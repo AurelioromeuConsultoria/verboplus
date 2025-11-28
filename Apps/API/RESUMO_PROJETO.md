@@ -77,6 +77,12 @@ dotnet run
 - `GET /api/mensagensAgendadas` - Ver mensagens agendadas
 - `GET /api/configuracoesMensagens` - Ver configurações
 
+### Novos módulos
+
+- `GET/POST/PUT/DELETE /api/equipes` - Gestão de equipes (área: 1=Verde, 2=Vermelha, 3=Laranja)
+- `GET/POST/PUT/DELETE /api/cargos` - Gestão de cargos
+- `GET/POST/PUT/DELETE /api/voluntarios` - Gestão de voluntários (relacionados a equipe e cargo)
+
 ## 🔄 Agendamento Funcionando
 
 O sistema possui um serviço que roda em background e:

@@ -1,9 +1,33 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Repos\\Malach\\Novo Pacote\\Backend\\",
+  "WorkspaceRootPath": "C:\\Repos\\Malach\\AppIgreja\\Backend\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{8F80C1B6-60DE-478D-A3AC-9ACAB0E98FD8}|src\\SistemaIgreja.API\\SistemaIgreja.API.csproj|c:\\repos\\malach\\novo pacote\\backend\\src\\sistemaigreja.api\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "AbsoluteMoniker": "D:0:0:{7CCC91CB-E4A3-4C93-9C4F-E7CD94D5931C}|SistemaIgreja.BackgroundWorker\\SistemaIgreja.BackgroundWorker.csproj|c:\\repos\\malach\\appigreja\\backend\\sistemaigreja.backgroundworker\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7CCC91CB-E4A3-4C93-9C4F-E7CD94D5931C}|SistemaIgreja.BackgroundWorker\\SistemaIgreja.BackgroundWorker.csproj|solutionrelative:sistemaigreja.backgroundworker\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8F80C1B6-60DE-478D-A3AC-9ACAB0E98FD8}|src\\SistemaIgreja.API\\SistemaIgreja.API.csproj|c:\\repos\\malach\\appigreja\\backend\\src\\sistemaigreja.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8F80C1B6-60DE-478D-A3AC-9ACAB0E98FD8}|src\\SistemaIgreja.API\\SistemaIgreja.API.csproj|solutionrelative:src\\sistemaigreja.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7CCC91CB-E4A3-4C93-9C4F-E7CD94D5931C}|SistemaIgreja.BackgroundWorker\\SistemaIgreja.BackgroundWorker.csproj|c:\\repos\\malach\\appigreja\\backend\\sistemaigreja.backgroundworker\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{7CCC91CB-E4A3-4C93-9C4F-E7CD94D5931C}|SistemaIgreja.BackgroundWorker\\SistemaIgreja.BackgroundWorker.csproj|solutionrelative:sistemaigreja.backgroundworker\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1147C86D-B2D7-468B-AFB5-E2E952DB0733}|src\\SistemaIgreja.Infrastructure\\SistemaIgreja.Infrastructure.csproj|c:\\repos\\malach\\appigreja\\backend\\src\\sistemaigreja.infrastructure\\services\\messageschedulerservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1147C86D-B2D7-468B-AFB5-E2E952DB0733}|src\\SistemaIgreja.Infrastructure\\SistemaIgreja.Infrastructure.csproj|solutionrelative:src\\sistemaigreja.infrastructure\\services\\messageschedulerservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8F80C1B6-60DE-478D-A3AC-9ACAB0E98FD8}|src\\SistemaIgreja.API\\SistemaIgreja.API.csproj|c:\\repos\\malach\\appigreja\\backend\\src\\sistemaigreja.api\\sistemaigreja.api.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
+      "RelativeMoniker": "D:0:0:{8F80C1B6-60DE-478D-A3AC-9ACAB0E98FD8}|src\\SistemaIgreja.API\\SistemaIgreja.API.csproj|solutionrelative:src\\sistemaigreja.api\\sistemaigreja.api.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DA1626A9-6CC8-4BB9-A444-78D29E0E48A6}|src\\SistemaIgreja.Application\\SistemaIgreja.Application.csproj|c:\\repos\\malach\\appigreja\\backend\\src\\sistemaigreja.application\\services\\mensagemagendadaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DA1626A9-6CC8-4BB9-A444-78D29E0E48A6}|src\\SistemaIgreja.Application\\SistemaIgreja.Application.csproj|solutionrelative:src\\sistemaigreja.application\\services\\mensagemagendadaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8F80C1B6-60DE-478D-A3AC-9ACAB0E98FD8}|src\\SistemaIgreja.API\\SistemaIgreja.API.csproj|c:\\repos\\malach\\appigreja\\backend\\src\\sistemaigreja.api\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{8F80C1B6-60DE-478D-A3AC-9ACAB0E98FD8}|src\\SistemaIgreja.API\\SistemaIgreja.API.csproj|solutionrelative:src\\sistemaigreja.api\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     }
   ],
@@ -14,8 +38,12 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 27,
+          "SelectedChildIndex": 29,
           "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:130:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
             {
               "$type": "Bookmark",
               "Name": "ST:132:0:{13b12e3e-c1b4-4539-9371-4fe9a0d523fc}"
@@ -126,11 +154,88 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Repos\\Malach\\AppIgreja\\Backend\\SistemaIgreja.BackgroundWorker\\appsettings.json",
+              "RelativeDocumentMoniker": "SistemaIgreja.BackgroundWorker\\appsettings.json",
+              "ToolTip": "C:\\Repos\\Malach\\AppIgreja\\Backend\\SistemaIgreja.BackgroundWorker\\appsettings.json",
+              "RelativeToolTip": "SistemaIgreja.BackgroundWorker\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-07-31T03:07:08.187Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Repos\\Malach\\AppIgreja\\Backend\\SistemaIgreja.BackgroundWorker\\Program.cs",
+              "RelativeDocumentMoniker": "SistemaIgreja.BackgroundWorker\\Program.cs",
+              "ToolTip": "C:\\Repos\\Malach\\AppIgreja\\Backend\\SistemaIgreja.BackgroundWorker\\Program.cs",
+              "RelativeToolTip": "SistemaIgreja.BackgroundWorker\\Program.cs",
+              "ViewState": "AgIAAA8AAAAAAAAAAAAAACEAAAAGAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-31T02:53:47.985Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Repos\\Malach\\AppIgreja\\Backend\\src\\SistemaIgreja.API\\Program.cs",
+              "RelativeDocumentMoniker": "src\\SistemaIgreja.API\\Program.cs",
+              "ToolTip": "C:\\Repos\\Malach\\AppIgreja\\Backend\\src\\SistemaIgreja.API\\Program.cs",
+              "RelativeToolTip": "src\\SistemaIgreja.API\\Program.cs",
+              "ViewState": "AgIAACQAAAAAAAAAAAAAADwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-31T02:28:00.58Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "SistemaIgreja.API",
+              "DocumentMoniker": "C:\\Repos\\Malach\\AppIgreja\\Backend\\src\\SistemaIgreja.API\\SistemaIgreja.API.csproj",
+              "RelativeDocumentMoniker": "src\\SistemaIgreja.API\\SistemaIgreja.API.csproj",
+              "ToolTip": "C:\\Repos\\Malach\\AppIgreja\\Backend\\src\\SistemaIgreja.API\\SistemaIgreja.API.csproj",
+              "RelativeToolTip": "src\\SistemaIgreja.API\\SistemaIgreja.API.csproj",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2025-07-31T01:56:25.134Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "MessageSchedulerService.cs",
+              "DocumentMoniker": "C:\\Repos\\Malach\\AppIgreja\\Backend\\src\\SistemaIgreja.Infrastructure\\Services\\MessageSchedulerService.cs",
+              "RelativeDocumentMoniker": "src\\SistemaIgreja.Infrastructure\\Services\\MessageSchedulerService.cs",
+              "ToolTip": "C:\\Repos\\Malach\\AppIgreja\\Backend\\src\\SistemaIgreja.Infrastructure\\Services\\MessageSchedulerService.cs",
+              "RelativeToolTip": "src\\SistemaIgreja.Infrastructure\\Services\\MessageSchedulerService.cs",
+              "ViewState": "AgIAAFQAAAAAAAAAAAAUwHMAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-31T00:18:46.352Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "MensagemAgendadaService.cs",
+              "DocumentMoniker": "C:\\Repos\\Malach\\AppIgreja\\Backend\\src\\SistemaIgreja.Application\\Services\\MensagemAgendadaService.cs",
+              "RelativeDocumentMoniker": "src\\SistemaIgreja.Application\\Services\\MensagemAgendadaService.cs",
+              "ToolTip": "C:\\Repos\\Malach\\AppIgreja\\Backend\\src\\SistemaIgreja.Application\\Services\\MensagemAgendadaService.cs",
+              "RelativeToolTip": "src\\SistemaIgreja.Application\\Services\\MensagemAgendadaService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-31T00:18:38.186Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
               "Title": "launchSettings.json",
-              "DocumentMoniker": "C:\\Repos\\Malach\\Novo Pacote\\Backend\\src\\SistemaIgreja.API\\Properties\\launchSettings.json",
+              "DocumentMoniker": "C:\\Repos\\Malach\\AppIgreja\\Backend\\src\\SistemaIgreja.API\\Properties\\launchSettings.json",
               "RelativeDocumentMoniker": "src\\SistemaIgreja.API\\Properties\\launchSettings.json",
-              "ToolTip": "C:\\Repos\\Malach\\Novo Pacote\\Backend\\src\\SistemaIgreja.API\\Properties\\launchSettings.json",
+              "ToolTip": "C:\\Repos\\Malach\\AppIgreja\\Backend\\src\\SistemaIgreja.API\\Properties\\launchSettings.json",
               "RelativeToolTip": "src\\SistemaIgreja.API\\Properties\\launchSettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",

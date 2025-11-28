@@ -12,6 +12,16 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<Visitante> Visitantes { get; set; }
     public DbSet<ConfiguracaoMensagem> ConfiguracoesMensagens { get; set; }
     public DbSet<MensagemAgendada> MensagensAgendadas { get; set; }
+    public DbSet<Equipe> Equipes { get; set; }
+    public DbSet<Cargo> Cargos { get; set; }
+    public DbSet<Voluntario> Voluntarios { get; set; }
+    public DbSet<Evento> Eventos { get; set; }
+    public DbSet<DestaqueSite> DestaquesSite { get; set; }
+    public DbSet<CategoriaNoticia> CategoriasNoticias { get; set; }
+    public DbSet<Noticia> Noticias { get; set; }
+    public DbSet<Contato> Contatos { get; set; }
+    public DbSet<InscricaoEvento> InscricoesEventos { get; set; }
+    public DbSet<Usuario> Usuarios { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,7 +74,144 @@ public class SistemaIgrejaDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // Dados iniciais para ConfiguracaoMensagem
+        // Configuração da entidade Equipe
+        modelBuilder.Entity<Equipe>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Area).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade Cargo
+        modelBuilder.Entity<Cargo>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade Voluntario
+        modelBuilder.Entity<Voluntario>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.WhatsApp).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Email).HasMaxLength(100);
+            entity.Property(e => e.DataCadastro).IsRequired();
+
+            entity.HasOne(v => v.Equipe)
+                  .WithMany(e => e.Voluntarios)
+                  .HasForeignKey(v => v.EquipeId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(v => v.Cargo)
+                  .WithMany(c => c.Voluntarios)
+                  .HasForeignKey(v => v.CargoId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configuração da entidade Evento
+        modelBuilder.Entity<Evento>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Titulo).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Descricao).HasMaxLength(1000);
+            entity.Property(e => e.ImagemDestaque).HasMaxLength(500);
+            entity.Property(e => e.Url).HasMaxLength(500);
+            entity.Property(e => e.DataInicio).IsRequired();
+            entity.Property(e => e.DataFim).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade DestaqueSite
+        modelBuilder.Entity<DestaqueSite>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Texto).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Descricao).HasMaxLength(1000);
+            entity.Property(e => e.Url).HasMaxLength(500);
+            entity.Property(e => e.Imagem).HasMaxLength(500);
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade CategoriaNoticia
+        modelBuilder.Entity<CategoriaNoticia>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade Noticia
+        modelBuilder.Entity<Noticia>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Titulo).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Descricao).HasMaxLength(1000);
+            entity.Property(e => e.Texto).HasMaxLength(5000);
+            entity.Property(e => e.Data).IsRequired();
+            entity.Property(e => e.Url).HasMaxLength(500);
+            entity.Property(e => e.Imagem).HasMaxLength(500);
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(n => n.CategoriaNoticia)
+                  .WithMany(c => c.Noticias)
+                  .HasForeignKey(n => n.CategoriaNoticiaId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configuração da entidade Contato
+        modelBuilder.Entity<Contato>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.WhatsApp).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Email).HasMaxLength(100);
+            entity.Property(e => e.Membro).IsRequired();
+            entity.Property(e => e.Mensagem).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade InscricaoEvento
+        modelBuilder.Entity<InscricaoEvento>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.WhatsApp).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Email).HasMaxLength(100);
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.QuantidadeAcompanhantes).IsRequired();
+            entity.Property(e => e.Observacoes).HasMaxLength(500);
+            entity.Property(e => e.ObservacoesInternas).HasMaxLength(500);
+            entity.Property(e => e.DataInscricao).IsRequired();
+
+            entity.HasOne(i => i.Evento)
+                  .WithMany(e => e.Inscricoes)
+                  .HasForeignKey(i => i.EventoId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // Índice para busca rápida
+            entity.HasIndex(i => new { i.EventoId, i.WhatsApp });
+        });
+
+        // Configuração da entidade Usuario
+        modelBuilder.Entity<Usuario>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.SenhaHash).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.TipoUsuario).IsRequired();
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            // Índice único para email
+            entity.HasIndex(e => e.Email).IsUnique();
+        });
+
+        // Dados iniciais para ConfiguracaoMensagem (datas fixas para evitar warnings de migração)
+        var seedDate = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc);
         modelBuilder.Entity<ConfiguracaoMensagem>().HasData(
             new ConfiguracaoMensagem
             {
@@ -74,7 +221,7 @@ public class SistemaIgrejaDbContext : DbContext
                 DiasAposVisita = 1,
                 HorarioEnvio = new TimeSpan(10, 0, 0), // 10:00
                 Ativo = true,
-                DataCriacao = DateTime.Now
+                DataCriacao = seedDate
             },
             new ConfiguracaoMensagem
             {
@@ -84,7 +231,7 @@ public class SistemaIgrejaDbContext : DbContext
                 DiasAposVisita = 7,
                 HorarioEnvio = new TimeSpan(18, 0, 0), // 18:00
                 Ativo = true,
-                DataCriacao = DateTime.Now
+                DataCriacao = seedDate
             }
         );
     }

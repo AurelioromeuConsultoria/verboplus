@@ -17,6 +17,44 @@ namespace SistemaIgreja.Infrastructure.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Cargo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Cargos");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaNoticia", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CategoriasNoticias");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.ConfiguracaoMensagem", b =>
                 {
                     b.Property<int>("Id")
@@ -54,7 +92,7 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         {
                             Id = 1,
                             Ativo = true,
-                            DataCriacao = new DateTime(2025, 6, 26, 23, 10, 6, 153, DateTimeKind.Local).AddTicks(841),
+                            DataCriacao = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DiasAposVisita = 1,
                             HorarioEnvio = new TimeSpan(0, 10, 0, 0, 0),
                             Nome = "Boas-vindas",
@@ -64,12 +102,191 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         {
                             Id = 2,
                             Ativo = true,
-                            DataCriacao = new DateTime(2025, 6, 26, 23, 10, 6, 153, DateTimeKind.Local).AddTicks(1116),
+                            DataCriacao = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DiasAposVisita = 7,
                             HorarioEnvio = new TimeSpan(0, 18, 0, 0, 0),
                             Nome = "Convite para retorno",
                             TextoMensagem = "Oi {Nome}! Sentimos sua falta na igreja. Que tal nos visitar novamente neste domingo? Será um prazer recebê-lo!"
                         });
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Contato", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Membro")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Mensagem")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WhatsApp")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Contatos");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.DestaqueSite", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Imagem")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DestaquesSite");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Equipe", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Area")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Equipes");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Evento", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DataFim")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DataInicio")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ImagemDestaque")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Eventos");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.InscricaoEvento", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("DataCancelamento")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DataConfirmacao")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DataInscricao")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EventoId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Observacoes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ObservacoesInternas")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("QuantidadeAcompanhantes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("WhatsApp")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventoId", "WhatsApp");
+
+                    b.ToTable("InscricoesEventos");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.MensagemAgendada", b =>
@@ -117,6 +334,90 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.ToTable("MensagensAgendadas");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Noticia", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CategoriaNoticiaId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Data")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Imagem")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Texto")
+                        .HasMaxLength(5000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoriaNoticiaId");
+
+                    b.ToTable("Noticias");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Usuario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SenhaHash")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TipoUsuario")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("UltimoAcesso")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Usuarios");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Visitante", b =>
                 {
                     b.Property<int>("Id")
@@ -152,6 +453,55 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.ToTable("Visitantes");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Voluntario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CargoId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DataCadastro")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EquipeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WhatsApp")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CargoId");
+
+                    b.HasIndex("EquipeId");
+
+                    b.ToTable("Voluntarios");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.InscricaoEvento", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Evento", "Evento")
+                        .WithMany("Inscricoes")
+                        .HasForeignKey("EventoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Evento");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.MensagemAgendada", b =>
                 {
                     b.HasOne("SistemaIgreja.Domain.Entities.ConfiguracaoMensagem", "ConfiguracaoMensagem")
@@ -171,9 +521,59 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Visitante");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Noticia", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.CategoriaNoticia", "CategoriaNoticia")
+                        .WithMany("Noticias")
+                        .HasForeignKey("CategoriaNoticiaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CategoriaNoticia");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Voluntario", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Cargo", "Cargo")
+                        .WithMany("Voluntarios")
+                        .HasForeignKey("CargoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SistemaIgreja.Domain.Entities.Equipe", "Equipe")
+                        .WithMany("Voluntarios")
+                        .HasForeignKey("EquipeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Cargo");
+
+                    b.Navigation("Equipe");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Cargo", b =>
+                {
+                    b.Navigation("Voluntarios");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaNoticia", b =>
+                {
+                    b.Navigation("Noticias");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.ConfiguracaoMensagem", b =>
                 {
                     b.Navigation("MensagensAgendadas");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Equipe", b =>
+                {
+                    b.Navigation("Voluntarios");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Evento", b =>
+                {
+                    b.Navigation("Inscricoes");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Visitante", b =>

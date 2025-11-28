@@ -1,5 +1,7 @@
 # Sistema para Igrejas - Fase 1: Visitantes
 
+[![coverage](https://img.shields.io/badge/coverage-report-blue)](tests/SistemaIgreja.API.Tests/TestResults/CoverageReport/index.html)
+
 ## Visão Geral
 
 Este é um sistema moderno e extensível desenvolvido especificamente para igrejas, focado inicialmente no cadastramento de visitantes e agendamento automático de mensagens de WhatsApp. O sistema foi construído seguindo os princípios da Clean Architecture, garantindo escalabilidade e manutenibilidade.
@@ -133,6 +135,41 @@ dotnet run
 - `POST /api/mensagensAgendadas/{id}/marcar-pronta` - Marcar como pronta
 - `POST /api/mensagensAgendadas/{id}/marcar-enviada` - Marcar como enviada
 - `POST /api/mensagensAgendadas/{id}/marcar-erro` - Marcar como erro
+
+### Equipes
+- `GET /api/equipes` - Listar todas as equipes
+- `GET /api/equipes/{id}` - Obter equipe por ID
+- `POST /api/equipes` - Criar nova equipe
+- `PUT /api/equipes/{id}` - Atualizar equipe
+- `DELETE /api/equipes/{id}` - Excluir equipe
+
+Campos:
+- Nome (string)
+- Área (int) → 1=Verde, 2=Vermelha, 3=Laranja
+
+### Cargos
+- `GET /api/cargos` - Listar todos os cargos
+- `GET /api/cargos/{id}` - Obter cargo por ID
+- `POST /api/cargos` - Criar novo cargo
+- `PUT /api/cargos/{id}` - Atualizar cargo
+- `DELETE /api/cargos/{id}` - Excluir cargo
+
+Campos:
+- Nome (string)
+
+### Voluntários
+- `GET /api/voluntarios` - Listar todos os voluntários
+- `GET /api/voluntarios/{id}` - Obter voluntário por ID
+- `POST /api/voluntarios` - Criar novo voluntário
+- `PUT /api/voluntarios/{id}` - Atualizar voluntário
+- `DELETE /api/voluntarios/{id}` - Excluir voluntário
+
+Campos:
+- Nome (string)
+- WhatsApp (string)
+- E-mail (string opcional)
+- EquipeId (int)
+- CargoId (int)
 
 ## Agendamento de Mensagens
 
