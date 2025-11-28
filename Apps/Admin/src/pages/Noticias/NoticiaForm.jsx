@@ -1,0 +1,174 @@
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { ArrowLeft, Save } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { LoadingPage } from '@/components/ui/loading';
+import { ErrorPage } from '@/components/ui/error-message';
+import { noticiasApi, categoriasNoticiasApi } from '@/lib/api';
+
+export default function NoticiaForm() {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditing = Boolean(id);
+
+  const [categorias, setCategorias] = useState([]);
+  const [formData, setFormData] = useState({
+    titulo: '',
+    descricao: '',
+    texto: '',
+    data: '',
+    url: '',
+    imagem: '',
+    categoriaNoticiaId: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const categoriasRes = await categoriasNoticiasApi.getAll();
+      setCategorias(categoriasRes.data || []);
+
+      if (isEditing) {
+        const res = await noticiasApi.getById(id);
+        const n = res.data;
+        setFormData({
+          titulo: n.titulo || '',
+          descricao: n.descricao || '',
+          texto: n.texto || '',
+          data: n.data ? new Date(n.data).toISOString().slice(0, 16) : '',
+          url: n.url || '',
+          imagem: n.imagem || '',
+          categoriaNoticiaId: String(n.categoriaNoticiaId || ''),
+        });
+      }
+    } catch (err) {
+      setError('Erro ao carregar dados');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, [id]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.categoriaNoticiaId) {
+      alert('Categoria é obrigatória');
+      return;
+    }
+    try {
+      setLoading(true);
+      const payload = {
+        titulo: formData.titulo.trim() || null,
+        descricao: formData.descricao.trim() || null,
+        texto: formData.texto.trim() || null,
+        data: formData.data ? new Date(formData.data).toISOString() : null,
+        url: formData.url.trim() || null,
+        imagem: formData.imagem.trim() || null,
+        categoriaNoticiaId: Number(formData.categoriaNoticiaId),
+      };
+      if (isEditing) await noticiasApi.update(id, payload);
+      else await noticiasApi.create(payload);
+      navigate('/noticias');
+    } catch (err) {
+      alert('Erro ao salvar notícia');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading && isEditing) return <LoadingPage text="Carregando notícia..." />;
+  if (error) return <ErrorPage message={error} onRetry={load} />;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center space-x-4">
+        <Button variant="ghost" asChild>
+          <Link to="/noticias">
+            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Notícia' : 'Nova Notícia'}</h1>
+          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações da notícia' : 'Cadastre uma nova notícia'}</p>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{isEditing ? 'Editar Notícia' : 'Cadastrar Notícia'}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="titulo">Título *</Label>
+                <Input id="titulo" name="titulo" value={formData.titulo} onChange={handleChange} placeholder="Título da notícia" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="categoriaNoticiaId">Categoria *</Label>
+                <select id="categoriaNoticiaId" name="categoriaNoticiaId" value={formData.categoriaNoticiaId} onChange={handleChange} className="w-full px-3 py-2 border rounded" required>
+                  <option value="">Selecione</option>
+                  {categorias.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="descricao">Descrição</Label>
+              <Textarea id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder="Descrição da notícia" rows={3} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="texto">Texto</Label>
+              <Textarea id="texto" name="texto" value={formData.texto} onChange={handleChange} placeholder="Texto completo da notícia" rows={6} />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="data">Data</Label>
+                <Input id="data" name="data" type="datetime-local" value={formData.data} onChange={handleChange} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="url">URL</Label>
+                <Input id="url" name="url" type="url" value={formData.url} onChange={handleChange} placeholder="https://exemplo.com" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="imagem">URL da Imagem</Label>
+              <Input id="imagem" name="imagem" type="url" value={formData.imagem} onChange={handleChange} placeholder="https://exemplo.com/imagem.jpg" />
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <Button type="submit" disabled={loading}>
+                <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+              </Button>
+              <Button type="button" variant="outline" asChild>
+                <Link to="/noticias">Cancelar</Link>
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+

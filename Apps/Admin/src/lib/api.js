@@ -40,5 +40,93 @@ export const mensagensAgendadasApi = {
   cancelar: (id) => api.patch(`/mensagensAgendadas/${id}/cancelar`),
 };
 
+// Equipes
+export const equipesApi = {
+  getAll: () => api.get('/equipes'),
+  getById: (id) => api.get(`/equipes/${id}`),
+  create: (data) => api.post('/equipes', data),
+  update: (id, data) => api.put(`/equipes/${id}`, data),
+  delete: (id) => api.delete(`/equipes/${id}`),
+};
+
+// Cargos
+export const cargosApi = {
+  getAll: () => api.get('/cargos'),
+  getById: (id) => api.get(`/cargos/${id}`),
+  create: (data) => api.post('/cargos', data),
+  update: (id, data) => api.put(`/cargos/${id}`, data),
+  delete: (id) => api.delete(`/cargos/${id}`),
+};
+
+// Voluntários
+export const voluntariosApi = {
+  getAll: () => api.get('/voluntarios'),
+  getById: (id) => api.get(`/voluntarios/${id}`),
+  create: (data) => api.post('/voluntarios', data),
+  update: (id, data) => api.put(`/voluntarios/${id}`, data),
+  delete: (id) => api.delete(`/voluntarios/${id}`),
+};
+
+// Eventos
+export const eventosApi = {
+  getAll: () => api.get('/Eventos'),
+  getById: (id) => api.get(`/Eventos/${id}`),
+  create: (data) => api.post('/Eventos', data),
+  update: (id, data) => api.put(`/Eventos/${id}`, data),
+  delete: (id) => api.delete(`/Eventos/${id}`),
+  getByPeriodo: () => api.get('/Eventos/periodo'),
+};
+
+// Destaques Site
+export const destaquesSiteApi = {
+  getAll: () => api.get('/DestaquesSite'),
+  getById: (id) => api.get(`/DestaquesSite/${id}`),
+  create: (data) => api.post('/DestaquesSite', data),
+  update: (id, data) => api.put(`/DestaquesSite/${id}`, data),
+  delete: (id) => api.delete(`/DestaquesSite/${id}`),
+};
+
+// Categorias de Notícias
+export const categoriasNoticiasApi = {
+  getAll: () => api.get('/CategoriasNoticias'),
+  getById: (id) => api.get(`/CategoriasNoticias/${id}`),
+  create: (data) => api.post('/CategoriasNoticias', data),
+  update: (id, data) => api.put(`/CategoriasNoticias/${id}`, data),
+  delete: (id) => api.delete(`/CategoriasNoticias/${id}`),
+};
+
+// Notícias
+export const noticiasApi = {
+  getAll: () => api.get('/Noticias'),
+  getById: (id) => api.get(`/Noticias/${id}`),
+  create: (data) => api.post('/Noticias', data),
+  update: (id, data) => api.put(`/Noticias/${id}`, data),
+  delete: (id) => api.delete(`/Noticias/${id}`),
+  getByCategoria: (categoriaId) => api.get(`/Noticias/categoria/${categoriaId}`),
+};
+
+// Contatos
+export const contatosApi = {
+  getAll: () => api.get('/Contatos'),
+  getById: (id) => api.get(`/Contatos/${id}`),
+  create: (data) => api.post('/Contatos', data),
+  update: (id, data) => api.put(`/Contatos/${id}`, data),
+  delete: (id) => api.delete(`/Contatos/${id}`),
+};
+
+// Inscrições em Eventos
+export const inscricoesEventosApi = {
+  getAll: () => api.get('/InscricoesEventos'),
+  getById: (id) => api.get(`/InscricoesEventos/${id}`),
+  getByEvento: (eventoId) => api.get(`/InscricoesEventos/evento/${eventoId}`),
+  getByStatus: (status) => api.get(`/InscricoesEventos/status/${status}`),
+  getEstatisticas: (eventoId) => api.get(`/InscricoesEventos/evento/${eventoId}/estatisticas`),
+  create: (data) => api.post('/InscricoesEventos', data),
+  update: (id, data) => api.put(`/InscricoesEventos/${id}`, data),
+  confirmar: (id) => api.put(`/InscricoesEventos/${id}/confirmar`),
+  cancelar: (id) => api.put(`/InscricoesEventos/${id}/cancelar`),
+  delete: (id) => api.delete(`/InscricoesEventos/${id}`),
+};
+
 export default api;
 
