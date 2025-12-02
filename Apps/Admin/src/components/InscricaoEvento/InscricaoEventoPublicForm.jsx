@@ -183,3 +183,5 @@ export default function InscricaoEventoPublicForm({ eventoId, onSuccess, onCance
   );
 }
 
+
+

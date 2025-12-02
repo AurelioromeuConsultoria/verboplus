@@ -1,5 +1,8 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout/Layout';
+import Login from './pages/Login/Login';
 import { Dashboard } from './pages/Dashboard';
 import { VisitantesList } from './pages/Visitantes/VisitantesList';
 import { VisitanteForm } from './pages/Visitantes/VisitanteForm';
@@ -27,14 +30,33 @@ import InscricoesEventosList from './pages/InscricoesEventos/InscricoesEventosLi
 import InscricaoEventoDetails from './pages/InscricoesEventos/InscricaoEventoDetails';
 import InscricaoEventoForm from './pages/InscricoesEventos/InscricaoEventoForm';
 import EventoInscricoes from './pages/InscricoesEventos/EventoInscricoes';
+import UsuariosList from './pages/Usuarios/UsuariosList';
+import Perfil from './pages/Perfil/Perfil';
+import CategoriasMidiasList from './pages/CategoriasMidias/CategoriasMidiasList';
+import CategoriaMidiaForm from './pages/CategoriasMidias/CategoriaMidiaForm';
+import GaleriasFotosList from './pages/GaleriasFotos/GaleriasFotosList';
+import GaleriaFotoForm from './pages/GaleriasFotos/GaleriaFotoForm';
+import GaleriaFotos from './pages/GaleriasFotos/GaleriaFotos';
 import './App.css';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Rota pública de login */}
+          <Route path="/login" element={<Login />} />
+          
+          {/* Rotas protegidas */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Dashboard />} />
           
           {/* Rotas de Visitantes */}
           <Route path="visitantes" element={<VisitantesList />} />
@@ -95,9 +117,30 @@ function App() {
           <Route path="inscricoes-eventos/:id" element={<InscricaoEventoDetails />} />
           <Route path="inscricoes-eventos/:id/editar" element={<InscricaoEventoForm />} />
           <Route path="eventos/:eventoId/inscricoes" element={<EventoInscricoes />} />
+
+          {/* Rotas de Usuários */}
+          <Route path="usuarios" element={<UsuariosList />} />
+
+          {/* Rota de Perfil */}
+          <Route path="perfil" element={<Perfil />} />
+
+          {/* Rotas de Categorias de Mídia */}
+          <Route path="categorias-midias" element={<CategoriasMidiasList />} />
+          <Route path="categorias-midias/novo" element={<CategoriaMidiaForm />} />
+          <Route path="categorias-midias/:id/editar" element={<CategoriaMidiaForm />} />
+
+          {/* Rotas de Galerias de Fotos */}
+          <Route path="galerias-fotos" element={<GaleriasFotosList />} />
+          <Route path="galerias-fotos/novo" element={<GaleriaFotoForm />} />
+          <Route path="galerias-fotos/:id/editar" element={<GaleriaFotoForm />} />
+          <Route path="galerias-fotos/:id/fotos" element={<GaleriaFotos />} />
         </Route>
+        
+        {/* Redirecionar rotas não encontradas para login ou dashboard */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
+    </AuthProvider>
   );
 }
 

@@ -8,11 +8,34 @@ const api = axios.create({
   },
 });
 
+// Interceptor para adicionar token nas requisições
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Interceptor para tratamento de erros
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error('Erro na API:', error);
+    
+    // Se token expirou ou inválido, redirecionar para login
+    if (error.response?.status === 401 && !error.config.url?.includes('/auth/login')) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('usuario');
+      window.location.href = '/login';
+    }
+    
     return Promise.reject(error);
   }
 );
@@ -126,6 +149,50 @@ export const inscricoesEventosApi = {
   confirmar: (id) => api.put(`/InscricoesEventos/${id}/confirmar`),
   cancelar: (id) => api.put(`/InscricoesEventos/${id}/cancelar`),
   delete: (id) => api.delete(`/InscricoesEventos/${id}`),
+};
+
+// Autenticação
+export const authApi = {
+  login: (data) => api.post('/auth/login', data),
+  me: () => api.get('/auth/me'),
+  alterarSenha: (data) => api.put('/auth/alterar-senha', data),
+};
+
+// Usuários
+export const usuariosApi = {
+  getAll: () => api.get('/usuarios'),
+  getById: (id) => api.get(`/usuarios/${id}`),
+  create: (data) => api.post('/usuarios', data),
+  update: (id, data) => api.put(`/usuarios/${id}`, data),
+  delete: (id) => api.delete(`/usuarios/${id}`),
+};
+
+// Categorias de Mídia
+export const categoriasMidiasApi = {
+  getAll: () => api.get('/categoriasMidias'),
+  getById: (id) => api.get(`/categoriasMidias/${id}`),
+  create: (data) => api.post('/categoriasMidias', data),
+  update: (id, data) => api.put(`/categoriasMidias/${id}`, data),
+  delete: (id) => api.delete(`/categoriasMidias/${id}`),
+};
+
+// Galerias de Fotos
+export const galeriasFotosApi = {
+  getAll: () => api.get('/galeriasFotos'),
+  getAtivas: () => api.get('/galeriasFotos/ativas'),
+  getById: (id) => api.get(`/galeriasFotos/${id}`),
+  getByEvento: (eventoId) => api.get(`/galeriasFotos/evento/${eventoId}`),
+  getByCategoria: (categoriaId) => api.get(`/galeriasFotos/categoria/${categoriaId}`),
+  create: (data) => api.post('/galeriasFotos', data),
+  update: (id, data) => api.put(`/galeriasFotos/${id}`, data),
+  delete: (id) => api.delete(`/galeriasFotos/${id}`),
+  upload: (id, formData) => api.post(`/galeriasFotos/${id}/upload`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
+  definirDestaque: (id, nomeArquivo) => api.put(`/galeriasFotos/${id}/destaque`, nomeArquivo),
+  listarFotos: (id) => api.get(`/galeriasFotos/${id}/fotos`),
 };
 
 export default api;

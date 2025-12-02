@@ -6,22 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
-import { contatosApi } from '@/lib/api';
+import { categoriasMidiasApi } from '@/lib/api';
 
-export default function ContatoForm() {
+export default function CategoriaMidiaForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
 
   const [formData, setFormData] = useState({
     nome: '',
-    whatsApp: '',
-    email: '',
-    membro: false,
-    mensagem: '',
+    descricao: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -31,17 +27,14 @@ export default function ContatoForm() {
     try {
       setLoading(true);
       setError(null);
-      const res = await contatosApi.getById(id);
+      const res = await categoriasMidiasApi.getById(id);
       const c = res.data;
       setFormData({
         nome: c.nome || '',
-        whatsApp: c.whatsApp || '',
-        email: c.email || '',
-        membro: c.membro || false,
-        mensagem: c.mensagem || '',
+        descricao: c.descricao || '',
       });
     } catch (err) {
-      setError('Erro ao carregar contato');
+      setError('Erro ao carregar categoria de mídia');
       console.error(err);
     } finally {
       setLoading(false);
@@ -51,12 +44,8 @@ export default function ContatoForm() {
   useEffect(() => { load(); }, [id]);
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-  };
-
-  const handleSwitchChange = (checked) => {
-    setFormData((prev) => ({ ...prev, membro: checked }));
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -69,67 +58,52 @@ export default function ContatoForm() {
       setLoading(true);
       const payload = {
         nome: formData.nome.trim(),
-        whatsApp: formData.whatsApp.trim() || null,
-        email: formData.email.trim() || null,
-        membro: formData.membro,
-        mensagem: formData.mensagem.trim() || null,
+        descricao: formData.descricao.trim() || null,
       };
-      if (isEditing) await contatosApi.update(id, payload);
-      else await contatosApi.create(payload);
-      navigate('/contatos');
+      if (isEditing) await categoriasMidiasApi.update(id, payload);
+      else await categoriasMidiasApi.create(payload);
+      navigate('/categorias-midias');
     } catch (err) {
-      alert('Erro ao salvar contato');
+      alert('Erro ao salvar categoria de mídia');
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && isEditing) return <LoadingPage text="Carregando contato..." />;
+  if (loading && isEditing) return <LoadingPage text="Carregando categoria..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Button variant="ghost" asChild>
-          <Link to="/contatos">
+          <Link to="/categorias-midias">
             <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Contato' : 'Novo Contato'}</h1>
-          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações do contato' : 'Cadastre um novo contato'}</p>
+          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Categoria de Mídia' : 'Nova Categoria de Mídia'}</h1>
+          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações da categoria' : 'Cadastre uma nova categoria de mídia'}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isEditing ? 'Editar Contato' : 'Cadastrar Contato'}</CardTitle>
+          <CardTitle>{isEditing ? 'Editar Categoria de Mídia' : 'Cadastrar Categoria de Mídia'}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="nome">Nome *</Label>
-                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder="Nome completo" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="whatsApp">WhatsApp</Label>
-                <Input id="whatsApp" name="whatsApp" value={formData.whatsApp} onChange={handleChange} placeholder="(11) 99999-9999" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} placeholder="email@exemplo.com" />
-              </div>
-              <div className="space-y-2 flex items-center space-x-3 pt-6">
-                <Switch id="membro" checked={formData.membro} onCheckedChange={handleSwitchChange} />
-                <Label htmlFor="membro" className="cursor-pointer">É membro da igreja?</Label>
+                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder="Nome da categoria" required maxLength={100} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="mensagem">Mensagem</Label>
-              <Textarea id="mensagem" name="mensagem" value={formData.mensagem} onChange={handleChange} placeholder="Mensagem do contato" rows={4} />
+              <Label htmlFor="descricao">Descrição</Label>
+              <Textarea id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder="Descrição da categoria" rows={3} maxLength={500} />
             </div>
 
             <div className="flex items-center space-x-4">
@@ -137,7 +111,7 @@ export default function ContatoForm() {
                 <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
               </Button>
               <Button type="button" variant="outline" asChild>
-                <Link to="/contatos">Cancelar</Link>
+                <Link to="/categorias-midias">Cancelar</Link>
               </Button>
             </div>
           </form>
@@ -146,6 +120,4 @@ export default function ContatoForm() {
     </div>
   );
 }
-
-
 

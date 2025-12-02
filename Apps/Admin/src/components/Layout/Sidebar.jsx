@@ -18,7 +18,10 @@ import {
   Globe,
   ChevronDown,
   ChevronRight,
-  Network
+  Network,
+  UserCog,
+  Images,
+  Folder
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -28,6 +31,11 @@ const menuItems = [
     title: 'Dashboard',
     href: '/',
     icon: Home,
+  },
+  {
+    title: 'Usuários',
+    href: '/usuarios',
+    icon: UserCog,
   },
 ];
 
@@ -122,6 +130,22 @@ const menuGroups = [
       },
     ],
   },
+  {
+    title: 'Mídia',
+    icon: Images,
+    items: [
+      {
+        title: 'Categorias de Mídia',
+        href: '/categorias-midias',
+        icon: Folder,
+      },
+      {
+        title: 'Galerias de Fotos',
+        href: '/galerias-fotos',
+        icon: Images,
+      },
+    ],
+  },
 ];
 
 export function Sidebar() {
@@ -132,6 +156,7 @@ export function Sidebar() {
     noticias: true,
     eventos: true,
     portal: true,
+    mídia: true,
   });
 
   const toggleGroup = (groupKey) => {
