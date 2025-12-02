@@ -56,5 +56,10 @@ public class UsuarioRepository : IUsuarioRepository
             await _context.SaveChangesAsync();
         }
     }
+
+    public async Task<bool> ExisteAlgumUsuarioAsync()
+    {
+        return await _context.Set<Usuario>().AnyAsync();
+    }
 }
 

@@ -16,3 +16,4 @@ public interface IInscricaoEventoRepository
     Task DeleteAsync(int id);
 }
 
+

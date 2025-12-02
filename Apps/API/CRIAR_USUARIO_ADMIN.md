@@ -74,3 +74,4 @@ Após criar o usuário, teste o login:
 
 Use o endpoint `PUT /api/auth/alterar-senha` para alterar a senha.
 
+

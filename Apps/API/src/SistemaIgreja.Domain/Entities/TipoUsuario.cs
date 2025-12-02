@@ -7,3 +7,4 @@ public enum TipoUsuario
     Ambos = 3         // Acesso aos dois módulos
 }
 
+

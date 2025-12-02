@@ -8,3 +8,4 @@ public enum StatusInscricao
     Presente = 4      // Participante compareceu ao evento
 }
 
+

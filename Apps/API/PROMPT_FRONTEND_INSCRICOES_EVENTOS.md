@@ -368,3 +368,4 @@ Sempre trate os seguintes cenários:
 - Erro 404 (Not Found) - mostrar "Inscrição não encontrada"
 - Erro 500 (Server Error) - mostrar mensagem genérica de erro
 
+

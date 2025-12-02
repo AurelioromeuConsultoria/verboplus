@@ -28,3 +28,4 @@ public class Usuario
     public DateTime? UltimoAcesso { get; set; }
 }
 
+

@@ -10,5 +10,6 @@ public interface IUsuarioRepository
     Task<Usuario> CreateAsync(Usuario usuario);
     Task<Usuario> UpdateAsync(Usuario usuario);
     Task DeleteAsync(int id);
+    Task<bool> ExisteAlgumUsuarioAsync();
 }
 

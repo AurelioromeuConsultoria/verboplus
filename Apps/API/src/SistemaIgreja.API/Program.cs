@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SistemaIgreja.Infrastructure.Data;
@@ -30,6 +31,8 @@ builder.Services.AddScoped<INoticiaRepository, NoticiaRepository>();
 builder.Services.AddScoped<IContatoRepository, ContatoRepository>();
 builder.Services.AddScoped<IInscricaoEventoRepository, InscricaoEventoRepository>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<ICategoriaMidiaRepository, CategoriaMidiaRepository>();
+builder.Services.AddScoped<IGaleriaFotoRepository, GaleriaFotoRepository>();
 
 // Serviços
 builder.Services.AddScoped<IVisitanteService, VisitanteService>();
@@ -47,6 +50,8 @@ builder.Services.AddScoped<IContatoService, ContatoService>();
 builder.Services.AddScoped<IInscricaoEventoService, InscricaoEventoService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ICategoriaMidiaService, CategoriaMidiaService>();
+builder.Services.AddScoped<IGaleriaFotoService, GaleriaFotoService>();
 
 // Serviço de agendamento
 builder.Services.AddHostedService<MessageSchedulerService>();
@@ -142,6 +147,23 @@ if (app.Environment.IsDevelopment())
 }
 
 // Removido app.UseHttpsRedirection() para evitar redirecionamento forçado
+
+// Servir arquivos estáticos da pasta wwwroot (padrão)
+app.UseStaticFiles();
+
+// Servir arquivos da pasta uploads (raiz do projeto)
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+}
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads"
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

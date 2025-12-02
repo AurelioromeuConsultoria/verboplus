@@ -36,6 +36,29 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.ToTable("Cargos");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaMidia", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CategoriasMidias");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaNoticia", b =>
                 {
                     b.Property<int>("Id")
@@ -234,6 +257,57 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Eventos");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.GaleriaFoto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CaminhoDiretorio")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("CategoriaMidiaId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Data")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("EventoId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ImagemDestaque")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("QuantidadeFotos")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoriaMidiaId");
+
+                    b.HasIndex("EventoId");
+
+                    b.ToTable("GaleriasFotos");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.InscricaoEvento", b =>
@@ -491,6 +565,23 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.ToTable("Voluntarios");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.GaleriaFoto", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.CategoriaMidia", "CategoriaMidia")
+                        .WithMany("Galerias")
+                        .HasForeignKey("CategoriaMidiaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SistemaIgreja.Domain.Entities.Evento", "Evento")
+                        .WithMany()
+                        .HasForeignKey("EventoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CategoriaMidia");
+
+                    b.Navigation("Evento");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.InscricaoEvento", b =>
                 {
                     b.HasOne("SistemaIgreja.Domain.Entities.Evento", "Evento")
@@ -554,6 +645,11 @@ namespace SistemaIgreja.Infrastructure.Migrations
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Cargo", b =>
                 {
                     b.Navigation("Voluntarios");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaMidia", b =>
+                {
+                    b.Navigation("Galerias");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaNoticia", b =>

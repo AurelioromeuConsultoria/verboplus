@@ -27,3 +27,4 @@ public class Contato
     public DateTime DataCriacao { get; set; } = DateTime.Now;
 }
 
+

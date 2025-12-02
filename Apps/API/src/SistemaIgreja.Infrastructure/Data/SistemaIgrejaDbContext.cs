@@ -22,6 +22,8 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<Contato> Contatos { get; set; }
     public DbSet<InscricaoEvento> InscricoesEventos { get; set; }
     public DbSet<Usuario> Usuarios { get; set; }
+    public DbSet<CategoriaMidia> CategoriasMidias { get; set; }
+    public DbSet<GaleriaFoto> GaleriasFotos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -208,6 +210,39 @@ public class SistemaIgrejaDbContext : DbContext
 
             // Índice único para email
             entity.HasIndex(e => e.Email).IsUnique();
+        });
+
+        // Configuração da entidade CategoriaMidia
+        modelBuilder.Entity<CategoriaMidia>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Descricao).HasMaxLength(500);
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade GaleriaFoto
+        modelBuilder.Entity<GaleriaFoto>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Descricao).HasMaxLength(1000);
+            entity.Property(e => e.Data).IsRequired();
+            entity.Property(e => e.CaminhoDiretorio).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.ImagemDestaque).HasMaxLength(500);
+            entity.Property(e => e.QuantidadeFotos).IsRequired();
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(g => g.Evento)
+                  .WithMany()
+                  .HasForeignKey(g => g.EventoId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(g => g.CategoriaMidia)
+                  .WithMany(c => c.Galerias)
+                  .HasForeignKey(g => g.CategoriaMidiaId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Dados iniciais para ConfiguracaoMensagem (datas fixas para evitar warnings de migração)

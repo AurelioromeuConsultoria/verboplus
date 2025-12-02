@@ -40,3 +40,4 @@ public class InscricaoEvento
     public DateTime? DataCancelamento { get; set; }
 }
 
+

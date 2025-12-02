@@ -49,3 +49,4 @@ public class EstatisticasInscricaoDto
     public int TotalParticipantes { get; set; }
 }
 
+
