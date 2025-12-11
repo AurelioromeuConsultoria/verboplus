@@ -1,0 +1,34 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+- group: 'SWA_AppIgreja_Admin_Variables'
+
+steps:
+# 1) Node.js
+- task: NodeTool@0
+  inputs:
+    versionSpec: '18.x'
+  displayName: 'Use Node.js 18'
+
+# 2) Instalar dependências
+- script: |
+    npm ci
+  displayName: 'Instalar dependências'
+
+# 3) Build do front
+- script: |
+    npm run build
+  displayName: 'Build do front'
+
+# 4) Deploy para Azure Static Web App
+- task: AzureStaticWebApp@0
+  displayName: 'Deploy para Azure Static Web App'
+  inputs:
+    app_location: '/'          # raiz do projeto
+    api_location: ''           # não tem API junto, então vazio
+    output_location: 'dist'    # pasta gerada pelo build (Vite/React)
+    azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN)
