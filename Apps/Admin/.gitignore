@@ -68,6 +68,13 @@ Thumbs.db
 # Vite
 .vite
 
+# Lock files (opcional - descomente se não quiser commitar)
+# package-lock.json
+# pnpm-lock.yaml
+# yarn.lock
+
+
+
 
 
 
