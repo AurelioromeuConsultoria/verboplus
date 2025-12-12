@@ -6,6 +6,8 @@ pool:
 
 variables:
 - group: 'SWA_AppIgreja_Admin_Variables'
+- name: PNPM_HOME
+  value: $(Pipeline.Workspace)/pnpm
 
 steps:
 # 1) Node.js (atualizado para 20.x LTS)
@@ -35,8 +37,6 @@ steps:
 - script: |
     pnpm install --frozen-lockfile
   displayName: 'Instalar dependências'
-  env:
-    PNPM_HOME: $(Pipeline.Workspace)/pnpm
 
 # 5) Build do front
 - script: |
