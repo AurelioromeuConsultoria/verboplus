@@ -146,3 +146,4 @@ app.Run();
 - Verifique as permissões da pasta `uploads` no sistema operacional
 - Certifique-se de que o servidor tem permissão de leitura na pasta
 
+

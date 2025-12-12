@@ -136,3 +136,4 @@ Authorization: Bearer {seu-token}
 3. Deve retornar `404` se a galeria não existir
 4. Pode ser útil ordenar os arquivos por nome ou data de criação
 
+
