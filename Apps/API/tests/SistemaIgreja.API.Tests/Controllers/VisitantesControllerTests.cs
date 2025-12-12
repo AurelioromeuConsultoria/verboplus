@@ -48,21 +48,21 @@ public class VisitantesControllerTests
     [Fact]
     public async Task Create_ReturnsCreated_WhenOk()
     {
-        var dto = new CriarVisitanteDto { Nome = "A", Telefone = "123", DataVisita = DateTime.UtcNow };
-        var created = new VisitanteDto { Id = 10, Nome = dto.Nome, Telefone = dto.Telefone, DataVisita = dto.DataVisita };
-        _serviceMock.Setup(s => s.CreateAsync(dto)).ReturnsAsync(created);
+        var request = new CreateVisitanteRequest { Nome = "A", Telefone = "123", DataVisita = DateTime.UtcNow };
+        var response = new VisitanteResponse { VisitanteId = 10, Nome = request.Nome, Telefone = request.Telefone, DataVisita = request.DataVisita ?? DateTime.UtcNow };
+        _serviceMock.Setup(s => s.CreateVisitanteAsync(request)).ReturnsAsync(response);
 
-        var result = await _controller.Create(dto);
+        var result = await _controller.Create(request);
 
         result.Result.Should().BeOfType<CreatedAtActionResult>();
         var createdAt = result.Result as CreatedAtActionResult;
-        createdAt!.Value.Should().BeEquivalentTo(created);
+        createdAt!.Value.Should().BeEquivalentTo(response);
     }
 
     [Fact]
     public async Task Update_ReturnsNotFound_OnArgumentException()
     {
-        var dto = new AtualizarVisitanteDto { Nome = "X", Telefone = "999", DataVisita = DateTime.UtcNow };
+        var dto = new AtualizarVisitanteDto { DataVisita = DateTime.UtcNow, Observacoes = "Teste" };
         _serviceMock.Setup(s => s.UpdateAsync(42, dto)).ThrowsAsync(new ArgumentException("Visitante não encontrado"));
 
         var result = await _controller.Update(42, dto);

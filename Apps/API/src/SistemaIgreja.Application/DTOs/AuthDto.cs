@@ -30,8 +30,10 @@ public class AlterarSenhaDto
 public class UsuarioDto
 {
     public int Id { get; set; }
+    public int PessoaId { get; set; }
     public string Nome { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string EmailLogin { get; set; } = string.Empty;
     public TipoUsuario TipoUsuario { get; set; }
     public string TipoUsuarioDescricao { get; set; } = string.Empty;
     public bool Ativo { get; set; }
@@ -42,7 +44,11 @@ public class UsuarioDto
 public class CriarUsuarioDto
 {
     public string Nome { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? Telefone { get; set; }
+    public string? WhatsApp { get; set; }
+    public DateTime? DataNascimento { get; set; }
+    public string EmailLogin { get; set; } = string.Empty;
     public string Senha { get; set; } = string.Empty;
     public TipoUsuario TipoUsuario { get; set; }
 }
@@ -50,10 +56,17 @@ public class CriarUsuarioDto
 public class AtualizarUsuarioDto
 {
     public string Nome { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? Telefone { get; set; }
+    public string? WhatsApp { get; set; }
+    public DateTime? DataNascimento { get; set; }
+    public string EmailLogin { get; set; } = string.Empty;
     public TipoUsuario TipoUsuario { get; set; }
     public bool Ativo { get; set; }
 }
+
+
+
 
 
 

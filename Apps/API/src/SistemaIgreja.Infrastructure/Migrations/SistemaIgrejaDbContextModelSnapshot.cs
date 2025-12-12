@@ -480,6 +480,79 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.ToTable("Noticias");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Pessoa", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataNascimento")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Telefone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("TipoPessoa")
+                        .HasColumnType("int");
+
+                    b.Property<string>("WhatsApp")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasFilter("[Email] IS NOT NULL");
+
+                    b.ToTable("Pessoas");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.PessoaPerfil", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("DataFim")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DataInicio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Perfil")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PessoaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PessoaId");
+
+                    b.ToTable("PessoasPerfis");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Usuario", b =>
                 {
                     b.Property<int>("Id")
@@ -494,15 +567,13 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Email")
+                    b.Property<string>("EmailLogin")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<int>("PessoaId")
+                        .HasColumnType("int");
 
                     b.Property<string>("SenhaHash")
                         .IsRequired()
@@ -517,7 +588,10 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Email")
+                    b.HasIndex("EmailLogin")
+                        .IsUnique();
+
+                    b.HasIndex("PessoaId")
                         .IsUnique();
 
                     b.ToTable("Usuarios");
@@ -537,25 +611,16 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<DateTime>("DataVisita")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Email")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<string>("Observacoes")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("Telefone")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<int>("PessoaId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PessoaId");
 
                     b.ToTable("Visitantes");
                 });
@@ -574,28 +639,19 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<DateTime>("DataCadastro")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Email")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<int>("EquipeId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("WhatsApp")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<int>("PessoaId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CargoId");
 
                     b.HasIndex("EquipeId");
+
+                    b.HasIndex("PessoaId");
 
                     b.ToTable("Voluntarios");
                 });
@@ -658,6 +714,39 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("CategoriaNoticia");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.PessoaPerfil", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Pessoa", "Pessoa")
+                        .WithMany("Perfis")
+                        .HasForeignKey("PessoaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Pessoa");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Usuario", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Pessoa", "Pessoa")
+                        .WithOne("Usuario")
+                        .HasForeignKey("SistemaIgreja.Domain.Entities.Usuario", "PessoaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Pessoa");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Visitante", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Pessoa", "Pessoa")
+                        .WithMany("Visitantes")
+                        .HasForeignKey("PessoaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Pessoa");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Voluntario", b =>
                 {
                     b.HasOne("SistemaIgreja.Domain.Entities.Cargo", "Cargo")
@@ -672,9 +761,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Pessoa", "Pessoa")
+                        .WithMany("Voluntarios")
+                        .HasForeignKey("PessoaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Cargo");
 
                     b.Navigation("Equipe");
+
+                    b.Navigation("Pessoa");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Cargo", b =>
@@ -705,6 +802,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Evento", b =>
                 {
                     b.Navigation("Inscricoes");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Pessoa", b =>
+                {
+                    b.Navigation("Perfis");
+
+                    b.Navigation("Usuario");
+
+                    b.Navigation("Visitantes");
+
+                    b.Navigation("Voluntarios");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Visitante", b =>

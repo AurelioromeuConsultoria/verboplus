@@ -22,7 +22,8 @@ public class MensagemAgendadaServiceTests
     [Fact]
     public async Task AgendarMensagensParaVisitanteAsync_CriaUmaPorConfiguracaoAtiva()
     {
-        var visitante = new Visitante { Id = 10, Nome = "Maria", Telefone = "111", DataVisita = new DateTime(2025, 1, 1) };
+        var pessoa = new Pessoa { Id = 1, Nome = "Maria", Telefone = "111", TipoPessoa = TipoPessoa.Adulto, Ativo = true, DataCriacao = DateTime.UtcNow };
+        var visitante = new Visitante { Id = 10, PessoaId = 1, Pessoa = pessoa, DataVisita = new DateTime(2025, 1, 1), DataCadastro = DateTime.UtcNow };
         _visitRepoMock.Setup(r => r.GetByIdAsync(10)).ReturnsAsync(visitante);
         _cfgRepoMock.Setup(r => r.GetAtivasAsync()).ReturnsAsync(new List<ConfiguracaoMensagem>
         {

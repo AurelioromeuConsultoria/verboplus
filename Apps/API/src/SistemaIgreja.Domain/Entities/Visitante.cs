@@ -7,21 +7,16 @@ public class Visitante
     public int Id { get; set; }
     
     [Required]
-    [MaxLength(100)]
-    public string Nome { get; set; } = string.Empty;
+    public int PessoaId { get; set; }
+    public virtual Pessoa Pessoa { get; set; } = null!;
     
     [Required]
-    [MaxLength(20)]
-    public string Telefone { get; set; } = string.Empty;
-    
     public DateTime DataVisita { get; set; }
-    
-    [MaxLength(100)]
-    public string? Email { get; set; }
     
     [MaxLength(500)]
     public string? Observacoes { get; set; }
     
+    [Required]
     public DateTime DataCadastro { get; set; } = DateTime.Now;
     
     // Relacionamento com mensagens agendadas

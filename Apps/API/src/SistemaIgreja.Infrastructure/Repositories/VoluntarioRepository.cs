@@ -17,15 +17,17 @@ public class VoluntarioRepository : IVoluntarioRepository
     public async Task<IEnumerable<Voluntario>> GetAllAsync()
     {
         return await _context.Set<Voluntario>()
+            .Include(v => v.Pessoa)
             .Include(v => v.Equipe)
             .Include(v => v.Cargo)
-            .OrderBy(v => v.Nome)
+            .OrderBy(v => v.Pessoa.Nome)
             .ToListAsync();
     }
 
     public async Task<Voluntario?> GetByIdAsync(int id)
     {
         return await _context.Set<Voluntario>()
+            .Include(v => v.Pessoa)
             .Include(v => v.Equipe)
             .Include(v => v.Cargo)
             .FirstOrDefaultAsync(v => v.Id == id);

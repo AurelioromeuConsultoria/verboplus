@@ -18,7 +18,10 @@ builder.Services.AddDbContext<SistemaIgrejaDbContext>(options =>
 
 
 // Repositórios
+builder.Services.AddScoped<IPessoaRepository, PessoaRepository>();
+builder.Services.AddScoped<IPessoaPerfilRepository, PessoaPerfilRepository>();
 builder.Services.AddScoped<IVisitanteRepository, VisitanteRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IConfiguracaoMensagemRepository, ConfiguracaoMensagemRepository>();
 builder.Services.AddScoped<IMensagemAgendadaRepository, MensagemAgendadaRepository>();
 // Novos repositórios
@@ -36,6 +39,8 @@ builder.Services.AddScoped<ICategoriaMidiaRepository, CategoriaMidiaRepository>(
 builder.Services.AddScoped<IGaleriaFotoRepository, GaleriaFotoRepository>();
 
 // Serviços
+builder.Services.AddScoped<IPessoaService, PessoaService>();
+builder.Services.AddScoped<IPessoaPerfilService, PessoaPerfilService>();
 builder.Services.AddScoped<IVisitanteService, VisitanteService>();
 builder.Services.AddScoped<IConfiguracaoMensagemService, ConfiguracaoMensagemService>();
 builder.Services.AddScoped<IMensagemAgendadaService, MensagemAgendadaService>();

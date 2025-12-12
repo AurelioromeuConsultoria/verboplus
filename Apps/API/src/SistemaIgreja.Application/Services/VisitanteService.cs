@@ -8,20 +8,33 @@ public interface IVisitanteService
 {
     Task<IEnumerable<VisitanteDto>> GetAllAsync();
     Task<VisitanteDto?> GetByIdAsync(int id);
-    Task<VisitanteDto> CreateAsync(CriarVisitanteDto dto);
+    Task<VisitanteResponse> CreateVisitanteAsync(CreateVisitanteRequest request);
+    Task<VisitanteDto> CreateAsync(CriarVisitanteDto dto); // Método legado mantido
     Task<VisitanteDto> UpdateAsync(int id, AtualizarVisitanteDto dto);
     Task DeleteAsync(int id);
+    Task<IEnumerable<VisitanteDto>> GetVisitantesPorPessoaAsync(int pessoaId);
 }
 
 public class VisitanteService : IVisitanteService
 {
     private readonly IVisitanteRepository _visitanteRepository;
     private readonly IMensagemAgendadaService _mensagemService;
+    private readonly IPessoaRepository _pessoaRepository;
+    private readonly IPessoaPerfilRepository _pessoaPerfilRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public VisitanteService(IVisitanteRepository visitanteRepository, IMensagemAgendadaService mensagemService)
+    public VisitanteService(
+        IVisitanteRepository visitanteRepository,
+        IMensagemAgendadaService mensagemService,
+        IPessoaRepository pessoaRepository,
+        IPessoaPerfilRepository pessoaPerfilRepository,
+        IUnitOfWork unitOfWork)
     {
         _visitanteRepository = visitanteRepository;
         _mensagemService = mensagemService;
+        _pessoaRepository = pessoaRepository;
+        _pessoaPerfilRepository = pessoaPerfilRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<IEnumerable<VisitanteDto>> GetAllAsync()
@@ -33,27 +46,264 @@ public class VisitanteService : IVisitanteService
     public async Task<VisitanteDto?> GetByIdAsync(int id)
     {
         var visitante = await _visitanteRepository.GetByIdAsync(id);
-        return visitante != null ? MapToDto(visitante) : null;
+        if (visitante == null) return null;
+        
+        // Garantir que perfis estão carregados
+        if (visitante.Pessoa != null && (visitante.Pessoa.Perfis == null || !visitante.Pessoa.Perfis.Any()))
+        {
+            var perfis = await _pessoaPerfilRepository.GetPerfisPorPessoaAsync(visitante.PessoaId);
+            visitante.Pessoa.Perfis = perfis.ToList();
+        }
+        
+        return MapToDto(visitante);
     }
 
+    public async Task<IEnumerable<VisitanteDto>> GetVisitantesPorPessoaAsync(int pessoaId)
+    {
+        var visitantes = await _visitanteRepository.GetVisitantesPorPessoaAsync(pessoaId);
+        return visitantes.Select(MapToDto);
+    }
+
+    /// <summary>
+    /// Cria um visitante seguindo o fluxo completo de deduplicação de Pessoa
+    /// </summary>
+    public async Task<VisitanteResponse> CreateVisitanteAsync(CreateVisitanteRequest request)
+    {
+        // Validações
+        if (string.IsNullOrWhiteSpace(request.Nome))
+            throw new ArgumentException("Nome é obrigatório");
+
+        if (!string.IsNullOrEmpty(request.Email) && !IsValidEmail(request.Email))
+            throw new ArgumentException("Email inválido");
+
+        // Usar transação para garantir atomicidade
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            // 1. Deduplicação de Pessoa
+            Pessoa? pessoa = await BuscarPessoaExistenteAsync(request);
+
+            // 2. Criar ou atualizar Pessoa
+            if (pessoa == null)
+            {
+                pessoa = new Pessoa
+                {
+                    Nome = request.Nome,
+                    Email = NormalizarEmail(request.Email),
+                    Telefone = NormalizarTelefone(request.Telefone),
+                    WhatsApp = NormalizarTelefone(request.WhatsApp),
+                    DataNascimento = request.DataNascimento,
+                    TipoPessoa = TipoPessoa.Adulto,
+                    Ativo = true,
+                    DataCriacao = DateTime.UtcNow
+                };
+                pessoa = await _pessoaRepository.CreateWithoutSaveAsync(pessoa);
+            }
+            else
+            {
+                // Atualizar apenas campos vazios (sem sobrescrever dados existentes)
+                bool atualizado = false;
+                if (string.IsNullOrWhiteSpace(pessoa.Nome) && !string.IsNullOrWhiteSpace(request.Nome))
+                {
+                    pessoa.Nome = request.Nome;
+                    atualizado = true;
+                }
+                if (string.IsNullOrWhiteSpace(pessoa.Email) && !string.IsNullOrWhiteSpace(request.Email))
+                {
+                    pessoa.Email = NormalizarEmail(request.Email);
+                    atualizado = true;
+                }
+                if (string.IsNullOrWhiteSpace(pessoa.Telefone) && !string.IsNullOrWhiteSpace(request.Telefone))
+                {
+                    pessoa.Telefone = NormalizarTelefone(request.Telefone);
+                    atualizado = true;
+                }
+                if (string.IsNullOrWhiteSpace(pessoa.WhatsApp) && !string.IsNullOrWhiteSpace(request.WhatsApp))
+                {
+                    pessoa.WhatsApp = NormalizarTelefone(request.WhatsApp);
+                    atualizado = true;
+                }
+                if (pessoa.DataNascimento == null && request.DataNascimento.HasValue)
+                {
+                    pessoa.DataNascimento = request.DataNascimento;
+                    atualizado = true;
+                }
+
+                if (atualizado)
+                {
+                    await _pessoaRepository.UpdateWithoutSaveAsync(pessoa);
+                }
+            }
+
+            // 3. Garantir perfil Visitante
+            var perfilAtivo = await _pessoaPerfilRepository.GetPerfilAtivoAsync(pessoa.Id, PerfilPessoa.Visitante);
+            if (perfilAtivo == null)
+            {
+                var novoPerfil = new PessoaPerfil
+                {
+                    PessoaId = pessoa.Id,
+                    Perfil = PerfilPessoa.Visitante,
+                    DataInicio = DateTime.UtcNow,
+                    DataFim = null
+                };
+                await _pessoaPerfilRepository.CreateWithoutSaveAsync(novoPerfil);
+            }
+
+            // 4. Criar registro de Visitante (histórico de visita)
+            var visitante = new Visitante
+            {
+                PessoaId = pessoa.Id,
+                DataVisita = request.DataVisita ?? DateTime.UtcNow,
+                Observacoes = request.Observacoes,
+                DataCadastro = DateTime.UtcNow
+            };
+
+            var visitanteCriado = await _visitanteRepository.CreateWithoutSaveAsync(visitante);
+
+            // Salvar todas as mudanças e commit da transação
+            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
+
+            // 5. Agendar mensagens automaticamente (fora da transação)
+            try
+            {
+                await _mensagemService.AgendarMensagensParaVisitanteAsync(visitanteCriado.Id);
+            }
+            catch (Exception ex)
+            {
+                // Log do erro mas não falha a criação do visitante
+                // Em produção, usar ILogger
+                Console.WriteLine($"Erro ao agendar mensagens: {ex.Message}");
+            }
+
+            // 6. Retornar resposta consolidada
+            return await MapToResponseAsync(visitanteCriado);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Busca Pessoa existente seguindo ordem: Email -> WhatsApp -> Telefone
+    /// </summary>
+    private async Task<Pessoa?> BuscarPessoaExistenteAsync(CreateVisitanteRequest request)
+    {
+        // 1. Buscar por Email (se fornecido)
+        if (!string.IsNullOrWhiteSpace(request.Email))
+        {
+            var pessoa = await _pessoaRepository.GetByEmailAsync(request.Email);
+            if (pessoa != null) return pessoa;
+        }
+
+        // 2. Buscar por WhatsApp normalizado (se fornecido)
+        if (!string.IsNullOrWhiteSpace(request.WhatsApp))
+        {
+            var whatsAppNormalizado = NormalizarTelefone(request.WhatsApp);
+            if (!string.IsNullOrWhiteSpace(whatsAppNormalizado))
+            {
+                var pessoa = await _pessoaRepository.GetByWhatsAppAsync(whatsAppNormalizado);
+                if (pessoa != null) return pessoa;
+            }
+        }
+
+        // 3. Buscar por Telefone normalizado (se fornecido)
+        if (!string.IsNullOrWhiteSpace(request.Telefone))
+        {
+            var telefoneNormalizado = NormalizarTelefone(request.Telefone);
+            if (!string.IsNullOrWhiteSpace(telefoneNormalizado))
+            {
+                var pessoa = await _pessoaRepository.GetByTelefoneAsync(telefoneNormalizado);
+                if (pessoa != null) return pessoa;
+            }
+        }
+
+        return null;
+    }
+
+    private static string NormalizarTelefone(string? telefone)
+    {
+        if (string.IsNullOrWhiteSpace(telefone))
+            return string.Empty;
+
+        // Remove tudo exceto dígitos
+        return new string(telefone.Where(char.IsDigit).ToArray());
+    }
+
+    private static string? NormalizarEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return null;
+
+        return email.Trim().ToLowerInvariant();
+    }
+
+    private static bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task<VisitanteResponse> MapToResponseAsync(Visitante visitante)
+    {
+        // Recarregar com relacionamentos
+        var visitanteCompleto = await _visitanteRepository.GetByIdAsync(visitante.Id);
+        if (visitanteCompleto == null)
+            throw new InvalidOperationException("Visitante não encontrado após criação");
+
+        var perfis = await _pessoaPerfilRepository.GetPerfisPorPessoaAsync(visitanteCompleto.PessoaId);
+        var perfisNomes = perfis.Select(p => p.Perfil.ToString()).ToList();
+
+        return new VisitanteResponse
+        {
+            VisitanteId = visitanteCompleto.Id,
+            PessoaId = visitanteCompleto.PessoaId,
+            Nome = visitanteCompleto.Pessoa?.Nome ?? string.Empty,
+            Email = visitanteCompleto.Pessoa?.Email,
+            Telefone = visitanteCompleto.Pessoa?.Telefone,
+            WhatsApp = visitanteCompleto.Pessoa?.WhatsApp,
+            DataVisita = visitanteCompleto.DataVisita,
+            Observacoes = visitanteCompleto.Observacoes,
+            Perfis = perfisNomes
+        };
+    }
+
+    // Método legado mantido para compatibilidade
     public async Task<VisitanteDto> CreateAsync(CriarVisitanteDto dto)
     {
-        var visitante = new Visitante
+        var request = new CreateVisitanteRequest
         {
             Nome = dto.Nome,
-            Telefone = dto.Telefone,
-            DataVisita = dto.DataVisita,
             Email = dto.Email,
-            Observacoes = dto.Observacoes,
-            DataCadastro = DateTime.Now
+            Telefone = dto.Telefone,
+            WhatsApp = dto.WhatsApp,
+            DataNascimento = dto.DataNascimento,
+            DataVisita = dto.DataVisita,
+            Observacoes = dto.Observacoes
         };
 
-        var visitanteCriado = await _visitanteRepository.CreateAsync(visitante);
-        
-        // Agendar mensagens automaticamente
-        await _mensagemService.AgendarMensagensParaVisitanteAsync(visitanteCriado.Id);
-
-        return MapToDto(visitanteCriado);
+        var response = await CreateVisitanteAsync(request);
+        return new VisitanteDto
+        {
+            Id = response.VisitanteId,
+            PessoaId = response.PessoaId,
+            Nome = response.Nome,
+            Email = response.Email,
+            Telefone = response.Telefone,
+            WhatsApp = response.WhatsApp,
+            DataVisita = response.DataVisita,
+            Observacoes = response.Observacoes,
+            DataCadastro = DateTime.UtcNow
+        };
     }
 
     public async Task<VisitanteDto> UpdateAsync(int id, AtualizarVisitanteDto dto)
@@ -62,10 +312,8 @@ public class VisitanteService : IVisitanteService
         if (visitante == null)
             throw new ArgumentException("Visitante não encontrado");
 
-        visitante.Nome = dto.Nome;
-        visitante.Telefone = dto.Telefone;
+        // Atualizar apenas dados específicos do visitante (não altera Pessoa)
         visitante.DataVisita = dto.DataVisita;
-        visitante.Email = dto.Email;
         visitante.Observacoes = dto.Observacoes;
 
         var visitanteAtualizado = await _visitanteRepository.UpdateAsync(visitante);
@@ -82,13 +330,14 @@ public class VisitanteService : IVisitanteService
         return new VisitanteDto
         {
             Id = visitante.Id,
-            Nome = visitante.Nome,
-            Telefone = visitante.Telefone,
+            PessoaId = visitante.PessoaId,
+            Nome = visitante.Pessoa?.Nome ?? string.Empty,
+            Telefone = visitante.Pessoa?.Telefone,
+            WhatsApp = visitante.Pessoa?.WhatsApp,
+            Email = visitante.Pessoa?.Email,
             DataVisita = visitante.DataVisita,
-            Email = visitante.Email,
             Observacoes = visitante.Observacoes,
             DataCadastro = visitante.DataCadastro
         };
     }
 }
-

@@ -15,6 +15,9 @@ public class VisitantesController : ControllerBase
         _visitanteService = visitanteService;
     }
 
+    /// <summary>
+    /// Lista todos os visitantes com dados da Pessoa
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<VisitanteDto>>> GetAll()
     {
@@ -22,6 +25,9 @@ public class VisitantesController : ControllerBase
         return Ok(visitantes);
     }
 
+    /// <summary>
+    /// Obtém detalhe de um visitante específico, incluindo dados da Pessoa e perfis
+    /// </summary>
     [HttpGet("{id}")]
     public async Task<ActionResult<VisitanteDto>> GetById(int id)
     {
@@ -32,20 +38,40 @@ public class VisitantesController : ControllerBase
         return Ok(visitante);
     }
 
+    /// <summary>
+    /// Lista todas as visitas de uma Pessoa específica
+    /// </summary>
+    [HttpGet("pessoa/{pessoaId}")]
+    public async Task<ActionResult<IEnumerable<VisitanteDto>>> GetByPessoa(int pessoaId)
+    {
+        var visitantes = await _visitanteService.GetVisitantesPorPessoaAsync(pessoaId);
+        return Ok(visitantes);
+    }
+
+    /// <summary>
+    /// Cria um novo visitante seguindo fluxo de deduplicação de Pessoa
+    /// </summary>
     [HttpPost]
-    public async Task<ActionResult<VisitanteDto>> Create(CriarVisitanteDto dto)
+    public async Task<ActionResult<VisitanteResponse>> Create(CreateVisitanteRequest request)
     {
         try
         {
-            var visitante = await _visitanteService.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = visitante.Id }, visitante);
+            var visitante = await _visitanteService.CreateVisitanteAsync(request);
+            return CreatedAtAction(nameof(GetById), new { id = visitante.VisitanteId }, visitante);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {
-            return BadRequest(ex.Message);
+            return StatusCode(500, new { message = "Erro ao criar visitante", error = ex.Message });
         }
     }
 
+    /// <summary>
+    /// Atualiza observações e data de visita (não altera dados da Pessoa)
+    /// </summary>
     [HttpPut("{id}")]
     public async Task<ActionResult<VisitanteDto>> Update(int id, AtualizarVisitanteDto dto)
     {
@@ -60,10 +86,13 @@ public class VisitantesController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ex.Message);
+            return BadRequest(new { message = ex.Message });
         }
     }
 
+    /// <summary>
+    /// Remove um registro de visitante
+    /// </summary>
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -74,8 +103,7 @@ public class VisitantesController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ex.Message);
+            return BadRequest(new { message = ex.Message });
         }
     }
 }
-

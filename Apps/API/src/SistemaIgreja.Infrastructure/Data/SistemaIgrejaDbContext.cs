@@ -9,6 +9,8 @@ public class SistemaIgrejaDbContext : DbContext
     {
     }
 
+    public DbSet<Pessoa> Pessoas { get; set; }
+    public DbSet<PessoaPerfil> PessoasPerfis { get; set; }
     public DbSet<Visitante> Visitantes { get; set; }
     public DbSet<ConfiguracaoMensagem> ConfiguracoesMensagens { get; set; }
     public DbSet<MensagemAgendada> MensagensAgendadas { get; set; }
@@ -29,16 +31,49 @@ public class SistemaIgrejaDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        // Configuração da entidade Pessoa
+        modelBuilder.Entity<Pessoa>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Email).HasMaxLength(100);
+            entity.Property(e => e.Telefone).HasMaxLength(20);
+            entity.Property(e => e.WhatsApp).HasMaxLength(20);
+            entity.Property(e => e.TipoPessoa).IsRequired();
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            // Índice único para email (quando não nulo)
+            entity.HasIndex(e => e.Email).IsUnique().HasFilter("[Email] IS NOT NULL");
+        });
+
+        // Configuração da entidade PessoaPerfil
+        modelBuilder.Entity<PessoaPerfil>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PessoaId).IsRequired();
+            entity.Property(e => e.Perfil).IsRequired();
+            entity.Property(e => e.DataInicio).IsRequired();
+
+            entity.HasOne(p => p.Pessoa)
+                  .WithMany(p => p.Perfis)
+                  .HasForeignKey(p => p.PessoaId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
         // Configuração da entidade Visitante
         modelBuilder.Entity<Visitante>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.Telefone).IsRequired().HasMaxLength(20);
-            entity.Property(e => e.Email).HasMaxLength(100);
+            entity.Property(e => e.PessoaId).IsRequired();
             entity.Property(e => e.Observacoes).HasMaxLength(500);
             entity.Property(e => e.DataVisita).IsRequired();
             entity.Property(e => e.DataCadastro).IsRequired();
+
+            entity.HasOne(v => v.Pessoa)
+                  .WithMany(p => p.Visitantes)
+                  .HasForeignKey(v => v.PessoaId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade ConfiguracaoMensagem
@@ -97,10 +132,13 @@ public class SistemaIgrejaDbContext : DbContext
         modelBuilder.Entity<Voluntario>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.WhatsApp).IsRequired().HasMaxLength(20);
-            entity.Property(e => e.Email).HasMaxLength(100);
+            entity.Property(e => e.PessoaId).IsRequired();
             entity.Property(e => e.DataCadastro).IsRequired();
+
+            entity.HasOne(v => v.Pessoa)
+                  .WithMany(p => p.Voluntarios)
+                  .HasForeignKey(v => v.PessoaId)
+                  .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(v => v.Equipe)
                   .WithMany(e => e.Voluntarios)
@@ -201,15 +239,20 @@ public class SistemaIgrejaDbContext : DbContext
         modelBuilder.Entity<Usuario>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.Email).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.PessoaId).IsRequired();
+            entity.Property(e => e.EmailLogin).IsRequired().HasMaxLength(100);
             entity.Property(e => e.SenhaHash).IsRequired().HasMaxLength(255);
             entity.Property(e => e.TipoUsuario).IsRequired();
             entity.Property(e => e.Ativo).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
 
-            // Índice único para email
-            entity.HasIndex(e => e.Email).IsUnique();
+            entity.HasOne(u => u.Pessoa)
+                  .WithOne(p => p.Usuario)
+                  .HasForeignKey<Usuario>(u => u.PessoaId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // Índice único para EmailLogin
+            entity.HasIndex(e => e.EmailLogin).IsUnique();
         });
 
         // Configuração da entidade CategoriaMidia

@@ -386,8 +386,8 @@ FodyWeavers.xsd
 *.sqlite3
 
 # Arquivos de configuração sensíveis (descomente se necessário)
-# appsettings.Development.json
-# appsettings.Production.json
+appsettings.Development.json
+appsettings.Production.json
 
 # Arquivos de log
 *.log
@@ -395,6 +395,12 @@ FodyWeavers.xsd
 # Arquivos temporários
 *.tmp
 *.temp
+
+# Diretório de uploads (arquivos gerados pelo sistema)
+src/SistemaIgreja.API/uploads/
+
+
+
 
 
 

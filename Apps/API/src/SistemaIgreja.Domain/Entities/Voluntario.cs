@@ -7,21 +7,17 @@ public class Voluntario
     public int Id { get; set; }
 
     [Required]
-    [MaxLength(100)]
-    public string Nome { get; set; } = string.Empty;
+    public int PessoaId { get; set; }
+    public virtual Pessoa Pessoa { get; set; } = null!;
 
     [Required]
-    [MaxLength(20)]
-    public string WhatsApp { get; set; } = string.Empty;
-
-    [MaxLength(100)]
-    public string? Email { get; set; }
-
     public int EquipeId { get; set; }
     public virtual Equipe Equipe { get; set; } = null!;
 
+    [Required]
     public int CargoId { get; set; }
     public virtual Cargo Cargo { get; set; } = null!;
 
+    [Required]
     public DateTime DataCadastro { get; set; } = DateTime.Now;
 }

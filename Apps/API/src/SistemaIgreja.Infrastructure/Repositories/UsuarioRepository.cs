@@ -17,20 +17,23 @@ public class UsuarioRepository : IUsuarioRepository
     public async Task<IEnumerable<Usuario>> GetAllAsync()
     {
         return await _context.Set<Usuario>()
-            .OrderBy(u => u.Nome)
+            .Include(u => u.Pessoa)
+            .OrderBy(u => u.Pessoa.Nome)
             .ToListAsync();
     }
 
     public async Task<Usuario?> GetByIdAsync(int id)
     {
         return await _context.Set<Usuario>()
+            .Include(u => u.Pessoa)
             .FirstOrDefaultAsync(u => u.Id == id);
     }
 
     public async Task<Usuario?> GetByEmailAsync(string email)
     {
         return await _context.Set<Usuario>()
-            .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
+            .Include(u => u.Pessoa)
+            .FirstOrDefaultAsync(u => u.EmailLogin.ToLower() == email.ToLower());
     }
 
     public async Task<Usuario> CreateAsync(Usuario usuario)

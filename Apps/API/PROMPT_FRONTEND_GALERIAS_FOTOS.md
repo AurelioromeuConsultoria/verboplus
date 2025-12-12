@@ -678,3 +678,6 @@ async function definirDestaque(galeriaId: number, nomeArquivo: string): Promise<
 
 **Última atualização:** 2025-01-28
 
+
+
+

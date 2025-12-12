@@ -114,3 +114,6 @@ Agora que já existe um usuário, o `POST /api/usuarios` exige autenticação:
 - Use refresh token para renovar sem fazer login novamente
 
 
+
+
+

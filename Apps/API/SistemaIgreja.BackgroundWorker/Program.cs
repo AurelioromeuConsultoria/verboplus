@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -17,7 +17,10 @@ var host = Host.CreateDefaultBuilder(args)
           opt.UseSqlServer(ctx.Configuration.GetConnectionString("DefaultConnection")));
 
         // Repositórios
+        services.AddScoped<IPessoaRepository, PessoaRepository>();
+        services.AddScoped<IPessoaPerfilRepository, PessoaPerfilRepository>();
         services.AddScoped<IVisitanteRepository, VisitanteRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IConfiguracaoMensagemRepository, ConfiguracaoMensagemRepository>();
         services.AddScoped<IMensagemAgendadaRepository, MensagemAgendadaRepository>();
         // Novos repositórios

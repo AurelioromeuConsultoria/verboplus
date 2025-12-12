@@ -16,10 +16,12 @@ public interface IUsuarioService
 public class UsuarioService : IUsuarioService
 {
     private readonly IUsuarioRepository _repository;
+    private readonly IPessoaRepository _pessoaRepository;
 
-    public UsuarioService(IUsuarioRepository repository)
+    public UsuarioService(IUsuarioRepository repository, IPessoaRepository pessoaRepository)
     {
         _repository = repository;
+        _pessoaRepository = pessoaRepository;
     }
 
     public async Task<IEnumerable<UsuarioDto>> GetAllAsync()
@@ -36,14 +38,40 @@ public class UsuarioService : IUsuarioService
 
     public async Task<UsuarioDto> CreateAsync(CriarUsuarioDto dto)
     {
-        // Verificar se email já existe
-        var existe = await _repository.GetByEmailAsync(dto.Email);
-        if (existe != null) throw new ArgumentException("Email já cadastrado");
+        // Verificar se EmailLogin já existe
+        var existeUsuario = await _repository.GetByEmailAsync(dto.EmailLogin);
+        if (existeUsuario != null) throw new ArgumentException("Email de login já cadastrado");
 
+        // Verificar se email da pessoa já existe (se fornecido)
+        Pessoa? pessoa = null;
+        if (!string.IsNullOrEmpty(dto.Email))
+        {
+            pessoa = await _pessoaRepository.GetByEmailAsync(dto.Email);
+            if (pessoa != null) throw new ArgumentException("Email já cadastrado para outra pessoa");
+        }
+
+        // Criar ou usar pessoa existente
+        if (pessoa == null)
+        {
+            pessoa = new Pessoa
+            {
+                Nome = dto.Nome,
+                Email = dto.Email,
+                Telefone = dto.Telefone,
+                WhatsApp = dto.WhatsApp,
+                DataNascimento = dto.DataNascimento,
+                TipoPessoa = TipoPessoa.Adulto,
+                Ativo = true,
+                DataCriacao = DateTime.Now
+            };
+            pessoa = await _pessoaRepository.CreateAsync(pessoa);
+        }
+
+        // Criar usuário
         var entity = new Usuario
         {
-            Nome = dto.Nome,
-            Email = dto.Email,
+            PessoaId = pessoa.Id,
+            EmailLogin = dto.EmailLogin,
             SenhaHash = BCrypt.Net.BCrypt.HashPassword(dto.Senha),
             TipoUsuario = dto.TipoUsuario,
             Ativo = true,
@@ -59,12 +87,30 @@ public class UsuarioService : IUsuarioService
         var entity = await _repository.GetByIdAsync(id);
         if (entity == null) throw new ArgumentException("Usuário não encontrado");
 
-        // Verificar se email já existe em outro usuário
-        var existe = await _repository.GetByEmailAsync(dto.Email);
-        if (existe != null && existe.Id != id) throw new ArgumentException("Email já cadastrado");
+        // Verificar se EmailLogin já existe em outro usuário
+        var existeUsuario = await _repository.GetByEmailAsync(dto.EmailLogin);
+        if (existeUsuario != null && existeUsuario.Id != id) throw new ArgumentException("Email de login já cadastrado");
 
-        entity.Nome = dto.Nome;
-        entity.Email = dto.Email;
+        // Atualizar pessoa
+        var pessoa = await _pessoaRepository.GetByIdAsync(entity.PessoaId);
+        if (pessoa == null) throw new ArgumentException("Pessoa não encontrada");
+
+        // Verificar se email da pessoa já existe em outra pessoa (se fornecido)
+        if (!string.IsNullOrEmpty(dto.Email) && dto.Email != pessoa.Email)
+        {
+            var existePessoa = await _pessoaRepository.GetByEmailAsync(dto.Email);
+            if (existePessoa != null && existePessoa.Id != pessoa.Id) throw new ArgumentException("Email já cadastrado para outra pessoa");
+        }
+
+        pessoa.Nome = dto.Nome;
+        pessoa.Email = dto.Email;
+        pessoa.Telefone = dto.Telefone;
+        pessoa.WhatsApp = dto.WhatsApp;
+        pessoa.DataNascimento = dto.DataNascimento;
+        await _pessoaRepository.UpdateAsync(pessoa);
+
+        // Atualizar usuário
+        entity.EmailLogin = dto.EmailLogin;
         entity.TipoUsuario = dto.TipoUsuario;
         entity.Ativo = dto.Ativo;
 
@@ -93,8 +139,10 @@ public class UsuarioService : IUsuarioService
         return new UsuarioDto
         {
             Id = u.Id,
-            Nome = u.Nome,
-            Email = u.Email,
+            PessoaId = u.PessoaId,
+            Nome = u.Pessoa?.Nome ?? string.Empty,
+            Email = u.Pessoa?.Email ?? string.Empty,
+            EmailLogin = u.EmailLogin,
             TipoUsuario = u.TipoUsuario,
             TipoUsuarioDescricao = GetTipoUsuarioDescricao(u.TipoUsuario),
             Ativo = u.Ativo,
@@ -103,6 +151,9 @@ public class UsuarioService : IUsuarioService
         };
     }
 }
+
+
+
 
 
 

@@ -69,7 +69,7 @@ public class MensagemAgendadaService : IMensagemAgendadaService
             var dataEnvio = visitante.DataVisita.AddDays(configuracao.DiasAposVisita);
             var dataEnvioCompleta = dataEnvio.Date + configuracao.HorarioEnvio;
 
-            var textoFinal = configuracao.TextoMensagem.Replace("{Nome}", visitante.Nome);
+            var textoFinal = configuracao.TextoMensagem.Replace("{Nome}", visitante.Pessoa?.Nome ?? "");
 
             var mensagemAgendada = new MensagemAgendada
             {
@@ -129,8 +129,8 @@ public class MensagemAgendadaService : IMensagemAgendadaService
         {
             Id = mensagem.Id,
             VisitanteId = mensagem.VisitanteId,
-            NomeVisitante = mensagem.Visitante?.Nome ?? "",
-            TelefoneVisitante = mensagem.Visitante?.Telefone ?? "",
+            NomeVisitante = mensagem.Visitante?.Pessoa?.Nome ?? "",
+            TelefoneVisitante = mensagem.Visitante?.Pessoa?.Telefone ?? "",
             ConfiguracaoMensagemId = mensagem.ConfiguracaoMensagemId,
             NomeConfiguracao = mensagem.ConfiguracaoMensagem?.Nome ?? "",
             DataAgendamento = mensagem.DataAgendamento,

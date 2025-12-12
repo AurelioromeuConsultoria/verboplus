@@ -7,12 +7,12 @@ public class Usuario
     public int Id { get; set; }
 
     [Required]
-    [MaxLength(100)]
-    public string Nome { get; set; } = string.Empty;
+    public int PessoaId { get; set; }
+    public virtual Pessoa Pessoa { get; set; } = null!;
 
     [Required]
     [MaxLength(100)]
-    public string Email { get; set; } = string.Empty;
+    public string EmailLogin { get; set; } = string.Empty;
 
     [Required]
     [MaxLength(255)]
@@ -27,6 +27,9 @@ public class Usuario
     public DateTime DataCriacao { get; set; } = DateTime.Now;
     public DateTime? UltimoAcesso { get; set; }
 }
+
+
+
 
 
 

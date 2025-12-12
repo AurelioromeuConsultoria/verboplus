@@ -122,11 +122,14 @@ public class AuthService : IAuthService
         var issuer = _configuration["Jwt:Issuer"] ?? "SistemaIgreja";
         var audience = _configuration["Jwt:Audience"] ?? "SistemaIgreja";
 
+        var nome = usuario.Pessoa?.Nome ?? string.Empty;
+        var email = usuario.Pessoa?.Email ?? usuario.EmailLogin;
+
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-            new Claim(ClaimTypes.Name, usuario.Nome),
-            new Claim(ClaimTypes.Email, usuario.Email),
+            new Claim(ClaimTypes.Name, nome),
+            new Claim(ClaimTypes.Email, email),
             new Claim("TipoUsuario", usuario.TipoUsuario.ToString()),
             new Claim("TipoUsuarioId", ((int)usuario.TipoUsuario).ToString())
         };
@@ -160,8 +163,10 @@ public class AuthService : IAuthService
         return new UsuarioDto
         {
             Id = u.Id,
-            Nome = u.Nome,
-            Email = u.Email,
+            PessoaId = u.PessoaId,
+            Nome = u.Pessoa?.Nome ?? string.Empty,
+            Email = u.Pessoa?.Email ?? string.Empty,
+            EmailLogin = u.EmailLogin,
             TipoUsuario = u.TipoUsuario,
             TipoUsuarioDescricao = GetTipoUsuarioDescricao(u.TipoUsuario),
             Ativo = u.Ativo,

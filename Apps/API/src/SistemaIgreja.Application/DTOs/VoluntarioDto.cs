@@ -3,9 +3,11 @@ namespace SistemaIgreja.Application.DTOs;
 public class VoluntarioDto
 {
     public int Id { get; set; }
+    public int PessoaId { get; set; }
     public string Nome { get; set; } = string.Empty;
-    public string WhatsApp { get; set; } = string.Empty;
+    public string? WhatsApp { get; set; }
     public string? Email { get; set; }
+    public string? Telefone { get; set; }
     public int EquipeId { get; set; }
     public string NomeEquipe { get; set; } = string.Empty;
     public int CargoId { get; set; }
@@ -16,8 +18,10 @@ public class VoluntarioDto
 public class CriarVoluntarioDto
 {
     public string Nome { get; set; } = string.Empty;
-    public string WhatsApp { get; set; } = string.Empty;
+    public string? WhatsApp { get; set; }
     public string? Email { get; set; }
+    public string? Telefone { get; set; }
+    public DateTime? DataNascimento { get; set; }
     public int EquipeId { get; set; }
     public int CargoId { get; set; }
 }
@@ -25,8 +29,10 @@ public class CriarVoluntarioDto
 public class AtualizarVoluntarioDto
 {
     public string Nome { get; set; } = string.Empty;
-    public string WhatsApp { get; set; } = string.Empty;
+    public string? WhatsApp { get; set; }
     public string? Email { get; set; }
+    public string? Telefone { get; set; }
+    public DateTime? DataNascimento { get; set; }
     public int EquipeId { get; set; }
     public int CargoId { get; set; }
 }

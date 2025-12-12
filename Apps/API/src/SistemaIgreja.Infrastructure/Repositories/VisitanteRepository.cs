@@ -17,6 +17,8 @@ public class VisitanteRepository : IVisitanteRepository
     public async Task<IEnumerable<Visitante>> GetAllAsync()
     {
         return await _context.Visitantes
+            .Include(v => v.Pessoa)
+                .ThenInclude(p => p.Perfis)
             .OrderByDescending(v => v.DataCadastro)
             .ToListAsync();
     }
@@ -24,6 +26,8 @@ public class VisitanteRepository : IVisitanteRepository
     public async Task<Visitante?> GetByIdAsync(int id)
     {
         return await _context.Visitantes
+            .Include(v => v.Pessoa)
+                .ThenInclude(p => p.Perfis)
             .Include(v => v.MensagensAgendadas)
             .FirstOrDefaultAsync(v => v.Id == id);
     }
@@ -33,6 +37,12 @@ public class VisitanteRepository : IVisitanteRepository
         _context.Visitantes.Add(visitante);
         await _context.SaveChangesAsync();
         return visitante;
+    }
+
+    public Task<Visitante> CreateWithoutSaveAsync(Visitante visitante)
+    {
+        _context.Visitantes.Add(visitante);
+        return Task.FromResult(visitante);
     }
 
     public async Task<Visitante> UpdateAsync(Visitante visitante)
@@ -55,7 +65,17 @@ public class VisitanteRepository : IVisitanteRepository
     public async Task<IEnumerable<Visitante>> GetVisitantesPorPeriodoAsync(DateTime dataInicio, DateTime dataFim)
     {
         return await _context.Visitantes
+            .Include(v => v.Pessoa)
             .Where(v => v.DataVisita >= dataInicio && v.DataVisita <= dataFim)
+            .OrderByDescending(v => v.DataVisita)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Visitante>> GetVisitantesPorPessoaAsync(int pessoaId)
+    {
+        return await _context.Visitantes
+            .Include(v => v.Pessoa)
+            .Where(v => v.PessoaId == pessoaId)
             .OrderByDescending(v => v.DataVisita)
             .ToListAsync();
     }
