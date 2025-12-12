@@ -19,3 +19,4 @@ public class CategoriaMidia
     public virtual ICollection<GaleriaFoto> Galerias { get; set; } = new List<GaleriaFoto>();
 }
 
+

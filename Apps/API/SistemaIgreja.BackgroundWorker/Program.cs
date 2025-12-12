@@ -14,7 +14,7 @@ var host = Host.CreateDefaultBuilder(args)
     {
         // DbContext
         services.AddDbContext<SistemaIgrejaDbContext>(opt =>
-          opt.UseSqlite(ctx.Configuration.GetConnectionString("DefaultConnection")));
+          opt.UseSqlServer(ctx.Configuration.GetConnectionString("DefaultConnection")));
 
         // Repositórios
         services.AddScoped<IVisitanteRepository, VisitanteRepository>();
@@ -45,5 +45,6 @@ using (var scope = host.Services.CreateScope())
     var context = scope.ServiceProvider.GetRequiredService<SistemaIgrejaDbContext>();
     context.Database.Migrate();
 }
+
 
 await host.RunAsync();

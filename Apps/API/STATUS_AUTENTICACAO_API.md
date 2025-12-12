@@ -112,3 +112,4 @@ Proteger apenas endpoints de escrita (POST, PUT, DELETE), mantendo GETs público
 Quer que eu proteja os endpoints administrativos agora?
 
 
+

@@ -41,3 +41,4 @@ public class GaleriaFoto
     public DateTime DataCriacao { get; set; } = DateTime.Now;
 }
 
+

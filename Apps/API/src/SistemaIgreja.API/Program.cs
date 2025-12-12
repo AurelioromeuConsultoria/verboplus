@@ -14,7 +14,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddDbContext<SistemaIgrejaDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 
 // Repositórios
 builder.Services.AddScoped<IVisitanteRepository, VisitanteRepository>();
@@ -132,10 +133,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Garantir que a API sempre rode na porta 5000
-app.Urls.Clear();
-app.Urls.Add("http://localhost:5000");
-
 // Configure the HTTP request pipeline.
 // IMPORTANTE: UseCors deve vir ANTES de UseAuthentication, UseAuthorization e MapControllers
 app.UseCors();
@@ -168,10 +165,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Aplicar migrations automaticamente em desenvolvimento
-if (app.Environment.IsDevelopment())
+using (var scope = app.Services.CreateScope())
 {
-    using var scope = app.Services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<SistemaIgrejaDbContext>();
     context.Database.Migrate();
 }
