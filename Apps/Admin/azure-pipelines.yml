@@ -28,9 +28,7 @@ steps:
     key: 'pnpm | "$(Agent.OS)" | pnpm-lock.yaml'
     restoreKeys: |
       pnpm | "$(Agent.OS)"
-    path: |
-      $(PNPM_HOME)/store
-      node_modules
+    path: '$(PNPM_HOME)/store;node_modules'
   displayName: 'Cache pnpm dependencies'
 
 # 4) Instalar dependências
