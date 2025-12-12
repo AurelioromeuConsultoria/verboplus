@@ -21,7 +21,8 @@ import {
   Network,
   UserCog,
   Images,
-  Folder
+  Folder,
+  User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -44,6 +45,16 @@ const menuGroups = [
     title: 'Connect',
     icon: Network,
     items: [
+      {
+        title: 'Pessoas',
+        href: '/pessoas',
+        icon: Users,
+      },
+      {
+        title: 'Perfis',
+        href: '/perfis',
+        icon: User,
+      },
       {
         title: 'Visitantes',
         href: '/visitantes',

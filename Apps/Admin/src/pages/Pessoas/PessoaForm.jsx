@@ -5,148 +5,163 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
-import { visitantesApi } from '@/lib/api';
+import { pessoasApi } from '@/lib/api';
 import { toast } from 'sonner';
 
-export function VisitanteForm() {
+export function PessoaForm() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const isEditing = !!id;
+  const isEditing = Boolean(id);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
     nome: '',
+    email: '',
     telefone: '',
     whatsApp: '',
-    email: '',
     dataNascimento: '',
-    dataVisita: new Date().toISOString().split('T')[0],
-    observacoes: ''
+    tipoPessoa: 'Adulto',
+    ativo: true,
   });
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
 
-  const loadVisitante = async () => {
+  const loadPessoa = async () => {
     if (!isEditing) return;
 
     try {
       setLoading(true);
       setError(null);
-      const response = await visitantesApi.getById(id);
-      const visitante = response.data;
+      const response = await pessoasApi.getById(id);
+      const pessoa = response.data;
       
-      const pessoa = visitante.pessoa || {};
       setFormData({
         nome: pessoa.nome || '',
+        email: pessoa.email || '',
         telefone: pessoa.telefone || '',
         whatsApp: pessoa.whatsApp || '',
-        email: pessoa.email || '',
-        dataNascimento: pessoa.dataNascimento ? pessoa.dataNascimento.split('T')[0] : '',
-        dataVisita: visitante.dataVisita ? visitante.dataVisita.split('T')[0] : new Date().toISOString().split('T')[0],
-        observacoes: visitante.observacoes || ''
+        dataNascimento: pessoa.dataNascimento 
+          ? pessoa.dataNascimento.split('T')[0] 
+          : '',
+        tipoPessoa: pessoa.tipoPessoa || 'Adulto',
+        ativo: pessoa.ativo !== undefined ? pessoa.ativo : true,
       });
     } catch (err) {
-      setError('Erro ao carregar visitante');
-      console.error('Erro ao carregar visitante:', err);
+      setError('Erro ao carregar pessoa');
+      console.error('Erro ao carregar pessoa:', err);
+      toast.error('Erro ao carregar pessoa');
     } finally {
       setLoading(false);
     }
   };
 
-  const normalizePhone = (phone) => {
-    return phone ? phone.replace(/\D/g, '') : null;
+  useEffect(() => {
+    loadPessoa();
+  }, [id]);
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!formData.nome || !formData.dataVisita) {
-      toast.error('Nome e Data da Visita são obrigatórios');
-      return;
+  const normalizePhone = (phone) => {
+    return phone.replace(/\D/g, '');
+  };
+
+  const handlePhoneChange = (name, value) => {
+    const normalized = normalizePhone(value);
+    setFormData((prev) => ({
+      ...prev,
+      [name]: normalized,
+    }));
+  };
+
+  const validateForm = () => {
+    if (!formData.nome.trim()) {
+      toast.error('Nome é obrigatório');
+      return false;
     }
 
     if (formData.email && !/.+@.+\..+/.test(formData.email)) {
       toast.error('Email inválido');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
       return;
     }
 
     try {
-      setSaving(true);
+      setLoading(true);
       
-      const submitData = {
+      const payload = {
         nome: formData.nome.trim(),
         email: formData.email?.trim() || null,
-        telefone: normalizePhone(formData.telefone),
-        whatsApp: normalizePhone(formData.whatsApp),
+        telefone: formData.telefone ? normalizePhone(formData.telefone) : null,
+        whatsApp: formData.whatsApp ? normalizePhone(formData.whatsApp) : null,
         dataNascimento: formData.dataNascimento 
           ? new Date(formData.dataNascimento + 'T00:00:00').toISOString()
           : null,
-        dataVisita: new Date(formData.dataVisita + 'T00:00:00').toISOString(),
-        observacoes: formData.observacoes?.trim() || null
+        tipoPessoa: formData.tipoPessoa,
+        ativo: formData.ativo,
       };
 
       if (isEditing) {
-        // Para edição, só atualiza campos da visita
-        await visitantesApi.update(id, {
-          dataVisita: submitData.dataVisita,
-          observacoes: submitData.observacoes
-        });
-        toast.success('Visita atualizada com sucesso');
+        await pessoasApi.update(id, payload);
+        toast.success('Pessoa atualizada com sucesso');
       } else {
-        await visitantesApi.create(submitData);
-        toast.success('Visita registrada com sucesso');
+        await pessoasApi.create(payload);
+        toast.success('Pessoa cadastrada com sucesso');
       }
 
-      navigate('/visitantes');
+      navigate('/pessoas');
     } catch (err) {
       const errorMessage = err.response?.data?.message || 
                           err.response?.data?.error ||
-                          `Erro ao ${isEditing ? 'atualizar' : 'cadastrar'} visita`;
+                          'Erro ao salvar pessoa';
       toast.error(errorMessage);
-      console.error(`Erro ao ${isEditing ? 'atualizar' : 'cadastrar'} visita:`, err);
+      console.error('Erro ao salvar pessoa:', err);
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  useEffect(() => {
-    loadVisitante();
-  }, [id]);
-
-  if (loading) {
-    return <LoadingPage text="Carregando visitante..." />;
+  if (loading && isEditing) {
+    return <LoadingPage text="Carregando pessoa..." />;
   }
 
   if (error) {
-    return <ErrorPage message={error} onRetry={loadVisitante} />;
+    return <ErrorPage message={error} onRetry={loadPessoa} />;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Button variant="ghost" asChild>
-          <Link to="/visitantes">
+          <Link to="/pessoas">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
           </Link>
         </Button>
         <div>
           <h1 className="text-3xl font-bold">
-            {isEditing ? 'Editar Visitante' : 'Novo Visitante'}
+            {isEditing ? 'Editar Pessoa' : 'Nova Pessoa'}
           </h1>
           <p className="text-muted-foreground">
-            {isEditing ? 'Atualize as informações do visitante' : 'Cadastre um novo visitante'}
+            {isEditing ? 'Atualize as informações da pessoa' : 'Cadastre uma nova pessoa'}
           </p>
         </div>
       </div>
@@ -154,7 +169,7 @@ export function VisitanteForm() {
       <Card>
         <CardHeader>
           <CardTitle>
-            {isEditing ? 'Editar Visitante' : 'Cadastrar Visitante'}
+            {isEditing ? 'Editar Pessoa' : 'Cadastrar Pessoa'}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -169,7 +184,6 @@ export function VisitanteForm() {
                   onChange={handleChange}
                   placeholder="Nome completo"
                   required
-                  disabled={isEditing}
                 />
               </div>
 
@@ -182,7 +196,6 @@ export function VisitanteForm() {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="email@exemplo.com"
-                  disabled={isEditing}
                 />
               </div>
 
@@ -192,9 +205,8 @@ export function VisitanteForm() {
                   id="telefone"
                   name="telefone"
                   value={formData.telefone}
-                  onChange={handleChange}
+                  onChange={(e) => handlePhoneChange('telefone', e.target.value)}
                   placeholder="11999998888 (apenas números)"
-                  disabled={isEditing}
                 />
               </div>
 
@@ -204,9 +216,8 @@ export function VisitanteForm() {
                   id="whatsApp"
                   name="whatsApp"
                   value={formData.whatsApp}
-                  onChange={handleChange}
+                  onChange={(e) => handlePhoneChange('whatsApp', e.target.value)}
                   placeholder="11999998888 (apenas números)"
-                  disabled={isEditing}
                 />
               </div>
 
@@ -218,42 +229,46 @@ export function VisitanteForm() {
                   type="date"
                   value={formData.dataNascimento}
                   onChange={handleChange}
-                  disabled={isEditing}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="dataVisita">Data da Visita *</Label>
-                <Input
-                  id="dataVisita"
-                  name="dataVisita"
-                  type="date"
-                  value={formData.dataVisita}
-                  onChange={handleChange}
-                  required
+                <Label htmlFor="tipoPessoa">Tipo de Pessoa</Label>
+                <Select
+                  value={formData.tipoPessoa}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, tipoPessoa: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Adulto">Adulto</SelectItem>
+                    <SelectItem value="Crianca">Criança</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 flex items-center space-x-2">
+                <Switch
+                  id="ativo"
+                  checked={formData.ativo}
+                  onCheckedChange={(checked) => 
+                    setFormData(prev => ({ ...prev, ativo: checked }))
+                  }
                 />
+                <Label htmlFor="ativo" className="cursor-pointer">
+                  Pessoa ativa
+                </Label>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="observacoes">Observações</Label>
-              <Textarea
-                id="observacoes"
-                name="observacoes"
-                value={formData.observacoes}
-                onChange={handleChange}
-                placeholder="Observações sobre o visitante..."
-                rows={3}
-              />
-            </div>
-
             <div className="flex items-center space-x-4">
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={loading}>
                 <Save className="h-4 w-4 mr-2" />
-                {saving ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+                {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
               </Button>
               <Button type="button" variant="outline" asChild>
-                <Link to="/visitantes">Cancelar</Link>
+                <Link to="/pessoas">Cancelar</Link>
               </Button>
             </div>
           </form>
@@ -262,4 +277,5 @@ export function VisitanteForm() {
     </div>
   );
 }
+
 

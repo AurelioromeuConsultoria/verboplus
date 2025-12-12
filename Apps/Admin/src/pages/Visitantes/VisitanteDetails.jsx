@@ -21,18 +21,22 @@ export function VisitanteDetails() {
       setLoading(true);
       setError(null);
       
-      const [visitanteResponse, mensagensResponse] = await Promise.all([
-        visitantesApi.getById(id),
-        mensagensAgendadasApi.getAll()
-      ]);
+      const visitanteResponse = await visitantesApi.getById(id);
+      const visitante = visitanteResponse.data;
       
-      setVisitante(visitanteResponse.data);
+      setVisitante(visitante);
       
-      // Filtrar mensagens do visitante
-      const mensagensDoVisitante = mensagensResponse.data.filter(
-        msg => msg.visitanteId === parseInt(id)
-      );
-      setMensagens(mensagensDoVisitante);
+      // Tentar carregar mensagens se o endpoint existir
+      try {
+        const mensagensResponse = await mensagensAgendadasApi.getAll();
+        const mensagensDoVisitante = mensagensResponse.data.filter(
+          msg => msg.visitanteId === parseInt(id)
+        );
+        setMensagens(mensagensDoVisitante);
+      } catch (err) {
+        // Ignorar erro se o endpoint não existir
+        console.log('Mensagens não disponíveis');
+      }
     } catch (err) {
       setError('Erro ao carregar dados do visitante');
       console.error('Erro ao carregar dados:', err);
@@ -80,9 +84,11 @@ export function VisitanteDetails() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">{visitante.nome}</h1>
+            <h1 className="text-3xl font-bold">
+              {visitante.pessoa?.nome || visitante.nome || 'Visitante'}
+            </h1>
             <p className="text-muted-foreground">
-              Detalhes do visitante
+              Detalhes da visita
             </p>
           </div>
         </div>
@@ -97,7 +103,7 @@ export function VisitanteDetails() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Informações Pessoais</CardTitle>
+            <CardTitle>Dados da Visita</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-3">
@@ -112,52 +118,80 @@ export function VisitanteDetails() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Phone className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Telefone (WhatsApp)</p>
-                <div className="flex items-center space-x-2">
-                  <p className="text-sm text-muted-foreground">{visitante.telefone}</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => window.open(`https://wa.me/55${visitante.telefone.replace(/\D/g, '')}`)}
-                  >
-                    <Phone className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {visitante.email && (
-              <div className="flex items-center space-x-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <Mail className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Email</p>
-                  <div className="flex items-center space-x-2">
-                    <p className="text-sm text-muted-foreground">{visitante.email}</p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => window.open(`mailto:${visitante.email}`)}
-                    >
-                      <Mail className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {visitante.observacoes && (
               <div>
                 <p className="text-sm font-medium mb-2">Observações</p>
                 <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
                   {visitante.observacoes}
                 </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Dados da Pessoa</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-sm font-medium">Nome</p>
+              <p className="text-sm text-muted-foreground">
+                {visitante.pessoa?.nome || visitante.nome || '-'}
+              </p>
+            </div>
+
+            {visitante.pessoa?.email && (
+              <div className="flex items-center space-x-2">
+                <div>
+                  <p className="text-sm font-medium">Email</p>
+                  <p className="text-sm text-muted-foreground">{visitante.pessoa.email}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.open(`mailto:${visitante.pessoa.email}`)}
+                >
+                  <Mail className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            {visitante.pessoa?.telefone && (
+              <div>
+                <p className="text-sm font-medium">Telefone</p>
+                <p className="text-sm text-muted-foreground">{visitante.pessoa.telefone}</p>
+              </div>
+            )}
+
+            {visitante.pessoa?.whatsApp && (
+              <div className="flex items-center space-x-2">
+                <div>
+                  <p className="text-sm font-medium">WhatsApp</p>
+                  <p className="text-sm text-muted-foreground">{visitante.pessoa.whatsApp}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.open(`https://wa.me/55${visitante.pessoa.whatsApp.replace(/\D/g, '')}`)}
+                >
+                  <Phone className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            {visitante.pessoa?.perfis && visitante.pessoa.perfis.length > 0 && (
+              <div>
+                <p className="text-sm font-medium mb-2">Perfis</p>
+                <div className="flex flex-wrap gap-1">
+                  {visitante.pessoa.perfis
+                    .filter(p => !p.dataFim)
+                    .map((perfil, idx) => (
+                      <Badge key={idx} variant="secondary">
+                        {perfil.perfil}
+                      </Badge>
+                    ))}
+                </div>
               </div>
             )}
           </CardContent>

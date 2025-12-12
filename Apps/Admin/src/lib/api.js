@@ -41,6 +41,27 @@ api.interceptors.response.use(
 );
 
 // Serviços da API
+
+// Pessoas
+export const pessoasApi = {
+  getAll: () => api.get('/pessoas'),
+  getById: (id) => api.get(`/pessoas/${id}`),
+  create: (data) => api.post('/pessoas', data),
+  update: (id, data) => api.put(`/pessoas/${id}`, data),
+  delete: (id) => api.delete(`/pessoas/${id}`),
+};
+
+// Pessoas Perfis
+export const pessoasPerfisApi = {
+  getAll: () => api.get('/pessoasperfis'),
+  getById: (id) => api.get(`/pessoasperfis/${id}`),
+  getByPessoa: (pessoaId) => api.get(`/pessoasperfis/pessoa/${pessoaId}`),
+  create: (data) => api.post('/pessoasperfis', data),
+  update: (id, data) => api.put(`/pessoasperfis/${id}`, data),
+  delete: (id) => api.delete(`/pessoasperfis/${id}`),
+};
+
+// Visitantes
 export const visitantesApi = {
   getAll: () => api.get('/visitantes'),
   getById: (id) => api.get(`/visitantes/${id}`),

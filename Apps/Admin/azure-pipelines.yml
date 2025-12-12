@@ -8,23 +8,42 @@ variables:
 - group: 'SWA_AppIgreja_Admin_Variables'
 
 steps:
-# 1) Node.js
+# 1) Node.js (atualizado para 20.x LTS)
 - task: NodeTool@0
   inputs:
-    versionSpec: '18.x'
-  displayName: 'Use Node.js 18'
+    versionSpec: '20.x'
+  displayName: 'Use Node.js 20'
 
-# 2) Instalar dependências
+# 2) Instalar pnpm (conforme packageManager do package.json)
 - script: |
-    npm ci
+    corepack enable
+    corepack prepare pnpm@10.4.1 --activate
+  displayName: 'Instalar pnpm'
+
+# 3) Cache de dependências do pnpm (acelera builds futuros)
+- task: Cache@2
+  inputs:
+    key: 'pnpm | "$(Agent.OS)" | pnpm-lock.yaml'
+    restoreKeys: |
+      pnpm | "$(Agent.OS)"
+    path: |
+      $(PNPM_HOME)/store
+      node_modules
+  displayName: 'Cache pnpm dependencies'
+
+# 4) Instalar dependências
+- script: |
+    pnpm install --frozen-lockfile
   displayName: 'Instalar dependências'
+  env:
+    PNPM_HOME: $(Pipeline.Workspace)/pnpm
 
-# 3) Build do front
+# 5) Build do front
 - script: |
-    npm run build
+    pnpm run build
   displayName: 'Build do front'
 
-# 4) Deploy para Azure Static Web App
+# 6) Deploy para Azure Static Web App
 - task: AzureStaticWebApp@0
   displayName: 'Deploy para Azure Static Web App'
   inputs:

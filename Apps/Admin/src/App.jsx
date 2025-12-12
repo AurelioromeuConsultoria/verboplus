@@ -7,6 +7,10 @@ import { Dashboard } from './pages/Dashboard';
 import { VisitantesList } from './pages/Visitantes/VisitantesList';
 import { VisitanteForm } from './pages/Visitantes/VisitanteForm';
 import { VisitanteDetails } from './pages/Visitantes/VisitanteDetails';
+import { PessoasList } from './pages/Pessoas/PessoasList';
+import { PessoaForm } from './pages/Pessoas/PessoaForm';
+import { PessoaDetails } from './pages/Pessoas/PessoaDetails';
+import { PerfisList } from './pages/Perfis/PerfisList';
 import ConfiguracoesList from './pages/ConfiguracoesMensagens/ConfiguracoesList';
 import ConfiguracaoForm from './pages/ConfiguracoesMensagens/ConfiguracaoForm';
 import MensagensAgendadas from './pages/MensagensAgendadas/MensagensAgendadas';
@@ -58,6 +62,15 @@ function App() {
           >
             <Route index element={<Dashboard />} />
           
+          {/* Rotas de Pessoas */}
+          <Route path="pessoas" element={<PessoasList />} />
+          <Route path="pessoas/novo" element={<PessoaForm />} />
+          <Route path="pessoas/:id/editar" element={<PessoaForm />} />
+          <Route path="pessoas/:id" element={<PessoaDetails />} />
+
+          {/* Rotas de Perfis */}
+          <Route path="perfis" element={<PerfisList />} />
+
           {/* Rotas de Visitantes */}
           <Route path="visitantes" element={<VisitantesList />} />
           <Route path="visitantes/novo" element={<VisitanteForm />} />
