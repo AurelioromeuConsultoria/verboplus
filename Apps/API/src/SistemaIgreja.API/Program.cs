@@ -37,6 +37,11 @@ builder.Services.AddScoped<IInscricaoEventoRepository, InscricaoEventoRepository
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<ICategoriaMidiaRepository, CategoriaMidiaRepository>();
 builder.Services.AddScoped<IGaleriaFotoRepository, GaleriaFotoRepository>();
+// Kids repositories
+builder.Services.AddScoped<ICriancaDetalheRepository, CriancaDetalheRepository>();
+builder.Services.AddScoped<IResponsavelCriancaRepository, ResponsavelCriancaRepository>();
+builder.Services.AddScoped<IKidsCheckinRepository, KidsCheckinRepository>();
+builder.Services.AddScoped<IKidsNotificacaoRepository, KidsNotificacaoRepository>();
 
 // Serviços
 builder.Services.AddScoped<IPessoaService, PessoaService>();
@@ -58,9 +63,16 @@ builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICategoriaMidiaService, CategoriaMidiaService>();
 builder.Services.AddScoped<IGaleriaFotoService, GaleriaFotoService>();
+// Kids services
+builder.Services.AddScoped<IKidsService, KidsService>();
 
 // Serviço de agendamento
-builder.Services.AddHostedService<MessageSchedulerService>();
+var schedulerEnabled = builder.Configuration.GetValue<bool>("Scheduler:Enabled");
+
+if (schedulerEnabled)
+{
+    builder.Services.AddHostedService<MessageSchedulerService>();
+}
 
 // Configurar JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key não configurada");
@@ -170,10 +182,24 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-using (var scope = app.Services.CreateScope())
+// Migrations automáticas: ligue só quando você quiser (DEV) e nunca deixe isso “sempre ligado” no Azure
+var runMigrations = app.Configuration.GetValue<bool>("Database:RunMigrations");
+
+if (app.Environment.IsDevelopment() && runMigrations)
 {
+    using var scope = app.Services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<SistemaIgrejaDbContext>();
-    context.Database.Migrate();
+
+    try
+    {
+        context.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        // Não derrube a API só porque o DB está offline/pausado.
+        // Assim você consegue abrir Swagger e debugar o resto.
+        app.Logger.LogError(ex, "Falha ao executar migrations. API iniciando mesmo assim.");
+    }
 }
 
 app.Run();

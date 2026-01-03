@@ -26,6 +26,12 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<CategoriaMidia> CategoriasMidias { get; set; }
     public DbSet<GaleriaFoto> GaleriasFotos { get; set; }
+    
+    // Kids
+    public DbSet<CriancaDetalhe> CriancasDetalhes { get; set; }
+    public DbSet<ResponsavelCrianca> ResponsaveisCriancas { get; set; }
+    public DbSet<KidsCheckin> KidsCheckins { get; set; }
+    public DbSet<KidsNotificacao> KidsNotificacoes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -286,6 +292,104 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithMany(c => c.Galerias)
                   .HasForeignKey(g => g.CategoriaMidiaId)
                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configuração da entidade CriancaDetalhe
+        modelBuilder.Entity<CriancaDetalhe>(entity =>
+        {
+            entity.HasKey(e => e.PessoaId);
+            entity.Property(e => e.Alergias).HasMaxLength(500);
+            entity.Property(e => e.RestricoesAlimentares).HasMaxLength(500);
+            entity.Property(e => e.Observacoes).HasMaxLength(1000);
+            entity.Property(e => e.SalaId).HasMaxLength(50);
+            entity.Property(e => e.DataCadastro).IsRequired();
+
+            entity.HasOne(c => c.Pessoa)
+                  .WithOne(p => p.CriancaDetalhe)
+                  .HasForeignKey<CriancaDetalhe>(c => c.PessoaId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configuração da entidade ResponsavelCrianca
+        modelBuilder.Entity<ResponsavelCrianca>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CriancaPessoaId).IsRequired();
+            entity.Property(e => e.ResponsavelPessoaId).IsRequired();
+            entity.Property(e => e.PodeRetirar).IsRequired();
+            entity.Property(e => e.Parentesco).HasMaxLength(50);
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.DataCadastro).IsRequired();
+
+            entity.HasOne(r => r.Crianca)
+                  .WithMany(p => p.ResponsaveisComoCrianca)
+                  .HasForeignKey(r => r.CriancaPessoaId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(r => r.Responsavel)
+                  .WithMany(p => p.ResponsaveisComoResponsavel)
+                  .HasForeignKey(r => r.ResponsavelPessoaId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // Índice para busca rápida
+            entity.HasIndex(r => new { r.CriancaPessoaId, r.ResponsavelPessoaId });
+        });
+
+        // Configuração da entidade KidsCheckin
+        modelBuilder.Entity<KidsCheckin>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CriancaPessoaId).IsRequired();
+            entity.Property(e => e.CheckinTime).IsRequired();
+            entity.Property(e => e.Metodo).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.CodigoSessao).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Observacoes).HasMaxLength(500);
+
+            entity.HasOne(c => c.Crianca)
+                  .WithMany(p => p.Checkins)
+                  .HasForeignKey(c => c.CriancaPessoaId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(c => c.CheckinBy)
+                  .WithMany(p => p.CheckinsRealizadosPor)
+                  .HasForeignKey(c => c.CheckinByPessoaId)
+                  .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(c => c.CheckoutBy)
+                  .WithMany(p => p.CheckoutsRealizadosPor)
+                  .HasForeignKey(c => c.CheckoutByPessoaId)
+                  .OnDelete(DeleteBehavior.NoAction);
+
+            // Índices
+            entity.HasIndex(c => c.CodigoSessao);
+            entity.HasIndex(c => new { c.CriancaPessoaId, c.Status });
+        });
+
+        // Configuração da entidade KidsNotificacao
+        modelBuilder.Entity<KidsNotificacao>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CriancaPessoaId).IsRequired();
+            entity.Property(e => e.ResponsavelPessoaId).IsRequired();
+            entity.Property(e => e.Tipo).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Mensagem).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(n => n.Crianca)
+                  .WithMany(p => p.NotificacoesComoCrianca)
+                  .HasForeignKey(n => n.CriancaPessoaId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(n => n.Responsavel)
+                  .WithMany(p => p.NotificacoesComoResponsavel)
+                  .HasForeignKey(n => n.ResponsavelPessoaId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // Índices
+            entity.HasIndex(n => new { n.CriancaPessoaId, n.Status });
+            entity.HasIndex(n => new { n.ResponsavelPessoaId, n.Status });
         });
 
         // Dados iniciais para ConfiguracaoMensagem (datas fixas para evitar warnings de migração)
