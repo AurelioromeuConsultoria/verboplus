@@ -125,12 +125,17 @@ public class MensagemAgendadaService : IMensagemAgendadaService
 
     private static MensagemAgendadaDto MapToDto(MensagemAgendada mensagem)
     {
+        // Priorizar WhatsApp, usar Telefone como fallback
+        var telefoneOuWhatsApp = mensagem.Visitante?.Pessoa?.WhatsApp 
+            ?? mensagem.Visitante?.Pessoa?.Telefone 
+            ?? "";
+
         return new MensagemAgendadaDto
         {
             Id = mensagem.Id,
             VisitanteId = mensagem.VisitanteId,
             NomeVisitante = mensagem.Visitante?.Pessoa?.Nome ?? "",
-            TelefoneVisitante = mensagem.Visitante?.Pessoa?.Telefone ?? "",
+            TelefoneVisitante = telefoneOuWhatsApp,
             ConfiguracaoMensagemId = mensagem.ConfiguracaoMensagemId,
             NomeConfiguracao = mensagem.ConfiguracaoMensagem?.Nome ?? "",
             DataAgendamento = mensagem.DataAgendamento,

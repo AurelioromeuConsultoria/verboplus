@@ -9,6 +9,7 @@ using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Infrastructure.Repositories;
 using SistemaIgreja.Application.Services;
 using SistemaIgreja.Infrastructure.Services;
+using SistemaIgreja.Application.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,6 +66,14 @@ builder.Services.AddScoped<ICategoriaMidiaService, CategoriaMidiaService>();
 builder.Services.AddScoped<IGaleriaFotoService, GaleriaFotoService>();
 // Kids services
 builder.Services.AddScoped<IKidsService, KidsService>();
+
+// Configurar Evolution API
+builder.Services.Configure<EvolutionApiSettings>(
+    builder.Configuration.GetSection("EvolutionApi"));
+
+// Registrar Evolution API Service com HttpClient
+builder.Services.AddHttpClient<IEvolutionApiService, EvolutionApiService>();
+builder.Services.AddScoped<IEvolutionApiService, EvolutionApiService>();
 
 // Serviço de agendamento
 var schedulerEnabled = builder.Configuration.GetValue<bool>("Scheduler:Enabled");

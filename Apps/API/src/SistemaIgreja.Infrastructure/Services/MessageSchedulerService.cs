@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Application.Interfaces;
 
 namespace SistemaIgreja.Infrastructure.Services;
 
@@ -55,11 +56,11 @@ public class MessageSchedulerService : BackgroundService
                     mensagem.NomeVisitante,
                     mensagem.TelefoneVisitante);
 
-                // Marcar como pronta para envio (simulação do envio)
+                // Marcar como pronta para envio
                 await mensagemService.MarcarComoProntaParaEnvioAsync(mensagem.Id);
 
-                // Simular envio da mensagem (aqui seria integrado com API do WhatsApp)
-                await SimularEnvioWhatsApp(mensagem);
+                // Enviar mensagem via Evolution API
+                await EnviarViaEvolutionApi(mensagem);
 
                 // Marcar como enviada
                 await mensagemService.MarcarComoEnviadaAsync(mensagem.Id);
@@ -86,30 +87,44 @@ public class MessageSchedulerService : BackgroundService
         }
     }
 
-    private async Task SimularEnvioWhatsApp(Application.DTOs.MensagemAgendadaDto mensagem)
+    private async Task EnviarViaEvolutionApi(Application.DTOs.MensagemAgendadaDto mensagem)
     {
-        // Simular delay de envio
-        await Task.Delay(1000);
+        using var scope = _serviceProvider.CreateScope();
+        var evolutionService = scope.ServiceProvider.GetRequiredService<IEvolutionApiService>();
 
-        // Log da mensagem que seria enviada
+        // Validar se tem número para enviar
+        if (string.IsNullOrWhiteSpace(mensagem.TelefoneVisitante))
+        {
+            throw new InvalidOperationException(
+                $"Mensagem ID {mensagem.Id} não possui número de telefone/WhatsApp para envio");
+        }
+
         _logger.LogInformation(
-            "SIMULAÇÃO ENVIO WhatsApp - Para: {Telefone}, Mensagem: {Texto}",
+            "Enviando mensagem via Evolution API - ID: {MensagemId}, Número: {Telefone}, Visitante: {Nome}",
+            mensagem.Id,
+            mensagem.TelefoneVisitante,
+            mensagem.NomeVisitante);
+
+        // Enviar mensagem via Evolution API
+        var resultado = await evolutionService.EnviarMensagemTextoAsync(
             mensagem.TelefoneVisitante,
             mensagem.TextoFinal);
 
-        // Aqui seria implementada a integração real com API do WhatsApp
-        // Exemplo com Z-API, Twilio, etc.
-        /*
-        var client = new HttpClient();
-        var payload = new
+        if (!resultado.Sucesso)
         {
-            phone = mensagem.TelefoneVisitante,
-            message = mensagem.TextoFinal
-        };
-        
-        var response = await client.PostAsJsonAsync("https://api.z-api.io/instances/YOUR_INSTANCE/token/YOUR_TOKEN/send-text", payload);
-        response.EnsureSuccessStatusCode();
-        */
+            var erro = $"Erro ao enviar mensagem via Evolution API: {resultado.MensagemErro} (Status: {resultado.StatusCode})";
+            _logger.LogError(
+                "Falha ao enviar mensagem ID {MensagemId} - {Erro}",
+                mensagem.Id,
+                erro);
+            
+            throw new Exception(erro);
+        }
+
+        _logger.LogInformation(
+            "Mensagem ID {MensagemId} enviada com sucesso via Evolution API - MessageId: {MessageId}",
+            mensagem.Id,
+            resultado.MessageId);
     }
 }
 
