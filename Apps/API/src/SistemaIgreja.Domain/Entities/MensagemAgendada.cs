@@ -35,6 +35,8 @@ public enum StatusMensagem
     ProntaParaEnvio = 2,
     Enviada = 3,
     Erro = 4,
-    Cancelada = 5
+    Cancelada = 5,
+    /// <summary>Reservada para processamento; evita dupla execução entre instâncias.</summary>
+    EmProcessamento = 6
 }
 

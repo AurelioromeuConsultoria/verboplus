@@ -9,6 +9,8 @@ public interface IMensagemAgendadaService
     Task<IEnumerable<MensagemAgendadaDto>> GetAllAsync();
     Task<MensagemAgendadaDto?> GetByIdAsync(int id);
     Task<IEnumerable<MensagemAgendadaDto>> GetMensagensProntasParaEnvioAsync();
+    /// <summary>Reserva transacionalmente mensagens prontas (status → EmProcessamento). Apenas as reservadas devem ser processadas.</summary>
+    Task<IEnumerable<MensagemAgendadaDto>> ReservarProntasParaEnvioAsync(int limit);
     Task<IEnumerable<MensagemAgendadaDto>> GetMensagensPorVisitanteAsync(int visitanteId);
     Task AgendarMensagensParaVisitanteAsync(int visitanteId);
     Task MarcarComoProntaParaEnvioAsync(int mensagemId);
@@ -47,6 +49,12 @@ public class MensagemAgendadaService : IMensagemAgendadaService
     public async Task<IEnumerable<MensagemAgendadaDto>> GetMensagensProntasParaEnvioAsync()
     {
         var mensagens = await _mensagemRepository.GetMensagensProntasParaEnvioAsync();
+        return mensagens.Select(MapToDto);
+    }
+
+    public async Task<IEnumerable<MensagemAgendadaDto>> ReservarProntasParaEnvioAsync(int limit)
+    {
+        var mensagens = await _mensagemRepository.ReservarProntasParaEnvioAsync(limit);
         return mensagens.Select(MapToDto);
     }
 

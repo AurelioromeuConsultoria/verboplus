@@ -69,6 +69,57 @@ public class MensagemAgendadaRepository : IMensagemAgendadaRepository
             .ToListAsync();
     }
 
+    /// <inheritdoc />
+    public async Task<IEnumerable<MensagemAgendada>> ReservarProntasParaEnvioAsync(int limit)
+    {
+        var agora = DateTime.Now;
+        var statusAgendada = (int)StatusMensagem.Agendada;
+        List<int> ids;
+
+        await using (var transaction = await _context.Database.BeginTransactionAsync())
+        {
+            try
+            {
+                ids = await _context.MensagensAgendadas
+                    .FromSqlRaw(
+                        "SELECT * FROM MensagensAgendadas WITH (UPDLOCK, ROWLOCK) WHERE Status = {0} AND DataEnvio <= {1} ORDER BY DataEnvio",
+                        statusAgendada,
+                        agora)
+                    .Take(limit)
+                    .Select(m => m.Id)
+                    .ToListAsync();
+
+                if (ids.Count == 0)
+                {
+                    await transaction.CommitAsync();
+                    return Array.Empty<MensagemAgendada>();
+                }
+
+                var now = DateTime.Now;
+                await _context.MensagensAgendadas
+                    .Where(m => ids.Contains(m.Id))
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(m => m.Status, StatusMensagem.EmProcessamento)
+                        .SetProperty(m => m.DataProcessamento, now));
+
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        return await _context.MensagensAgendadas
+            .Include(m => m.Visitante!)
+                .ThenInclude(v => v.Pessoa)
+            .Include(m => m.ConfiguracaoMensagem!)
+            .Where(m => ids.Contains(m.Id))
+            .OrderBy(m => m.DataEnvio)
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<MensagemAgendada>> GetMensagensPorVisitanteAsync(int visitanteId)
     {
         return await _context.MensagensAgendadas

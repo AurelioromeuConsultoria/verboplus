@@ -10,6 +10,8 @@ public interface IMensagemAgendadaRepository
     Task<MensagemAgendada> UpdateAsync(MensagemAgendada mensagem);
     Task DeleteAsync(int id);
     Task<IEnumerable<MensagemAgendada>> GetMensagensProntasParaEnvioAsync();
+    /// <summary>Reserva transacionalmente mensagens Agendada com DataEnvio &lt;= agora (status → EmProcessamento). Evita dupla execução.</summary>
+    Task<IEnumerable<MensagemAgendada>> ReservarProntasParaEnvioAsync(int limit);
     Task<IEnumerable<MensagemAgendada>> GetMensagensPorVisitanteAsync(int visitanteId);
     Task<IEnumerable<MensagemAgendada>> GetMensagensPorStatusAsync(StatusMensagem status);
 }

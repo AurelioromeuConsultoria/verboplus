@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -24,27 +25,20 @@ public class EvolutionApiService : IEvolutionApiService
         _settings = settings.Value;
         _logger = logger;
 
-        // Configurar timeout
         _httpClient.Timeout = TimeSpan.FromSeconds(_settings.TimeoutSeconds);
 
-        // Configurar base URL
         if (!string.IsNullOrEmpty(_settings.BaseUrl))
-        {
             _httpClient.BaseAddress = new Uri(_settings.BaseUrl.TrimEnd('/'));
-        }
 
-        // Configurar header padrão da API Key
         if (!string.IsNullOrEmpty(_settings.ApiKey))
-        {
             _httpClient.DefaultRequestHeaders.Add("apikey", _settings.ApiKey);
-        }
 
         _httpClient.DefaultRequestHeaders.Add("Content-Type", "application/json");
     }
 
     public async Task<EvolutionApiResponse> EnviarMensagemTextoAsync(
-        string numero, 
-        string mensagem, 
+        string numero,
+        string mensagem,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(numero))
@@ -67,7 +61,6 @@ public class EvolutionApiService : IEvolutionApiService
             };
         }
 
-        // Formatar número para formato internacional
         string numeroFormatado;
         try
         {
@@ -85,7 +78,6 @@ public class EvolutionApiService : IEvolutionApiService
             };
         }
 
-        // Criar request
         var request = new EvolutionApiSendTextRequest
         {
             Number = numeroFormatado,
@@ -94,24 +86,21 @@ public class EvolutionApiService : IEvolutionApiService
         };
 
         var endpoint = $"/message/sendText/{_settings.InstanceName}";
-        
         _logger.LogInformation(
             "Enviando mensagem via Evolution API - Endpoint: {Endpoint}, Número: {Numero}, Mensagem: {MensagemPreview}",
             endpoint,
             numeroFormatado,
-            mensagem.Length > 50 ? mensagem.Substring(0, 50) + "..." : mensagem);
+            mensagem.Length > 50 ? mensagem[..50] + "..." : mensagem);
 
-        // Tentar enviar com retry
         for (int tentativa = 1; tentativa <= _settings.MaxRetries; tentativa++)
         {
+            HttpResponseMessage? response = null;
+            string? responseContent = null;
+
             try
             {
-                var response = await _httpClient.PostAsJsonAsync(
-                    endpoint,
-                    request,
-                    cancellationToken);
-
-                var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                response = await _httpClient.PostAsJsonAsync(endpoint, request, cancellationToken);
+                responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
 
                 _logger.LogDebug(
                     "Resposta Evolution API - Status: {StatusCode}, Tentativa: {Tentativa}/{MaxRetries}, Resposta: {Resposta}",
@@ -122,11 +111,10 @@ public class EvolutionApiService : IEvolutionApiService
 
                 if (response.IsSuccessStatusCode)
                 {
-                    // Tentar deserializar resposta de sucesso
                     try
                     {
                         var jsonDoc = JsonDocument.Parse(responseContent);
-                        var messageId = jsonDoc.RootElement.TryGetProperty("key", out var keyElement) 
+                        var messageId = jsonDoc.RootElement.TryGetProperty("key", out var keyElement)
                             && keyElement.TryGetProperty("id", out var idElement)
                             ? idElement.GetString()
                             : null;
@@ -146,7 +134,6 @@ public class EvolutionApiService : IEvolutionApiService
                     }
                     catch (JsonException ex)
                     {
-                        // Mesmo que não consiga deserializar, se o status é sucesso, consideramos OK
                         _logger.LogWarning(ex, "Não foi possível deserializar resposta, mas status é sucesso");
                         return new EvolutionApiResponse
                         {
@@ -157,63 +144,55 @@ public class EvolutionApiService : IEvolutionApiService
                     }
                 }
 
-                // Tratar erros específicos
-                var errorResponse = await TratarErroResponseAsync(response, responseContent, cancellationToken);
+                var errorResponse = TratarErroResponse(responseContent, (int)response.StatusCode);
 
-                // Erros que não devem ter retry
-                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest ||
-                    response.StatusCode == System.Net.HttpStatusCode.Unauthorized ||
-                    response.StatusCode == System.Net.HttpStatusCode.NotFound ||
-                    response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                if (!IsTransientFailure((HttpStatusCode)response.StatusCode))
                 {
                     _logger.LogWarning(
-                        "Erro permanente ao enviar mensagem - Status: {StatusCode}, Erro: {Erro}",
+                        "Erro permanente (sem retry) ao enviar mensagem - Status: {StatusCode}, Erro: {Erro}",
                         response.StatusCode,
                         errorResponse.MensagemErro);
                     return errorResponse;
                 }
 
-                // Erros que podem ter retry (5xx, timeout, etc)
                 if (tentativa < _settings.MaxRetries)
                 {
-                    var delay = TimeSpan.FromSeconds(_settings.RetryDelaySeconds * tentativa); // Backoff exponencial
+                    var delay = ObterBackoffExponencial(tentativa);
                     _logger.LogWarning(
-                        "Erro temporário ao enviar mensagem (tentativa {Tentativa}/{MaxRetries}) - Status: {StatusCode}, Erro: {Erro}. Tentando novamente em {Delay}s",
+                        "Retry {Tentativa}/{MaxRetries} - Status: {StatusCode}, Erro: {Erro}. Nova tentativa em {Delay}s",
                         tentativa,
                         _settings.MaxRetries,
                         response.StatusCode,
                         errorResponse.MensagemErro,
                         delay.TotalSeconds);
-                    
                     await Task.Delay(delay, cancellationToken);
                     continue;
                 }
 
-                // Última tentativa falhou
                 _logger.LogError(
-                    "Falha ao enviar mensagem após {MaxRetries} tentativas - Status: {StatusCode}, Erro: {Erro}",
+                    "Falha definitiva ao enviar mensagem após {MaxRetries} tentativas - Status: {StatusCode}, Erro: {Erro}",
                     _settings.MaxRetries,
                     response.StatusCode,
                     errorResponse.MensagemErro);
-
                 return errorResponse;
             }
-            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+            catch (TaskCanceledException)
             {
                 if (tentativa < _settings.MaxRetries)
                 {
-                    var delay = TimeSpan.FromSeconds(_settings.RetryDelaySeconds * tentativa);
+                    var delay = ObterBackoffExponencial(tentativa);
                     _logger.LogWarning(
-                        "Timeout ao enviar mensagem (tentativa {Tentativa}/{MaxRetries}). Tentando novamente em {Delay}s",
+                        "Retry {Tentativa}/{MaxRetries} - Timeout na requisição. Nova tentativa em {Delay}s",
                         tentativa,
                         _settings.MaxRetries,
                         delay.TotalSeconds);
-                    
                     await Task.Delay(delay, cancellationToken);
                     continue;
                 }
 
-                _logger.LogError(ex, "Timeout ao enviar mensagem após {MaxRetries} tentativas", _settings.MaxRetries);
+                _logger.LogError(
+                    "Falha definitiva: timeout ao enviar mensagem após {MaxRetries} tentativas",
+                    _settings.MaxRetries);
                 return new EvolutionApiResponse
                 {
                     Sucesso = false,
@@ -225,19 +204,21 @@ public class EvolutionApiService : IEvolutionApiService
             {
                 if (tentativa < _settings.MaxRetries)
                 {
-                    var delay = TimeSpan.FromSeconds(_settings.RetryDelaySeconds * tentativa);
+                    var delay = ObterBackoffExponencial(tentativa);
                     _logger.LogWarning(
                         ex,
-                        "Erro de conexão ao enviar mensagem (tentativa {Tentativa}/{MaxRetries}). Tentando novamente em {Delay}s",
+                        "Retry {Tentativa}/{MaxRetries} - Erro de conexão. Nova tentativa em {Delay}s",
                         tentativa,
                         _settings.MaxRetries,
                         delay.TotalSeconds);
-                    
                     await Task.Delay(delay, cancellationToken);
                     continue;
                 }
 
-                _logger.LogError(ex, "Erro de conexão ao enviar mensagem após {MaxRetries} tentativas", _settings.MaxRetries);
+                _logger.LogError(
+                    ex,
+                    "Falha definitiva: erro de conexão ao enviar mensagem após {MaxRetries} tentativas",
+                    _settings.MaxRetries);
                 return new EvolutionApiResponse
                 {
                     Sucesso = false,
@@ -247,15 +228,23 @@ public class EvolutionApiService : IEvolutionApiService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro inesperado ao enviar mensagem (tentativa {Tentativa}/{MaxRetries})", tentativa, _settings.MaxRetries);
-                
                 if (tentativa < _settings.MaxRetries)
                 {
-                    var delay = TimeSpan.FromSeconds(_settings.RetryDelaySeconds * tentativa);
+                    var delay = ObterBackoffExponencial(tentativa);
+                    _logger.LogWarning(
+                        ex,
+                        "Retry {Tentativa}/{MaxRetries} - Erro inesperado. Nova tentativa em {Delay}s",
+                        tentativa,
+                        _settings.MaxRetries,
+                        delay.TotalSeconds);
                     await Task.Delay(delay, cancellationToken);
                     continue;
                 }
 
+                _logger.LogError(
+                    ex,
+                    "Falha definitiva: erro inesperado ao enviar mensagem após {MaxRetries} tentativas",
+                    _settings.MaxRetries);
                 return new EvolutionApiResponse
                 {
                     Sucesso = false,
@@ -265,7 +254,6 @@ public class EvolutionApiService : IEvolutionApiService
             }
         }
 
-        // Não deveria chegar aqui, mas por segurança
         return new EvolutionApiResponse
         {
             Sucesso = false,
@@ -290,17 +278,14 @@ public class EvolutionApiService : IEvolutionApiService
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
             _logger.LogDebug("Resposta validação instância: {Resposta}", content);
 
-            // Verificar se a instância está na lista
             try
             {
                 var jsonDoc = JsonDocument.Parse(content);
                 if (jsonDoc.RootElement.ValueKind == JsonValueKind.Array)
                 {
-                    var instanciaEncontrada = jsonDoc.RootElement.EnumerateArray()
-                        .Any(inst => inst.TryGetProperty("instance", out var instanceProp) 
-                            && instanceProp.GetString() == _settings.InstanceName);
-
-                    if (instanciaEncontrada)
+                    var encontrada = jsonDoc.RootElement.EnumerateArray()
+                        .Any(inst => inst.TryGetProperty("instance", out var p) && p.GetString() == _settings.InstanceName);
+                    if (encontrada)
                     {
                         _logger.LogInformation("Instância {InstanceName} encontrada e válida", _settings.InstanceName);
                         return true;
@@ -322,20 +307,40 @@ public class EvolutionApiService : IEvolutionApiService
         }
     }
 
-    private async Task<EvolutionApiResponse> TratarErroResponseAsync(
-        HttpResponseMessage response,
-        string responseContent,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// Retry apenas para falhas transitórias: timeout, 429, 5xx. Não retry para 4xx (exceto 429).
+    /// </summary>
+    private static bool IsTransientFailure(HttpStatusCode status)
+    {
+        var code = (int)status;
+        if (code is >= 500 and < 600) return true;
+        if (status == (HttpStatusCode)429) return true; // Too Many Requests
+        return false;
+    }
+
+    /// <summary>
+    /// Backoff exponencial: base * 2^(tentativa-1), limitado ao máximo configurável.
+    /// </summary>
+    private TimeSpan ObterBackoffExponencial(int tentativa)
+    {
+        var segundos = _settings.RetryDelaySeconds * Math.Pow(2, tentativa - 1);
+        var cap = Math.Min(60, Math.Max(1, _settings.RetryDelaySeconds * 8));
+        segundos = Math.Min(segundos, cap);
+        return TimeSpan.FromSeconds(segundos);
+    }
+
+    private static EvolutionApiResponse TratarErroResponse(string responseContent, int statusCode)
     {
         try
         {
-            var errorResponse = await response.Content.ReadFromJsonAsync<EvolutionApiErrorResponse>(cancellationToken: cancellationToken);
-            
+            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var parsed = JsonSerializer.Deserialize<EvolutionApiErrorResponse>(responseContent, opts);
+            var msg = parsed?.Message ?? parsed?.Error ?? responseContent;
             return new EvolutionApiResponse
             {
                 Sucesso = false,
-                StatusCode = (int)response.StatusCode,
-                MensagemErro = errorResponse?.Message ?? errorResponse?.Error ?? responseContent,
+                StatusCode = statusCode,
+                MensagemErro = msg,
                 RespostaCompleta = responseContent
             };
         }
@@ -344,7 +349,7 @@ public class EvolutionApiService : IEvolutionApiService
             return new EvolutionApiResponse
             {
                 Sucesso = false,
-                StatusCode = (int)response.StatusCode,
+                StatusCode = statusCode,
                 MensagemErro = responseContent,
                 RespostaCompleta = responseContent
             };

@@ -67,21 +67,16 @@ builder.Services.AddScoped<IGaleriaFotoService, GaleriaFotoService>();
 // Kids services
 builder.Services.AddScoped<IKidsService, KidsService>();
 
-// Configurar Evolution API
 builder.Services.Configure<EvolutionApiSettings>(
     builder.Configuration.GetSection("EvolutionApi"));
+builder.Services.Configure<MessageSchedulerSettings>(
+    builder.Configuration.GetSection(MessageSchedulerSettings.SectionName));
 
-// Registrar Evolution API Service com HttpClient
 builder.Services.AddHttpClient<IEvolutionApiService, EvolutionApiService>();
-builder.Services.AddScoped<IEvolutionApiService, EvolutionApiService>();
 
-// Serviço de agendamento
 var schedulerEnabled = builder.Configuration.GetValue<bool>("Scheduler:Enabled");
-
 if (schedulerEnabled)
-{
     builder.Services.AddHostedService<MessageSchedulerService>();
-}
 
 // Configurar JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key não configurada");

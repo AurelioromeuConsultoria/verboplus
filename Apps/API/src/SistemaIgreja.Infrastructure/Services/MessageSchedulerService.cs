@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using SistemaIgreja.Application.Services;
+using Microsoft.Extensions.Options;
+using SistemaIgreja.Application.Configuration;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 
 namespace SistemaIgreja.Infrastructure.Services;
 
@@ -10,17 +12,25 @@ public class MessageSchedulerService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MessageSchedulerService> _logger;
-    private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(5); // Verifica a cada 5 minutos
+    private readonly MessageSchedulerSettings _settings;
 
-    public MessageSchedulerService(IServiceProvider serviceProvider, ILogger<MessageSchedulerService> logger)
+    public MessageSchedulerService(
+        IServiceProvider serviceProvider,
+        ILogger<MessageSchedulerService> logger,
+        IOptions<MessageSchedulerSettings> settings)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _settings = settings.Value;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("MessageSchedulerService iniciado");
+        _logger.LogInformation(
+            "MessageSchedulerService iniciado. Intervalo base: {BaseMin} min, jitter: 0–{Jitter}s, batch: {Batch}",
+            _settings.BaseIntervalMinutes,
+            _settings.JitterSecondsMax,
+            _settings.BatchSizeReserva);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -33,10 +43,22 @@ public class MessageSchedulerService : BackgroundService
                 _logger.LogError(ex, "Erro ao processar mensagens agendadas");
             }
 
-            await Task.Delay(_checkInterval, stoppingToken);
+            var delay = ObterDelayComJitter();
+            _logger.LogDebug("Próxima execução em {Delay}", delay);
+            await Task.Delay(delay, stoppingToken);
         }
 
         _logger.LogInformation("MessageSchedulerService parado");
+    }
+
+    /// <summary>
+    /// Intervalo base + jitter aleatório (0–JitterSecondsMax) para reduzir sincronismo entre instâncias.
+    /// </summary>
+    private TimeSpan ObterDelayComJitter()
+    {
+        var baseInterval = TimeSpan.FromMinutes(_settings.BaseIntervalMinutes);
+        var jitterSec = Random.Shared.Next(0, _settings.JitterSecondsMax + 1);
+        return baseInterval.Add(TimeSpan.FromSeconds(jitterSec));
     }
 
     private async Task ProcessarMensagensAgendadas()
@@ -44,9 +66,10 @@ public class MessageSchedulerService : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var mensagemService = scope.ServiceProvider.GetRequiredService<IMensagemAgendadaService>();
 
-        var mensagensProntas = await mensagemService.GetMensagensProntasParaEnvioAsync();
+        var reservadas = await mensagemService.ReservarProntasParaEnvioAsync(_settings.BatchSizeReserva);
+        var lista = reservadas.ToList();
 
-        foreach (var mensagem in mensagensProntas)
+        foreach (var mensagem in lista)
         {
             try
             {
@@ -56,13 +79,8 @@ public class MessageSchedulerService : BackgroundService
                     mensagem.NomeVisitante,
                     mensagem.TelefoneVisitante);
 
-                // Marcar como pronta para envio
-                await mensagemService.MarcarComoProntaParaEnvioAsync(mensagem.Id);
-
-                // Enviar mensagem via Evolution API
                 await EnviarViaEvolutionApi(mensagem);
 
-                // Marcar como enviada
                 await mensagemService.MarcarComoEnviadaAsync(mensagem.Id);
 
                 _logger.LogInformation(
@@ -72,7 +90,7 @@ public class MessageSchedulerService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, 
+                _logger.LogError(ex,
                     "Erro ao enviar mensagem ID {MensagemId} para {Telefone}",
                     mensagem.Id,
                     mensagem.TelefoneVisitante);
@@ -81,9 +99,9 @@ public class MessageSchedulerService : BackgroundService
             }
         }
 
-        if (mensagensProntas.Any())
+        if (lista.Count > 0)
         {
-            _logger.LogInformation("Processadas {Count} mensagens", mensagensProntas.Count());
+            _logger.LogInformation("Processadas {Count} mensagens reservadas", lista.Count);
         }
     }
 
@@ -92,7 +110,6 @@ public class MessageSchedulerService : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var evolutionService = scope.ServiceProvider.GetRequiredService<IEvolutionApiService>();
 
-        // Validar se tem número para enviar
         if (string.IsNullOrWhiteSpace(mensagem.TelefoneVisitante))
         {
             throw new InvalidOperationException(
@@ -105,26 +122,24 @@ public class MessageSchedulerService : BackgroundService
             mensagem.TelefoneVisitante,
             mensagem.NomeVisitante);
 
-        // Enviar mensagem via Evolution API
         var resultado = await evolutionService.EnviarMensagemTextoAsync(
             mensagem.TelefoneVisitante,
             mensagem.TextoFinal);
 
         if (!resultado.Sucesso)
         {
-            var erro = $"Erro ao enviar mensagem via Evolution API: {resultado.MensagemErro} (Status: {resultado.StatusCode})";
+            var erro = $"Evolution API: {resultado.MensagemErro} (Status: {resultado.StatusCode})";
             _logger.LogError(
                 "Falha ao enviar mensagem ID {MensagemId} - {Erro}",
                 mensagem.Id,
                 erro);
-            
+
             throw new Exception(erro);
         }
 
         _logger.LogInformation(
-            "Mensagem ID {MensagemId} enviada com sucesso via Evolution API - MessageId: {MessageId}",
+            "Mensagem ID {MensagemId} enviada via Evolution API - MessageId: {MessageId}",
             mensagem.Id,
             resultado.MessageId);
     }
 }
-
