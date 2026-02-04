@@ -19,6 +19,7 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<Voluntario> Voluntarios { get; set; }
     public DbSet<Evento> Eventos { get; set; }
     public DbSet<DestaqueSite> DestaquesSite { get; set; }
+    public DbSet<ConfiguracaoPortal> ConfiguracoesPortal { get; set; }
     public DbSet<CategoriaNoticia> CategoriasNoticias { get; set; }
     public DbSet<Noticia> Noticias { get; set; }
     public DbSet<Contato> Contatos { get; set; }
@@ -26,6 +27,9 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<CategoriaMidia> CategoriasMidias { get; set; }
     public DbSet<GaleriaFoto> GaleriasFotos { get; set; }
+    public DbSet<Enquete> Enquetes { get; set; }
+    public DbSet<EnqueteOpcao> EnqueteOpcoes { get; set; }
+    public DbSet<EnqueteVoto> EnqueteVotos { get; set; }
     
     // Kids
     public DbSet<CriancaDetalhe> CriancasDetalhes { get; set; }
@@ -179,6 +183,21 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.Url).HasMaxLength(500);
             entity.Property(e => e.Imagem).HasMaxLength(500);
             entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade ConfiguracaoPortal (singleton)
+        modelBuilder.Entity<ConfiguracaoPortal>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TempoTransicaoCarrossel).IsRequired().HasDefaultValue(5);
+            entity.Property(e => e.DataAtualizacao).IsRequired();
+            // Garantir que sempre haverá apenas um registro
+            entity.HasData(new ConfiguracaoPortal
+            {
+                Id = 1,
+                TempoTransicaoCarrossel = 5,
+                DataAtualizacao = new DateTime(2026, 2, 4, 0, 0, 0) // Data fixa para migration
+            });
         });
 
         // Configuração da entidade CategoriaNoticia
@@ -416,6 +435,60 @@ public class SistemaIgrejaDbContext : DbContext
                 DataCriacao = seedDate
             }
         );
+
+        // Configuração da entidade Enquete
+        modelBuilder.Entity<Enquete>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Titulo).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Descricao).HasMaxLength(1000);
+            entity.Property(e => e.DataInicio).IsRequired();
+            entity.Property(e => e.DataFim).IsRequired();
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.PermitirMultiplaEscolha).IsRequired();
+            entity.Property(e => e.PermitirVotoAnonimo).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade EnqueteOpcao
+        modelBuilder.Entity<EnqueteOpcao>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EnqueteId).IsRequired();
+            entity.Property(e => e.Texto).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Ordem).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(e => e.Enquete)
+                  .WithMany(e => e.Opcoes)
+                  .HasForeignKey(e => e.EnqueteId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configuração da entidade EnqueteVoto
+        modelBuilder.Entity<EnqueteVoto>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EnqueteId).IsRequired();
+            entity.Property(e => e.EnqueteOpcaoId).IsRequired();
+            entity.Property(e => e.NomeAnonimo).HasMaxLength(100);
+            entity.Property(e => e.DataVoto).IsRequired();
+
+            entity.HasOne(e => e.Enquete)
+                  .WithMany(e => e.Votos)
+                  .HasForeignKey(e => e.EnqueteId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Opcao)
+                  .WithMany(e => e.Votos)
+                  .HasForeignKey(e => e.EnqueteOpcaoId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Usuario)
+                  .WithMany()
+                  .HasForeignKey(e => e.UsuarioId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
     }
 }
 

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SistemaIgreja.Infrastructure.Data;
 namespace SistemaIgreja.Infrastructure.Migrations
 {
     [DbContext(typeof(SistemaIgrejaDbContext))]
-    partial class SistemaIgrejaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260204023037_RemoverTempoTransicaoEAdicionarConfiguracaoPortal")]
+    partial class RemoverTempoTransicaoEAdicionarConfiguracaoPortal
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

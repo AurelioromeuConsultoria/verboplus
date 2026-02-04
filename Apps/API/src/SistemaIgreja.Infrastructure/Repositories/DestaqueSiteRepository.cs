@@ -17,7 +17,8 @@ public class DestaqueSiteRepository : IDestaqueSiteRepository
     public async Task<IEnumerable<DestaqueSite>> GetAllAsync()
     {
         return await _context.Set<DestaqueSite>()
-            .OrderByDescending(d => d.DataCriacao)
+            .OrderBy(d => d.DataCriacao) // Ordenar por data de criação crescente (mais antigo primeiro)
+            .ThenBy(d => d.Id) // Em caso de empate na data, ordenar por ID
             .ToListAsync();
     }
 

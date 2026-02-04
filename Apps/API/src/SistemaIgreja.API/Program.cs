@@ -38,6 +38,8 @@ builder.Services.AddScoped<IInscricaoEventoRepository, InscricaoEventoRepository
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<ICategoriaMidiaRepository, CategoriaMidiaRepository>();
 builder.Services.AddScoped<IGaleriaFotoRepository, GaleriaFotoRepository>();
+builder.Services.AddScoped<IEnqueteRepository, EnqueteRepository>();
+builder.Services.AddScoped<IConfiguracaoPortalRepository, ConfiguracaoPortalRepository>();
 // Kids repositories
 builder.Services.AddScoped<ICriancaDetalheRepository, CriancaDetalheRepository>();
 builder.Services.AddScoped<IResponsavelCriancaRepository, ResponsavelCriancaRepository>();
@@ -64,6 +66,9 @@ builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICategoriaMidiaService, CategoriaMidiaService>();
 builder.Services.AddScoped<IGaleriaFotoService, GaleriaFotoService>();
+builder.Services.AddScoped<IEnqueteService, EnqueteService>();
+builder.Services.AddScoped<IConfiguracaoPortalService, ConfiguracaoPortalService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 // Kids services
 builder.Services.AddScoped<IKidsService, KidsService>();
 

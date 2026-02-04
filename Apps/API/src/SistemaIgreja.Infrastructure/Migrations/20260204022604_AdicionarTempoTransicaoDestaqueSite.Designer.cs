@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SistemaIgreja.Infrastructure.Data;
 namespace SistemaIgreja.Infrastructure.Migrations
 {
     [DbContext(typeof(SistemaIgrejaDbContext))]
-    partial class SistemaIgrejaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260204022604_AdicionarTempoTransicaoDestaqueSite")]
+    partial class AdicionarTempoTransicaoDestaqueSite
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -146,35 +149,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.ConfiguracaoPortal", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("DataAtualizacao")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("TempoTransicaoCarrossel")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(5);
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ConfiguracoesPortal");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DataAtualizacao = new DateTime(2026, 2, 4, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            TempoTransicaoCarrossel = 5
-                        });
-                });
-
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Contato", b =>
                 {
                     b.Property<int>("Id")
@@ -260,6 +234,11 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<string>("Imagem")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("TempoTransicao")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(5);
 
                     b.Property<string>("Texto")
                         .IsRequired()
