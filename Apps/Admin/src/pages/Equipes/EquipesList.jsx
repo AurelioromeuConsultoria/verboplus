@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, Filter, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { usePagination } from '@/hooks/usePagination';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { equipesApi } from '@/lib/api';
+import { toast } from 'sonner';
 
 const AREA_LABEL = {
   1: 'Verde',
@@ -20,6 +27,7 @@ export default function EquipesList() {
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const [area, setArea] = useState('');
+  const confirmDialog = useConfirmDialog();
 
   const load = async () => {
     try {
@@ -40,14 +48,26 @@ export default function EquipesList() {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir esta equipe?')) return;
-    try {
-      await equipesApi.delete(id);
-      await load();
-    } catch (err) {
-      alert('Erro ao excluir. Existe(m) voluntário(s) vinculado(s).');
-      console.error(err);
-    }
+    const equipe = items.find(e => e.id === id);
+    confirmDialog.show({
+      title: 'Excluir Equipe',
+      description: `Tem certeza que deseja excluir "${equipe?.nome || 'esta equipe'}"? Esta ação não pode ser desfeita. Se houver voluntários vinculados, a exclusão será bloqueada.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await equipesApi.delete(id);
+          toast.success('Equipe excluída com sucesso');
+          await load();
+        } catch (err) {
+          const errorMsg = err.response?.data?.message || 'Erro ao excluir equipe. Pode haver voluntários vinculados.';
+          toast.error(errorMsg);
+          console.error(err);
+          throw err;
+        }
+      },
+    });
   };
 
   const filtered = items.filter((e) => {
@@ -55,6 +75,8 @@ export default function EquipesList() {
     if (area && String(e.area) !== String(area)) return false;
     return true;
   });
+
+  const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
   if (loading) return <LoadingPage text="Carregando equipes..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
@@ -80,9 +102,8 @@ export default function EquipesList() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Filter className="h-4 w-4" />Buscar por nome</label>
-              <input
-                className="w-full px-3 py-2 border rounded"
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por nome</label>
+              <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Digite o nome da equipe"
@@ -90,12 +111,17 @@ export default function EquipesList() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Área</label>
-              <select className="w-full px-3 py-2 border rounded" value={area} onChange={(e) => setArea(e.target.value)}>
-                <option value="">Todas</option>
-                <option value="1">Verde</option>
-                <option value="2">Vermelha</option>
-                <option value="3">Laranja</option>
-              </select>
+              <Select value={area || 'all'} onValueChange={(value) => setArea(value === 'all' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as áreas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as áreas</SelectItem>
+                  <SelectItem value="1">Verde</SelectItem>
+                  <SelectItem value="2">Vermelha</SelectItem>
+                  <SelectItem value="3">Laranja</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
@@ -103,7 +129,7 @@ export default function EquipesList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Equipes</CardTitle>
+          <CardTitle>Lista de Equipes ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
@@ -119,7 +145,7 @@ export default function EquipesList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((equipe) => (
+                {paginatedItems.map((equipe) => (
                   <TableRow key={equipe.id}>
                     <TableCell className="font-medium">{equipe.nome}</TableCell>
                     <TableCell>{AREA_LABEL[equipe.area] || equipe.area}</TableCell>
@@ -141,8 +167,29 @@ export default function EquipesList() {
               </TableBody>
             </Table>
           )}
+          {filtered.length > 0 && (
+            <DataTablePagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={confirmDialog.hide}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

@@ -1,18 +1,33 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Filter, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AdvancedSearch } from '@/components/ui/advanced-search';
+import { SortableTableHeader } from '@/components/ui/sortable-table-header';
+import { useTableSort } from '@/hooks/useTableSort';
+import { usePagination } from '@/hooks/usePagination';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { exportToCSV } from '@/utils/export';
 import { eventosApi } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function EventosList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [busca, setBusca] = useState('');
+  const [filters, setFilters] = useState({
+    titulo: '',
+    descricao: '',
+    dataInicio_from: '',
+    dataInicio_to: '',
+  });
+  const confirmDialog = useConfirmDialog();
 
   const load = async () => {
     try {
@@ -33,20 +48,75 @@ export default function EventosList() {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir este evento?')) return;
-    try {
-      await eventosApi.delete(id);
-      await load();
-    } catch (err) {
-      alert('Erro ao excluir evento');
-      console.error(err);
-    }
+    const evento = items.find(e => e.id === id);
+    confirmDialog.show({
+      title: 'Excluir Evento',
+      description: `Tem certeza que deseja excluir "${evento?.titulo || 'este evento'}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await eventosApi.delete(id);
+          toast.success('Evento excluído com sucesso');
+          await load();
+        } catch (err) {
+          toast.error('Erro ao excluir evento');
+          console.error(err);
+          throw err;
+        }
+      },
+    });
   };
 
-  const filtered = items.filter((e) => {
-    if (busca && !e.titulo?.toLowerCase().includes(busca.toLowerCase()) && !e.descricao?.toLowerCase().includes(busca.toLowerCase())) return false;
+  const filteredRaw = items.filter((e) => {
+    // Busca por título
+    if (filters.titulo && !e.titulo?.toLowerCase().includes(filters.titulo.toLowerCase())) {
+      return false;
+    }
+
+    // Busca por descrição
+    if (filters.descricao && !e.descricao?.toLowerCase().includes(filters.descricao.toLowerCase())) {
+      return false;
+    }
+
+    // Filtro por data de início
+    if (filters.dataInicio_from) {
+      const dataInicio = new Date(e.dataInicio);
+      const dataFrom = new Date(filters.dataInicio_from + 'T00:00:00');
+      if (dataInicio < dataFrom) return false;
+    }
+
+    if (filters.dataInicio_to) {
+      const dataInicio = new Date(e.dataInicio);
+      const dataTo = new Date(filters.dataInicio_to + 'T23:59:59');
+      if (dataInicio > dataTo) return false;
+    }
+
     return true;
   });
+
+  // Ordenação
+  const { sortedData: filtered, sortConfig, handleSort } = useTableSort(filteredRaw, {
+    defaultSort: 'titulo',
+    defaultDirection: 'asc',
+  });
+
+  const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
+
+  // Exportação
+  const handleExport = () => {
+    const exportData = filtered.map(evento => ({
+      Título: evento.titulo || '',
+      Descrição: evento.descricao || '',
+      'Data Início': evento.dataInicio ? new Date(evento.dataInicio).toLocaleString('pt-BR') : '',
+      'Data Fim': evento.dataFim ? new Date(evento.dataFim).toLocaleString('pt-BR') : '',
+      URL: evento.url || '',
+    }));
+
+    exportToCSV(exportData, 'eventos');
+    toast.success('Dados exportados com sucesso!');
+  };
 
   if (loading) return <LoadingPage text="Carregando eventos..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
@@ -65,28 +135,41 @@ export default function EventosList() {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Filter className="h-4 w-4" />Buscar</label>
-              <input
-                className="w-full px-3 py-2 border rounded"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite o título ou descrição"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <AdvancedSearch
+        searchFields={[
+          { key: 'titulo', label: 'Título', type: 'text', placeholder: 'Buscar por título...' },
+          { key: 'descricao', label: 'Descrição', type: 'text', placeholder: 'Buscar por descrição...' },
+        ]}
+        filterFields={[
+          {
+            key: 'dataInicio',
+            label: 'Data de Início',
+            type: 'date-range',
+          },
+        ]}
+        values={filters}
+        onChange={setFilters}
+        onReset={() => {
+          setFilters({
+            titulo: '',
+            descricao: '',
+            dataInicio_from: '',
+            dataInicio_to: '',
+          });
+        }}
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Eventos</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Lista de Eventos ({total})</CardTitle>
+            {filtered.length > 0 && (
+              <Button variant="outline" size="sm" onClick={handleExport}>
+                <Download className="h-4 w-4 mr-2" />
+                Exportar CSV
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
@@ -95,16 +178,24 @@ export default function EventosList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Data Início</TableHead>
-                  <TableHead>Data Fim</TableHead>
+                  <SortableTableHeader field="titulo" onSort={handleSort} sortConfig={sortConfig}>
+                    Título
+                  </SortableTableHeader>
+                  <SortableTableHeader field="descricao" onSort={handleSort} sortConfig={sortConfig}>
+                    Descrição
+                  </SortableTableHeader>
+                  <SortableTableHeader field="dataInicio" onSort={handleSort} sortConfig={sortConfig}>
+                    Data Início
+                  </SortableTableHeader>
+                  <SortableTableHeader field="dataFim" onSort={handleSort} sortConfig={sortConfig}>
+                    Data Fim
+                  </SortableTableHeader>
                   <TableHead>URL</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((evento) => (
+                {paginatedItems.map((evento) => (
                   <TableRow key={evento.id}>
                     <TableCell className="font-medium">{evento.titulo || '-'}</TableCell>
                     <TableCell>{evento.descricao ? (evento.descricao.length > 50 ? `${evento.descricao.substring(0, 50)}...` : evento.descricao) : '-'}</TableCell>
@@ -139,8 +230,29 @@ export default function EventosList() {
               </TableBody>
             </Table>
           )}
+          {filtered.length > 0 && (
+            <DataTablePagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={confirmDialog.hide}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

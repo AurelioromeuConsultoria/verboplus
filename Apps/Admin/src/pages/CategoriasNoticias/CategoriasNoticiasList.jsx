@@ -1,18 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, Filter, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { usePagination } from '@/hooks/usePagination';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { categoriasNoticiasApi } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function CategoriasNoticiasList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
+  const confirmDialog = useConfirmDialog();
 
   const load = async () => {
     try {
@@ -33,20 +40,34 @@ export default function CategoriasNoticiasList() {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir esta categoria de notícia?')) return;
-    try {
-      await categoriasNoticiasApi.delete(id);
-      await load();
-    } catch (err) {
-      alert('Erro ao excluir. Existe(m) notícia(s) vinculada(s).');
-      console.error(err);
-    }
+    const categoria = items.find(c => c.id === id);
+    confirmDialog.show({
+      title: 'Excluir Categoria',
+      description: `Tem certeza que deseja excluir "${categoria?.nome || 'esta categoria'}"? Esta ação não pode ser desfeita. Se houver notícias vinculadas, a exclusão será bloqueada.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await categoriasNoticiasApi.delete(id);
+          toast.success('Categoria excluída com sucesso');
+          await load();
+        } catch (err) {
+          const errorMsg = err.response?.data?.message || 'Erro ao excluir categoria. Pode haver notícias vinculadas.';
+          toast.error(errorMsg);
+          console.error(err);
+          throw err;
+        }
+      },
+    });
   };
 
   const filtered = items.filter((c) => {
     if (busca && !c.nome.toLowerCase().includes(busca.toLowerCase())) return false;
     return true;
   });
+
+  const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
   if (loading) return <LoadingPage text="Carregando categorias de notícias..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
@@ -72,9 +93,8 @@ export default function CategoriasNoticiasList() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Filter className="h-4 w-4" />Buscar por nome</label>
-              <input
-                className="w-full px-3 py-2 border rounded"
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por nome</label>
+              <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Digite o nome da categoria"
@@ -86,7 +106,7 @@ export default function CategoriasNoticiasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Categorias de Notícias</CardTitle>
+          <CardTitle>Lista de Categorias de Notícias ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
@@ -101,7 +121,7 @@ export default function CategoriasNoticiasList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((categoria) => (
+                {paginatedItems.map((categoria) => (
                   <TableRow key={categoria.id}>
                     <TableCell className="font-medium">{categoria.nome}</TableCell>
                     <TableCell>{new Date(categoria.dataCriacao).toLocaleDateString('pt-BR')}</TableCell>
@@ -122,8 +142,29 @@ export default function CategoriasNoticiasList() {
               </TableBody>
             </Table>
           )}
+          {filtered.length > 0 && (
+            <DataTablePagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={confirmDialog.hide}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

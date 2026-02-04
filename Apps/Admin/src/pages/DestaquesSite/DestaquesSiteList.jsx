@@ -1,18 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, Filter, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { usePagination } from '@/hooks/usePagination';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { destaquesSiteApi } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function DestaquesSiteList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
+  const confirmDialog = useConfirmDialog();
 
   const load = async () => {
     try {
@@ -33,20 +40,33 @@ export default function DestaquesSiteList() {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir este destaque do site?')) return;
-    try {
-      await destaquesSiteApi.delete(id);
-      await load();
-    } catch (err) {
-      alert('Erro ao excluir destaque do site');
-      console.error(err);
-    }
+    const destaque = items.find(d => d.id === id);
+    confirmDialog.show({
+      title: 'Excluir Destaque',
+      description: `Tem certeza que deseja excluir "${destaque?.texto || 'este destaque'}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await destaquesSiteApi.delete(id);
+          toast.success('Destaque excluído com sucesso');
+          await load();
+        } catch (err) {
+          toast.error('Erro ao excluir destaque do site');
+          console.error(err);
+          throw err;
+        }
+      },
+    });
   };
 
   const filtered = items.filter((d) => {
     if (busca && !d.texto?.toLowerCase().includes(busca.toLowerCase()) && !d.descricao?.toLowerCase().includes(busca.toLowerCase())) return false;
     return true;
   });
+
+  const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
   if (loading) return <LoadingPage text="Carregando destaques do site..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
@@ -72,9 +92,8 @@ export default function DestaquesSiteList() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Filter className="h-4 w-4" />Buscar</label>
-              <input
-                className="w-full px-3 py-2 border rounded"
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar</label>
+              <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Digite o texto ou descrição"
@@ -86,7 +105,7 @@ export default function DestaquesSiteList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Destaques do Site</CardTitle>
+          <CardTitle>Lista de Destaques do Site ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
@@ -103,7 +122,7 @@ export default function DestaquesSiteList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((destaque) => (
+                {paginatedItems.map((destaque) => (
                   <TableRow key={destaque.id}>
                     <TableCell className="font-medium">{destaque.texto || '-'}</TableCell>
                     <TableCell>{destaque.descricao || '-'}</TableCell>
@@ -132,8 +151,29 @@ export default function DestaquesSiteList() {
               </TableBody>
             </Table>
           )}
+          {filtered.length > 0 && (
+            <DataTablePagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={confirmDialog.hide}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

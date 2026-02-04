@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Eye, Edit, Trash2, Phone, Mail, Search, Filter } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, Phone, Mail, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AdvancedSearch } from '@/components/ui/advanced-search';
+import { SortableTableHeader } from '@/components/ui/sortable-table-header';
+import { useTableSort } from '@/hooks/useTableSort';
+import { exportToCSV } from '@/utils/export';
 import { pessoasApi } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -16,9 +20,20 @@ export function PessoasList() {
   const [pessoas, setPessoas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [busca, setBusca] = useState('');
-  const [filtroPerfil, setFiltroPerfil] = useState('');
-  const [filtroTipoPessoa, setFiltroTipoPessoa] = useState('');
+  const [filters, setFilters] = useState({
+    nome: '',
+    email: '',
+    telefone: '',
+    whatsApp: '',
+    perfil: undefined,
+    tipoPessoa: undefined,
+    ativo: undefined,
+  });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pessoaToDelete, setPessoaToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadPessoas = async () => {
     try {
@@ -36,18 +51,28 @@ export function PessoasList() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir esta pessoa?')) {
-      return;
-    }
+  const handleDeleteClick = (pessoa) => {
+    setPessoaToDelete(pessoa);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!pessoaToDelete) return;
 
     try {
-      await pessoasApi.delete(id);
+      setDeleting(true);
+      await pessoasApi.delete(pessoaToDelete.id);
       toast.success('Pessoa excluída com sucesso');
+      setDeleteDialogOpen(false);
+      setPessoaToDelete(null);
       await loadPessoas();
+      // Reset to first page if current page becomes empty
+      setPage(1);
     } catch (err) {
       toast.error('Erro ao excluir pessoa');
       console.error('Erro ao excluir pessoa:', err);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -64,23 +89,91 @@ export function PessoasList() {
       .filter(perfil => perfil !== '')
   )];
 
-  // Filtrar pessoas
-  const pessoasFiltradas = pessoas.filter((pessoa) => {
-    const buscaLower = busca.toLowerCase();
-    const matchBusca = !busca || 
-      pessoa.nome?.toLowerCase().includes(buscaLower) ||
-      pessoa.email?.toLowerCase().includes(buscaLower) ||
-      pessoa.telefone?.includes(busca) ||
-      pessoa.whatsApp?.includes(busca);
+  // Filtrar pessoas com busca avançada
+  const pessoasFiltradasRaw = pessoas.filter((pessoa) => {
+    // Busca por nome
+    if (filters.nome && !pessoa.nome?.toLowerCase().includes(filters.nome.toLowerCase())) {
+      return false;
+    }
 
-    const matchPerfil = !filtroPerfil || 
-      pessoa.perfis?.some(p => p.perfil === filtroPerfil);
+    // Busca por email
+    if (filters.email && !pessoa.email?.toLowerCase().includes(filters.email.toLowerCase())) {
+      return false;
+    }
 
-    const matchTipo = !filtroTipoPessoa || 
-      pessoa.tipoPessoa === filtroTipoPessoa;
+    // Busca por telefone
+    if (filters.telefone && !pessoa.telefone?.includes(filters.telefone)) {
+      return false;
+    }
 
-    return matchBusca && matchPerfil && matchTipo;
+    // Busca por WhatsApp
+    if (filters.whatsApp && !pessoa.whatsApp?.includes(filters.whatsApp)) {
+      return false;
+    }
+
+    // Filtro por perfil
+    if (filters.perfil && !pessoa.perfis?.some(p => p.perfil === filters.perfil)) {
+      return false;
+    }
+
+    // Filtro por tipo de pessoa
+    if (filters.tipoPessoa && pessoa.tipoPessoa !== filters.tipoPessoa) {
+      return false;
+    }
+
+    // Filtro por status ativo
+    if (filters.ativo !== undefined) {
+      const isAtivo = filters.ativo === 'true' || filters.ativo === true;
+      if (pessoa.ativo !== isAtivo) {
+        return false;
+      }
+    }
+
+    return true;
   });
+
+  // Ordenação
+  const { sortedData: pessoasFiltradas, sortConfig, handleSort } = useTableSort(pessoasFiltradasRaw, {
+    defaultSort: 'nome',
+    defaultDirection: 'asc',
+  });
+
+  // Paginação client-side
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const pessoasPaginadas = pessoasFiltradas.slice(startIndex, endIndex);
+
+  // Exportação
+  const handleExport = () => {
+    const exportData = pessoasFiltradas.map(pessoa => ({
+      Nome: pessoa.nome || '',
+      Email: pessoa.email || '',
+      Telefone: pessoa.telefone || '',
+      WhatsApp: pessoa.whatsApp || '',
+      'Tipo de Pessoa': pessoa.tipoPessoa || '',
+      Perfis: pessoa.perfis?.filter(p => !p.dataFim).map(p => p.perfil).join('; ') || '',
+      Ativo: pessoa.ativo ? 'Sim' : 'Não',
+      'Data de Criação': pessoa.dataCriacao ? new Date(pessoa.dataCriacao).toLocaleDateString('pt-BR') : '',
+    }));
+
+    exportToCSV(exportData, 'pessoas', [
+      { key: 'Nome', label: 'Nome' },
+      { key: 'Email', label: 'Email' },
+      { key: 'Telefone', label: 'Telefone' },
+      { key: 'WhatsApp', label: 'WhatsApp' },
+      { key: 'Tipo de Pessoa', label: 'Tipo de Pessoa' },
+      { key: 'Perfis', label: 'Perfis' },
+      { key: 'Ativo', label: 'Ativo' },
+      { key: 'Data de Criação', label: 'Data de Criação' },
+    ]);
+
+    toast.success('Dados exportados com sucesso!');
+  };
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filters]);
 
   if (loading) {
     return <LoadingPage text="Carregando pessoas..." />;
@@ -107,62 +200,63 @@ export function PessoasList() {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Search className="h-4 w-4" />
-                Buscar
-              </label>
-              <Input
-                placeholder="Nome, Email, Telefone ou WhatsApp"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Perfil</label>
-              <Select value={filtroPerfil || "all"} onValueChange={(value) => setFiltroPerfil(value === "all" ? "" : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os perfis" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os perfis</SelectItem>
-                  {perfisUnicos.map((perfil) => (
-                    <SelectItem key={perfil} value={perfil}>
-                      {perfil}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tipo de Pessoa</label>
-              <Select value={filtroTipoPessoa || "all"} onValueChange={(value) => setFiltroTipoPessoa(value === "all" ? "" : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os tipos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os tipos</SelectItem>
-                  <SelectItem value="Adulto">Adulto</SelectItem>
-                  <SelectItem value="Crianca">Criança</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <AdvancedSearch
+        searchFields={[
+          { key: 'nome', label: 'Nome', type: 'text', placeholder: 'Buscar por nome...' },
+          { key: 'email', label: 'Email', type: 'text', placeholder: 'Buscar por email...' },
+          { key: 'telefone', label: 'Telefone', type: 'text', placeholder: 'Buscar por telefone...' },
+          { key: 'whatsApp', label: 'WhatsApp', type: 'text', placeholder: 'Buscar por WhatsApp...' },
+        ]}
+        filterFields={[
+          {
+            key: 'perfil',
+            label: 'Perfil',
+            type: 'select',
+            options: perfisUnicos.map(perfil => ({ value: perfil, label: perfil })),
+          },
+          {
+            key: 'tipoPessoa',
+            label: 'Tipo de Pessoa',
+            type: 'select',
+            options: [
+              { value: 'Adulto', label: 'Adulto' },
+              { value: 'Crianca', label: 'Criança' },
+            ],
+          },
+          {
+            key: 'ativo',
+            label: 'Status',
+            type: 'boolean',
+            trueLabel: 'Ativo',
+            falseLabel: 'Inativo',
+          },
+        ]}
+        values={filters}
+        onChange={setFilters}
+        onReset={() => {
+          setFilters({
+            nome: '',
+            email: '',
+            telefone: '',
+            whatsApp: '',
+            perfil: undefined,
+            tipoPessoa: undefined,
+            ativo: undefined,
+          });
+        }}
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Pessoas ({pessoasFiltradas.length})</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Lista de Pessoas ({pessoasFiltradas.length})</CardTitle>
+            {pessoasFiltradas.length > 0 && (
+              <Button variant="outline" size="sm" onClick={handleExport}>
+                <Download className="h-4 w-4 mr-2" />
+                Exportar CSV
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {pessoasFiltradas.length === 0 ? (
@@ -185,18 +279,30 @@ export function PessoasList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>WhatsApp</TableHead>
-                  <TableHead>Tipo</TableHead>
+                  <SortableTableHeader field="nome" onSort={handleSort} sortConfig={sortConfig}>
+                    Nome
+                  </SortableTableHeader>
+                  <SortableTableHeader field="email" onSort={handleSort} sortConfig={sortConfig}>
+                    Email
+                  </SortableTableHeader>
+                  <SortableTableHeader field="telefone" onSort={handleSort} sortConfig={sortConfig}>
+                    Telefone
+                  </SortableTableHeader>
+                  <SortableTableHeader field="whatsApp" onSort={handleSort} sortConfig={sortConfig}>
+                    WhatsApp
+                  </SortableTableHeader>
+                  <SortableTableHeader field="tipoPessoa" onSort={handleSort} sortConfig={sortConfig}>
+                    Tipo
+                  </SortableTableHeader>
                   <TableHead>Perfis</TableHead>
-                  <TableHead>Ativo</TableHead>
+                  <SortableTableHeader field="ativo" onSort={handleSort} sortConfig={sortConfig}>
+                    Ativo
+                  </SortableTableHeader>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pessoasFiltradas.map((pessoa) => (
+                {pessoasPaginadas.map((pessoa) => (
                   <TableRow key={pessoa.id}>
                     <TableCell className="font-medium">
                       {pessoa.nome}
@@ -272,7 +378,7 @@ export function PessoasList() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(pessoa.id)}
+                          onClick={() => handleDeleteClick(pessoa)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -283,8 +389,32 @@ export function PessoasList() {
               </TableBody>
             </Table>
           )}
+          {pessoasFiltradas.length > 0 && (
+            <DataTablePagination
+              page={page}
+              pageSize={pageSize}
+              total={pessoasFiltradas.length}
+              onPageChange={setPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setPage(1);
+              }}
+            />
+          )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Excluir Pessoa"
+        description={`Tem certeza que deseja excluir "${pessoaToDelete?.nome}"? Esta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="destructive"
+        loading={deleting}
+      />
     </div>
   );
 }

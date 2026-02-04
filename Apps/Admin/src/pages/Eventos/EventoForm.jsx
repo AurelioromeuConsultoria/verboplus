@@ -58,6 +58,22 @@ export default function EventoForm() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Função para normalizar URL (adiciona https:// se não tiver protocolo, mas preserva URLs relativas)
+  const normalizeUrl = (url) => {
+    if (!url || !url.trim()) return null;
+    const trimmed = url.trim();
+    // Se já tiver protocolo, retorna como está
+    if (trimmed.match(/^https?:\/\//i)) {
+      return trimmed;
+    }
+    // Se começar com /, é URL relativa interna - não adicionar protocolo
+    if (trimmed.startsWith('/')) {
+      return trimmed;
+    }
+    // Se não tiver protocolo e não for relativa, adiciona https://
+    return `https://${trimmed}`;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -66,7 +82,7 @@ export default function EventoForm() {
         titulo: formData.titulo.trim() || null,
         descricao: formData.descricao.trim() || null,
         imagemDestaque: formData.imagemDestaque.trim() || null,
-        url: formData.url.trim() || null,
+        url: normalizeUrl(formData.url),
         dataInicio: formData.dataInicio ? new Date(formData.dataInicio).toISOString() : null,
         dataFim: formData.dataFim ? new Date(formData.dataFim).toISOString() : null,
       };
@@ -113,7 +129,19 @@ export default function EventoForm() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="url">URL</Label>
-                <Input id="url" name="url" type="url" value={formData.url} onChange={handleChange} placeholder="https://exemplo.com" />
+                <Input 
+                  id="url" 
+                  name="url" 
+                  type="text" 
+                  value={formData.url} 
+                  onChange={handleChange} 
+                  placeholder="exemplo.com ou https://exemplo.com" 
+                />
+                {formData.url && !formData.url.match(/^https?:\/\//i) && (
+                  <p className="text-xs text-muted-foreground">
+                    Será adicionado https:// automaticamente
+                  </p>
+                )}
               </div>
             </div>
 

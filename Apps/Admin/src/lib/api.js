@@ -240,5 +240,41 @@ export const galeriasFotosApi = {
   listarFotos: (id) => api.get(`/galeriasFotos/${id}/fotos`),
 };
 
+// Configuração Portal
+export const configuracaoPortalApi = {
+  get: () => api.get('/configuracaoPortal'),
+  update: (data) => api.put('/configuracaoPortal', data),
+};
+
+// Enquetes
+export const enquetesApi = {
+  getAll: () => api.get('/Enquetes'),
+  getAtivas: () => api.get('/Enquetes/ativas'),
+  getById: (id) => api.get(`/Enquetes/${id}`),
+  create: (data) => api.post('/Enquetes', data),
+  update: (id, data) => api.put(`/Enquetes/${id}`, data),
+  delete: (id) => api.delete(`/Enquetes/${id}`),
+};
+
+// Kids
+export const kidsApi = {
+  getCriancas: () => api.get('/kids/criancas'),
+  getCriancaById: (id) => api.get(`/kids/criancas/${id}`),
+  createCrianca: (data) => api.post('/kids/criancas', data),
+  updateCrianca: (id, data) => api.put(`/kids/criancas/${id}`, data),
+  deleteCrianca: (id) => api.delete(`/kids/criancas/${id}`),
+  getCheckins: (criancaPessoaId) => {
+    const params = criancaPessoaId ? { criancaPessoaId } : {};
+    return api.get('/kids/checkins', { params });
+  },
+  checkin: (data) => api.post('/kids/checkin', data),
+  checkout: (data) => api.post('/kids/checkout', data),
+};
+
+// Dashboard
+export const dashboardApi = {
+  getEstatisticas: () => api.get('/dashboard/estatisticas'),
+};
+
 export default api;
 

@@ -1,12 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Filter, Phone, Mail } from 'lucide-react';
+import { Plus, Edit, Trash2, Filter, Phone, Mail, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { usePagination } from '@/hooks/usePagination';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { contatosApi } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function ContatosList() {
   const [items, setItems] = useState([]);
@@ -14,6 +22,7 @@ export default function ContatosList() {
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const [membroFilter, setMembroFilter] = useState('');
+  const confirmDialog = useConfirmDialog();
 
   const load = async () => {
     try {
@@ -34,14 +43,25 @@ export default function ContatosList() {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir este contato?')) return;
-    try {
-      await contatosApi.delete(id);
-      await load();
-    } catch (err) {
-      alert('Erro ao excluir contato');
-      console.error(err);
-    }
+    const contato = items.find(c => c.id === id);
+    confirmDialog.show({
+      title: 'Excluir Contato',
+      description: `Tem certeza que deseja excluir o contato de "${contato?.nome || 'este contato'}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await contatosApi.delete(id);
+          toast.success('Contato excluído com sucesso');
+          await load();
+        } catch (err) {
+          toast.error('Erro ao excluir contato');
+          console.error(err);
+          throw err;
+        }
+      },
+    });
   };
 
   const filtered = items.filter((c) => {
@@ -49,6 +69,8 @@ export default function ContatosList() {
     if (membroFilter !== '' && String(c.membro) !== membroFilter) return false;
     return true;
   });
+
+  const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
   if (loading) return <LoadingPage text="Carregando contatos..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
@@ -74,9 +96,8 @@ export default function ContatosList() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Filter className="h-4 w-4" />Buscar</label>
-              <input
-                className="w-full px-3 py-2 border rounded"
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar</label>
+              <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Digite o nome ou email"
@@ -84,11 +105,16 @@ export default function ContatosList() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Membro</label>
-              <select className="w-full px-3 py-2 border rounded" value={membroFilter} onChange={(e) => setMembroFilter(e.target.value)}>
-                <option value="">Todos</option>
-                <option value="true">Membro</option>
-                <option value="false">Não Membro</option>
-              </select>
+              <Select value={membroFilter || 'all'} onValueChange={(value) => setMembroFilter(value === 'all' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="true">Membro</SelectItem>
+                  <SelectItem value="false">Não Membro</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
@@ -96,7 +122,7 @@ export default function ContatosList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Contatos</CardTitle>
+          <CardTitle>Lista de Contatos ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
@@ -115,7 +141,7 @@ export default function ContatosList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((contato) => (
+                {paginatedItems.map((contato) => (
                   <TableRow key={contato.id}>
                     <TableCell className="font-medium">{contato.nome || '-'}</TableCell>
                     <TableCell>
@@ -147,9 +173,9 @@ export default function ContatosList() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${contato.membro ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                      <Badge variant={contato.membro ? 'default' : 'secondary'}>
                         {contato.membro ? 'Sim' : 'Não'}
-                      </span>
+                      </Badge>
                     </TableCell>
                     <TableCell>{contato.mensagem ? (contato.mensagem.length > 50 ? `${contato.mensagem.substring(0, 50)}...` : contato.mensagem) : '-'}</TableCell>
                     <TableCell>{contato.dataCriacao ? new Date(contato.dataCriacao).toLocaleDateString('pt-BR') : '-'}</TableCell>
@@ -170,8 +196,29 @@ export default function ContatosList() {
               </TableBody>
             </Table>
           )}
+          {filtered.length > 0 && (
+            <DataTablePagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={confirmDialog.hide}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

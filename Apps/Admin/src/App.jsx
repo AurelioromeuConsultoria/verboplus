@@ -42,6 +42,10 @@ import CategoriaMidiaForm from './pages/CategoriasMidias/CategoriaMidiaForm';
 import GaleriasFotosList from './pages/GaleriasFotos/GaleriasFotosList';
 import GaleriaFotoForm from './pages/GaleriasFotos/GaleriaFotoForm';
 import GaleriaFotos from './pages/GaleriasFotos/GaleriaFotos';
+import EnquetesList from './pages/Enquetes/EnquetesList';
+import EnqueteForm from './pages/Enquetes/EnqueteForm';
+import KidsCheckinsList from './pages/Kids/KidsCheckinsList';
+import ConfiguracaoPortal from './pages/ConfiguracaoPortal/ConfiguracaoPortal';
 import './App.css';
 
 function App() {
@@ -111,6 +115,7 @@ function App() {
           <Route path="destaques-site" element={<DestaquesSiteList />} />
           <Route path="destaques-site/novo" element={<DestaqueSiteForm />} />
           <Route path="destaques-site/:id/editar" element={<DestaqueSiteForm />} />
+          <Route path="configuracao-portal" element={<ConfiguracaoPortal />} />
 
           {/* Rotas de Categorias de Notícias */}
           <Route path="categorias-noticias" element={<CategoriasNoticiasList />} />
@@ -149,6 +154,14 @@ function App() {
           <Route path="galerias-fotos/novo" element={<GaleriaFotoForm />} />
           <Route path="galerias-fotos/:id/editar" element={<GaleriaFotoForm />} />
           <Route path="galerias-fotos/:id/fotos" element={<GaleriaFotos />} />
+
+          {/* Rotas de Enquetes */}
+          <Route path="enquetes" element={<EnquetesList />} />
+          <Route path="enquetes/novo" element={<EnqueteForm />} />
+          <Route path="enquetes/:id/editar" element={<EnqueteForm />} />
+
+          {/* Rotas de Kids */}
+          <Route path="kids/checkins" element={<KidsCheckinsList />} />
         </Route>
         
         {/* Redirecionar rotas não encontradas para login ou dashboard */}

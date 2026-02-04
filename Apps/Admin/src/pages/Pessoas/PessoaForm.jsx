@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { useFormValidation } from '@/hooks/useFormValidation';
 import { pessoasApi } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -20,7 +21,36 @@ export function PessoaForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const [formData, setFormData] = useState({
+  const validationRules = {
+    nome: {
+      required: true,
+      requiredMessage: 'Nome é obrigatório',
+      minLength: 2,
+      minLengthMessage: 'Nome deve ter pelo menos 2 caracteres',
+      maxLength: 100,
+    },
+    email: {
+      email: true,
+      emailMessage: 'Email inválido',
+    },
+    telefone: {
+      maxLength: 20,
+    },
+    whatsApp: {
+      maxLength: 20,
+    },
+  };
+
+  const {
+    values: formData,
+    errors,
+    touched,
+    handleChange: handleValidationChange,
+    handleBlur,
+    validate,
+    reset: resetValidation,
+    setValues: setFormData,
+  } = useFormValidation(validationRules, {
     nome: '',
     email: '',
     telefone: '',
@@ -39,7 +69,7 @@ export function PessoaForm() {
       const response = await pessoasApi.getById(id);
       const pessoa = response.data;
       
-      setFormData({
+      const loadedData = {
         nome: pessoa.nome || '',
         email: pessoa.email || '',
         telefone: pessoa.telefone || '',
@@ -49,7 +79,9 @@ export function PessoaForm() {
           : '',
         tipoPessoa: pessoa.tipoPessoa || 'Adulto',
         ativo: pessoa.ativo !== undefined ? pessoa.ativo : true,
-      });
+      };
+      setFormData(loadedData);
+      resetValidation(loadedData);
     } catch (err) {
       setError('Erro ao carregar pessoa');
       console.error('Erro ao carregar pessoa:', err);
@@ -63,44 +95,29 @@ export function PessoaForm() {
     loadPessoa();
   }, [id]);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  };
-
   const normalizePhone = (phone) => {
     return phone.replace(/\D/g, '');
   };
 
-  const handlePhoneChange = (name, value) => {
-    const normalized = normalizePhone(value);
-    setFormData((prev) => ({
-      ...prev,
-      [name]: normalized,
-    }));
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    const finalValue = type === 'checkbox' ? checked : value;
+    handleValidationChange(name, finalValue);
   };
 
-  const validateForm = () => {
-    if (!formData.nome.trim()) {
-      toast.error('Nome é obrigatório');
-      return false;
-    }
-
-    if (formData.email && !/.+@.+\..+/.test(formData.email)) {
-      toast.error('Email inválido');
-      return false;
-    }
-
-    return true;
+  const handlePhoneChange = (name, value) => {
+    const normalized = normalizePhone(value);
+    handleValidationChange(name, normalized);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    if (!validate()) {
+      const firstError = Object.values(errors)[0];
+      if (firstError) {
+        toast.error(firstError);
+      }
       return;
     }
 
@@ -182,9 +199,13 @@ export function PessoaForm() {
                   name="nome"
                   value={formData.nome}
                   onChange={handleChange}
+                  onBlur={() => handleBlur('nome')}
                   placeholder="Nome completo"
-                  required
+                  className={touched.nome && errors.nome ? 'border-destructive' : ''}
                 />
+                {touched.nome && errors.nome && (
+                  <p className="text-sm text-destructive mt-1">{errors.nome}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -195,8 +216,13 @@ export function PessoaForm() {
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
+                  onBlur={() => handleBlur('email')}
                   placeholder="email@exemplo.com"
+                  className={touched.email && errors.email ? 'border-destructive' : ''}
                 />
+                {touched.email && errors.email && (
+                  <p className="text-sm text-destructive mt-1">{errors.email}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -206,8 +232,13 @@ export function PessoaForm() {
                   name="telefone"
                   value={formData.telefone}
                   onChange={(e) => handlePhoneChange('telefone', e.target.value)}
+                  onBlur={() => handleBlur('telefone')}
                   placeholder="11999998888 (apenas números)"
+                  className={touched.telefone && errors.telefone ? 'border-destructive' : ''}
                 />
+                {touched.telefone && errors.telefone && (
+                  <p className="text-sm text-destructive mt-1">{errors.telefone}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -217,8 +248,13 @@ export function PessoaForm() {
                   name="whatsApp"
                   value={formData.whatsApp}
                   onChange={(e) => handlePhoneChange('whatsApp', e.target.value)}
+                  onBlur={() => handleBlur('whatsApp')}
                   placeholder="11999998888 (apenas números)"
+                  className={touched.whatsApp && errors.whatsApp ? 'border-destructive' : ''}
                 />
+                {touched.whatsApp && errors.whatsApp && (
+                  <p className="text-sm text-destructive mt-1">{errors.whatsApp}</p>
+                )}
               </div>
 
               <div className="space-y-2">

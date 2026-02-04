@@ -1,11 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Filter, Image, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, Filter, Image, Calendar, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { usePagination } from '@/hooks/usePagination';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { galeriasFotosApi, eventosApi, categoriasMidiasApi } from '@/lib/api';
+import { toast } from 'sonner';
 
 const API_BASE_URL = 'http://localhost:5000';
 
@@ -19,6 +27,7 @@ export default function GaleriasFotosList() {
   const [eventoFilter, setEventoFilter] = useState('');
   const [categoriaFilter, setCategoriaFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const confirmDialog = useConfirmDialog();
 
   const load = async () => {
     try {
@@ -45,14 +54,25 @@ export default function GaleriasFotosList() {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!confirm('⚠️ ATENÇÃO: Esta ação irá deletar a galeria e TODAS as fotos. Esta ação não pode ser desfeita.\n\nTem certeza que deseja continuar?')) return;
-    try {
-      await galeriasFotosApi.delete(id);
-      await load();
-    } catch (err) {
-      alert('Erro ao excluir galeria');
-      console.error(err);
-    }
+    const galeria = items.find(g => g.id === id);
+    confirmDialog.show({
+      title: '⚠️ Excluir Galeria',
+      description: `Esta ação irá deletar a galeria "${galeria?.nome || 'esta galeria'}" e TODAS as fotos associadas. Esta ação não pode ser desfeita. Tem certeza que deseja continuar?`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await galeriasFotosApi.delete(id);
+          toast.success('Galeria excluída com sucesso');
+          await load();
+        } catch (err) {
+          toast.error('Erro ao excluir galeria');
+          console.error(err);
+          throw err;
+        }
+      },
+    });
   };
 
   const filtered = items.filter((g) => {
@@ -62,6 +82,8 @@ export default function GaleriasFotosList() {
     if (statusFilter !== '' && String(g.ativo) !== statusFilter) return false;
     return true;
   });
+
+  const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 12);
 
   const getImagemUrl = (caminho) => {
     if (!caminho) return null;
@@ -94,9 +116,8 @@ export default function GaleriasFotosList() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Filter className="h-4 w-4" />Buscar</label>
-              <input
-                className="w-full px-3 py-2 border rounded"
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar</label>
+              <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Nome ou descrição"
@@ -104,29 +125,44 @@ export default function GaleriasFotosList() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Evento</label>
-              <select className="w-full px-3 py-2 border rounded" value={eventoFilter} onChange={(e) => setEventoFilter(e.target.value)}>
-                <option value="">Todos</option>
-                {eventos.map((e) => (
-                  <option key={e.id} value={e.id}>{e.titulo}</option>
-                ))}
-              </select>
+              <Select value={eventoFilter || 'all'} onValueChange={(value) => setEventoFilter(value === 'all' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os eventos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os eventos</SelectItem>
+                  {eventos.map((e) => (
+                    <SelectItem key={e.id} value={String(e.id)}>{e.titulo}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Categoria</label>
-              <select className="w-full px-3 py-2 border rounded" value={categoriaFilter} onChange={(e) => setCategoriaFilter(e.target.value)}>
-                <option value="">Todas</option>
-                {categorias.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
-                ))}
-              </select>
+              <Select value={categoriaFilter || 'all'} onValueChange={(value) => setCategoriaFilter(value === 'all' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as categorias" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as categorias</SelectItem>
+                  {categorias.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Status</label>
-              <select className="w-full px-3 py-2 border rounded" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="">Todos</option>
-                <option value="true">Ativo</option>
-                <option value="false">Inativo</option>
-              </select>
+              <Select value={statusFilter || 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="true">Ativo</SelectItem>
+                  <SelectItem value="false">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
@@ -139,8 +175,9 @@ export default function GaleriasFotosList() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((galeria) => {
+        <>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {paginatedItems.map((galeria) => {
             const imagemUrl = getImagemUrl(galeria.imagemDestaque);
             return (
               <Card key={galeria.id} className="overflow-hidden">
@@ -160,8 +197,8 @@ export default function GaleriasFotosList() {
                     <Image className="h-16 w-16 text-gray-400" />
                   </div>
                   {!galeria.ativo && (
-                    <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
-                      Inativo
+                    <div className="absolute top-2 right-2">
+                      <Badge variant="destructive">Inativo</Badge>
                     </div>
                   )}
                 </div>
@@ -205,8 +242,28 @@ export default function GaleriasFotosList() {
               </Card>
             );
           })}
-        </div>
+          </div>
+          <DataTablePagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </>
       )}
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={confirmDialog.hide}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

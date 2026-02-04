@@ -8,6 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { usePagination } from '@/hooks/usePagination';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { pessoasPerfisApi } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -17,6 +21,7 @@ export function PerfisList() {
   const [error, setError] = useState(null);
   const [filtroPerfil, setFiltroPerfil] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
+  const confirmDialog = useConfirmDialog();
 
   const loadPerfis = async () => {
     try {
@@ -34,35 +39,49 @@ export function PerfisList() {
   };
 
   const handleEncerrarPerfil = async (id) => {
-    if (!confirm('Tem certeza que deseja encerrar este perfil?')) {
-      return;
-    }
-
-    try {
-      await pessoasPerfisApi.update(id, {
-        dataFim: new Date().toISOString(),
-      });
-      toast.success('Perfil encerrado com sucesso');
-      await loadPerfis();
-    } catch (err) {
-      toast.error('Erro ao encerrar perfil');
-      console.error('Erro ao encerrar perfil:', err);
-    }
+    const perfil = perfis.find(p => p.id === id);
+    confirmDialog.show({
+      title: 'Encerrar Perfil',
+      description: `Tem certeza que deseja encerrar o perfil "${perfil?.perfil || 'este perfil'}" de "${perfil?.pessoa?.nome || 'esta pessoa'}"?`,
+      confirmText: 'Encerrar',
+      cancelText: 'Cancelar',
+      variant: 'default',
+      onConfirm: async () => {
+        try {
+          await pessoasPerfisApi.update(id, {
+            dataFim: new Date().toISOString(),
+          });
+          toast.success('Perfil encerrado com sucesso');
+          await loadPerfis();
+        } catch (err) {
+          toast.error('Erro ao encerrar perfil');
+          console.error('Erro ao encerrar perfil:', err);
+          throw err;
+        }
+      },
+    });
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir este perfil?')) {
-      return;
-    }
-
-    try {
-      await pessoasPerfisApi.delete(id);
-      toast.success('Perfil excluído com sucesso');
-      await loadPerfis();
-    } catch (err) {
-      toast.error('Erro ao excluir perfil');
-      console.error('Erro ao excluir perfil:', err);
-    }
+    const perfil = perfis.find(p => p.id === id);
+    confirmDialog.show({
+      title: 'Excluir Perfil',
+      description: `Tem certeza que deseja excluir o perfil "${perfil?.perfil || 'este perfil'}" de "${perfil?.pessoa?.nome || 'esta pessoa'}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await pessoasPerfisApi.delete(id);
+          toast.success('Perfil excluído com sucesso');
+          await loadPerfis();
+        } catch (err) {
+          toast.error('Erro ao excluir perfil');
+          console.error('Erro ao excluir perfil:', err);
+          throw err;
+        }
+      },
+    });
   };
 
   useEffect(() => {
@@ -89,6 +108,8 @@ export function PerfisList() {
 
     return matchPerfil && matchStatus;
   });
+
+  const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(perfisFiltrados, 20);
 
   if (loading) {
     return <LoadingPage text="Carregando perfis..." />;
@@ -153,7 +174,7 @@ export function PerfisList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Perfis ({perfisFiltrados.length})</CardTitle>
+          <CardTitle>Lista de Perfis ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {perfisFiltrados.length === 0 ? (
@@ -177,7 +198,7 @@ export function PerfisList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {perfisFiltrados.map((perfil) => {
+                {paginatedItems.map((perfil) => {
                   const isAtivo = !perfil.dataFim;
                   return (
                     <TableRow key={perfil.id}>
@@ -233,8 +254,29 @@ export function PerfisList() {
               </TableBody>
             </Table>
           )}
+          {perfisFiltrados.length > 0 && (
+            <DataTablePagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={confirmDialog.hide}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

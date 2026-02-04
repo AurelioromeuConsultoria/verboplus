@@ -22,10 +22,16 @@ import {
   UserCog,
   Images,
   Folder,
-  User
+  User,
+  ChevronsUpDown,
+  BarChart3,
+  Baby,
+  LogIn,
+  Cog
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
 
 const menuItems = [
   {
@@ -139,6 +145,11 @@ const menuGroups = [
         href: '/destaques-site',
         icon: Star,
       },
+      {
+        title: 'Configuração',
+        href: '/configuracao-portal',
+        icon: Cog,
+      },
     ],
   },
   {
@@ -157,6 +168,28 @@ const menuGroups = [
       },
     ],
   },
+  {
+    title: 'Enquetes',
+    icon: BarChart3,
+    items: [
+      {
+        title: 'Enquetes',
+        href: '/enquetes',
+        icon: BarChart3,
+      },
+    ],
+  },
+  {
+    title: 'Kids',
+    icon: Baby,
+    items: [
+      {
+        title: 'Check-ins',
+        href: '/kids/checkins',
+        icon: LogIn,
+      },
+    ],
+  },
 ];
 
 export function Sidebar() {
@@ -168,6 +201,8 @@ export function Sidebar() {
     eventos: true,
     portal: true,
     mídia: true,
+    enquetes: true,
+    kids: true,
   });
 
   const toggleGroup = (groupKey) => {
@@ -175,6 +210,37 @@ export function Sidebar() {
       ...prev,
       [groupKey]: !prev[groupKey],
     }));
+  };
+
+  const expandAllGroups = () => {
+    const allGroups = menuGroups.reduce((acc, group) => {
+      const groupKey = group.title.toLowerCase().replace(/\s+/g, '');
+      acc[groupKey] = true;
+      return acc;
+    }, {});
+    setOpenGroups(allGroups);
+  };
+
+  const collapseAllGroups = () => {
+    const allGroups = menuGroups.reduce((acc, group) => {
+      const groupKey = group.title.toLowerCase().replace(/\s+/g, '');
+      acc[groupKey] = false;
+      return acc;
+    }, {});
+    setOpenGroups(allGroups);
+  };
+
+  const allExpanded = menuGroups.every(group => {
+    const groupKey = group.title.toLowerCase().replace(/\s+/g, '');
+    return openGroups[groupKey];
+  });
+
+  const toggleAllGroups = () => {
+    if (allExpanded) {
+      collapseAllGroups();
+    } else {
+      expandAllGroups();
+    }
   };
 
   const isGroupActive = (items) => {
@@ -188,13 +254,22 @@ export function Sidebar() {
   return (
     <div className="flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border">
       {/* Logo */}
-      <div className="flex h-16 items-center px-6 border-b border-sidebar-border">
+      <div className="flex h-16 items-center justify-between px-6 border-b border-sidebar-border">
         <div className="flex items-center space-x-2">
           <Church className="h-8 w-8 text-sidebar-primary" />
           <span className="text-lg font-semibold text-sidebar-foreground">
             Sistema Igreja
           </span>
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleAllGroups}
+          className="h-8 w-8 p-0 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+          title={allExpanded ? 'Colapsar todos os menus' : 'Expandir todos os menus'}
+        >
+          <ChevronsUpDown className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Navigation */}

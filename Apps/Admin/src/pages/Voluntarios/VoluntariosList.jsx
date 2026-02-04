@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Filter, Phone, Mail } from 'lucide-react';
+import { Plus, Edit, Trash2, Filter, Phone, Mail, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { usePagination } from '@/hooks/usePagination';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { voluntariosApi, equipesApi, cargosApi } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function VoluntariosList() {
   const [items, setItems] = useState([]);
@@ -17,6 +24,7 @@ export default function VoluntariosList() {
   const [busca, setBusca] = useState('');
   const [equipeId, setEquipeId] = useState('');
   const [cargoId, setCargoId] = useState('');
+  const confirmDialog = useConfirmDialog();
 
   const load = async () => {
     try {
@@ -43,14 +51,25 @@ export default function VoluntariosList() {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir este voluntário?')) return;
-    try {
-      await voluntariosApi.delete(id);
-      await load();
-    } catch (err) {
-      alert('Erro ao excluir voluntário');
-      console.error(err);
-    }
+    const voluntario = items.find(v => v.id === id);
+    confirmDialog.show({
+      title: 'Excluir Voluntário',
+      description: `Tem certeza que deseja excluir "${voluntario?.nome || 'este voluntário'}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await voluntariosApi.delete(id);
+          toast.success('Voluntário excluído com sucesso');
+          await load();
+        } catch (err) {
+          toast.error('Erro ao excluir voluntário');
+          console.error(err);
+          throw err;
+        }
+      },
+    });
   };
 
   const filtered = items.filter((v) => {
@@ -59,6 +78,8 @@ export default function VoluntariosList() {
     if (cargoId && String(v.cargoId) !== String(cargoId)) return false;
     return true;
   });
+
+  const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
   if (loading) return <LoadingPage text="Carregando voluntários..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
@@ -84,9 +105,8 @@ export default function VoluntariosList() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Filter className="h-4 w-4" />Buscar por nome</label>
-              <input
-                className="w-full px-3 py-2 border rounded"
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por nome</label>
+              <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Digite o nome"
@@ -94,21 +114,31 @@ export default function VoluntariosList() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Equipe</label>
-              <select className="w-full px-3 py-2 border rounded" value={equipeId} onChange={(e) => setEquipeId(e.target.value)}>
-                <option value="">Todas</option>
-                {equipes.map((e) => (
-                  <option key={e.id} value={e.id}>{e.nome}</option>
-                ))}
-              </select>
+              <Select value={equipeId || 'all'} onValueChange={(value) => setEquipeId(value === 'all' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as equipes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as equipes</SelectItem>
+                  {equipes.map((e) => (
+                    <SelectItem key={e.id} value={String(e.id)}>{e.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Cargo</label>
-              <select className="w-full px-3 py-2 border rounded" value={cargoId} onChange={(e) => setCargoId(e.target.value)}>
-                <option value="">Todos</option>
-                {cargos.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
-                ))}
-              </select>
+              <Select value={cargoId || 'all'} onValueChange={(value) => setCargoId(value === 'all' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os cargos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os cargos</SelectItem>
+                  {cargos.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
@@ -116,7 +146,7 @@ export default function VoluntariosList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Voluntários</CardTitle>
+          <CardTitle>Lista de Voluntários ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
@@ -133,7 +163,7 @@ export default function VoluntariosList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((vol) => (
+                {paginatedItems.map((vol) => (
                   <TableRow key={vol.id}>
                     <TableCell className="font-medium">{vol.nome}</TableCell>
                     <TableCell>
@@ -169,8 +199,29 @@ export default function VoluntariosList() {
               </TableBody>
             </Table>
           )}
+          {filtered.length > 0 && (
+            <DataTablePagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={confirmDialog.hide}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

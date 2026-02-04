@@ -1,13 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Eye, Edit, Trash2, Phone, Mail, Search, Filter, Calendar } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, Phone, Mail, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AdvancedSearch } from '@/components/ui/advanced-search';
+import { SortableTableHeader } from '@/components/ui/sortable-table-header';
+import { useTableSort } from '@/hooks/useTableSort';
+import { usePagination } from '@/hooks/usePagination';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { exportToCSV } from '@/utils/export';
 import { visitantesApi } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -15,9 +22,15 @@ export function VisitantesList() {
   const [visitantes, setVisitantes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [busca, setBusca] = useState('');
-  const [dataInicio, setDataInicio] = useState('');
-  const [dataFim, setDataFim] = useState('');
+  const [filters, setFilters] = useState({
+    nome: '',
+    email: '',
+    telefone: '',
+    whatsApp: '',
+    dataVisita_from: '',
+    dataVisita_to: '',
+  });
+  const confirmDialog = useConfirmDialog();
 
   const loadVisitantes = async () => {
     try {
@@ -35,39 +48,103 @@ export function VisitantesList() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir esta visita?')) {
-      return;
-    }
-
-    try {
-      await visitantesApi.delete(id);
-      toast.success('Visita excluída com sucesso');
-      await loadVisitantes();
-    } catch (err) {
-      toast.error('Erro ao excluir visita');
-      console.error('Erro ao excluir visita:', err);
-    }
+    const visitante = visitantes.find(v => v.id === id);
+    const pessoaNome = visitante?.pessoa?.nome || 'esta visita';
+    confirmDialog.show({
+      title: 'Excluir Visita',
+      description: `Tem certeza que deseja excluir a visita de "${pessoaNome}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await visitantesApi.delete(id);
+          toast.success('Visita excluída com sucesso');
+          await loadVisitantes();
+        } catch (err) {
+          toast.error('Erro ao excluir visita');
+          console.error('Erro ao excluir visita:', err);
+          throw err;
+        }
+      },
+    });
   };
 
   useEffect(() => {
     loadVisitantes();
   }, []);
 
-  // Filtrar visitantes
-  const visitantesFiltrados = visitantes.filter((visitante) => {
-    const buscaLower = busca.toLowerCase();
-    const matchBusca = !busca || 
-      visitante.pessoa?.nome?.toLowerCase().includes(buscaLower) ||
-      visitante.pessoa?.email?.toLowerCase().includes(buscaLower) ||
-      visitante.pessoa?.telefone?.includes(busca) ||
-      visitante.pessoa?.whatsApp?.includes(busca);
+  // Filtrar visitantes com busca avançada
+  const visitantesFiltradosRaw = visitantes.filter((visitante) => {
+    // Busca por nome
+    if (filters.nome && !visitante.pessoa?.nome?.toLowerCase().includes(filters.nome.toLowerCase())) {
+      return false;
+    }
 
+    // Busca por email
+    if (filters.email && !visitante.pessoa?.email?.toLowerCase().includes(filters.email.toLowerCase())) {
+      return false;
+    }
+
+    // Busca por telefone
+    if (filters.telefone && !visitante.pessoa?.telefone?.includes(filters.telefone)) {
+      return false;
+    }
+
+    // Busca por WhatsApp
+    if (filters.whatsApp && !visitante.pessoa?.whatsApp?.includes(filters.whatsApp)) {
+      return false;
+    }
+
+    // Filtro por data de visita
     const dataVisita = new Date(visitante.dataVisita);
-    const matchDataInicio = !dataInicio || dataVisita >= new Date(dataInicio + 'T00:00:00');
-    const matchDataFim = !dataFim || dataVisita <= new Date(dataFim + 'T23:59:59');
+    if (filters.dataVisita_from) {
+      const dataFrom = new Date(filters.dataVisita_from + 'T00:00:00');
+      if (dataVisita < dataFrom) return false;
+    }
+    if (filters.dataVisita_to) {
+      const dataTo = new Date(filters.dataVisita_to + 'T23:59:59');
+      if (dataVisita > dataTo) return false;
+    }
 
-    return matchBusca && matchDataInicio && matchDataFim;
+    return true;
   });
+
+  // Ordenação - precisa ordenar por propriedades aninhadas
+  const visitantesFiltradosComNome = visitantesFiltradosRaw.map(v => ({
+    ...v,
+    nome: v.pessoa?.nome || '',
+    email: v.pessoa?.email || '',
+    telefone: v.pessoa?.telefone || '',
+    whatsApp: v.pessoa?.whatsApp || '',
+  }));
+
+  const { sortedData: visitantesFiltrados, sortConfig, handleSort } = useTableSort(visitantesFiltradosComNome, {
+    defaultSort: 'dataVisita',
+    defaultDirection: 'desc',
+  });
+
+  const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(visitantesFiltrados, 20);
+
+  // Exportação
+  const handleExport = () => {
+    const exportData = visitantesFiltrados.map(v => ({
+      Nome: v.pessoa?.nome || '',
+      Email: v.pessoa?.email || '',
+      Telefone: v.pessoa?.telefone || '',
+      WhatsApp: v.pessoa?.whatsApp || '',
+      'Data da Visita': v.dataVisita ? new Date(v.dataVisita).toLocaleDateString('pt-BR') : '',
+      Observações: v.observacoes || '',
+    }));
+
+    exportToCSV(exportData, 'visitantes');
+    toast.success('Dados exportados com sucesso!');
+  };
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filters, setPage]);
 
   if (loading) {
     return <LoadingPage text="Carregando visitantes..." />;
@@ -94,55 +171,45 @@ export function VisitantesList() {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Search className="h-4 w-4" />
-                Buscar
-              </label>
-              <Input
-                placeholder="Nome, Email, Telefone ou WhatsApp"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Data Início
-              </label>
-              <Input
-                type="date"
-                value={dataInicio}
-                onChange={(e) => setDataInicio(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Data Fim
-              </label>
-              <Input
-                type="date"
-                value={dataFim}
-                onChange={(e) => setDataFim(e.target.value)}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <AdvancedSearch
+        searchFields={[
+          { key: 'nome', label: 'Nome', type: 'text', placeholder: 'Buscar por nome...' },
+          { key: 'email', label: 'Email', type: 'text', placeholder: 'Buscar por email...' },
+          { key: 'telefone', label: 'Telefone', type: 'text', placeholder: 'Buscar por telefone...' },
+          { key: 'whatsApp', label: 'WhatsApp', type: 'text', placeholder: 'Buscar por WhatsApp...' },
+        ]}
+        filterFields={[
+          {
+            key: 'dataVisita',
+            label: 'Data da Visita',
+            type: 'date-range',
+          },
+        ]}
+        values={filters}
+        onChange={setFilters}
+        onReset={() => {
+          setFilters({
+            nome: '',
+            email: '',
+            telefone: '',
+            whatsApp: '',
+            dataVisita_from: '',
+            dataVisita_to: '',
+          });
+        }}
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Visitas ({visitantesFiltrados.length})</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Lista de Visitas ({total})</CardTitle>
+            {visitantesFiltrados.length > 0 && (
+              <Button variant="outline" size="sm" onClick={handleExport}>
+                <Download className="h-4 w-4 mr-2" />
+                Exportar CSV
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {visitantesFiltrados.length === 0 ? (
@@ -165,8 +232,12 @@ export function VisitantesList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Data da Visita</TableHead>
-                  <TableHead>Pessoa</TableHead>
+                  <SortableTableHeader field="dataVisita" onSort={handleSort} sortConfig={sortConfig}>
+                    Data da Visita
+                  </SortableTableHeader>
+                  <SortableTableHeader field="nome" onSort={handleSort} sortConfig={sortConfig}>
+                    Pessoa
+                  </SortableTableHeader>
                   <TableHead>Contato</TableHead>
                   <TableHead>Observações</TableHead>
                   <TableHead>Perfis</TableHead>
@@ -174,7 +245,7 @@ export function VisitantesList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visitantesFiltrados.map((visitante) => {
+                {paginatedItems.map((visitante) => {
                   const pessoa = visitante.pessoa || {};
                   const contato = pessoa.email || pessoa.whatsApp || pessoa.telefone || '-';
                   const perfis = pessoa.perfis || [];
@@ -260,8 +331,29 @@ export function VisitantesList() {
               </TableBody>
             </Table>
           )}
+          {visitantesFiltrados.length > 0 && (
+            <DataTablePagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={confirmDialog.hide}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

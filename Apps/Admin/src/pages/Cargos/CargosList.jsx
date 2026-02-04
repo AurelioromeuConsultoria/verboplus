@@ -1,18 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, Filter, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { usePagination } from '@/hooks/usePagination';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { cargosApi } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function CargosList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
+  const confirmDialog = useConfirmDialog();
 
   const load = async () => {
     try {
@@ -33,20 +40,34 @@ export default function CargosList() {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir este cargo?')) return;
-    try {
-      await cargosApi.delete(id);
-      await load();
-    } catch (err) {
-      alert('Erro ao excluir. Existe(m) voluntário(s) vinculado(s).');
-      console.error(err);
-    }
+    const cargo = items.find(c => c.id === id);
+    confirmDialog.show({
+      title: 'Excluir Cargo',
+      description: `Tem certeza que deseja excluir "${cargo?.nome || 'este cargo'}"? Esta ação não pode ser desfeita. Se houver voluntários vinculados, a exclusão será bloqueada.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await cargosApi.delete(id);
+          toast.success('Cargo excluído com sucesso');
+          await load();
+        } catch (err) {
+          const errorMsg = err.response?.data?.message || 'Erro ao excluir cargo. Pode haver voluntários vinculados.';
+          toast.error(errorMsg);
+          console.error(err);
+          throw err;
+        }
+      },
+    });
   };
 
   const filtered = items.filter((c) => {
     if (busca && !c.nome.toLowerCase().includes(busca.toLowerCase())) return false;
     return true;
   });
+
+  const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
   if (loading) return <LoadingPage text="Carregando cargos..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
@@ -72,9 +93,8 @@ export default function CargosList() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Filter className="h-4 w-4" />Buscar por nome</label>
-              <input
-                className="w-full px-3 py-2 border rounded"
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por nome</label>
+              <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Digite o nome do cargo"
@@ -86,7 +106,7 @@ export default function CargosList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Cargos</CardTitle>
+          <CardTitle>Lista de Cargos ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
@@ -101,7 +121,7 @@ export default function CargosList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((cargo) => (
+                {paginatedItems.map((cargo) => (
                   <TableRow key={cargo.id}>
                     <TableCell className="font-medium">{cargo.nome}</TableCell>
                     <TableCell>{new Date(cargo.dataCriacao).toLocaleDateString('pt-BR')}</TableCell>
@@ -122,8 +142,29 @@ export default function CargosList() {
               </TableBody>
             </Table>
           )}
+          {filtered.length > 0 && (
+            <DataTablePagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={confirmDialog.hide}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }
