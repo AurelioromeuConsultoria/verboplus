@@ -70,7 +70,13 @@ export function PerfisList() {
   }, []);
 
   // Obter lista única de perfis para filtro
-  const perfisUnicos = [...new Set(perfis.map(p => p.perfil))];
+  const perfisUnicos = [...new Set(
+    perfis
+      .map(p => p.perfil)
+      .filter(perfil => perfil != null && typeof perfil === 'string')
+      .map(perfil => perfil.trim())
+      .filter(perfil => perfil !== '')
+  )];
 
   // Filtrar perfis
   const perfisFiltrados = perfis.filter((perfil) => {
@@ -114,12 +120,12 @@ export function PerfisList() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <label className="text-sm font-medium">Perfil</label>
-              <Select value={filtroPerfil} onValueChange={setFiltroPerfil}>
+              <Select value={filtroPerfil || "all"} onValueChange={(value) => setFiltroPerfil(value === "all" ? "" : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos os perfis" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os perfis</SelectItem>
+                  <SelectItem value="all">Todos os perfis</SelectItem>
                   {perfisUnicos.map((perfil) => (
                     <SelectItem key={perfil} value={perfil}>
                       {perfil}
@@ -130,12 +136,12 @@ export function PerfisList() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Status</label>
-              <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+              <Select value={filtroStatus || "all"} onValueChange={(value) => setFiltroStatus(value === "all" ? "" : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os status</SelectItem>
+                  <SelectItem value="all">Todos os status</SelectItem>
                   <SelectItem value="ativo">Ativo</SelectItem>
                   <SelectItem value="inativo">Inativo</SelectItem>
                 </SelectContent>

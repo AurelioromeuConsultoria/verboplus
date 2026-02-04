@@ -27,9 +27,10 @@ export function PessoasList() {
       const response = await pessoasApi.getAll();
       setPessoas(response.data || []);
     } catch (err) {
-      setError('Erro ao carregar pessoas');
+      const errorMessage = err.response?.data?.message || err.message || 'Erro ao carregar pessoas';
+      setError(errorMessage);
       console.error('Erro ao carregar pessoas:', err);
-      toast.error('Erro ao carregar pessoas');
+      toast.error(`Erro ao carregar pessoas: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -52,11 +53,15 @@ export function PessoasList() {
 
   useEffect(() => {
     loadPessoas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Obter lista única de perfis para filtro
   const perfisUnicos = [...new Set(
     pessoas.flatMap(p => p.perfis?.map(perf => perf.perfil) || [])
+      .filter(perfil => perfil != null && typeof perfil === 'string')
+      .map(perfil => perfil.trim())
+      .filter(perfil => perfil !== '')
   )];
 
   // Filtrar pessoas
@@ -124,12 +129,12 @@ export function PessoasList() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Perfil</label>
-              <Select value={filtroPerfil} onValueChange={setFiltroPerfil}>
+              <Select value={filtroPerfil || "all"} onValueChange={(value) => setFiltroPerfil(value === "all" ? "" : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos os perfis" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os perfis</SelectItem>
+                  <SelectItem value="all">Todos os perfis</SelectItem>
                   {perfisUnicos.map((perfil) => (
                     <SelectItem key={perfil} value={perfil}>
                       {perfil}
@@ -140,12 +145,12 @@ export function PessoasList() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Tipo de Pessoa</label>
-              <Select value={filtroTipoPessoa} onValueChange={setFiltroTipoPessoa}>
+              <Select value={filtroTipoPessoa || "all"} onValueChange={(value) => setFiltroTipoPessoa(value === "all" ? "" : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos os tipos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os tipos</SelectItem>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
                   <SelectItem value="Adulto">Adulto</SelectItem>
                   <SelectItem value="Crianca">Criança</SelectItem>
                 </SelectContent>

@@ -8,7 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { ImageUpload } from '@/components/ImageUpload';
 import { destaquesSiteApi } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function DestaqueSiteForm() {
   const navigate = useNavigate();
@@ -64,9 +66,11 @@ export default function DestaqueSiteForm() {
       };
       if (isEditing) await destaquesSiteApi.update(id, payload);
       else await destaquesSiteApi.create(payload);
+      toast.success(isEditing ? 'Destaque atualizado com sucesso!' : 'Destaque criado com sucesso!');
       navigate('/destaques-site');
     } catch (err) {
-      alert('Erro ao salvar destaque do site');
+      const errorMessage = err.response?.data?.message || 'Erro ao salvar destaque do site';
+      toast.error(errorMessage);
       console.error(err);
     } finally {
       setLoading(false);
@@ -113,8 +117,13 @@ export default function DestaqueSiteForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="imagem">URL da Imagem</Label>
-              <Input id="imagem" name="imagem" type="url" value={formData.imagem} onChange={handleChange} placeholder="https://exemplo.com/imagem.jpg" />
+              <ImageUpload
+                label="Imagem"
+                value={formData.imagem}
+                onChange={(url) => setFormData((prev) => ({ ...prev, imagem: url }))}
+                accept="image/*"
+                type="image"
+              />
             </div>
 
             <div className="flex items-center space-x-4">

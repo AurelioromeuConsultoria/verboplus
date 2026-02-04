@@ -13,6 +13,12 @@ import {
   Eye,
   X
 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import api from '../../lib/api';
 import Loading from '../../components/ui/loading';
 import ErrorMessage from '../../components/ui/error-message';
@@ -130,29 +136,28 @@ const MensagensAgendadas = () => {
     const statusText = getStatusText(status);
     switch (statusText) {
       case 'Agendada':
-        return <Clock className="w-4 h-4 text-blue-600" />;
+        return <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" />;
       case 'Enviada':
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
+        return <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400" />;
       case 'Erro':
-        return <XCircle className="w-4 h-4 text-red-600" />;
+        return <XCircle className="w-4 h-4 text-red-500 dark:text-red-400" />;
       default:
-        return <AlertCircle className="w-4 h-4 text-gray-600" />;
+        return <AlertCircle className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
   const getStatusBadge = (status) => {
-    const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
     const statusText = getStatusText(status);
     
     switch (statusText) {
       case 'Agendada':
-        return `${baseClasses} bg-blue-100 text-blue-800`;
+        return <Badge variant="default" className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700">Agendada</Badge>;
       case 'Enviada':
-        return `${baseClasses} bg-green-100 text-green-800`;
+        return <Badge variant="default" className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700">Enviada</Badge>;
       case 'Erro':
-        return `${baseClasses} bg-red-100 text-red-800`;
+        return <Badge variant="destructive">Erro</Badge>;
       default:
-        return `${baseClasses} bg-gray-100 text-gray-800`;
+        return <Badge variant="secondary">{statusText}</Badge>;
     }
   };
 
@@ -199,245 +204,251 @@ const MensagensAgendadas = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Mensagens Agendadas</h1>
-        <p className="text-gray-600 mt-1">Acompanhe o status das mensagens automáticas</p>
+        <h1 className="text-3xl font-bold text-foreground">Mensagens Agendadas</h1>
+        <p className="text-muted-foreground mt-1">Acompanhe o status das mensagens automáticas</p>
       </div>
 
       {error && <ErrorMessage message={error} />}
 
       {/* Cards de Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <MessageSquare className="w-8 h-8 text-gray-600" />
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <MessageSquare className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Clock className="w-8 h-8 text-blue-600" />
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Clock className="w-8 h-8 text-blue-500 dark:text-blue-400" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-muted-foreground">Agendadas</p>
+                <p className="text-2xl font-bold text-blue-500 dark:text-blue-400">{stats.agendadas}</p>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Agendadas</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.agendadas}</p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <CheckCircle className="w-8 h-8 text-green-600" />
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <CheckCircle className="w-8 h-8 text-green-500 dark:text-green-400" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-muted-foreground">Enviadas</p>
+                <p className="text-2xl font-bold text-green-500 dark:text-green-400">{stats.enviadas}</p>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Enviadas</p>
-              <p className="text-2xl font-bold text-green-600">{stats.enviadas}</p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <XCircle className="w-8 h-8 text-red-600" />
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <XCircle className="w-8 h-8 text-red-500 dark:text-red-400" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-muted-foreground">Com Erro</p>
+                <p className="text-2xl font-bold text-red-500 dark:text-red-400">{stats.erro}</p>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Com Erro</p>
-              <p className="text-2xl font-bold text-red-600">{stats.erro}</p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center space-x-2 mb-4">
-          <Filter className="w-5 h-5 text-gray-600" />
-          <h3 className="text-lg font-medium text-gray-900">Filtros</h3>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              name="status"
-              value={filtros.status}
-              onChange={handleFiltroChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Todos os status</option>
-              <option value="Agendada">Agendada</option>
-              <option value="Enviada">Enviada</option>
-              <option value="Erro">Erro</option>
-            </select>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="w-5 h-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">Status</label>
+              <select
+                name="status"
+                value={filtros.status}
+                onChange={handleFiltroChange}
+                className="w-full px-3 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
+              >
+                <option value="">Todos os status</option>
+                <option value="Agendada">Agendada</option>
+                <option value="Enviada">Enviada</option>
+                <option value="Erro">Erro</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">Visitante</label>
+              <select
+                name="visitanteId"
+                value={filtros.visitanteId}
+                onChange={handleFiltroChange}
+                className="w-full px-3 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
+              >
+                <option value="">Todos os visitantes</option>
+                {visitantes.map(visitante => (
+                  <option key={visitante.id} value={visitante.id}>
+                    {visitante.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">Data Início</label>
+              <input
+                type="date"
+                name="dataInicio"
+                value={filtros.dataInicio}
+                onChange={handleFiltroChange}
+                className="w-full px-3 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">Data Fim</label>
+              <input
+                type="date"
+                name="dataFim"
+                value={filtros.dataFim}
+                onChange={handleFiltroChange}
+                className="w-full px-3 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Visitante</label>
-            <select
-              name="visitanteId"
-              value={filtros.visitanteId}
-              onChange={handleFiltroChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Todos os visitantes</option>
-              {visitantes.map(visitante => (
-                <option key={visitante.id} value={visitante.id}>
-                  {visitante.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data Início</label>
-            <input
-              type="date"
-              name="dataInicio"
-              value={filtros.dataInicio}
-              onChange={handleFiltroChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data Fim</label>
-            <input
-              type="date"
-              name="dataFim"
-              value={filtros.dataFim}
-              onChange={handleFiltroChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-        </div>
-
-        {(filtros.status || filtros.visitanteId || filtros.dataInicio || filtros.dataFim) && (
-          <div className="mt-4">
-            <button
-              onClick={limparFiltros}
-              className="inline-flex items-center px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
-            >
-              <X className="w-4 h-4 mr-1" />
-              Limpar filtros
-            </button>
-          </div>
-        )}
-      </div>
+          {(filtros.status || filtros.visitanteId || filtros.dataInicio || filtros.dataFim) && (
+            <div className="mt-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={limparFiltros}
+              >
+                <X className="w-4 h-4 mr-1" />
+                Limpar filtros
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Tabela de Mensagens */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">
+      <Card>
+        <CardHeader>
+          <CardTitle>
             Mensagens ({mensagensFiltradas.length})
-          </h3>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Visitante
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Mensagem
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Data/Hora Envio
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {mensagensFiltradas.map((mensagem) => (
-                <tr key={mensagem.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <User className="w-4 h-4 text-gray-400 mr-2" />
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {getVisitanteNome(mensagem.visitanteId)}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {mensagensFiltradas.length === 0 ? (
+            <div className="text-center py-12">
+              <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
+                {mensagens.length === 0 ? 'Nenhuma mensagem encontrada' : 'Nenhuma mensagem corresponde aos filtros'}
+              </h3>
+              <p className="text-muted-foreground">
+                {mensagens.length === 0 
+                  ? 'As mensagens aparecerão aqui quando visitantes forem cadastrados.'
+                  : 'Tente ajustar os filtros para encontrar as mensagens desejadas.'
+                }
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Visitante</TableHead>
+                    <TableHead>Mensagem</TableHead>
+                    <TableHead>Data/Hora Envio</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mensagensFiltradas.map((mensagem) => (
+                    <TableRow key={mensagem.id}>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <User className="w-4 h-4 text-muted-foreground mr-2" />
+                          <div>
+                            <div className="text-sm font-medium text-foreground">
+                              {getVisitanteNome(mensagem.visitanteId)}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              ID: {mensagem.visitanteId}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-500">
-                          ID: {mensagem.visitanteId}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-foreground max-w-xs truncate">
+                          {mensagem.textoMensagem}
                         </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900 max-w-xs truncate">
-                      {mensagem.textoMensagem}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-900">
-                      <Calendar className="w-4 h-4 text-gray-400 mr-2" />
-                      {formatDateTime(mensagem.dataHoraEnvio)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      {getStatusIcon(mensagem.status)}
-                      <span className={`ml-2 ${getStatusBadge(mensagem.status)}`}>
-                        {getStatusText(mensagem.status)}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <Link
-                        to={`/visitantes/${mensagem.visitanteId}`}
-                        className="text-blue-600 hover:text-blue-900"
-                        title="Ver visitante"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                      {mensagem.status === 'Agendada' && (
-                        <button
-                          onClick={() => cancelarMensagem(mensagem.id)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Cancelar mensagem"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Empty State */}
-        {mensagensFiltradas.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {mensagens.length === 0 ? 'Nenhuma mensagem encontrada' : 'Nenhuma mensagem corresponde aos filtros'}
-            </h3>
-            <p className="text-gray-600">
-              {mensagens.length === 0 
-                ? 'As mensagens aparecerão aqui quando visitantes forem cadastrados.'
-                : 'Tente ajustar os filtros para encontrar as mensagens desejadas.'
-              }
-            </p>
-          </div>
-        )}
-      </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center text-sm text-foreground">
+                          <Calendar className="w-4 h-4 text-muted-foreground mr-2" />
+                          {formatDateTime(mensagem.dataHoraEnvio)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(mensagem.status)}
+                          {getStatusBadge(mensagem.status)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            asChild
+                          >
+                            <Link
+                              to={`/visitantes/${mensagem.visitanteId}`}
+                              title="Ver visitante"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Link>
+                          </Button>
+                          {mensagem.status === 'Agendada' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => cancelarMensagem(mensagem.id)}
+                              title="Cancelar mensagem"
+                            >
+                              <X className="w-4 h-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

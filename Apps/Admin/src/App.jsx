@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout/Layout';
 import Login from './pages/Login/Login';
@@ -45,8 +46,9 @@ import './App.css';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
         <Routes>
           {/* Rota pública de login */}
           <Route path="/login" element={<Login />} />
@@ -152,8 +154,9 @@ function App() {
         {/* Redirecionar rotas não encontradas para login ou dashboard */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Router>
-    </AuthProvider>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

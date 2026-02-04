@@ -176,7 +176,31 @@ export const inscricoesEventosApi = {
 export const authApi = {
   login: (data) => api.post('/auth/login', data),
   me: () => api.get('/auth/me'),
-  alterarSenha: (data) => api.put('/auth/alterar-senha', data),
+  alterarSenha: (data) => api.post('/auth/alterar-senha', data),
+};
+
+// Uploads
+export const uploadApi = {
+  uploadImage: (formData) => api.post('/admin/upload/images', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
+  uploadVideo: (formData) => api.post('/admin/upload/videos', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
+  uploadAudio: (formData) => api.post('/admin/upload/audios', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
+  uploadFile: (formData) => api.post('/admin/upload/files', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
 };
 
 // Usuários

@@ -8,7 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { ImageUpload } from '@/components/ImageUpload';
 import { noticiasApi, categoriasNoticiasApi } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function NoticiaForm() {
   const navigate = useNavigate();
@@ -66,7 +68,7 @@ export default function NoticiaForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.categoriaNoticiaId) {
-      alert('Categoria é obrigatória');
+      toast.error('Categoria é obrigatória');
       return;
     }
     try {
@@ -82,9 +84,11 @@ export default function NoticiaForm() {
       };
       if (isEditing) await noticiasApi.update(id, payload);
       else await noticiasApi.create(payload);
+      toast.success(isEditing ? 'Notícia atualizada com sucesso!' : 'Notícia criada com sucesso!');
       navigate('/noticias');
     } catch (err) {
-      alert('Erro ao salvar notícia');
+      const errorMessage = err.response?.data?.message || 'Erro ao salvar notícia';
+      toast.error(errorMessage);
       console.error(err);
     } finally {
       setLoading(false);
@@ -152,8 +156,13 @@ export default function NoticiaForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="imagem">URL da Imagem</Label>
-              <Input id="imagem" name="imagem" type="url" value={formData.imagem} onChange={handleChange} placeholder="https://exemplo.com/imagem.jpg" />
+              <ImageUpload
+                label="Imagem"
+                value={formData.imagem}
+                onChange={(url) => setFormData((prev) => ({ ...prev, imagem: url }))}
+                accept="image/*"
+                type="image"
+              />
             </div>
 
             <div className="flex items-center space-x-4">

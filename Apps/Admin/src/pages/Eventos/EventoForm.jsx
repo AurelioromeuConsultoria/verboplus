@@ -8,7 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { ImageUpload } from '@/components/ImageUpload';
 import { eventosApi } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function EventoForm() {
   const navigate = useNavigate();
@@ -70,9 +72,11 @@ export default function EventoForm() {
       };
       if (isEditing) await eventosApi.update(id, payload);
       else await eventosApi.create(payload);
+      toast.success(isEditing ? 'Evento atualizado com sucesso!' : 'Evento criado com sucesso!');
       navigate('/eventos');
     } catch (err) {
-      alert('Erro ao salvar evento');
+      const errorMessage = err.response?.data?.message || 'Erro ao salvar evento';
+      toast.error(errorMessage);
       console.error(err);
     } finally {
       setLoading(false);
@@ -119,8 +123,13 @@ export default function EventoForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="imagemDestaque">URL da Imagem de Destaque</Label>
-              <Input id="imagemDestaque" name="imagemDestaque" type="url" value={formData.imagemDestaque} onChange={handleChange} placeholder="https://exemplo.com/imagem.jpg" />
+              <ImageUpload
+                label="Imagem de Destaque"
+                value={formData.imagemDestaque}
+                onChange={(url) => setFormData((prev) => ({ ...prev, imagemDestaque: url }))}
+                accept="image/*"
+                type="image"
+              />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">

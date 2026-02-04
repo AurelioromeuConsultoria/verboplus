@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { authApi } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { toast } from 'sonner';
-import { User, Mail, Shield, Calendar, Clock, Lock } from 'lucide-react';
+import { User, Mail, Shield, Calendar, Clock, Lock, Palette, Sun, Moon } from 'lucide-react';
 
 const TIPO_USUARIO_LABELS = {
   1: 'Administrador',
@@ -24,6 +25,7 @@ const TIPO_USUARIO_COLORS = {
 
 export default function Perfil() {
   const { usuario: usuarioContext, atualizarUsuario } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [usuario, setUsuario] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -103,6 +105,45 @@ export default function Perfil() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Preferências
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                Tema
+              </label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={theme === 'light' ? 'default' : 'outline'}
+                  onClick={() => setTheme('light')}
+                  className="flex-1"
+                >
+                  <Sun className="h-4 w-4 mr-2" />
+                  Claro
+                </Button>
+                <Button
+                  type="button"
+                  variant={theme === 'dark' ? 'default' : 'outline'}
+                  onClick={() => setTheme('dark')}
+                  className="flex-1"
+                >
+                  <Moon className="h-4 w-4 mr-2" />
+                  Escuro
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Você também pode alternar pelo ícone no topo da página
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

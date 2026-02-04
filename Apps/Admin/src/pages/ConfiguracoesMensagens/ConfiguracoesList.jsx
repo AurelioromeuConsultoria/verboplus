@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Edit, Trash2, Clock, MessageSquare, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import api from '../../lib/api';
 import Loading from '../../components/ui/loading';
 import ErrorMessage from '../../components/ui/error-message';
@@ -67,16 +70,15 @@ const ConfiguracoesList = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Configurações de Mensagens</h1>
-          <p className="text-gray-600 mt-1">Gerencie as mensagens automáticas enviadas aos visitantes</p>
+          <h1 className="text-3xl font-bold text-foreground">Configurações de Mensagens</h1>
+          <p className="text-muted-foreground mt-1">Gerencie as mensagens automáticas enviadas aos visitantes</p>
         </div>
-        <Link
-          to="/configuracoes-mensagens/novo"
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Configuração
-        </Link>
+        <Button asChild>
+          <Link to="/configuracoes-mensagens/novo">
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Configuração
+          </Link>
+        </Button>
       </div>
 
       {error && <ErrorMessage message={error} />}
@@ -84,95 +86,97 @@ const ConfiguracoesList = () => {
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {configuracoes.map((config) => (
-          <div key={config.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            {/* Header do Card */}
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center space-x-2">
-                <MessageSquare className="w-5 h-5 text-blue-600" />
-                <span className="font-medium text-gray-900">Mensagem #{config.id}</span>
+          <Card key={config.id}>
+            <CardContent className="p-6">
+              {/* Header do Card */}
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center space-x-2">
+                  <MessageSquare className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+                  <span className="font-medium text-foreground">Mensagem #{config.id}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleStatus(config.id, config.ativo)}
+                    title={config.ativo ? 'Desativar' : 'Ativar'}
+                    className={config.ativo ? 'text-green-500 hover:text-green-600' : 'text-muted-foreground'}
+                  >
+                    {config.ativo ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => toggleStatus(config.id, config.ativo)}
-                  className={`p-1 rounded transition-colors ${
-                    config.ativo ? 'text-green-600 hover:text-green-700' : 'text-gray-400 hover:text-gray-500'
-                  }`}
-                  title={config.ativo ? 'Desativar' : 'Ativar'}
+
+              {/* Status Badge */}
+              <div className="mb-3">
+                {config.ativo ? (
+                  <Badge variant="default" className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700">
+                    Ativa
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary">Inativa</Badge>
+                )}
+              </div>
+
+              {/* Conteúdo da Mensagem */}
+              <div className="mb-4">
+                <p className="text-sm text-muted-foreground line-clamp-3">
+                  {config.textoMensagem}
+                </p>
+              </div>
+
+              {/* Informações de Agendamento */}
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4 mr-2" />
+                  <span>
+                    {config.diasAposVisita === 0 
+                      ? 'No mesmo dia' 
+                      : `${config.diasAposVisita} dia${config.diasAposVisita > 1 ? 's' : ''} após a visita`
+                    }
+                  </span>
+                </div>
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4 mr-2" />
+                  <span>Às {formatHorario(config.horarioEnvio)}</span>
+                </div>
+              </div>
+
+              {/* Ações */}
+              <div className="flex justify-end space-x-2 pt-4 border-t border-border">
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to={`/configuracoes-mensagens/editar/${config.id}`}>
+                    <Edit className="w-4 h-4 mr-1" />
+                    Editar
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete(config.id)}
+                  className="text-destructive hover:text-destructive"
                 >
-                  {config.ativo ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
-                </button>
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Excluir
+                </Button>
               </div>
-            </div>
-
-            {/* Status Badge */}
-            <div className="mb-3">
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                config.ativo 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {config.ativo ? 'Ativa' : 'Inativa'}
-              </span>
-            </div>
-
-            {/* Conteúdo da Mensagem */}
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 line-clamp-3">
-                {config.textoMensagem}
-              </p>
-            </div>
-
-            {/* Informações de Agendamento */}
-            <div className="space-y-2 mb-4">
-              <div className="flex items-center text-sm text-gray-600">
-                <Clock className="w-4 h-4 mr-2" />
-                <span>
-                  {config.diasAposVisita === 0 
-                    ? 'No mesmo dia' 
-                    : `${config.diasAposVisita} dia${config.diasAposVisita > 1 ? 's' : ''} após a visita`
-                  }
-                </span>
-              </div>
-              <div className="flex items-center text-sm text-gray-600">
-                <Clock className="w-4 h-4 mr-2" />
-                <span>Às {formatHorario(config.horarioEnvio)}</span>
-              </div>
-            </div>
-
-            {/* Ações */}
-            <div className="flex justify-end space-x-2 pt-4 border-t border-gray-100">
-              <Link
-                to={`/configuracoes-mensagens/editar/${config.id}`}
-                className="inline-flex items-center px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
-              >
-                <Edit className="w-4 h-4 mr-1" />
-                Editar
-              </Link>
-              <button
-                onClick={() => handleDelete(config.id)}
-                className="inline-flex items-center px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-              >
-                <Trash2 className="w-4 h-4 mr-1" />
-                Excluir
-              </button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
       {/* Empty State */}
       {configuracoes.length === 0 && !loading && (
         <div className="text-center py-12">
-          <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma configuração encontrada</h3>
-          <p className="text-gray-600 mb-4">Comece criando sua primeira configuração de mensagem automática.</p>
-          <Link
-            to="/configuracoes-mensagens/novo"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Configuração
-          </Link>
+          <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma configuração encontrada</h3>
+          <p className="text-muted-foreground mb-4">Comece criando sua primeira configuração de mensagem automática.</p>
+          <Button asChild>
+            <Link to="/configuracoes-mensagens/novo">
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Configuração
+            </Link>
+          </Button>
         </div>
       )}
     </div>
