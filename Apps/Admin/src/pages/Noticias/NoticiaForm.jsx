@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { ImageUpload } from '@/components/ImageUpload';
+import { RichTextEditor } from '@/components/RichTextEditor';
 import { noticiasApi, categoriasNoticiasApi } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -156,8 +157,13 @@ export default function NoticiaForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="texto">Texto</Label>
-              <Textarea id="texto" name="texto" value={formData.texto} onChange={handleChange} placeholder="Texto completo da notícia" rows={6} />
+              <RichTextEditor
+                label="Texto"
+                name="texto"
+                value={formData.texto}
+                onChange={handleChange}
+                placeholder="Texto completo da notícia. Cole o texto e os espaços entre parágrafos serão preservados automaticamente."
+              />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
