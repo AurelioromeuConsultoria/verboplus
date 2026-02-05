@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Services;
@@ -15,6 +16,7 @@ public class NoticiasController : ControllerBase
         _service = service;
     }
 
+    [AllowAnonymous]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<NoticiaDto>>> GetAll()
     {
@@ -22,6 +24,7 @@ public class NoticiasController : ControllerBase
         return Ok(items);
     }
 
+    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<ActionResult<NoticiaDto>> GetById(int id)
     {
@@ -30,6 +33,7 @@ public class NoticiasController : ControllerBase
         return Ok(item);
     }
 
+    [AllowAnonymous]
     [HttpGet("categoria/{categoriaId}")]
     public async Task<ActionResult<IEnumerable<NoticiaDto>>> GetByCategoria(int categoriaId)
     {
