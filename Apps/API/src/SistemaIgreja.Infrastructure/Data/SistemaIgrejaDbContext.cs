@@ -15,6 +15,7 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<ConfiguracaoMensagem> ConfiguracoesMensagens { get; set; }
     public DbSet<MensagemAgendada> MensagensAgendadas { get; set; }
     public DbSet<Equipe> Equipes { get; set; }
+    public DbSet<HubCasa> HubCasas { get; set; }
     public DbSet<Cargo> Cargos { get; set; }
     public DbSet<Voluntario> Voluntarios { get; set; }
     public DbSet<Evento> Eventos { get; set; }
@@ -128,6 +129,31 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Area).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade HubCasa
+        modelBuilder.Entity<HubCasa>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.EnderecoCompleto).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.Anfitriao).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(e => e.AbertoPor)
+                  .WithMany()
+                  .HasForeignKey(e => e.AbertoPorId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Lider)
+                  .WithMany()
+                  .HasForeignKey(e => e.LiderId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Timoteo)
+                  .WithMany()
+                  .HasForeignKey(e => e.TimoteoId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade Cargo
@@ -491,4 +517,3 @@ public class SistemaIgrejaDbContext : DbContext
         });
     }
 }
-

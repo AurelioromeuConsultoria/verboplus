@@ -27,6 +27,7 @@ builder.Services.AddScoped<IConfiguracaoMensagemRepository, ConfiguracaoMensagem
 builder.Services.AddScoped<IMensagemAgendadaRepository, MensagemAgendadaRepository>();
 // Novos repositórios
 builder.Services.AddScoped<IEquipeRepository, EquipeRepository>();
+builder.Services.AddScoped<IHubCasaRepository, HubCasaRepository>();
 builder.Services.AddScoped<ICargoRepository, CargoRepository>();
 builder.Services.AddScoped<IVoluntarioRepository, VoluntarioRepository>();
 builder.Services.AddScoped<IEventoRepository, EventoRepository>();
@@ -54,6 +55,7 @@ builder.Services.AddScoped<IConfiguracaoMensagemService, ConfiguracaoMensagemSer
 builder.Services.AddScoped<IMensagemAgendadaService, MensagemAgendadaService>();
 // Novos serviços
 builder.Services.AddScoped<IEquipeService, EquipeService>();
+builder.Services.AddScoped<IHubCasaService, HubCasaService>();
 builder.Services.AddScoped<ICargoService, CargoService>();
 builder.Services.AddScoped<IVoluntarioService, VoluntarioService>();
 builder.Services.AddScoped<IEventoService, EventoService>();
@@ -212,4 +214,3 @@ if (app.Environment.IsDevelopment() && runMigrations)
 }
 
 app.Run();
-
