@@ -100,18 +100,13 @@ const menuGroups = [
     ],
   },
   {
-    title: 'Notícias',
-    icon: Newspaper,
+    title: 'Hub',
+    icon: Home,
     items: [
       {
-        title: 'Categorias',
-        href: '/categorias-noticias',
-        icon: Tag,
-      },
-      {
-        title: 'Notícias',
-        href: '/noticias',
-        icon: Newspaper,
+        title: 'Casas',
+        href: '/hub/casas',
+        icon: Home,
       },
     ],
   },
@@ -135,6 +130,21 @@ const menuGroups = [
     title: 'Portal',
     icon: Globe,
     items: [
+      {
+        title: 'Categorias de Notícias',
+        href: '/categorias-noticias',
+        icon: Tag,
+      },
+      {
+        title: 'Notícias',
+        href: '/noticias',
+        icon: Newspaper,
+      },
+      {
+        title: 'Enquetes',
+        href: '/enquetes',
+        icon: BarChart3,
+      },
       {
         title: 'Contatos',
         href: '/contatos',
@@ -169,17 +179,6 @@ const menuGroups = [
     ],
   },
   {
-    title: 'Enquetes',
-    icon: BarChart3,
-    items: [
-      {
-        title: 'Enquetes',
-        href: '/enquetes',
-        icon: BarChart3,
-      },
-    ],
-  },
-  {
     title: 'Kids',
     icon: Baby,
     items: [
@@ -197,12 +196,11 @@ export function Sidebar() {
   const [openGroups, setOpenGroups] = useState({
     connect: true,
     voluntariado: true,
-    noticias: true,
     eventos: true,
     portal: true,
     mídia: true,
-    enquetes: true,
     kids: true,
+    hub: true,
   });
 
   const toggleGroup = (groupKey) => {
@@ -361,8 +359,23 @@ export function Sidebar() {
         <div className="text-xs text-sidebar-foreground/60">
           Sistema de Gestão para Igrejas
         </div>
+        <a
+          href="https://malachdigital.com.br/"
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 flex items-center gap-2 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            className="h-4 w-4 text-black dark:text-white"
+            fill="currentColor"
+          >
+            <path d="M3 20V4h4l5 5 5-5h4v16h-4V10l-5 5-5-5v10H3z" />
+          </svg>
+          <span>Desenvolvido por Malach Digital</span>
+        </a>
       </div>
     </div>
   );
 }
-

@@ -46,6 +46,8 @@ import EnquetesList from './pages/Enquetes/EnquetesList';
 import EnqueteForm from './pages/Enquetes/EnqueteForm';
 import KidsCheckinsList from './pages/Kids/KidsCheckinsList';
 import ConfiguracaoPortal from './pages/ConfiguracaoPortal/ConfiguracaoPortal';
+import CasasList from './pages/Hub/CasasList';
+import CasaForm from './pages/Hub/CasaForm';
 import './App.css';
 
 function App() {
@@ -162,6 +164,11 @@ function App() {
 
           {/* Rotas de Kids */}
           <Route path="kids/checkins" element={<KidsCheckinsList />} />
+
+          {/* Rotas de Hub - Casas */}
+          <Route path="hub/casas" element={<CasasList />} />
+          <Route path="hub/casas/novo" element={<CasaForm />} />
+          <Route path="hub/casas/:id/editar" element={<CasaForm />} />
         </Route>
         
         {/* Redirecionar rotas não encontradas para login ou dashboard */}
@@ -174,4 +181,3 @@ function App() {
 }
 
 export default App;
-
