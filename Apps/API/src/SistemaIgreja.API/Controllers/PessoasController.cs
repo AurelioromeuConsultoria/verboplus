@@ -20,6 +20,16 @@ public class PessoasController : ControllerBase
     /// <summary>
     /// Lista todas as pessoas com seus perfis
     /// </summary>
+    [HttpGet("aniversariantes")]
+    public async Task<ActionResult<IEnumerable<AniversarianteDto>>> GetAniversariantes([FromQuery] int dias = 30, [FromQuery] int limite = 50)
+    {
+        var items = await _service.GetProximosAniversariantesAsync(dias, limite);
+        return Ok(items);
+    }
+
+    /// <summary>
+    /// Lista todas as pessoas com seus perfis
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<PessoaDto>>> GetAll()
     {
@@ -99,6 +109,5 @@ public class PessoasController : ControllerBase
         }
     }
 }
-
 
 

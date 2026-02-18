@@ -171,7 +171,17 @@ public class AuthService : IAuthService
             TipoUsuarioDescricao = GetTipoUsuarioDescricao(u.TipoUsuario),
             Ativo = u.Ativo,
             DataCriacao = u.DataCriacao,
-            UltimoAcesso = u.UltimoAcesso
+            UltimoAcesso = u.UltimoAcesso,
+            PerfilAcessoId = u.PerfilAcessoId,
+            PerfilAcessoNome = u.PerfilAcesso?.Nome,
+            Permissoes = u.PerfilAcesso?.Permissoes.Select(p => new PermissaoPerfilDto
+            {
+                Id = p.Id,
+                Recurso = p.Recurso,
+                PodeVer = p.PodeVer,
+                PodeEditar = p.PodeEditar,
+                PodeExcluir = p.PodeExcluir
+            }).ToList() ?? new List<PermissaoPerfilDto>()
         };
     }
 
@@ -186,4 +196,3 @@ public class AuthService : IAuthService
         };
     }
 }
-

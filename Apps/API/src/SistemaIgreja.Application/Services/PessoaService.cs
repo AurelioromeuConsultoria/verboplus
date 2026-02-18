@@ -11,6 +11,7 @@ public interface IPessoaService
     Task<PessoaDto> CreateAsync(CriarPessoaDto dto);
     Task<PessoaDto> UpdateAsync(int id, AtualizarPessoaDto dto);
     Task DeleteAsync(int id);
+    Task<IEnumerable<AniversarianteDto>> GetProximosAniversariantesAsync(int dias, int limite);
 }
 
 public class PessoaService : IPessoaService
@@ -103,6 +104,37 @@ public class PessoaService : IPessoaService
         await _repository.DeleteAsync(id);
     }
 
+    public async Task<IEnumerable<AniversarianteDto>> GetProximosAniversariantesAsync(int dias, int limite)
+    {
+        if (dias <= 0) dias = 30;
+        if (limite <= 0) limite = 50;
+
+        var hoje = DateTime.Today;
+        var pessoas = await _repository.GetAllAsync();
+
+        return pessoas
+            .Where(p => p.Ativo && p.DataNascimento.HasValue)
+            .Select(p =>
+            {
+                var nasc = p.DataNascimento!.Value.Date;
+                var prox = GetProximoAniversario(nasc, hoje);
+                var diasRestantes = (prox - hoje).Days;
+                return new AniversarianteDto
+                {
+                    Id = p.Id,
+                    Nome = p.Nome,
+                    DataNascimento = nasc,
+                    ProximoAniversario = prox,
+                    DiasParaAniversario = diasRestantes
+                };
+            })
+            .Where(a => a.DiasParaAniversario <= dias && a.DiasParaAniversario >= 0)
+            .OrderBy(a => a.DiasParaAniversario)
+            .ThenBy(a => a.Nome)
+            .Take(limite)
+            .ToList();
+    }
+
     private static PessoaDto MapToDto(Pessoa pessoa, IEnumerable<PessoaPerfil> perfis)
     {
         return new PessoaDto
@@ -154,7 +186,27 @@ public class PessoaService : IPessoaService
             _ => "Desconhecido"
         };
     }
-}
 
+    private static DateTime GetProximoAniversario(DateTime dataNascimento, DateTime hoje)
+    {
+        var ano = hoje.Year;
+        var mes = dataNascimento.Month;
+        var dia = dataNascimento.Day;
+
+        var diasNoMes = DateTime.DaysInMonth(ano, mes);
+        if (dia > diasNoMes) dia = diasNoMes;
+
+        var proximo = new DateTime(ano, mes, dia);
+        if (proximo < hoje)
+        {
+            ano += 1;
+            diasNoMes = DateTime.DaysInMonth(ano, mes);
+            if (dia > diasNoMes) dia = diasNoMes;
+            proximo = new DateTime(ano, mes, dia);
+        }
+
+        return proximo;
+    }
+}
 
 

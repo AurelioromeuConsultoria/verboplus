@@ -16,6 +16,7 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<MensagemAgendada> MensagensAgendadas { get; set; }
     public DbSet<Equipe> Equipes { get; set; }
     public DbSet<HubCasa> HubCasas { get; set; }
+    public DbSet<Fornecedor> Fornecedores { get; set; }
     public DbSet<Cargo> Cargos { get; set; }
     public DbSet<Voluntario> Voluntarios { get; set; }
     public DbSet<Evento> Eventos { get; set; }
@@ -26,6 +27,8 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<Contato> Contatos { get; set; }
     public DbSet<InscricaoEvento> InscricoesEventos { get; set; }
     public DbSet<Usuario> Usuarios { get; set; }
+    public DbSet<PerfilAcesso> PerfisAcesso { get; set; }
+    public DbSet<PerfilAcessoPermissao> PerfisAcessoPermissoes { get; set; }
     public DbSet<CategoriaMidia> CategoriasMidias { get; set; }
     public DbSet<GaleriaFoto> GaleriasFotos { get; set; }
     public DbSet<Enquete> Enquetes { get; set; }
@@ -55,7 +58,8 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.DataCriacao).IsRequired();
 
             // Índice único para email (quando não nulo)
-            entity.HasIndex(e => e.Email).IsUnique().HasFilter("[Email] IS NOT NULL");
+            // Usar sintaxe compatível com ambos SQL Server e PostgreSQL
+            entity.HasIndex(e => e.Email).IsUnique();
         });
 
         // Configuração da entidade PessoaPerfil
@@ -156,6 +160,24 @@ public class SistemaIgrejaDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
+        // Configuração da entidade Fornecedor
+        modelBuilder.Entity<Fornecedor>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.RazaoSocial).HasMaxLength(200);
+            entity.Property(e => e.CnpjCpf).HasMaxLength(20);
+            entity.Property(e => e.InscricaoEstadual).HasMaxLength(30);
+            entity.Property(e => e.Endereco).HasMaxLength(300);
+            entity.Property(e => e.Telefone).HasMaxLength(30);
+            entity.Property(e => e.Site).HasMaxLength(200);
+            entity.Property(e => e.ContatoNome).HasMaxLength(150);
+            entity.Property(e => e.ContatoCpf).HasMaxLength(20);
+            entity.Property(e => e.ContatoWhatsApp).HasMaxLength(30);
+            entity.Property(e => e.ContatoEmail).HasMaxLength(150);
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
         // Configuração da entidade Cargo
         modelBuilder.Entity<Cargo>(entity =>
         {
@@ -184,6 +206,86 @@ public class SistemaIgrejaDbContext : DbContext
             entity.HasOne(v => v.Cargo)
                   .WithMany(c => c.Voluntarios)
                   .HasForeignKey(v => v.CargoId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configuração da entidade PerfilAcesso
+        modelBuilder.Entity<PerfilAcesso>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Descricao).HasMaxLength(300);
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade PerfilAcessoPermissao
+        modelBuilder.Entity<PerfilAcessoPermissao>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Recurso).IsRequired().HasMaxLength(80);
+
+            entity.HasOne(e => e.PerfilAcesso)
+                  .WithMany(p => p.Permissoes)
+                  .HasForeignKey(e => e.PerfilAcessoId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Seed perfil Administrador
+        modelBuilder.Entity<PerfilAcesso>().HasData(new PerfilAcesso
+        {
+            Id = 1,
+            Nome = "Administrador",
+            Descricao = "Acesso total ao sistema",
+            DataCriacao = new DateTime(2026, 2, 6, 0, 0, 0)
+        });
+
+        var recursos = new[]
+        {
+            "dashboard",
+            "usuarios",
+            "perfis-acesso",
+            "pessoas",
+            "perfis",
+            "visitantes",
+            "configuracoes-mensagens",
+            "mensagens-agendadas",
+            "equipes",
+            "cargos",
+            "voluntarios",
+            "eventos",
+            "inscricoes-eventos",
+            "portal",
+            "noticias",
+            "categorias-noticias",
+            "contatos",
+            "destaques-site",
+            "categorias-midias",
+            "galerias-fotos",
+            "enquetes",
+            "kids",
+            "hub",
+            "financeiro",
+            "fornecedores"
+        };
+
+        var permissoes = recursos.Select((recurso, index) => new PerfilAcessoPermissao
+        {
+            Id = 1000 + index,
+            PerfilAcessoId = 1,
+            Recurso = recurso,
+            PodeVer = true,
+            PodeEditar = true,
+            PodeExcluir = true
+        });
+
+        modelBuilder.Entity<PerfilAcessoPermissao>().HasData(permissoes);
+
+        // Relacionamento Usuario -> PerfilAcesso
+        modelBuilder.Entity<Usuario>(entity =>
+        {
+            entity.HasOne(u => u.PerfilAcesso)
+                  .WithMany(p => p.Usuarios)
+                  .HasForeignKey(u => u.PerfilAcessoId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 

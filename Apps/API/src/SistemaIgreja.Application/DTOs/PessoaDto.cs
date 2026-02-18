@@ -18,6 +18,15 @@ public class PessoaDto
     public List<PessoaPerfilDto> Perfis { get; set; } = new();
 }
 
+public class AniversarianteDto
+{
+    public int Id { get; set; }
+    public string Nome { get; set; } = string.Empty;
+    public DateTime DataNascimento { get; set; }
+    public DateTime ProximoAniversario { get; set; }
+    public int DiasParaAniversario { get; set; }
+}
+
 public class CriarPessoaDto
 {
     [Required(ErrorMessage = "Nome é obrigatório")]
@@ -61,6 +70,5 @@ public class AtualizarPessoaDto
 
     public bool Ativo { get; set; }
 }
-
 
 

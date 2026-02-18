@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -332,14 +332,13 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.InsertData(
-                table: "ConfiguracoesMensagens",
-                columns: new[] { "Id", "Ativo", "DataCriacao", "DiasAposVisita", "HorarioEnvio", "Nome", "TextoMensagem" },
-                values: new object[,]
-                {
-                    { 1, true, new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), 1, new TimeSpan(0, 10, 0, 0, 0), "Boas-vindas", "Olá {Nome}! Que alegria ter você conosco na igreja! Esperamos vê-lo novamente em breve. Deus abençoe!" },
-                    { 2, true, new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), 7, new TimeSpan(0, 18, 0, 0, 0), "Convite para retorno", "Oi {Nome}! Sentimos sua falta na igreja. Que tal nos visitar novamente neste domingo? Será um prazer recebê-lo!" }
-                });
+            // Usar SQL direto para compatibilidade com PostgreSQL
+            migrationBuilder.Sql(@"
+                INSERT INTO ""ConfiguracoesMensagens"" (""Id"", ""Ativo"", ""DataCriacao"", ""DiasAposVisita"", ""HorarioEnvio"", ""Nome"", ""TextoMensagem"")
+                VALUES 
+                (1, true, '2025-01-01 00:00:00'::timestamp, 1, '10:00:00'::time, 'Boas-vindas', 'Olá {Nome}! Que alegria ter você conosco na igreja! Esperamos vê-lo novamente em breve. Deus abençoe!'),
+                (2, true, '2025-01-01 00:00:00'::timestamp, 7, '18:00:00'::time, 'Convite para retorno', 'Oi {Nome}! Sentimos sua falta na igreja. Que tal nos visitar novamente neste domingo? Será um prazer recebê-lo!');
+            ");
 
             migrationBuilder.CreateIndex(
                 name: "IX_GaleriasFotos_CategoriaMidiaId",

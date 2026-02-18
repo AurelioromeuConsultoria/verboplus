@@ -39,6 +39,9 @@ public class UsuarioDto
     public bool Ativo { get; set; }
     public DateTime DataCriacao { get; set; }
     public DateTime? UltimoAcesso { get; set; }
+    public int? PerfilAcessoId { get; set; }
+    public string? PerfilAcessoNome { get; set; }
+    public List<PermissaoPerfilDto> Permissoes { get; set; } = new();
 }
 
 public class CriarUsuarioDto
@@ -51,6 +54,7 @@ public class CriarUsuarioDto
     public string EmailLogin { get; set; } = string.Empty;
     public string Senha { get; set; } = string.Empty;
     public TipoUsuario TipoUsuario { get; set; }
+    public int? PerfilAcessoId { get; set; }
 }
 
 public class AtualizarUsuarioDto
@@ -63,8 +67,8 @@ public class AtualizarUsuarioDto
     public string EmailLogin { get; set; } = string.Empty;
     public TipoUsuario TipoUsuario { get; set; }
     public bool Ativo { get; set; }
+    public int? PerfilAcessoId { get; set; }
 }
-
 
 
 

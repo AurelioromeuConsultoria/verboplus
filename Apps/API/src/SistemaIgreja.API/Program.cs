@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using SistemaIgreja.Infrastructure.Data;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Infrastructure.Repositories;
@@ -14,8 +15,32 @@ using SistemaIgreja.Application.Configuration;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+// Configurar DbContext baseado no provider escolhido
+var databaseProvider = builder.Configuration["Database:Provider"] ?? "SqlServer";
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Configurar Npgsql para usar timestamp (sem timezone) ao invés de timestamptz
+// Isso evita problemas com DateTime.Kind diferente de UTC
+if (databaseProvider.ToLower() == "postgresql" || databaseProvider.ToLower() == "postgres")
+{
+    AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+}
+
 builder.Services.AddDbContext<SistemaIgrejaDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    switch (databaseProvider.ToLower())
+    {
+        case "postgresql":
+        case "postgres":
+            options.UseNpgsql(connectionString, npgsqlOptions => 
+                npgsqlOptions.EnableRetryOnFailure());
+            break;
+        case "sqlserver":
+        default:
+            options.UseSqlServer(connectionString);
+            break;
+    }
+});
 
 
 // Repositórios
@@ -28,6 +53,7 @@ builder.Services.AddScoped<IMensagemAgendadaRepository, MensagemAgendadaReposito
 // Novos repositórios
 builder.Services.AddScoped<IEquipeRepository, EquipeRepository>();
 builder.Services.AddScoped<IHubCasaRepository, HubCasaRepository>();
+builder.Services.AddScoped<IFornecedorRepository, FornecedorRepository>();
 builder.Services.AddScoped<ICargoRepository, CargoRepository>();
 builder.Services.AddScoped<IVoluntarioRepository, VoluntarioRepository>();
 builder.Services.AddScoped<IEventoRepository, EventoRepository>();
@@ -37,6 +63,7 @@ builder.Services.AddScoped<INoticiaRepository, NoticiaRepository>();
 builder.Services.AddScoped<IContatoRepository, ContatoRepository>();
 builder.Services.AddScoped<IInscricaoEventoRepository, InscricaoEventoRepository>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<IPerfilAcessoRepository, PerfilAcessoRepository>();
 builder.Services.AddScoped<ICategoriaMidiaRepository, CategoriaMidiaRepository>();
 builder.Services.AddScoped<IGaleriaFotoRepository, GaleriaFotoRepository>();
 builder.Services.AddScoped<IEnqueteRepository, EnqueteRepository>();
@@ -56,6 +83,7 @@ builder.Services.AddScoped<IMensagemAgendadaService, MensagemAgendadaService>();
 // Novos serviços
 builder.Services.AddScoped<IEquipeService, EquipeService>();
 builder.Services.AddScoped<IHubCasaService, HubCasaService>();
+builder.Services.AddScoped<IFornecedorService, FornecedorService>();
 builder.Services.AddScoped<ICargoService, CargoService>();
 builder.Services.AddScoped<IVoluntarioService, VoluntarioService>();
 builder.Services.AddScoped<IEventoService, EventoService>();
@@ -66,6 +94,8 @@ builder.Services.AddScoped<IContatoService, ContatoService>();
 builder.Services.AddScoped<IInscricaoEventoService, InscricaoEventoService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPerfilAcessoService, PerfilAcessoService>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<ICategoriaMidiaService, CategoriaMidiaService>();
 builder.Services.AddScoped<IGaleriaFotoService, GaleriaFotoService>();
 builder.Services.AddScoped<IEnqueteService, EnqueteService>();
@@ -191,6 +221,7 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<SistemaIgreja.API.Permissions.PermissionMiddleware>();
 app.MapControllers();
 
 // Migrations automáticas: ligue só quando você quiser (DEV) e nunca deixe isso “sempre ligado” no Azure

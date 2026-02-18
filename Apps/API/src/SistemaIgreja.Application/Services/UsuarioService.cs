@@ -17,11 +17,13 @@ public class UsuarioService : IUsuarioService
 {
     private readonly IUsuarioRepository _repository;
     private readonly IPessoaRepository _pessoaRepository;
+    private readonly IPerfilAcessoRepository _perfilAcessoRepository;
 
-    public UsuarioService(IUsuarioRepository repository, IPessoaRepository pessoaRepository)
+    public UsuarioService(IUsuarioRepository repository, IPessoaRepository pessoaRepository, IPerfilAcessoRepository perfilAcessoRepository)
     {
         _repository = repository;
         _pessoaRepository = pessoaRepository;
+        _perfilAcessoRepository = perfilAcessoRepository;
     }
 
     public async Task<IEnumerable<UsuarioDto>> GetAllAsync()
@@ -67,6 +69,12 @@ public class UsuarioService : IUsuarioService
             pessoa = await _pessoaRepository.CreateAsync(pessoa);
         }
 
+        if (dto.PerfilAcessoId == null)
+            throw new ArgumentException("Perfil de acesso é obrigatório");
+
+        var perfil = await _perfilAcessoRepository.GetByIdAsync(dto.PerfilAcessoId.Value);
+        if (perfil == null) throw new ArgumentException("Perfil de acesso inválido");
+
         // Criar usuário
         var entity = new Usuario
         {
@@ -74,6 +82,7 @@ public class UsuarioService : IUsuarioService
             EmailLogin = dto.EmailLogin,
             SenhaHash = BCrypt.Net.BCrypt.HashPassword(dto.Senha),
             TipoUsuario = dto.TipoUsuario,
+            PerfilAcessoId = dto.PerfilAcessoId,
             Ativo = true,
             DataCriacao = DateTime.Now
         };
@@ -109,10 +118,17 @@ public class UsuarioService : IUsuarioService
         pessoa.DataNascimento = dto.DataNascimento;
         await _pessoaRepository.UpdateAsync(pessoa);
 
+        if (dto.PerfilAcessoId == null)
+            throw new ArgumentException("Perfil de acesso é obrigatório");
+
+        var perfil = await _perfilAcessoRepository.GetByIdAsync(dto.PerfilAcessoId.Value);
+        if (perfil == null) throw new ArgumentException("Perfil de acesso inválido");
+
         // Atualizar usuário
         entity.EmailLogin = dto.EmailLogin;
         entity.TipoUsuario = dto.TipoUsuario;
         entity.Ativo = dto.Ativo;
+        entity.PerfilAcessoId = dto.PerfilAcessoId;
 
         var updated = await _repository.UpdateAsync(entity);
         return MapToDto(updated);
@@ -147,11 +163,20 @@ public class UsuarioService : IUsuarioService
             TipoUsuarioDescricao = GetTipoUsuarioDescricao(u.TipoUsuario),
             Ativo = u.Ativo,
             DataCriacao = u.DataCriacao,
-            UltimoAcesso = u.UltimoAcesso
+            UltimoAcesso = u.UltimoAcesso,
+            PerfilAcessoId = u.PerfilAcessoId,
+            PerfilAcessoNome = u.PerfilAcesso?.Nome,
+            Permissoes = u.PerfilAcesso?.Permissoes.Select(p => new PermissaoPerfilDto
+            {
+                Id = p.Id,
+                Recurso = p.Recurso,
+                PodeVer = p.PodeVer,
+                PodeEditar = p.PodeEditar,
+                PodeExcluir = p.PodeExcluir
+            }).ToList() ?? new List<PermissaoPerfilDto>()
         };
     }
 }
-
 
 
 

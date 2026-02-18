@@ -10,4 +10,6 @@ public class DashboardDto
     public int TotalEventos { get; set; }
     public int TotalInscricoes { get; set; }
     public int TotalVoluntarios { get; set; }
+    public int TotalAniversariantesProximos { get; set; }
+    public List<AniversarianteDto> ProximosAniversariantes { get; set; } = new();
 }

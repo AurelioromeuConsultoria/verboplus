@@ -399,6 +399,19 @@ appsettings.Production.json
 # Diretório de uploads (arquivos gerados pelo sistema)
 src/SistemaIgreja.API/uploads/
 
+# Arquivos do macOS
+.DS_Store
+**/.DS_Store
+
+# Arquivos de backup temporários
+*.backup
+**/*.backup
+
+# Arquivos de configuração com senhas (não commitar)
+appsettings.json
+appsettings.*.json
+!appsettings.*.example.json
+
 
 
 

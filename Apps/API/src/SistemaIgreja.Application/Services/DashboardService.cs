@@ -47,6 +47,7 @@ public class DashboardService : IDashboardService
         var eventos = await _eventoRepository.GetAllAsync();
         var inscricoes = await _inscricaoEventoRepository.GetAllAsync();
         var voluntarios = await _voluntarioRepository.GetAllAsync();
+        var aniversariantes = CalcularAniversariantes(pessoas, 30, 5).ToList();
 
         return new DashboardDto
         {
@@ -57,7 +58,59 @@ public class DashboardService : IDashboardService
             TotalPessoas = pessoas.Count(),
             TotalEventos = eventos.Count(),
             TotalInscricoes = inscricoes.Count(),
-            TotalVoluntarios = voluntarios.Count()
+            TotalVoluntarios = voluntarios.Count(),
+            TotalAniversariantesProximos = aniversariantes.Count,
+            ProximosAniversariantes = aniversariantes
         };
+    }
+
+    private static IEnumerable<AniversarianteDto> CalcularAniversariantes(IEnumerable<Pessoa> pessoas, int dias, int limite)
+    {
+        if (dias <= 0) dias = 30;
+        if (limite <= 0) limite = 5;
+
+        var hoje = DateTime.Today;
+
+        return pessoas
+            .Where(p => p.Ativo && p.DataNascimento.HasValue)
+            .Select(p =>
+            {
+                var nasc = p.DataNascimento!.Value.Date;
+                var prox = GetProximoAniversario(nasc, hoje);
+                var diasRestantes = (prox - hoje).Days;
+                return new AniversarianteDto
+                {
+                    Id = p.Id,
+                    Nome = p.Nome,
+                    DataNascimento = nasc,
+                    ProximoAniversario = prox,
+                    DiasParaAniversario = diasRestantes
+                };
+            })
+            .Where(a => a.DiasParaAniversario <= dias && a.DiasParaAniversario >= 0)
+            .OrderBy(a => a.DiasParaAniversario)
+            .ThenBy(a => a.Nome)
+            .Take(limite);
+    }
+
+    private static DateTime GetProximoAniversario(DateTime dataNascimento, DateTime hoje)
+    {
+        var ano = hoje.Year;
+        var mes = dataNascimento.Month;
+        var dia = dataNascimento.Day;
+
+        var diasNoMes = DateTime.DaysInMonth(ano, mes);
+        if (dia > diasNoMes) dia = diasNoMes;
+
+        var proximo = new DateTime(ano, mes, dia);
+        if (proximo < hoje)
+        {
+            ano += 1;
+            diasNoMes = DateTime.DaysInMonth(ano, mes);
+            if (dia > diasNoMes) dia = diasNoMes;
+            proximo = new DateTime(ano, mes, dia);
+        }
+
+        return proximo;
     }
 }

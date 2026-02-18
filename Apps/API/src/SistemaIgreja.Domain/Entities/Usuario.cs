@@ -24,10 +24,12 @@ public class Usuario
     [Required]
     public bool Ativo { get; set; } = true;
 
+    public int? PerfilAcessoId { get; set; }
+    public virtual PerfilAcesso? PerfilAcesso { get; set; }
+
     public DateTime DataCriacao { get; set; } = DateTime.Now;
     public DateTime? UltimoAcesso { get; set; }
 }
-
 
 
 
