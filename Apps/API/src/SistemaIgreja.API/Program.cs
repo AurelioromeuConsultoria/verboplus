@@ -13,21 +13,22 @@ using SistemaIgreja.Application.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ==========================
-// DATABASE CONFIGURATION
-// ==========================
-
+// =======================
+// Database (EF Core)
+// =======================
 var databaseProvider = builder.Configuration["Database:Provider"] ?? "SqlServer";
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-if (databaseProvider.ToLower() == "postgresql" || databaseProvider.ToLower() == "postgres")
+// Npgsql legacy timestamp behavior (se você usa timestamps sem timezone)
+if (databaseProvider.Equals("postgresql", StringComparison.OrdinalIgnoreCase) ||
+    databaseProvider.Equals("postgres", StringComparison.OrdinalIgnoreCase))
 {
     AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 }
 
 builder.Services.AddDbContext<SistemaIgrejaDbContext>(options =>
 {
-    switch (databaseProvider.ToLower())
+    switch (databaseProvider.ToLowerInvariant())
     {
         case "postgresql":
         case "postgres":
@@ -42,17 +43,16 @@ builder.Services.AddDbContext<SistemaIgrejaDbContext>(options =>
     }
 });
 
-// ==========================
-// DEPENDENCY INJECTION
-// ==========================
-
-// Repositories
+// =======================
+// Repositórios
+// =======================
 builder.Services.AddScoped<IPessoaRepository, PessoaRepository>();
 builder.Services.AddScoped<IPessoaPerfilRepository, PessoaPerfilRepository>();
 builder.Services.AddScoped<IVisitanteRepository, VisitanteRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IConfiguracaoMensagemRepository, ConfiguracaoMensagemRepository>();
 builder.Services.AddScoped<IMensagemAgendadaRepository, MensagemAgendadaRepository>();
+
 builder.Services.AddScoped<IEquipeRepository, EquipeRepository>();
 builder.Services.AddScoped<IHubCasaRepository, HubCasaRepository>();
 builder.Services.AddScoped<IFornecedorRepository, FornecedorRepository>();
@@ -70,17 +70,22 @@ builder.Services.AddScoped<ICategoriaMidiaRepository, CategoriaMidiaRepository>(
 builder.Services.AddScoped<IGaleriaFotoRepository, GaleriaFotoRepository>();
 builder.Services.AddScoped<IEnqueteRepository, EnqueteRepository>();
 builder.Services.AddScoped<IConfiguracaoPortalRepository, ConfiguracaoPortalRepository>();
+
+// Kids
 builder.Services.AddScoped<ICriancaDetalheRepository, CriancaDetalheRepository>();
 builder.Services.AddScoped<IResponsavelCriancaRepository, ResponsavelCriancaRepository>();
 builder.Services.AddScoped<IKidsCheckinRepository, KidsCheckinRepository>();
 builder.Services.AddScoped<IKidsNotificacaoRepository, KidsNotificacaoRepository>();
 
-// Services
+// =======================
+// Serviços
+// =======================
 builder.Services.AddScoped<IPessoaService, PessoaService>();
 builder.Services.AddScoped<IPessoaPerfilService, PessoaPerfilService>();
 builder.Services.AddScoped<IVisitanteService, VisitanteService>();
 builder.Services.AddScoped<IConfiguracaoMensagemService, ConfiguracaoMensagemService>();
 builder.Services.AddScoped<IMensagemAgendadaService, MensagemAgendadaService>();
+
 builder.Services.AddScoped<IEquipeService, EquipeService>();
 builder.Services.AddScoped<IHubCasaService, HubCasaService>();
 builder.Services.AddScoped<IFornecedorService, FornecedorService>();
@@ -101,29 +106,30 @@ builder.Services.AddScoped<IGaleriaFotoService, GaleriaFotoService>();
 builder.Services.AddScoped<IEnqueteService, EnqueteService>();
 builder.Services.AddScoped<IConfiguracaoPortalService, ConfiguracaoPortalService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+
+// Kids
 builder.Services.AddScoped<IKidsService, KidsService>();
 
-// ==========================
-// CONFIGURATION
-// ==========================
-
-builder.Services.Configure<EvolutionApiSettings>(
-    builder.Configuration.GetSection("EvolutionApi"));
-
-builder.Services.Configure<MessageSchedulerSettings>(
-    builder.Configuration.GetSection(MessageSchedulerSettings.SectionName));
+// =======================
+// Settings / HttpClient / Scheduler
+// =======================
+builder.Services.Configure<EvolutionApiSettings>(builder.Configuration.GetSection("EvolutionApi"));
+builder.Services.Configure<MessageSchedulerSettings>(builder.Configuration.GetSection(MessageSchedulerSettings.SectionName));
 
 builder.Services.AddHttpClient<IEvolutionApiService, EvolutionApiService>();
 
-if (builder.Configuration.GetValue<bool>("Scheduler:Enabled"))
+var schedulerEnabled = builder.Configuration.GetValue<bool>("Scheduler:Enabled");
+if (schedulerEnabled)
+{
     builder.Services.AddHostedService<MessageSchedulerService>();
+}
 
-// ==========================
-// JWT AUTH
-// ==========================
-
-var jwtKey = builder.Configuration["Jwt:Key"] 
-             ?? throw new InvalidOperationException("JWT Key não configurada");
+// =======================
+// JWT Auth
+// =======================
+var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key não configurada");
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "SistemaIgreja";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "SistemaIgreja";
 
 builder.Services.AddAuthentication(options =>
 {
@@ -138,8 +144,8 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
         ClockSkew = TimeSpan.Zero
     };
@@ -147,24 +153,49 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// =======================
+// Controllers + Swagger
+// =======================
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Sistema Igreja API", Version = "v1" });
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header usando o esquema Bearer. Ex: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 
-// ==========================
+// =======================
 // CORS
-// ==========================
-
+// =======================
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        var allowedOrigins = builder.Configuration
-            .GetSection("Cors:AllowedOrigins")
-            .Get<string[]>() ?? Array.Empty<string>();
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? new[] { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://localhost:4173" };
 
         policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
@@ -175,37 +206,48 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// ==========================
-// MIDDLEWARE
-// ==========================
-
+// =======================
+// Pipeline
+// =======================
 app.UseCors();
 
+// Swagger: mantenho só em Development, como você já tinha
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseStaticFiles();
+// app.UseHttpsRedirection(); // você tinha removido, mantive removido
 
-// ==========================
-// UPLOADS FIX PARA AZURE
-// ==========================
+app.UseStaticFiles(); // wwwroot (somente leitura no App Service quando Run-From-Package)
 
+// =======================
+// UPLOADS (CORRIGIDO PARA APP SERVICE)
+// - NUNCA grave em wwwroot em produção no App Service.
+// - Use D:\home\data\uploads (persistente)
+// =======================
 string uploadsPath;
 
 if (app.Environment.IsDevelopment())
 {
+    // Local: dentro do projeto
     uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
 }
 else
 {
-    var home = Environment.GetEnvironmentVariable("HOME") ?? @"D:\home";
+    // App Service Windows: HOME normalmente é D:\home (ou variável HOME)
+    var home = Environment.GetEnvironmentVariable("HOME");
+    if (string.IsNullOrWhiteSpace(home))
+        home = @"D:\home";
+
     uploadsPath = Path.Combine(home, "data", "uploads");
 }
 
 Directory.CreateDirectory(uploadsPath);
+
+// log útil pra você confirmar no Log Stream qual path está rodando
+app.Logger.LogInformation("UPLOADS PATH = {UploadsPath}", uploadsPath);
 
 app.UseStaticFiles(new StaticFileOptions
 {
@@ -213,19 +255,17 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/uploads"
 });
 
-// ==========================
-// AUTH PIPELINE
-// ==========================
-
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.UseMiddleware<SistemaIgreja.API.Permissions.PermissionMiddleware>();
+
 app.MapControllers();
 
-// ==========================
-// MIGRATIONS CONTROLADAS
-// ==========================
-
+// =======================
+// Migrations automáticas
+// (recomendado: NÃO rodar em produção automaticamente)
+// =======================
 var runMigrations = app.Configuration.GetValue<bool>("Database:RunMigrations");
 
 if (app.Environment.IsDevelopment() && runMigrations)
@@ -239,7 +279,7 @@ if (app.Environment.IsDevelopment() && runMigrations)
     }
     catch (Exception ex)
     {
-        app.Logger.LogError(ex, "Falha ao executar migrations.");
+        app.Logger.LogError(ex, "Falha ao executar migrations. API iniciando mesmo assim.");
     }
 }
 
