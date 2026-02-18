@@ -1,0 +1,60 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  projectPath: 'src/SistemaIgreja.API/SistemaIgreja.API.csproj'
+  appName: 'api-appigreja'
+  azureSubscription: 'sc-azure-appigreja'
+
+stages:
+- stage: Build
+  jobs:
+  - job: Build
+    steps:
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '8.x'
+
+    - script: dotnet restore "$(projectPath)"
+      displayName: Restore
+
+    - script: dotnet build "$(projectPath)" -c $(buildConfiguration) --no-restore
+      displayName: Build
+
+    - script: dotnet publish "$(projectPath)" -c $(buildConfiguration) -o $(Build.ArtifactStagingDirectory)/publish
+      displayName: Publish
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/publish'
+        includeRootFolder: false
+        archiveType: zip
+        archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
+        replaceExistingArchive: true
+
+    - publish: '$(Build.ArtifactStagingDirectory)/app.zip'
+      artifact: drop
+
+- stage: Deploy
+  dependsOn: Build
+  jobs:
+  - deployment: Deploy
+    environment: production
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              appType: 'webApp'
+              appName: '$(appName)'
+              package: '$(Pipeline.Workspace)/drop/app.zip'
