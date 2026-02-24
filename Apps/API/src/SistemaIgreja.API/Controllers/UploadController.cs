@@ -18,24 +18,28 @@ public class UploadController : ControllerBase
     }
 
     [HttpPost("images")]
+    [Consumes("multipart/form-data")]
     public async Task<IActionResult> UploadImage([FromForm] IFormFile file)
     {
         return await UploadFile(file, "images", new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg" });
     }
 
     [HttpPost("videos")]
+    [Consumes("multipart/form-data")]
     public async Task<IActionResult> UploadVideo([FromForm] IFormFile file)
     {
         return await UploadFile(file, "videos", new[] { ".mp4", ".webm", ".ogg", ".mov", ".avi" });
     }
 
     [HttpPost("audios")]
+    [Consumes("multipart/form-data")]
     public async Task<IActionResult> UploadAudio([FromForm] IFormFile file)
     {
         return await UploadFile(file, "audios", new[] { ".mp3", ".wav", ".ogg", ".m4a", ".aac" });
     }
 
     [HttpPost("files")]
+    [Consumes("multipart/form-data")]
     public async Task<IActionResult> UploadFile([FromForm] IFormFile file)
     {
         return await UploadFile(file, "files", null);

@@ -122,6 +122,7 @@ public class GaleriasFotosController : ControllerBase
     }
 
     [HttpPost("{id}/upload")]
+    [Consumes("multipart/form-data")]
     public async Task<IActionResult> UploadFotos(int id, [FromForm] List<IFormFile> arquivos)
     {
         if (arquivos == null || arquivos.Count == 0)
