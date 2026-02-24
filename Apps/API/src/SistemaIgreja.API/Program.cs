@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using SistemaIgreja.API.Swagger;
 using SistemaIgreja.Infrastructure.Data;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Infrastructure.Repositories;
@@ -153,15 +154,17 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Sistema Igreja API", Version = "v1" });
     
-    // Configurar suporte para upload de arquivos (IFormFile)
-    // Isso resolve o erro do Swagger ao gerar documentação para endpoints com IFormFile
+    // Adicionar filtro customizado para lidar com upload de arquivos (IFormFile)
+    c.OperationFilter<FileUploadOperationFilter>();
+    
+    // Configurar suporte para upload de arquivos (IFormFile) - fallback
     c.MapType<IFormFile>(() => new OpenApiSchema
     {
         Type = "string",
         Format = "binary"
     });
     
-    // Configurar suporte para List<IFormFile>
+    // Configurar suporte para List<IFormFile> - fallback
     c.MapType<List<IFormFile>>(() => new OpenApiSchema
     {
         Type = "array",
