@@ -13,13 +13,13 @@ using SistemaIgreja.Application.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// =======================
-// Database (EF Core)
-// =======================
+// ==========================
+// DATABASE CONFIGURATION
+// ==========================
+
 var databaseProvider = builder.Configuration["Database:Provider"] ?? "SqlServer";
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-// Npgsql legacy timestamp behavior (se você usa timestamps sem timezone)
 if (databaseProvider.Equals("postgresql", StringComparison.OrdinalIgnoreCase) ||
     databaseProvider.Equals("postgres", StringComparison.OrdinalIgnoreCase))
 {
@@ -43,16 +43,17 @@ builder.Services.AddDbContext<SistemaIgrejaDbContext>(options =>
     }
 });
 
-// =======================
-// Repositórios
-// =======================
+// ==========================
+// DEPENDENCY INJECTION
+// ==========================
+
+// Repositories
 builder.Services.AddScoped<IPessoaRepository, PessoaRepository>();
 builder.Services.AddScoped<IPessoaPerfilRepository, PessoaPerfilRepository>();
 builder.Services.AddScoped<IVisitanteRepository, VisitanteRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IConfiguracaoMensagemRepository, ConfiguracaoMensagemRepository>();
 builder.Services.AddScoped<IMensagemAgendadaRepository, MensagemAgendadaRepository>();
-
 builder.Services.AddScoped<IEquipeRepository, EquipeRepository>();
 builder.Services.AddScoped<IHubCasaRepository, HubCasaRepository>();
 builder.Services.AddScoped<IFornecedorRepository, FornecedorRepository>();
@@ -77,15 +78,12 @@ builder.Services.AddScoped<IResponsavelCriancaRepository, ResponsavelCriancaRepo
 builder.Services.AddScoped<IKidsCheckinRepository, KidsCheckinRepository>();
 builder.Services.AddScoped<IKidsNotificacaoRepository, KidsNotificacaoRepository>();
 
-// =======================
-// Serviços
-// =======================
+// Services
 builder.Services.AddScoped<IPessoaService, PessoaService>();
 builder.Services.AddScoped<IPessoaPerfilService, PessoaPerfilService>();
 builder.Services.AddScoped<IVisitanteService, VisitanteService>();
 builder.Services.AddScoped<IConfiguracaoMensagemService, ConfiguracaoMensagemService>();
 builder.Services.AddScoped<IMensagemAgendadaService, MensagemAgendadaService>();
-
 builder.Services.AddScoped<IEquipeService, EquipeService>();
 builder.Services.AddScoped<IHubCasaService, HubCasaService>();
 builder.Services.AddScoped<IFornecedorService, FornecedorService>();
@@ -106,30 +104,25 @@ builder.Services.AddScoped<IGaleriaFotoService, GaleriaFotoService>();
 builder.Services.AddScoped<IEnqueteService, EnqueteService>();
 builder.Services.AddScoped<IConfiguracaoPortalService, ConfiguracaoPortalService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
-
-// Kids
 builder.Services.AddScoped<IKidsService, KidsService>();
 
-// =======================
-// Settings / HttpClient / Scheduler
-// =======================
-builder.Services.Configure<EvolutionApiSettings>(builder.Configuration.GetSection("EvolutionApi"));
-builder.Services.Configure<MessageSchedulerSettings>(builder.Configuration.GetSection(MessageSchedulerSettings.SectionName));
+builder.Services.Configure<EvolutionApiSettings>(
+    builder.Configuration.GetSection("EvolutionApi"));
+
+builder.Services.Configure<MessageSchedulerSettings>(
+    builder.Configuration.GetSection(MessageSchedulerSettings.SectionName));
 
 builder.Services.AddHttpClient<IEvolutionApiService, EvolutionApiService>();
 
-var schedulerEnabled = builder.Configuration.GetValue<bool>("Scheduler:Enabled");
-if (schedulerEnabled)
-{
+if (builder.Configuration.GetValue<bool>("Scheduler:Enabled"))
     builder.Services.AddHostedService<MessageSchedulerService>();
-}
 
-// =======================
-// JWT Auth
-// =======================
-var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key não configurada");
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "SistemaIgreja";
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "SistemaIgreja";
+// ==========================
+// JWT AUTH
+// ==========================
+
+var jwtKey = builder.Configuration["Jwt:Key"]
+             ?? throw new InvalidOperationException("JWT Key não configurada");
 
 builder.Services.AddAuthentication(options =>
 {
@@ -144,8 +137,8 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtIssuer,
-        ValidAudience = jwtAudience,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
         ClockSkew = TimeSpan.Zero
     };
@@ -153,49 +146,24 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// =======================
-// Controllers + Swagger
-// =======================
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Sistema Igreja API", Version = "v1" });
-
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header usando o esquema Bearer. Ex: \"Authorization: Bearer {token}\"",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
 });
 
-// =======================
+// ==========================
 // CORS
-// =======================
+// ==========================
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-            ?? new[] { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://localhost:4173" };
+        var allowedOrigins = builder.Configuration
+            .GetSection("Cors:AllowedOrigins")
+            .Get<string[]>() ?? Array.Empty<string>();
 
         policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
@@ -206,48 +174,51 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// =======================
-// Pipeline
-// =======================
 app.UseCors();
 
-// Swagger: mantenho só em Development, como você já tinha
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// app.UseHttpsRedirection(); // você tinha removido, mantive removido
+app.UseStaticFiles();
 
-app.UseStaticFiles(); // wwwroot (somente leitura no App Service quando Run-From-Package)
+// ==========================
+// UPLOADS FIX DEFINITIVO
+// ==========================
 
-// =======================
-// UPLOADS (CORRIGIDO PARA APP SERVICE)
-// - NUNCA grave em wwwroot em produção no App Service.
-// - Use D:\home\data\uploads (persistente)
-// =======================
-string uploadsPath;
-
-if (app.Environment.IsDevelopment())
+bool IsRunningOnAzure()
 {
-    // Local: dentro do projeto
-    uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
-}
-else
-{
-    // App Service Windows: HOME normalmente é D:\home (ou variável HOME)
-    var home = Environment.GetEnvironmentVariable("HOME");
-    if (string.IsNullOrWhiteSpace(home))
-        home = @"D:\home";
-
-    uploadsPath = Path.Combine(home, "data", "uploads");
+    return !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID"));
 }
 
-Directory.CreateDirectory(uploadsPath);
+string GetUploadsPath(IWebHostEnvironment env)
+{
+    if (IsRunningOnAzure())
+    {
+        var home = Environment.GetEnvironmentVariable("HOME");
+        if (string.IsNullOrWhiteSpace(home))
+            home = @"D:\home";
 
-// log útil pra você confirmar no Log Stream qual path está rodando
-app.Logger.LogInformation("UPLOADS PATH = {UploadsPath}", uploadsPath);
+        return Path.Combine(home, "data", "uploads");
+    }
+
+    return Path.Combine(env.ContentRootPath, "uploads");
+}
+
+var uploadsPath = GetUploadsPath(app.Environment);
+
+try
+{
+    Directory.CreateDirectory(uploadsPath);
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "Erro ao criar pasta de uploads em {UploadsPath}", uploadsPath);
+}
+
+app.Logger.LogInformation("UploadsPath definido como: {UploadsPath}", uploadsPath);
 
 app.UseStaticFiles(new StaticFileOptions
 {
@@ -257,30 +228,7 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.UseMiddleware<SistemaIgreja.API.Permissions.PermissionMiddleware>();
-
 app.MapControllers();
-
-// =======================
-// Migrations automáticas
-// (recomendado: NÃO rodar em produção automaticamente)
-// =======================
-var runMigrations = app.Configuration.GetValue<bool>("Database:RunMigrations");
-
-if (app.Environment.IsDevelopment() && runMigrations)
-{
-    using var scope = app.Services.CreateScope();
-    var context = scope.ServiceProvider.GetRequiredService<SistemaIgrejaDbContext>();
-
-    try
-    {
-        context.Database.Migrate();
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogError(ex, "Falha ao executar migrations. API iniciando mesmo assim.");
-    }
-}
 
 app.Run();
