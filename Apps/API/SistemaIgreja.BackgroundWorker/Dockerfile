@@ -2,9 +2,12 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
 
+# Copia o repositório inteiro (porque a worker referencia projetos em /src)
 COPY . .
-RUN dotnet restore
-RUN dotnet publish -c Release -o /out
+
+# Restaura e publica APENAS a worker (evita restaurar /tests que está em .NET 9)
+RUN dotnet restore "SistemaIgreja.BackgroundWorker/SistemaIgreja.BackgroundWorker.csproj"
+RUN dotnet publish "SistemaIgreja.BackgroundWorker/SistemaIgreja.BackgroundWorker.csproj" -c Release -o /out --no-restore
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/runtime:8.0
