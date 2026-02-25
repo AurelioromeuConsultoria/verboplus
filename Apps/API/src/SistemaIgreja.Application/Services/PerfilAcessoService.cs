@@ -41,8 +41,20 @@ public class PerfilAcessoService : IPerfilAcessoService
             Nome = dto.Nome,
             Descricao = dto.Descricao,
             DataCriacao = DateTime.Now,
-            Permissoes = dto.Permissoes.Select(MapToEntity).ToList()
+            Permissoes = new List<PerfilAcessoPermissao>()
         };
+
+        // Adicionar permissões após criar o perfil para garantir que o relacionamento seja estabelecido
+        foreach (var permDto in dto.Permissoes)
+        {
+            perfil.Permissoes.Add(new PerfilAcessoPermissao
+            {
+                Recurso = permDto.Recurso,
+                PodeVer = permDto.PodeVer,
+                PodeEditar = permDto.PodeEditar,
+                PodeExcluir = permDto.PodeExcluir
+            });
+        }
 
         var created = await _repository.CreateAsync(perfil);
         return MapToDto(created);
@@ -57,9 +69,15 @@ public class PerfilAcessoService : IPerfilAcessoService
         perfil.Descricao = dto.Descricao;
 
         perfil.Permissoes.Clear();
-        foreach (var perm in dto.Permissoes)
+        foreach (var permDto in dto.Permissoes)
         {
-            perfil.Permissoes.Add(MapToEntity(perm));
+            perfil.Permissoes.Add(new PerfilAcessoPermissao
+            {
+                Recurso = permDto.Recurso,
+                PodeVer = permDto.PodeVer,
+                PodeEditar = permDto.PodeEditar,
+                PodeExcluir = permDto.PodeExcluir
+            });
         }
 
         var updated = await _repository.UpdateAsync(perfil);

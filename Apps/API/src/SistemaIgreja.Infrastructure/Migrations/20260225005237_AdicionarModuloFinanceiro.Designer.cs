@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SistemaIgreja.Infrastructure.Data;
@@ -11,9 +12,11 @@ using SistemaIgreja.Infrastructure.Data;
 namespace SistemaIgreja.Infrastructure.Migrations
 {
     [DbContext(typeof(SistemaIgrejaDbContext))]
-    partial class SistemaIgrejaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260225005237_AdicionarModuloFinanceiro")]
+    partial class AdicionarModuloFinanceiro
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -115,34 +118,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("CategoriasNoticias");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaReceita", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Descricao")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("CategoriasReceitas");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.CentroCusto", b =>
@@ -1456,9 +1431,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("CategoriaReceitaId")
-                        .HasColumnType("integer");
-
                     b.Property<int?>("CentroCustoId")
                         .HasColumnType("integer");
 
@@ -1500,8 +1472,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CategoriaReceitaId");
 
                     b.HasIndex("CentroCustoId");
 
@@ -1904,11 +1874,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Receita", b =>
                 {
-                    b.HasOne("SistemaIgreja.Domain.Entities.CategoriaReceita", "CategoriaReceita")
-                        .WithMany("Receitas")
-                        .HasForeignKey("CategoriaReceitaId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("SistemaIgreja.Domain.Entities.CentroCusto", "CentroCusto")
                         .WithMany("Receitas")
                         .HasForeignKey("CentroCustoId")
@@ -1928,8 +1893,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("CategoriaReceita");
 
                     b.Navigation("CentroCusto");
 
@@ -2033,11 +1996,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaNoticia", b =>
                 {
                     b.Navigation("Noticias");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaReceita", b =>
-                {
-                    b.Navigation("Receitas");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.CentroCusto", b =>

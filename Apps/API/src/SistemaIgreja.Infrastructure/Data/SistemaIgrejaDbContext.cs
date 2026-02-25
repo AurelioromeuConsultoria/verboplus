@@ -17,6 +17,13 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<Equipe> Equipes { get; set; }
     public DbSet<HubCasa> HubCasas { get; set; }
     public DbSet<Fornecedor> Fornecedores { get; set; }
+    public DbSet<CategoriaDespesa> CategoriasDespesas { get; set; }
+    public DbSet<CategoriaReceita> CategoriasReceitas { get; set; }
+    public DbSet<ContaBancaria> ContasBancarias { get; set; }
+    public DbSet<CentroCusto> CentrosCustos { get; set; }
+    public DbSet<Projeto> Projetos { get; set; }
+    public DbSet<Despesa> Despesas { get; set; }
+    public DbSet<Receita> Receitas { get; set; }
     public DbSet<Cargo> Cargos { get; set; }
     public DbSet<Voluntario> Voluntarios { get; set; }
     public DbSet<Evento> Eventos { get; set; }
@@ -178,6 +185,152 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.DataCriacao).IsRequired();
         });
 
+        // Configuração da entidade CategoriaDespesa
+        modelBuilder.Entity<CategoriaDespesa>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Descricao).HasMaxLength(300);
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade CategoriaReceita
+        modelBuilder.Entity<CategoriaReceita>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Descricao).HasMaxLength(300);
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade CategoriaReceita
+        modelBuilder.Entity<CategoriaReceita>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Descricao).HasMaxLength(300);
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade ContaBancaria
+        modelBuilder.Entity<ContaBancaria>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Banco).HasMaxLength(100);
+            entity.Property(e => e.Agencia).HasMaxLength(20);
+            entity.Property(e => e.Conta).HasMaxLength(20);
+            entity.Property(e => e.TipoConta).HasMaxLength(10);
+            entity.Property(e => e.SaldoInicial).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade CentroCusto
+        modelBuilder.Entity<CentroCusto>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Descricao).HasMaxLength(300);
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade Projeto
+        modelBuilder.Entity<Projeto>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.Descricao).HasMaxLength(500);
+            entity.Property(e => e.Orcamento).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade Despesa
+        modelBuilder.Entity<Despesa>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Descricao).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Valor).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.DataVencimento).IsRequired();
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.Observacoes).HasMaxLength(500);
+            entity.Property(e => e.ComprovanteUrl).HasMaxLength(500);
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(e => e.Fornecedor)
+                  .WithMany()
+                  .HasForeignKey(e => e.FornecedorId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.CategoriaDespesa)
+                  .WithMany(c => c.Despesas)
+                  .HasForeignKey(e => e.CategoriaDespesaId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ContaBancaria)
+                  .WithMany(c => c.Despesas)
+                  .HasForeignKey(e => e.ContaBancariaId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.CentroCusto)
+                  .WithMany(c => c.Despesas)
+                  .HasForeignKey(e => e.CentroCustoId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Projeto)
+                  .WithMany(p => p.Despesas)
+                  .HasForeignKey(e => e.ProjetoId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Usuario)
+                  .WithMany()
+                  .HasForeignKey(e => e.UsuarioId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configuração da entidade Receita
+        modelBuilder.Entity<Receita>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Descricao).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Valor).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.DataRecebimento).IsRequired();
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.Observacoes).HasMaxLength(500);
+            entity.Property(e => e.ComprovanteUrl).HasMaxLength(500);
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(e => e.CategoriaReceita)
+                  .WithMany(c => c.Receitas)
+                  .HasForeignKey(e => e.CategoriaReceitaId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ContaBancaria)
+                  .WithMany(c => c.Receitas)
+                  .HasForeignKey(e => e.ContaBancariaId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.CentroCusto)
+                  .WithMany(c => c.Receitas)
+                  .HasForeignKey(e => e.CentroCustoId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Projeto)
+                  .WithMany(p => p.Receitas)
+                  .HasForeignKey(e => e.ProjetoId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Usuario)
+                  .WithMany()
+                  .HasForeignKey(e => e.UsuarioId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
         // Configuração da entidade Cargo
         modelBuilder.Entity<Cargo>(entity =>
         {
@@ -222,6 +375,7 @@ public class SistemaIgrejaDbContext : DbContext
         modelBuilder.Entity<PerfilAcessoPermissao>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Recurso).IsRequired().HasMaxLength(80);
 
             entity.HasOne(e => e.PerfilAcesso)

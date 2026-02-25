@@ -12,6 +12,7 @@ using SistemaIgreja.Infrastructure.Repositories;
 using SistemaIgreja.Application.Services;
 using SistemaIgreja.Infrastructure.Services;
 using SistemaIgreja.Application.Configuration;
+using FinanceiroQueryService = SistemaIgreja.Infrastructure.Services.FinanceiroQueryService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +60,13 @@ builder.Services.AddScoped<IMensagemAgendadaRepository, MensagemAgendadaReposito
 builder.Services.AddScoped<IEquipeRepository, EquipeRepository>();
 builder.Services.AddScoped<IHubCasaRepository, HubCasaRepository>();
 builder.Services.AddScoped<IFornecedorRepository, FornecedorRepository>();
+builder.Services.AddScoped<ICategoriaDespesaRepository, CategoriaDespesaRepository>();
+builder.Services.AddScoped<ICategoriaReceitaRepository, CategoriaReceitaRepository>();
+builder.Services.AddScoped<IContaBancariaRepository, ContaBancariaRepository>();
+builder.Services.AddScoped<ICentroCustoRepository, CentroCustoRepository>();
+builder.Services.AddScoped<IProjetoRepository, ProjetoRepository>();
+builder.Services.AddScoped<IDespesaRepository, DespesaRepository>();
+builder.Services.AddScoped<IReceitaRepository, ReceitaRepository>();
 builder.Services.AddScoped<ICargoRepository, CargoRepository>();
 builder.Services.AddScoped<IVoluntarioRepository, VoluntarioRepository>();
 builder.Services.AddScoped<IEventoRepository, EventoRepository>();
@@ -89,6 +97,13 @@ builder.Services.AddScoped<IMensagemAgendadaService, MensagemAgendadaService>();
 builder.Services.AddScoped<IEquipeService, EquipeService>();
 builder.Services.AddScoped<IHubCasaService, HubCasaService>();
 builder.Services.AddScoped<IFornecedorService, FornecedorService>();
+builder.Services.AddScoped<ICategoriaDespesaService, CategoriaDespesaService>();
+builder.Services.AddScoped<ICategoriaReceitaService, CategoriaReceitaService>();
+builder.Services.AddScoped<IContaBancariaService, ContaBancariaService>();
+builder.Services.AddScoped<ICentroCustoService, CentroCustoService>();
+builder.Services.AddScoped<IProjetoService, ProjetoService>();
+builder.Services.AddScoped<IDespesaService, DespesaService>();
+builder.Services.AddScoped<IReceitaService, ReceitaService>();
 builder.Services.AddScoped<ICargoService, CargoService>();
 builder.Services.AddScoped<IVoluntarioService, VoluntarioService>();
 builder.Services.AddScoped<IEventoService, EventoService>();
@@ -106,6 +121,9 @@ builder.Services.AddScoped<IGaleriaFotoService, GaleriaFotoService>();
 builder.Services.AddScoped<IEnqueteService, EnqueteService>();
 builder.Services.AddScoped<IConfiguracaoPortalService, ConfiguracaoPortalService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IFinanceiroQueryService, FinanceiroQueryService>();
+builder.Services.AddScoped<IDashboardFinanceiroService, DashboardFinanceiroService>();
+builder.Services.AddScoped<IRelatorioFinanceiroService, RelatorioFinanceiroService>();
 builder.Services.AddScoped<IKidsService, KidsService>();
 
 builder.Services.Configure<EvolutionApiSettings>(

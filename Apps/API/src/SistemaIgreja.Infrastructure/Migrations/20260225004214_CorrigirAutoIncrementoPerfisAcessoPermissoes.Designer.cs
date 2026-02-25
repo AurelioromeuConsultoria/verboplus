@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SistemaIgreja.Infrastructure.Data;
@@ -11,9 +12,11 @@ using SistemaIgreja.Infrastructure.Data;
 namespace SistemaIgreja.Infrastructure.Migrations
 {
     [DbContext(typeof(SistemaIgrejaDbContext))]
-    partial class SistemaIgrejaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260225004214_CorrigirAutoIncrementoPerfisAcessoPermissoes")]
+    partial class CorrigirAutoIncrementoPerfisAcessoPermissoes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -41,34 +44,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Cargos");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaDespesa", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Descricao")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("CategoriasDespesas");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaMidia", b =>
@@ -115,62 +90,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("CategoriasNoticias");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaReceita", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Descricao")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("CategoriasReceitas");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CentroCusto", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Descricao")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("CentrosCustos");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.ConfiguracaoMensagem", b =>
@@ -259,49 +178,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.ContaBancaria", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Agencia")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Banco")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Conta")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<decimal>("SaldoInicial")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("TipoConta")
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ContasBancarias");
-                });
-
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Contato", b =>
                 {
                     b.Property<int>("Id")
@@ -367,77 +243,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasKey("PessoaId");
 
                     b.ToTable("CriancasDetalhes");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Despesa", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CategoriaDespesaId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("CentroCustoId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ComprovanteUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int?>("ContaBancariaId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime?>("DataPagamento")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime>("DataVencimento")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Descricao")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int?>("FornecedorId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Observacoes")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int?>("ProjetoId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("UsuarioId")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("Valor")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoriaDespesaId");
-
-                    b.HasIndex("CentroCustoId");
-
-                    b.HasIndex("ContaBancariaId");
-
-                    b.HasIndex("FornecedorId");
-
-                    b.HasIndex("ProjetoId");
-
-                    b.HasIndex("UsuarioId");
-
-                    b.ToTable("Despesas");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.DestaqueSite", b =>
@@ -1411,109 +1216,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.ToTable("PessoasPerfis");
                 });
 
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Projeto", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime?>("DataFim")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime?>("DataInicio")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Descricao")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
-
-                    b.Property<decimal?>("Orcamento")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Projetos");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Receita", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CategoriaReceitaId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("CentroCustoId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ComprovanteUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int?>("ContaBancariaId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("DataConfirmacao")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime>("DataRecebimento")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Descricao")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Observacoes")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int?>("ProjetoId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("UsuarioId")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("Valor")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoriaReceitaId");
-
-                    b.HasIndex("CentroCustoId");
-
-                    b.HasIndex("ContaBancariaId");
-
-                    b.HasIndex("ProjetoId");
-
-                    b.HasIndex("UsuarioId");
-
-                    b.ToTable("Receitas");
-                });
-
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.ResponsavelCrianca", b =>
                 {
                     b.Property<int>("Id")
@@ -1667,51 +1369,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Pessoa");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Despesa", b =>
-                {
-                    b.HasOne("SistemaIgreja.Domain.Entities.CategoriaDespesa", "CategoriaDespesa")
-                        .WithMany("Despesas")
-                        .HasForeignKey("CategoriaDespesaId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.CentroCusto", "CentroCusto")
-                        .WithMany("Despesas")
-                        .HasForeignKey("CentroCustoId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.ContaBancaria", "ContaBancaria")
-                        .WithMany("Despesas")
-                        .HasForeignKey("ContaBancariaId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.Fornecedor", "Fornecedor")
-                        .WithMany()
-                        .HasForeignKey("FornecedorId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.Projeto", "Projeto")
-                        .WithMany("Despesas")
-                        .HasForeignKey("ProjetoId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.Usuario", "Usuario")
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("CategoriaDespesa");
-
-                    b.Navigation("CentroCusto");
-
-                    b.Navigation("ContaBancaria");
-
-                    b.Navigation("Fornecedor");
-
-                    b.Navigation("Projeto");
-
-                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.EnqueteOpcao", b =>
@@ -1902,44 +1559,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Pessoa");
                 });
 
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Receita", b =>
-                {
-                    b.HasOne("SistemaIgreja.Domain.Entities.CategoriaReceita", "CategoriaReceita")
-                        .WithMany("Receitas")
-                        .HasForeignKey("CategoriaReceitaId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.CentroCusto", "CentroCusto")
-                        .WithMany("Receitas")
-                        .HasForeignKey("CentroCustoId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.ContaBancaria", "ContaBancaria")
-                        .WithMany("Receitas")
-                        .HasForeignKey("ContaBancariaId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.Projeto", "Projeto")
-                        .WithMany("Receitas")
-                        .HasForeignKey("ProjetoId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.Usuario", "Usuario")
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("CategoriaReceita");
-
-                    b.Navigation("CentroCusto");
-
-                    b.Navigation("ContaBancaria");
-
-                    b.Navigation("Projeto");
-
-                    b.Navigation("Usuario");
-                });
-
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.ResponsavelCrianca", b =>
                 {
                     b.HasOne("SistemaIgreja.Domain.Entities.Pessoa", "Crianca")
@@ -2020,11 +1639,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Voluntarios");
                 });
 
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaDespesa", b =>
-                {
-                    b.Navigation("Despesas");
-                });
-
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaMidia", b =>
                 {
                     b.Navigation("Galerias");
@@ -2035,28 +1649,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Noticias");
                 });
 
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaReceita", b =>
-                {
-                    b.Navigation("Receitas");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CentroCusto", b =>
-                {
-                    b.Navigation("Despesas");
-
-                    b.Navigation("Receitas");
-                });
-
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.ConfiguracaoMensagem", b =>
                 {
                     b.Navigation("MensagensAgendadas");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.ContaBancaria", b =>
-                {
-                    b.Navigation("Despesas");
-
-                    b.Navigation("Receitas");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Enquete", b =>
@@ -2113,13 +1708,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Visitantes");
 
                     b.Navigation("Voluntarios");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Projeto", b =>
-                {
-                    b.Navigation("Despesas");
-
-                    b.Navigation("Receitas");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Visitante", b =>

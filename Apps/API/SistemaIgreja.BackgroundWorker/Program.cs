@@ -13,8 +13,35 @@ using SistemaIgreja.Infrastructure.Services;
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((ctx, services) =>
     {
-        services.AddDbContext<SistemaIgrejaDbContext>(opt =>
-            opt.UseSqlServer(ctx.Configuration.GetConnectionString("DefaultConnection")));
+        // ==========================
+        // DATABASE CONFIGURATION
+        // ==========================
+
+        var databaseProvider = ctx.Configuration["Database:Provider"] ?? "SqlServer";
+        var connectionString = ctx.Configuration.GetConnectionString("DefaultConnection");
+
+        if (databaseProvider.Equals("postgresql", StringComparison.OrdinalIgnoreCase) ||
+            databaseProvider.Equals("postgres", StringComparison.OrdinalIgnoreCase))
+        {
+            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+        }
+
+        services.AddDbContext<SistemaIgrejaDbContext>(options =>
+        {
+            switch (databaseProvider.ToLowerInvariant())
+            {
+                case "postgresql":
+                case "postgres":
+                    options.UseNpgsql(connectionString, npgsqlOptions =>
+                        npgsqlOptions.EnableRetryOnFailure());
+                    break;
+
+                case "sqlserver":
+                default:
+                    options.UseSqlServer(connectionString);
+                    break;
+            }
+        });
 
         services.AddScoped<IPessoaRepository, PessoaRepository>();
         services.AddScoped<IPessoaPerfilRepository, PessoaPerfilRepository>();
