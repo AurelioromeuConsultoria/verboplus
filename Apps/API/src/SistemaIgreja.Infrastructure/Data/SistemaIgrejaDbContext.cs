@@ -27,6 +27,10 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<Cargo> Cargos { get; set; }
     public DbSet<Voluntario> Voluntarios { get; set; }
     public DbSet<Evento> Eventos { get; set; }
+    public DbSet<EventoRecorrencia> EventosRecorrencias { get; set; }
+    public DbSet<EventoOcorrencia> EventosOcorrencias { get; set; }
+    public DbSet<Escala> Escalas { get; set; }
+    public DbSet<EscalaItem> EscalasItens { get; set; }
     public DbSet<DestaqueSite> DestaquesSite { get; set; }
     public DbSet<ConfiguracaoPortal> ConfiguracoesPortal { get; set; }
     public DbSet<CategoriaNoticia> CategoriasNoticias { get; set; }
@@ -453,7 +457,110 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.Url).HasMaxLength(500);
             entity.Property(e => e.DataInicio).IsRequired();
             entity.Property(e => e.DataFim).IsRequired();
+            entity.Property(e => e.Tipo).IsRequired().HasDefaultValue(TipoEvento.Evento);
+            entity.Property(e => e.EhRecorrente).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.Ativo).IsRequired().HasDefaultValue(true);
             entity.Property(e => e.DataCriacao).IsRequired();
+        });
+
+        // Configuração da entidade EventoRecorrencia
+        modelBuilder.Entity<EventoRecorrencia>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DiaSemana).IsRequired();
+            entity.Property(e => e.HoraInicio).IsRequired();
+            entity.Property(e => e.Periodicidade).IsRequired();
+            entity.Property(e => e.DataInicioVigencia).IsRequired();
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(e => e.Evento)
+                  .WithMany(e => e.Recorrencias)
+                  .HasForeignKey(e => e.EventoId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.EventoId, e.Ativo });
+        });
+
+        // Configuração da entidade EventoOcorrencia
+        modelBuilder.Entity<EventoOcorrencia>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DataHoraInicio).IsRequired();
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.GeradaAutomaticamente).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(e => e.Evento)
+                  .WithMany(e => e.Ocorrencias)
+                  .HasForeignKey(e => e.EventoId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.EventoRecorrencia)
+                  .WithMany(r => r.Ocorrencias)
+                  .HasForeignKey(e => e.EventoRecorrenciaId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => new { e.EventoId, e.DataHoraInicio });
+        });
+
+        // Configuração da entidade Escala
+        modelBuilder.Entity<Escala>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.Observacoes).HasMaxLength(500);
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(e => e.EventoOcorrencia)
+                  .WithOne(eo => eo.Escala)
+                  .HasForeignKey<Escala>(e => e.EventoOcorrenciaId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.CriadoPorUsuario)
+                  .WithMany()
+                  .HasForeignKey(e => e.CriadoPorUsuarioId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.EventoOcorrenciaId).IsUnique();
+        });
+
+        // Configuração da entidade EscalaItem
+        modelBuilder.Entity<EscalaItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Ordem).IsRequired();
+            entity.Property(e => e.ConflitoAprovado).IsRequired();
+            entity.Property(e => e.MotivoExcecao).HasMaxLength(500);
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(e => e.Escala)
+                  .WithMany(e => e.Itens)
+                  .HasForeignKey(e => e.EscalaId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Equipe)
+                  .WithMany()
+                  .HasForeignKey(e => e.EquipeId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Cargo)
+                  .WithMany()
+                  .HasForeignKey(e => e.CargoId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Voluntario)
+                  .WithMany()
+                  .HasForeignKey(e => e.VoluntarioId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.AprovadoPorUsuario)
+                  .WithMany()
+                  .HasForeignKey(e => e.AprovadoPorUsuarioId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => new { e.EscalaId, e.VoluntarioId });
+            entity.HasIndex(e => new { e.EscalaId, e.EquipeId });
         });
 
         // Configuração da entidade DestaqueSite

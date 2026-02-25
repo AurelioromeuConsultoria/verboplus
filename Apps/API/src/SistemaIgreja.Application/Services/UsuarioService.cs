@@ -44,29 +44,47 @@ public class UsuarioService : IUsuarioService
         var existeUsuario = await _repository.GetByEmailAsync(dto.EmailLogin);
         if (existeUsuario != null) throw new ArgumentException("Email de login já cadastrado");
 
-        // Verificar se email da pessoa já existe (se fornecido)
-        Pessoa? pessoa = null;
-        if (!string.IsNullOrEmpty(dto.Email))
+        Pessoa? pessoa;
+        if (dto.PessoaId.HasValue)
         {
-            pessoa = await _pessoaRepository.GetByEmailAsync(dto.Email);
-            if (pessoa != null) throw new ArgumentException("Email já cadastrado para outra pessoa");
+            pessoa = await _pessoaRepository.GetByIdAsync(dto.PessoaId.Value)
+                ?? throw new ArgumentException("Pessoa não encontrada");
+        }
+        else
+        {
+            // Compatibilidade: sem PessoaId, tenta reaproveitar por email (se informado), senão cria nova pessoa.
+            pessoa = null;
+            if (!string.IsNullOrWhiteSpace(dto.Email))
+            {
+                pessoa = await _pessoaRepository.GetByEmailAsync(dto.Email);
+            }
+
+            if (pessoa == null)
+            {
+                if (string.IsNullOrWhiteSpace(dto.Nome))
+                {
+                    throw new ArgumentException("Nome é obrigatório ao criar usuário sem pessoa vinculada");
+                }
+
+                pessoa = new Pessoa
+                {
+                    Nome = dto.Nome,
+                    Email = dto.Email,
+                    Telefone = dto.Telefone,
+                    WhatsApp = dto.WhatsApp,
+                    DataNascimento = dto.DataNascimento,
+                    TipoPessoa = TipoPessoa.Adulto,
+                    Ativo = true,
+                    DataCriacao = DateTime.Now
+                };
+                pessoa = await _pessoaRepository.CreateAsync(pessoa);
+            }
         }
 
-        // Criar ou usar pessoa existente
-        if (pessoa == null)
+        var usuarioDaPessoa = await _repository.GetByPessoaIdAsync(pessoa.Id);
+        if (usuarioDaPessoa != null)
         {
-            pessoa = new Pessoa
-            {
-                Nome = dto.Nome,
-                Email = dto.Email,
-                Telefone = dto.Telefone,
-                WhatsApp = dto.WhatsApp,
-                DataNascimento = dto.DataNascimento,
-                TipoPessoa = TipoPessoa.Adulto,
-                Ativo = true,
-                DataCriacao = DateTime.Now
-            };
-            pessoa = await _pessoaRepository.CreateAsync(pessoa);
+            throw new ArgumentException("Esta pessoa já possui usuário");
         }
 
         if (dto.PerfilAcessoId == null)

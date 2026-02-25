@@ -42,6 +42,15 @@ public class UsuarioRepository : IUsuarioRepository
             .FirstOrDefaultAsync(u => u.EmailLogin.ToLower() == email.ToLower());
     }
 
+    public async Task<Usuario?> GetByPessoaIdAsync(int pessoaId)
+    {
+        return await _context.Set<Usuario>()
+            .Include(u => u.Pessoa)
+            .Include(u => u.PerfilAcesso)
+                .ThenInclude(p => p.Permissoes)
+            .FirstOrDefaultAsync(u => u.PessoaId == pessoaId);
+    }
+
     public async Task<Usuario> CreateAsync(Usuario usuario)
     {
         _context.Set<Usuario>().Add(usuario);

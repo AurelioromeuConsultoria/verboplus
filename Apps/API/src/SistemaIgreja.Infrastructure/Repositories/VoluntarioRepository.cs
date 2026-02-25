@@ -24,6 +24,17 @@ public class VoluntarioRepository : IVoluntarioRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Voluntario>> GetByEquipeAsync(int equipeId)
+    {
+        return await _context.Set<Voluntario>()
+            .Include(v => v.Pessoa)
+            .Include(v => v.Equipe)
+            .Include(v => v.Cargo)
+            .Where(v => v.EquipeId == equipeId)
+            .OrderBy(v => v.Pessoa.Nome)
+            .ToListAsync();
+    }
+
     public async Task<Voluntario?> GetByIdAsync(int id)
     {
         return await _context.Set<Voluntario>()

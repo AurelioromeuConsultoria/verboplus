@@ -46,6 +46,7 @@ public class UsuarioDto
 
 public class CriarUsuarioDto
 {
+    public int? PessoaId { get; set; }
     public string Nome { get; set; } = string.Empty;
     public string? Email { get; set; }
     public string? Telefone { get; set; }
