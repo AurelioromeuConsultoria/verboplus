@@ -76,9 +76,9 @@ public class VisitanteService : IVisitanteService
         if (!string.IsNullOrEmpty(request.Email) && !IsValidEmail(request.Email))
             throw new ArgumentException("Email inválido");
 
-        // Usar transação para garantir atomicidade
-        await _unitOfWork.BeginTransactionAsync();
-        try
+        var visitanteId = 0;
+
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             // 1. Deduplicação de Pessoa
             Pessoa? pessoa = await BuscarPessoaExistenteAsync(request);
@@ -160,30 +160,32 @@ public class VisitanteService : IVisitanteService
 
             var visitanteCriado = await _visitanteRepository.CreateWithoutSaveAsync(visitante);
 
-            // Salvar todas as mudanças e commit da transação
+            // Salvar todas as mudanças dentro da transação
             await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
+            visitanteId = visitanteCriado.Id;
+        });
 
-            // 5. Agendar mensagens automaticamente (fora da transação)
-            try
-            {
-                await _mensagemService.AgendarMensagensParaVisitanteAsync(visitanteCriado.Id);
-            }
-            catch (Exception ex)
-            {
-                // Log do erro mas não falha a criação do visitante
-                // Em produção, usar ILogger
-                Console.WriteLine($"Erro ao agendar mensagens: {ex.Message}");
-            }
-
-            // 6. Retornar resposta consolidada
-            return await MapToResponseAsync(visitanteCriado);
-        }
-        catch
+        if (visitanteId <= 0)
         {
-            await _unitOfWork.RollbackTransactionAsync();
-            throw;
+            throw new InvalidOperationException("Falha ao criar visitante (ID não gerado)");
         }
+
+        // 5. Agendar mensagens automaticamente (fora da transação)
+        try
+        {
+            await _mensagemService.AgendarMensagensParaVisitanteAsync(visitanteId);
+        }
+        catch (Exception ex)
+        {
+            // Log do erro mas não falha a criação do visitante
+            // Em produção, usar ILogger
+            Console.WriteLine($"Erro ao agendar mensagens: {ex.Message}");
+        }
+
+        // 6. Retornar resposta consolidada
+        var visitanteParaResposta = await _visitanteRepository.GetByIdAsync(visitanteId)
+            ?? throw new InvalidOperationException("Visitante não encontrado após criação");
+        return await MapToResponseAsync(visitanteParaResposta);
     }
 
     /// <summary>
@@ -337,7 +339,11 @@ public class VisitanteService : IVisitanteService
             Email = visitante.Pessoa?.Email,
             DataVisita = visitante.DataVisita,
             Observacoes = visitante.Observacoes,
-            DataCadastro = visitante.DataCadastro
+            DataCadastro = visitante.DataCadastro,
+            Perfis = visitante.Pessoa?.Perfis?
+                .Where(p => p.DataFim == null)
+                .Select(p => p.Perfil.ToString())
+                .ToList() ?? new List<string>()
         };
     }
 }

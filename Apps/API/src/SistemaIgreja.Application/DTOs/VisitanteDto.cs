@@ -14,6 +14,7 @@ public class VisitanteDto
     public DateTime DataVisita { get; set; }
     public string? Observacoes { get; set; }
     public DateTime DataCadastro { get; set; }
+    public List<string> Perfis { get; set; } = new();
 }
 
 // DTO de Request para criar visitante

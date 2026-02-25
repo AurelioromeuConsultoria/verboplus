@@ -84,117 +84,113 @@ public class KidsService : IKidsService
 
     public async Task<CriancaDto> CreateCriancaAsync(CreateCriancaRequest request)
     {
-        await _unitOfWork.BeginTransactionAsync();
         try
         {
-            // Criar Pessoa
-            var pessoa = new Pessoa
+            return await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
-                Nome = request.Nome,
-                DataNascimento = request.DataNascimento,
-                Email = request.Email,
-                Telefone = request.Telefone,
-                WhatsApp = request.WhatsApp,
-                TipoPessoa = TipoPessoa.Crianca,
-                Ativo = true,
-                DataCriacao = DateTime.UtcNow
-            };
-            
-            // Adicionar Pessoa ao contexto sem salvar
-            var pessoaCriada = await _pessoaRepository.CreateWithoutSaveAsync(pessoa);
-            
-            // Salvar apenas a Pessoa para gerar o ID (dentro da transação)
-            await _unitOfWork.SaveChangesAsync();
-            
-            // Recarregar a pessoa para garantir que o ID está disponível
-            // Isso garante que o contexto está sincronizado
-            pessoaCriada = await _pessoaRepository.GetByIdAsync(pessoaCriada.Id) ?? pessoaCriada;
-            
-            // Agora que o ID foi gerado e confirmado, criar CriancaDetalhe
-            var detalhe = new CriancaDetalhe
-            {
-                PessoaId = pessoaCriada.Id, // Usar o ID diretamente após confirmação
-                Alergias = request.Alergias,
-                RestricoesAlimentares = request.RestricoesAlimentares,
-                Observacoes = request.Observacoes,
-                SalaId = request.SalaId,
-                DataCadastro = DateTime.UtcNow
-            };
-            
-            await _criancaDetalheRepository.CreateWithoutSaveAsync(detalhe);
-            
-            // Criar perfil Kids
-            var perfil = new PessoaPerfil
-            {
-                PessoaId = pessoaCriada.Id,
-                Perfil = PerfilPessoa.Kids,
-                DataInicio = DateTime.UtcNow,
-                DataFim = null
-            };
-            
-            await _perfilRepository.CreateWithoutSaveAsync(perfil);
-            
-            // Processar responsáveis se fornecidos
-            if (request.Responsaveis != null && request.Responsaveis.Any())
-            {
-                foreach (var respRequest in request.Responsaveis)
+                // Criar Pessoa
+                var pessoa = new Pessoa
                 {
-                    Pessoa? responsavelPessoa;
-                    
-                    if (respRequest.ResponsavelPessoaId.HasValue)
+                    Nome = request.Nome,
+                    DataNascimento = request.DataNascimento,
+                    Email = request.Email,
+                    Telefone = request.Telefone,
+                    WhatsApp = request.WhatsApp,
+                    TipoPessoa = TipoPessoa.Crianca,
+                    Ativo = true,
+                    DataCriacao = DateTime.UtcNow
+                };
+
+                // Adicionar Pessoa ao contexto sem salvar
+                var pessoaCriada = await _pessoaRepository.CreateWithoutSaveAsync(pessoa);
+
+                // Salvar apenas a Pessoa para gerar o ID (dentro da transação)
+                await _unitOfWork.SaveChangesAsync();
+
+                // Recarregar a pessoa para garantir que o ID está disponível
+                pessoaCriada = await _pessoaRepository.GetByIdAsync(pessoaCriada.Id) ?? pessoaCriada;
+
+                // Agora que o ID foi gerado e confirmado, criar CriancaDetalhe
+                var detalhe = new CriancaDetalhe
+                {
+                    PessoaId = pessoaCriada.Id,
+                    Alergias = request.Alergias,
+                    RestricoesAlimentares = request.RestricoesAlimentares,
+                    Observacoes = request.Observacoes,
+                    SalaId = request.SalaId,
+                    DataCadastro = DateTime.UtcNow
+                };
+
+                await _criancaDetalheRepository.CreateWithoutSaveAsync(detalhe);
+
+                // Criar perfil Kids
+                var perfil = new PessoaPerfil
+                {
+                    PessoaId = pessoaCriada.Id,
+                    Perfil = PerfilPessoa.Kids,
+                    DataInicio = DateTime.UtcNow,
+                    DataFim = null
+                };
+
+                await _perfilRepository.CreateWithoutSaveAsync(perfil);
+
+                // Processar responsáveis se fornecidos
+                if (request.Responsaveis != null && request.Responsaveis.Any())
+                {
+                    foreach (var respRequest in request.Responsaveis)
                     {
-                        responsavelPessoa = await _pessoaRepository.GetByIdAsync(respRequest.ResponsavelPessoaId.Value);
-                        if (responsavelPessoa == null) throw new ArgumentException($"Responsável com ID {respRequest.ResponsavelPessoaId} não encontrado");
-                    }
-                    else
-                    {
-                        // Criar novo responsável
-                        if (string.IsNullOrWhiteSpace(respRequest.Nome))
-                            throw new ArgumentException("Nome do responsável é obrigatório quando não fornecido ID");
-                        
-                        var novaPessoa = new Pessoa
+                        Pessoa? responsavelPessoa;
+
+                        if (respRequest.ResponsavelPessoaId.HasValue)
                         {
-                            Nome = respRequest.Nome,
-                            Telefone = respRequest.Telefone,
-                            WhatsApp = respRequest.WhatsApp,
-                            Email = respRequest.Email,
-                            TipoPessoa = TipoPessoa.Adulto,
+                            responsavelPessoa = await _pessoaRepository.GetByIdAsync(respRequest.ResponsavelPessoaId.Value);
+                            if (responsavelPessoa == null)
+                                throw new ArgumentException($"Responsável com ID {respRequest.ResponsavelPessoaId} não encontrado");
+                        }
+                        else
+                        {
+                            if (string.IsNullOrWhiteSpace(respRequest.Nome))
+                                throw new ArgumentException("Nome do responsável é obrigatório quando não fornecido ID");
+
+                            var novaPessoa = new Pessoa
+                            {
+                                Nome = respRequest.Nome,
+                                Telefone = respRequest.Telefone,
+                                WhatsApp = respRequest.WhatsApp,
+                                Email = respRequest.Email,
+                                TipoPessoa = TipoPessoa.Adulto,
+                                Ativo = true,
+                                DataCriacao = DateTime.UtcNow
+                            };
+
+                            responsavelPessoa = await _pessoaRepository.CreateWithoutSaveAsync(novaPessoa);
+                            await _unitOfWork.SaveChangesAsync();
+                        }
+
+                        var responsavelCrianca = new ResponsavelCrianca
+                        {
+                            CriancaPessoaId = pessoaCriada.Id,
+                            ResponsavelPessoaId = responsavelPessoa!.Id,
+                            PodeRetirar = respRequest.PodeRetirar,
+                            Parentesco = respRequest.Parentesco,
                             Ativo = true,
-                            DataCriacao = DateTime.UtcNow
+                            DataCadastro = DateTime.UtcNow
                         };
-                        
-                        responsavelPessoa = await _pessoaRepository.CreateWithoutSaveAsync(novaPessoa);
-                        // Salvar o responsável para gerar o ID se for novo
-                        await _unitOfWork.SaveChangesAsync();
+
+                        await _responsavelRepository.CreateWithoutSaveAsync(responsavelCrianca);
                     }
-                    
-                    // Vincular responsável (responsavelPessoa não pode ser null aqui devido às validações acima)
-                    var responsavelCrianca = new ResponsavelCrianca
-                    {
-                        CriancaPessoaId = pessoaCriada.Id,
-                        ResponsavelPessoaId = responsavelPessoa!.Id,
-                        PodeRetirar = respRequest.PodeRetirar,
-                        Parentesco = respRequest.Parentesco,
-                        Ativo = true,
-                        DataCadastro = DateTime.UtcNow
-                    };
-                    
-                    await _responsavelRepository.CreateWithoutSaveAsync(responsavelCrianca);
                 }
-            }
-            
-            await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
-            
-            // Retornar crianca criada
-            var responsaveis = await _responsavelRepository.GetByCriancaIdAsync(pessoaCriada.Id);
-            KidsCheckin? checkinAtivo = null;
-            return MapToCriancaDto(pessoaCriada, detalhe, responsaveis, checkinAtivo);
+
+                await _unitOfWork.SaveChangesAsync();
+
+                // Retornar crianca criada
+                var responsaveis = await _responsavelRepository.GetByCriancaIdAsync(pessoaCriada.Id);
+                KidsCheckin? checkinAtivo = null;
+                return MapToCriancaDto(pessoaCriada, detalhe, responsaveis, checkinAtivo);
+            });
         }
         catch (Exception ex)
         {
-            await _unitOfWork.RollbackTransactionAsync();
-            // Re-throw com mais contexto
             throw new Exception($"Erro ao criar criança: {ex.Message}", ex);
         }
     }
@@ -313,22 +309,18 @@ public class KidsService : IKidsService
 
     public async Task<CheckinResponse> CheckinAsync(CheckinRequest request)
     {
-        await _unitOfWork.BeginTransactionAsync();
-        try
+        return await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             var crianca = await _pessoaRepository.GetByIdAsync(request.CriancaPessoaId);
             if (crianca == null || crianca.TipoPessoa != TipoPessoa.Crianca || !crianca.Ativo)
                 throw new ArgumentException("Criança não encontrada ou inativa");
-            
-            // Verificar se já existe check-in ativo
+
             var checkinAtivo = await _checkinRepository.GetCheckinAtivoPorCriancaAsync(request.CriancaPessoaId);
             if (checkinAtivo != null)
                 throw new InvalidOperationException("Criança já possui um check-in ativo");
-            
-            // Gerar código de sessão único
+
             var codigoSessao = Guid.NewGuid().ToString("N")[..12].ToUpper();
-            
-            // Criar check-in
+
             var checkin = new KidsCheckin
             {
                 CriancaPessoaId = request.CriancaPessoaId,
@@ -339,17 +331,16 @@ public class KidsService : IKidsService
                 Status = "CheckedIn",
                 Observacoes = request.Observacoes
             };
-            
+
             await _checkinRepository.CreateWithoutSaveAsync(checkin);
-            
-            // Buscar responsáveis ativos
+
             var responsaveis = await _responsavelRepository.GetByCriancaIdAsync(request.CriancaPessoaId);
             var notificacoes = new List<NotificacaoCriadaDto>();
-            
+
             foreach (var responsavel in responsaveis)
             {
                 var mensagem = $"Check-in realizado para {crianca.Nome} às {DateTime.UtcNow:HH:mm}";
-                
+
                 var notificacao = new KidsNotificacao
                 {
                     CriancaPessoaId = request.CriancaPessoaId,
@@ -359,9 +350,9 @@ public class KidsService : IKidsService
                     Status = "Pendente",
                     DataCriacao = DateTime.UtcNow
                 };
-                
+
                 await _notificacaoRepository.CreateWithoutSaveAsync(notificacao);
-                
+
                 notificacoes.Add(new NotificacaoCriadaDto
                 {
                     ResponsavelPessoaId = responsavel.ResponsavelPessoaId,
@@ -369,10 +360,9 @@ public class KidsService : IKidsService
                     Status = "Pendente"
                 });
             }
-            
+
             await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
-            
+
             return new CheckinResponse
             {
                 CheckinId = checkin.Id,
@@ -380,58 +370,46 @@ public class KidsService : IKidsService
                 CheckinTime = checkin.CheckinTime,
                 Notificacoes = notificacoes
             };
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync();
-            throw;
-        }
+        });
     }
 
     public async Task CheckoutAsync(CheckoutRequest request)
     {
-        await _unitOfWork.BeginTransactionAsync();
-        try
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            // Buscar check-in pelo código de sessão
             var checkin = await _checkinRepository.GetByCodigoSessaoAsync(request.CodigoSessao);
             if (checkin == null)
                 throw new ArgumentException("Código de sessão inválido");
-            
+
             if (checkin.CriancaPessoaId != request.CriancaPessoaId)
                 throw new ArgumentException("Código de sessão não corresponde à criança");
-            
+
             if (checkin.Status != "CheckedIn")
                 throw new InvalidOperationException("Check-in já foi finalizado");
-            
-            // Verificar se o responsável pode retirar
+
             var podeRetirar = await _responsavelRepository.PodeRetirarAsync(request.CriancaPessoaId, request.CheckoutByPessoaId);
             if (!podeRetirar)
             {
-                // Verificar se é admin/voluntário (por enquanto, apenas verificar se é pessoa ativa)
-                // TODO: Implementar verificação de perfil admin/voluntário
                 var pessoa = await _pessoaRepository.GetByIdAsync(request.CheckoutByPessoaId);
                 if (pessoa == null || !pessoa.Ativo)
                     throw new UnauthorizedAccessException("Você não tem autorização para retirar esta criança");
             }
-            
-            // Atualizar check-in
+
             checkin.CheckoutTime = DateTime.UtcNow;
             checkin.CheckoutByPessoaId = request.CheckoutByPessoaId;
             checkin.Status = "CheckedOut";
             if (!string.IsNullOrEmpty(request.Metodo))
                 checkin.Metodo = request.Metodo;
-            
+
             await _checkinRepository.UpdateWithoutSaveAsync(checkin);
-            
-            // Criar notificações para responsáveis
+
             var responsaveis = await _responsavelRepository.GetByCriancaIdAsync(request.CriancaPessoaId);
             var crianca = await _pessoaRepository.GetByIdAsync(request.CriancaPessoaId);
-            
+
             foreach (var responsavel in responsaveis)
             {
                 var mensagem = $"Check-out realizado para {crianca?.Nome ?? "criança"} às {DateTime.UtcNow:HH:mm}";
-                
+
                 var notificacao = new KidsNotificacao
                 {
                     CriancaPessoaId = request.CriancaPessoaId,
@@ -441,18 +419,12 @@ public class KidsService : IKidsService
                     Status = "Pendente",
                     DataCriacao = DateTime.UtcNow
                 };
-                
+
                 await _notificacaoRepository.CreateWithoutSaveAsync(notificacao);
             }
-            
+
             await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync();
-            throw;
-        }
+        });
     }
 
     public async Task<IEnumerable<KidsCheckinDto>> GetHistoricoCheckinsAsync(int? criancaPessoaId = null)

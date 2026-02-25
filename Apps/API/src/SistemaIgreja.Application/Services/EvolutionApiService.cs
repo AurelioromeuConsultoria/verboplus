@@ -32,8 +32,6 @@ public class EvolutionApiService : IEvolutionApiService
 
         if (!string.IsNullOrEmpty(_settings.ApiKey))
             _httpClient.DefaultRequestHeaders.Add("apikey", _settings.ApiKey);
-
-        _httpClient.DefaultRequestHeaders.Add("Content-Type", "application/json");
     }
 
     public async Task<EvolutionApiResponse> EnviarMensagemTextoAsync(

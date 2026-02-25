@@ -74,25 +74,41 @@ public class MensagemAgendadaRepository : IMensagemAgendadaRepository
     {
         var agora = DateTime.Now;
         var statusAgendada = (int)StatusMensagem.Agendada;
-        List<int> ids;
+        List<int> ids = new();
 
-        await using (var transaction = await _context.Database.BeginTransactionAsync())
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                ids = await _context.MensagensAgendadas
-                    .FromSqlRaw(
-                        "SELECT * FROM MensagensAgendadas WITH (UPDLOCK, ROWLOCK) WHERE Status = {0} AND DataEnvio <= {1} ORDER BY DataEnvio",
-                        statusAgendada,
-                        agora)
-                    .Take(limit)
-                    .Select(m => m.Id)
-                    .ToListAsync();
+                if (_context.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    ids = await _context.MensagensAgendadas
+                        .FromSqlRaw(
+                            "SELECT * FROM \"MensagensAgendadas\" WHERE \"Status\" = {0} AND \"DataEnvio\" <= {1} ORDER BY \"DataEnvio\" FOR UPDATE SKIP LOCKED",
+                            statusAgendada,
+                            agora)
+                        .Take(limit)
+                        .Select(m => m.Id)
+                        .ToListAsync();
+                }
+                else
+                {
+                    ids = await _context.MensagensAgendadas
+                        .FromSqlRaw(
+                            "SELECT * FROM MensagensAgendadas WITH (UPDLOCK, ROWLOCK) WHERE Status = {0} AND DataEnvio <= {1} ORDER BY DataEnvio",
+                            statusAgendada,
+                            agora)
+                        .Take(limit)
+                        .Select(m => m.Id)
+                        .ToListAsync();
+                }
 
                 if (ids.Count == 0)
                 {
                     await transaction.CommitAsync();
-                    return Array.Empty<MensagemAgendada>();
+                    return;
                 }
 
                 var now = DateTime.Now;
@@ -109,7 +125,7 @@ public class MensagemAgendadaRepository : IMensagemAgendadaRepository
                 await transaction.RollbackAsync();
                 throw;
             }
-        }
+        });
 
         return await _context.MensagensAgendadas
             .Include(m => m.Visitante!)
