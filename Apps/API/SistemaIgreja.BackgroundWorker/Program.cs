@@ -54,6 +54,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddScoped<IVoluntarioRepository, VoluntarioRepository>();
         services.AddScoped<IEventoRepository, EventoRepository>();
         services.AddScoped<IEventoOcorrenciaRepository, EventoOcorrenciaRepository>();
+        services.AddScoped<IEscalaRepository, EscalaRepository>();
 
         services.AddScoped<IVisitanteService, VisitanteService>();
         services.AddScoped<IConfiguracaoMensagemService, ConfiguracaoMensagemService>();
@@ -62,6 +63,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddScoped<ICargoService, CargoService>();
         services.AddScoped<IVoluntarioService, VoluntarioService>();
         services.AddScoped<IEventoOcorrenciaService, EventoOcorrenciaService>();
+        services.AddScoped<IEscalaService, EscalaService>();
 
         services.Configure<MessageSchedulerSettings>(
             ctx.Configuration.GetSection(MessageSchedulerSettings.SectionName));

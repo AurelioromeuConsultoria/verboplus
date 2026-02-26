@@ -32,6 +32,8 @@ public class MessageSchedulerService : BackgroundService
             _settings.JitterSecondsMax,
             _settings.BatchSizeReserva);
 
+        await ValidarEvolutionApiNoBootAsync(stoppingToken);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -49,6 +51,29 @@ public class MessageSchedulerService : BackgroundService
         }
 
         _logger.LogInformation("MessageSchedulerService parado");
+    }
+
+    private async Task ValidarEvolutionApiNoBootAsync(CancellationToken stoppingToken)
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var evolutionService = scope.ServiceProvider.GetRequiredService<IEvolutionApiService>();
+            var ok = await evolutionService.ValidarInstanciaAsync(stoppingToken);
+
+            if (ok)
+            {
+                _logger.LogInformation("Evolution API: validação inicial OK (instância encontrada)");
+            }
+            else
+            {
+                _logger.LogWarning("Evolution API: validação inicial falhou (veja logs de RequestUri/404 acima)");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Evolution API: falha ao validar no boot");
+        }
     }
 
     /// <summary>

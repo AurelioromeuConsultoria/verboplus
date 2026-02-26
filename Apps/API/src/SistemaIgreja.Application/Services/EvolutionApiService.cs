@@ -32,6 +32,13 @@ public class EvolutionApiService : IEvolutionApiService
 
         if (!string.IsNullOrEmpty(_settings.ApiKey))
             _httpClient.DefaultRequestHeaders.Add("apikey", _settings.ApiKey);
+
+        _logger.LogInformation(
+            "Evolution API configurada. BaseUrl: {BaseUrl}, InstanceName: {InstanceName}, Timeout: {TimeoutSeconds}s, MaxRetries: {MaxRetries}",
+            _httpClient.BaseAddress?.ToString() ?? "(não definida)",
+            string.IsNullOrWhiteSpace(_settings.InstanceName) ? "(não definida)" : _settings.InstanceName,
+            _settings.TimeoutSeconds,
+            _settings.MaxRetries);
     }
 
     public async Task<EvolutionApiResponse> EnviarMensagemTextoAsync(
@@ -100,6 +107,9 @@ public class EvolutionApiService : IEvolutionApiService
                 response = await _httpClient.PostAsJsonAsync(endpoint, request, cancellationToken);
                 responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
 
+                var requestUri = response.RequestMessage?.RequestUri?.ToString()
+                                ?? (_httpClient.BaseAddress is null ? endpoint : new Uri(_httpClient.BaseAddress, endpoint).ToString());
+
                 _logger.LogDebug(
                     "Resposta Evolution API - Status: {StatusCode}, Tentativa: {Tentativa}/{MaxRetries}, Resposta: {Resposta}",
                     response.StatusCode,
@@ -143,6 +153,25 @@ public class EvolutionApiService : IEvolutionApiService
                 }
 
                 var errorResponse = TratarErroResponse(responseContent, (int)response.StatusCode);
+
+                if ((int)response.StatusCode == 404)
+                {
+                    _logger.LogError(
+                        "Evolution API retornou 404. RequestUri: {RequestUri}. BaseUrl: {BaseUrl}. InstanceName: {InstanceName}. Response: {Response}",
+                        requestUri,
+                        _httpClient.BaseAddress?.ToString() ?? "(não definida)",
+                        string.IsNullOrWhiteSpace(_settings.InstanceName) ? "(não definida)" : _settings.InstanceName,
+                        Truncate(responseContent, 600));
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Falha ao enviar mensagem na Evolution API. Status: {StatusCode}. RequestUri: {RequestUri}. Erro: {Erro}. Response: {Response}",
+                        response.StatusCode,
+                        requestUri,
+                        errorResponse.MensagemErro,
+                        Truncate(responseContent, 600));
+                }
 
                 if (!IsTransientFailure((HttpStatusCode)response.StatusCode))
                 {
@@ -269,7 +298,15 @@ public class EvolutionApiService : IEvolutionApiService
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Falha ao validar instância - Status: {StatusCode}", response.StatusCode);
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                var requestUri = response.RequestMessage?.RequestUri?.ToString()
+                                ?? (_httpClient.BaseAddress is null ? endpoint : new Uri(_httpClient.BaseAddress, endpoint).ToString());
+
+                _logger.LogWarning(
+                    "Falha ao validar instância na Evolution API - Status: {StatusCode}. RequestUri: {RequestUri}. Response: {Response}",
+                    response.StatusCode,
+                    requestUri,
+                    Truncate(body, 600));
                 return false;
             }
 
@@ -352,5 +389,12 @@ public class EvolutionApiService : IEvolutionApiService
                 RespostaCompleta = responseContent
             };
         }
+    }
+
+    private static string Truncate(string? s, int maxLen)
+    {
+        if (string.IsNullOrEmpty(s)) return string.Empty;
+        if (s.Length <= maxLen) return s;
+        return s[..maxLen] + "...(truncado)";
     }
 }
