@@ -315,15 +315,35 @@ public class EvolutionApiService : IEvolutionApiService
 
             try
             {
+                if (string.IsNullOrWhiteSpace(_settings.InstanceName))
+                {
+                    _logger.LogWarning("InstanceName não configurado para Evolution API (EvolutionApi:InstanceName)");
+                    return false;
+                }
+
                 var jsonDoc = JsonDocument.Parse(content);
                 if (jsonDoc.RootElement.ValueKind == JsonValueKind.Array)
                 {
-                    var encontrada = jsonDoc.RootElement.EnumerateArray()
-                        .Any(inst => inst.TryGetProperty("instance", out var p) && p.GetString() == _settings.InstanceName);
+                    var nomes = jsonDoc.RootElement.EnumerateArray()
+                        .Select(ExtractInstanceNameFromFetchInstancesItem)
+                        .Where(n => !string.IsNullOrWhiteSpace(n))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+
+                    var encontrada = nomes.Any(n =>
+                        string.Equals(n, _settings.InstanceName, StringComparison.OrdinalIgnoreCase));
                     if (encontrada)
                     {
                         _logger.LogInformation("Instância {InstanceName} encontrada e válida", _settings.InstanceName);
                         return true;
+                    }
+
+                    if (nomes.Count > 0)
+                    {
+                        _logger.LogWarning(
+                            "Instância {InstanceName} não encontrada. Instâncias disponíveis: {Disponiveis}",
+                            _settings.InstanceName,
+                            string.Join(", ", nomes));
                     }
                 }
             }
@@ -396,5 +416,52 @@ public class EvolutionApiService : IEvolutionApiService
         if (string.IsNullOrEmpty(s)) return string.Empty;
         if (s.Length <= maxLen) return s;
         return s[..maxLen] + "...(truncado)";
+    }
+
+    private static string? ExtractInstanceNameFromFetchInstancesItem(JsonElement item)
+    {
+        // v2 comum:
+        // [
+        //   { "instance": { "instanceName": "kingdom", ... } }
+        // ]
+        if (item.ValueKind == JsonValueKind.Object)
+        {
+            if (item.TryGetProperty("instanceName", out var directInstanceName) &&
+                directInstanceName.ValueKind == JsonValueKind.String)
+            {
+                return directInstanceName.GetString();
+            }
+
+            if (item.TryGetProperty("name", out var directName) &&
+                directName.ValueKind == JsonValueKind.String)
+            {
+                return directName.GetString();
+            }
+
+            if (item.TryGetProperty("instance", out var instanceProp))
+            {
+                if (instanceProp.ValueKind == JsonValueKind.String)
+                {
+                    return instanceProp.GetString();
+                }
+
+                if (instanceProp.ValueKind == JsonValueKind.Object)
+                {
+                    if (instanceProp.TryGetProperty("instanceName", out var nestedInstanceName) &&
+                        nestedInstanceName.ValueKind == JsonValueKind.String)
+                    {
+                        return nestedInstanceName.GetString();
+                    }
+
+                    if (instanceProp.TryGetProperty("name", out var nestedName) &&
+                        nestedName.ValueKind == JsonValueKind.String)
+                    {
+                        return nestedName.GetString();
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 }
