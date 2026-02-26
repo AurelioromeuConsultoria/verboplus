@@ -235,7 +235,30 @@ builder.Services.AddCors(options =>
             .GetSection("Cors:AllowedOrigins")
             .Get<string[]>() ?? Array.Empty<string>();
 
-        policy.WithOrigins(allowedOrigins)
+        var allowedSet = new HashSet<string>(allowedOrigins, StringComparer.OrdinalIgnoreCase);
+
+        policy.SetIsOriginAllowed(origin =>
+              {
+                  if (string.IsNullOrWhiteSpace(origin)) return false;
+                  if (allowedSet.Contains(origin)) return true;
+
+                  // Conveniência para dev local (porta variável)
+                  if (origin.StartsWith("http://localhost:", StringComparison.OrdinalIgnoreCase) ||
+                      origin.StartsWith("https://localhost:", StringComparison.OrdinalIgnoreCase))
+                  {
+                      return true;
+                  }
+
+                  // Permitir subdomínios do domínio oficial (ex.: admin.kingdombr.com.br)
+                  if (Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+                      uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase) &&
+                      uri.Host.EndsWith(".kingdombr.com.br", StringComparison.OrdinalIgnoreCase))
+                  {
+                      return true;
+                  }
+
+                  return false;
+              })
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
@@ -244,6 +267,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.UseRouting();
 app.UseCors();
 
 
