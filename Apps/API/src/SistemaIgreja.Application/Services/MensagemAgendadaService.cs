@@ -13,6 +13,7 @@ public interface IMensagemAgendadaService
     Task<IEnumerable<MensagemAgendadaDto>> ReservarProntasParaEnvioAsync(int limit);
     Task<IEnumerable<MensagemAgendadaDto>> GetMensagensPorVisitanteAsync(int visitanteId);
     Task AgendarMensagensParaVisitanteAsync(int visitanteId);
+    Task<RegerarMensagensResultDto> RegerarMensagensParaVisitanteAsync(int visitanteId);
     Task MarcarComoProntaParaEnvioAsync(int mensagemId);
     Task MarcarComoEnviadaAsync(int mensagemId);
     Task MarcarComoErroAsync(int mensagemId, string erro);
@@ -92,6 +93,48 @@ public class MensagemAgendadaService : IMensagemAgendadaService
 
             await _mensagemRepository.CreateAsync(mensagemAgendada);
         }
+    }
+
+    public async Task<RegerarMensagensResultDto> RegerarMensagensParaVisitanteAsync(int visitanteId)
+    {
+        var visitante = await _visitanteRepository.GetByIdAsync(visitanteId);
+        if (visitante == null)
+            throw new ArgumentException("Visitante não encontrado");
+
+        var canceladas = await _mensagemRepository.CancelarPendentesPorVisitanteAsync(
+            visitanteId,
+            $"Cancelada por regeneração em {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+
+        var configuracoes = await _configuracaoRepository.GetAtivasAsync();
+        var criadas = 0;
+
+        foreach (var configuracao in configuracoes)
+        {
+            var dataEnvio = visitante.DataVisita.AddDays(configuracao.DiasAposVisita);
+            var dataEnvioCompleta = dataEnvio.Date + configuracao.HorarioEnvio;
+
+            var textoFinal = configuracao.TextoMensagem.Replace("{Nome}", visitante.Pessoa?.Nome ?? "");
+
+            var mensagemAgendada = new MensagemAgendada
+            {
+                VisitanteId = visitante.Id,
+                ConfiguracaoMensagemId = configuracao.Id,
+                DataAgendamento = DateTime.Now,
+                DataEnvio = dataEnvioCompleta,
+                Status = StatusMensagem.Agendada,
+                TextoFinal = textoFinal,
+                DataCriacao = DateTime.Now
+            };
+
+            await _mensagemRepository.CreateAsync(mensagemAgendada);
+            criadas++;
+        }
+
+        return new RegerarMensagensResultDto
+        {
+            MensagensCanceladas = canceladas,
+            MensagensCriadas = criadas
+        };
     }
 
     public async Task MarcarComoProntaParaEnvioAsync(int mensagemId)

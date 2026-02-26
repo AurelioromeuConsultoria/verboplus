@@ -14,5 +14,11 @@ public interface IMensagemAgendadaRepository
     Task<IEnumerable<MensagemAgendada>> ReservarProntasParaEnvioAsync(int limit);
     Task<IEnumerable<MensagemAgendada>> GetMensagensPorVisitanteAsync(int visitanteId);
     Task<IEnumerable<MensagemAgendada>> GetMensagensPorStatusAsync(StatusMensagem status);
+
+    /// <summary>
+    /// Cancela mensagens do visitante que ainda não foram enviadas (Status != Enviada).
+    /// Retorna a quantidade afetada.
+    /// </summary>
+    Task<int> CancelarPendentesPorVisitanteAsync(int visitanteId, string motivo);
 }
 

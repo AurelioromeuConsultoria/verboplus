@@ -28,7 +28,7 @@ public class EvolutionApiService : IEvolutionApiService
         _httpClient.Timeout = TimeSpan.FromSeconds(_settings.TimeoutSeconds);
 
         if (!string.IsNullOrEmpty(_settings.BaseUrl))
-            _httpClient.BaseAddress = new Uri(_settings.BaseUrl.TrimEnd('/'));
+            _httpClient.BaseAddress = new Uri(_settings.BaseUrl.TrimEnd('/') + "/");
 
         if (!string.IsNullOrEmpty(_settings.ApiKey))
             _httpClient.DefaultRequestHeaders.Add("apikey", _settings.ApiKey);
@@ -83,7 +83,7 @@ public class EvolutionApiService : IEvolutionApiService
             LinkPreview = false
         };
 
-        var endpoint = $"/message/sendText/{_settings.InstanceName}";
+        var endpoint = $"message/sendText/{_settings.InstanceName}";
         _logger.LogInformation(
             "Enviando mensagem via Evolution API - Endpoint: {Endpoint}, Número: {Numero}, Mensagem: {MensagemPreview}",
             endpoint,
@@ -264,7 +264,7 @@ public class EvolutionApiService : IEvolutionApiService
     {
         try
         {
-            var endpoint = $"/instance/fetchInstances";
+            var endpoint = "instance/fetchInstances";
             var response = await _httpClient.GetAsync(endpoint, cancellationToken);
 
             if (!response.IsSuccessStatusCode)

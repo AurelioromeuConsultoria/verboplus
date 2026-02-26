@@ -9,10 +9,12 @@ namespace SistemaIgreja.API.Controllers;
 public class VisitantesController : ControllerBase
 {
     private readonly IVisitanteService _visitanteService;
+    private readonly IMensagemAgendadaService _mensagemService;
 
-    public VisitantesController(IVisitanteService visitanteService)
+    public VisitantesController(IVisitanteService visitanteService, IMensagemAgendadaService mensagemService)
     {
         _visitanteService = visitanteService;
+        _mensagemService = mensagemService;
     }
 
     /// <summary>
@@ -87,6 +89,27 @@ public class VisitantesController : ControllerBase
         catch (Exception ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Regera mensagens agendadas do visitante (cancela pendentes e recria conforme configurações ativas).
+    /// </summary>
+    [HttpPost("{id}/regerar-mensagens")]
+    public async Task<ActionResult<RegerarMensagensResultDto>> RegerarMensagens(int id)
+    {
+        try
+        {
+            var result = await _mensagemService.RegerarMensagensParaVisitanteAsync(id);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao regerar mensagens", error = ex.Message });
         }
     }
 

@@ -157,5 +157,20 @@ public class MensagemAgendadaRepository : IMensagemAgendadaRepository
             .OrderByDescending(m => m.DataCriacao)
             .ToListAsync();
     }
+
+    public async Task<int> CancelarPendentesPorVisitanteAsync(int visitanteId, string motivo)
+    {
+        var now = DateTime.Now;
+        var motivoFinal = string.IsNullOrWhiteSpace(motivo)
+            ? "Cancelada por regeneração"
+            : motivo;
+
+        return await _context.MensagensAgendadas
+            .Where(m => m.VisitanteId == visitanteId && m.Status != StatusMensagem.Enviada)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(m => m.Status, StatusMensagem.Cancelada)
+                .SetProperty(m => m.DataProcessamento, now)
+                .SetProperty(m => m.LogErro, motivoFinal));
+    }
 }
 

@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using SistemaIgreja.Domain.Entities;
+using SistemaIgreja.Application.JsonConverters;
 
 namespace SistemaIgreja.Application.DTOs;
 
@@ -11,6 +13,7 @@ public class PessoaDto
     public string? Telefone { get; set; }
     public string? WhatsApp { get; set; }
     public DateTime? DataNascimento { get; set; }
+    [JsonConverter(typeof(TipoPessoaJsonConverter))]
     public TipoPessoa TipoPessoa { get; set; }
     public string TipoPessoaDescricao { get; set; } = string.Empty;
     public bool Ativo { get; set; }
@@ -45,6 +48,7 @@ public class CriarPessoaDto
 
     public DateTime? DataNascimento { get; set; }
 
+    [JsonConverter(typeof(TipoPessoaJsonConverter))]
     public TipoPessoa TipoPessoa { get; set; } = TipoPessoa.Adulto;
 }
 
@@ -66,6 +70,7 @@ public class AtualizarPessoaDto
 
     public DateTime? DataNascimento { get; set; }
 
+    [JsonConverter(typeof(TipoPessoaJsonConverter))]
     public TipoPessoa TipoPessoa { get; set; }
 
     public bool Ativo { get; set; }
