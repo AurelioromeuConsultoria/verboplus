@@ -1,4 +1,5 @@
 using SistemaIgreja.Application.DTOs;
+using SistemaIgreja.Application.DTOs.Pessoas;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
 
@@ -7,22 +8,36 @@ namespace SistemaIgreja.Application.Services;
 public interface IPessoaService
 {
     Task<IEnumerable<PessoaDto>> GetAllAsync();
+    Task<PagedResultDto<PessoaDto>> GetPagedAsync(PessoaPagedQueryDto query);
     Task<PessoaDto?> GetByIdAsync(int id);
+    Task<Pessoa360Dto?> Get360Async(int id);
     Task<PessoaDto> CreateAsync(CriarPessoaDto dto);
     Task<PessoaDto> UpdateAsync(int id, AtualizarPessoaDto dto);
     Task DeleteAsync(int id);
     Task<IEnumerable<AniversarianteDto>> GetProximosAniversariantesAsync(int dias, int limite);
+    Task<IEnumerable<AniversarianteDto>> GetAniversariantesPorMesAsync(int mes, int limite);
 }
 
 public class PessoaService : IPessoaService
 {
     private readonly IPessoaRepository _repository;
     private readonly IPessoaPerfilRepository _perfilRepository;
+    private readonly IVisitanteService _visitanteService;
+    private readonly IVoluntarioService _voluntarioService;
+    private readonly IUsuarioService _usuarioService;
 
-    public PessoaService(IPessoaRepository repository, IPessoaPerfilRepository perfilRepository)
+    public PessoaService(
+        IPessoaRepository repository,
+        IPessoaPerfilRepository perfilRepository,
+        IVisitanteService visitanteService,
+        IVoluntarioService voluntarioService,
+        IUsuarioService usuarioService)
     {
         _repository = repository;
         _perfilRepository = perfilRepository;
+        _visitanteService = visitanteService;
+        _voluntarioService = voluntarioService;
+        _usuarioService = usuarioService;
     }
 
     public async Task<IEnumerable<PessoaDto>> GetAllAsync()
@@ -39,6 +54,56 @@ public class PessoaService : IPessoaService
         return pessoasDto;
     }
 
+    public async Task<PagedResultDto<PessoaDto>> GetPagedAsync(PessoaPagedQueryDto queryDto)
+    {
+        var page = queryDto.Page <= 0 ? 1 : queryDto.Page;
+        var pageSize = queryDto.PageSize <= 0 ? 20 : Math.Min(queryDto.PageSize, 200);
+
+        PerfilPessoa? perfil = null;
+        if (!string.IsNullOrWhiteSpace(queryDto.Perfil) &&
+            Enum.TryParse<PerfilPessoa>(queryDto.Perfil.Trim(), ignoreCase: true, out var perfilParsed))
+        {
+            perfil = perfilParsed;
+        }
+
+        TipoPessoa? tipoPessoa = null;
+        if (!string.IsNullOrWhiteSpace(queryDto.TipoPessoa) &&
+            Enum.TryParse<TipoPessoa>(queryDto.TipoPessoa.Trim(), ignoreCase: true, out var tipoParsed))
+        {
+            tipoPessoa = tipoParsed;
+        }
+
+        var query = new PessoaPagedQuery
+        {
+            Page = page,
+            PageSize = pageSize,
+            Sort = queryDto.Sort,
+            Direction = queryDto.Direction,
+            Nome = queryDto.Nome,
+            Email = queryDto.Email,
+            Telefone = queryDto.Telefone,
+            WhatsApp = queryDto.WhatsApp,
+            Perfil = perfil,
+            TipoPessoa = tipoPessoa,
+            Ativo = queryDto.Ativo
+        };
+
+        var (items, total) = await _repository.GetPagedAsync(query);
+
+        // Perfis já vêm carregados via Include no repo.
+        var dtos = items
+            .Select(p => MapToDto(p, p.Perfis ?? Array.Empty<PessoaPerfil>()))
+            .ToList();
+
+        return new PagedResultDto<PessoaDto>
+        {
+            Items = dtos,
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
+
     public async Task<PessoaDto?> GetByIdAsync(int id)
     {
         var pessoa = await _repository.GetByIdAsync(id);
@@ -46,6 +111,35 @@ public class PessoaService : IPessoaService
 
         var perfis = await _perfilRepository.GetPerfisPorPessoaAsync(pessoa.Id);
         return MapToDto(pessoa, perfis);
+    }
+
+    public async Task<Pessoa360Dto?> Get360Async(int id)
+    {
+        var pessoa = await _repository.GetByIdAsync(id);
+        if (pessoa == null) return null;
+
+        var perfis = await _perfilRepository.GetPerfisPorPessoaAsync(pessoa.Id);
+        var pessoaDto = MapToDto(pessoa, perfis);
+
+        var visitantes = await _visitanteService.GetVisitantesPorPessoaAsync(id);
+        var voluntarios = await _voluntarioService.GetVoluntariosPorPessoaAsync(id);
+        var usuario = await _usuarioService.GetByPessoaIdAsync(id);
+
+        return new Pessoa360Dto
+        {
+            Pessoa = pessoaDto,
+            Visitantes = visitantes.OrderByDescending(v => v.DataVisita).ToList(),
+            Voluntarios = voluntarios.ToList(),
+            Usuario = usuario != null ? new UsuarioResumoDto
+            {
+                Id = usuario.Id,
+                EmailLogin = usuario.EmailLogin,
+                TipoUsuarioDescricao = usuario.TipoUsuarioDescricao,
+                Ativo = usuario.Ativo,
+                PerfilAcessoNome = usuario.PerfilAcessoNome,
+                UltimoAcesso = usuario.UltimoAcesso
+            } : null
+        };
     }
 
     public async Task<PessoaDto> CreateAsync(CriarPessoaDto dto)
@@ -130,6 +224,37 @@ public class PessoaService : IPessoaService
             })
             .Where(a => a.DiasParaAniversario <= dias && a.DiasParaAniversario >= 0)
             .OrderBy(a => a.DiasParaAniversario)
+            .ThenBy(a => a.Nome)
+            .Take(limite)
+            .ToList();
+    }
+
+    public async Task<IEnumerable<AniversarianteDto>> GetAniversariantesPorMesAsync(int mes, int limite)
+    {
+        if (mes is < 1 or > 12) throw new ArgumentException("Mês inválido. Use 1 a 12.");
+        if (limite <= 0) limite = 500;
+
+        var hoje = DateTime.Today;
+        var pessoas = await _repository.GetAllAsync();
+
+        return pessoas
+            .Where(p => p.Ativo && p.DataNascimento.HasValue && p.DataNascimento.Value.Month == mes)
+            .Select(p =>
+            {
+                var nasc = p.DataNascimento!.Value.Date;
+                var prox = GetProximoAniversario(nasc, hoje);
+                var diasRestantes = (prox - hoje).Days;
+                return new AniversarianteDto
+                {
+                    Id = p.Id,
+                    Nome = p.Nome,
+                    DataNascimento = nasc,
+                    ProximoAniversario = prox,
+                    DiasParaAniversario = diasRestantes
+                };
+            })
+            .OrderBy(a => a.DataNascimento.Month)
+            .ThenBy(a => a.DataNascimento.Day)
             .ThenBy(a => a.Nome)
             .Take(limite)
             .ToList();

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
+using SistemaIgreja.Application.DTOs.Visitantes;
 using SistemaIgreja.Application.Services;
 
 namespace SistemaIgreja.API.Controllers;
@@ -25,6 +26,16 @@ public class VisitantesController : ControllerBase
     {
         var visitantes = await _visitanteService.GetAllAsync();
         return Ok(visitantes);
+    }
+
+    /// <summary>
+    /// Lista visitantes com paginação e filtros (server-side).
+    /// </summary>
+    [HttpGet("paged")]
+    public async Task<ActionResult<PagedResultDto<VisitanteDto>>> GetPaged([FromQuery] VisitantePagedQueryDto query)
+    {
+        var result = await _visitanteService.GetPagedAsync(query);
+        return Ok(result);
     }
 
     /// <summary>

@@ -45,25 +45,22 @@ public class EquipeCargoVoluntarioServicesTests
         eqRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new Equipe { Id = 1, Nome = "Recepcao", Area = AreaEquipe.Verde });
         cgRepo.Setup(r => r.GetByIdAsync(2)).ReturnsAsync(new Cargo { Id = 2, Nome = "Recepcionista" });
 
-        // Mock: pessoa não existe, então será criada
-        pessoaRepo.Setup(r => r.GetByEmailAsync("m@x.com")).ReturnsAsync((Pessoa?)null);
-        
         var pessoa = new Pessoa { Id = 1, Nome = "Maria", WhatsApp = "111", Email = "m@x.com", TipoPessoa = TipoPessoa.Adulto, Ativo = true, DataCriacao = DateTime.UtcNow };
-        pessoaRepo.Setup(r => r.CreateAsync(It.IsAny<Pessoa>())).ReturnsAsync(pessoa);
+        pessoaRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(pessoa);
 
         volRepo.Setup(r => r.CreateAsync(It.IsAny<Voluntario>()))
                .ReturnsAsync((Voluntario v) => { v.Id = 10; return v; });
-        
+
         var equipe = new Equipe { Id = 1, Nome = "Recepcao" };
         var cargo = new Cargo { Id = 2, Nome = "Recepcionista" };
-        var voluntario = new Voluntario 
-        { 
-            Id = 10, 
-            PessoaId = 1, 
-            Pessoa = pessoa, 
-            EquipeId = 1, 
-            CargoId = 2, 
-            Equipe = equipe, 
+        var voluntario = new Voluntario
+        {
+            Id = 10,
+            PessoaId = 1,
+            Pessoa = pessoa,
+            EquipeId = 1,
+            CargoId = 2,
+            Equipe = equipe,
             Cargo = cargo,
             DataCadastro = DateTime.UtcNow
         };
@@ -71,7 +68,7 @@ public class EquipeCargoVoluntarioServicesTests
 
         var service = new VoluntarioService(volRepo.Object, eqRepo.Object, cgRepo.Object, pessoaRepo.Object);
 
-        var result = await service.CreateAsync(new CriarVoluntarioDto { Nome = "Maria", WhatsApp = "111", Email = "m@x.com", EquipeId = 1, CargoId = 2 });
+        var result = await service.CreateAsync(new CriarVoluntarioDto { PessoaId = 1, WhatsApp = "111", Email = "m@x.com", EquipeId = 1, CargoId = 2 });
 
         result.Id.Should().Be(10);
         result.NomeEquipe.Should().Be("Recepcao");

@@ -8,6 +8,7 @@ public interface IUsuarioService
 {
     Task<IEnumerable<UsuarioDto>> GetAllAsync();
     Task<UsuarioDto?> GetByIdAsync(int id);
+    Task<UsuarioDto?> GetByPessoaIdAsync(int pessoaId);
     Task<UsuarioDto> CreateAsync(CriarUsuarioDto dto);
     Task<UsuarioDto> UpdateAsync(int id, AtualizarUsuarioDto dto);
     Task DeleteAsync(int id);
@@ -35,6 +36,12 @@ public class UsuarioService : IUsuarioService
     public async Task<UsuarioDto?> GetByIdAsync(int id)
     {
         var entity = await _repository.GetByIdAsync(id);
+        return entity != null ? MapToDto(entity) : null;
+    }
+
+    public async Task<UsuarioDto?> GetByPessoaIdAsync(int pessoaId)
+    {
+        var entity = await _repository.GetByPessoaIdAsync(pessoaId);
         return entity != null ? MapToDto(entity) : null;
     }
 

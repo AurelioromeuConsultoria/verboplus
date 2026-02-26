@@ -1,10 +1,13 @@
 using SistemaIgreja.Domain.Entities;
+using SistemaIgreja.Application.DTOs.MensagensAgendadas;
 
 namespace SistemaIgreja.Application.Interfaces;
 
 public interface IMensagemAgendadaRepository
 {
     Task<IEnumerable<MensagemAgendada>> GetAllAsync();
+    Task<(IReadOnlyList<MensagemAgendada> Items, int Total)> GetPagedAsync(MensagemAgendadaPagedQuery query);
+    Task<MensagemAgendadaStatsDto> GetStatsAsync();
     Task<MensagemAgendada?> GetByIdAsync(int id);
     Task<MensagemAgendada> CreateAsync(MensagemAgendada mensagem);
     Task<MensagemAgendada> UpdateAsync(MensagemAgendada mensagem);

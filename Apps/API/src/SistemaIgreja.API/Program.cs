@@ -6,6 +6,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SistemaIgreja.API.Swagger;
+using SistemaIgreja.API.Services;
 using SistemaIgreja.Infrastructure.Data;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Infrastructure.Repositories;
@@ -29,8 +30,11 @@ if (databaseProvider.Equals("postgresql", StringComparison.OrdinalIgnoreCase) ||
     AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 }
 
-builder.Services.AddDbContext<SistemaIgrejaDbContext>(options =>
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddDbContext<SistemaIgrejaDbContext>((sp, options) =>
 {
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
     switch (databaseProvider.ToLowerInvariant())
     {
         case "postgresql":
@@ -96,6 +100,10 @@ builder.Services.AddScoped<IPessoaPerfilService, PessoaPerfilService>();
 builder.Services.AddScoped<IVisitanteService, VisitanteService>();
 builder.Services.AddScoped<IConfiguracaoMensagemService, ConfiguracaoMensagemService>();
 builder.Services.AddScoped<IMensagemAgendadaService, MensagemAgendadaService>();
+builder.Services.AddScoped<ISearchService, SearchService>();
+builder.Services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
+builder.Services.AddScoped<AuditSaveChangesInterceptor>();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IEquipeService, EquipeService>();
 builder.Services.AddScoped<IHubCasaService, HubCasaService>();
 builder.Services.AddScoped<IFornecedorService, FornecedorService>();

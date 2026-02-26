@@ -1,4 +1,5 @@
 using SistemaIgreja.Application.DTOs;
+using SistemaIgreja.Application.DTOs.Visitantes;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
 
@@ -7,6 +8,7 @@ namespace SistemaIgreja.Application.Services;
 public interface IVisitanteService
 {
     Task<IEnumerable<VisitanteDto>> GetAllAsync();
+    Task<PagedResultDto<VisitanteDto>> GetPagedAsync(VisitantePagedQueryDto query);
     Task<VisitanteDto?> GetByIdAsync(int id);
     Task<VisitanteResponse> CreateVisitanteAsync(CreateVisitanteRequest request);
     Task<VisitanteDto> CreateAsync(CriarVisitanteDto dto); // Método legado mantido
@@ -41,6 +43,37 @@ public class VisitanteService : IVisitanteService
     {
         var visitantes = await _visitanteRepository.GetAllAsync();
         return visitantes.Select(MapToDto);
+    }
+
+    public async Task<PagedResultDto<VisitanteDto>> GetPagedAsync(VisitantePagedQueryDto queryDto)
+    {
+        var page = queryDto.Page <= 0 ? 1 : queryDto.Page;
+        var pageSize = queryDto.PageSize <= 0 ? 20 : Math.Min(queryDto.PageSize, 200);
+
+        var query = new VisitantePagedQuery
+        {
+            Page = page,
+            PageSize = pageSize,
+            Sort = queryDto.Sort,
+            Direction = queryDto.Direction,
+            Nome = queryDto.Nome,
+            Email = queryDto.Email,
+            Telefone = queryDto.Telefone,
+            WhatsApp = queryDto.WhatsApp,
+            DataVisitaFrom = queryDto.DataVisitaFrom,
+            DataVisitaTo = queryDto.DataVisitaTo
+        };
+
+        var (items, total) = await _visitanteRepository.GetPagedAsync(query);
+        var dtos = items.Select(MapToDto).ToList();
+
+        return new PagedResultDto<VisitanteDto>
+        {
+            Items = dtos,
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 
     public async Task<VisitanteDto?> GetByIdAsync(int id)

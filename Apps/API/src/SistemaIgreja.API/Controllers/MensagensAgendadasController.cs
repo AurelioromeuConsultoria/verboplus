@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
+using SistemaIgreja.Application.DTOs.MensagensAgendadas;
 using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 
@@ -21,6 +22,23 @@ public class MensagensAgendadasController : ControllerBase
     {
         var mensagens = await _mensagemService.GetAllAsync();
         return Ok(mensagens);
+    }
+
+    /// <summary>
+    /// Lista mensagens com paginação e filtros (server-side).
+    /// </summary>
+    [HttpGet("paged")]
+    public async Task<ActionResult<PagedResultDto<MensagemAgendadaDto>>> GetPaged([FromQuery] MensagemAgendadaPagedQueryDto query)
+    {
+        var result = await _mensagemService.GetPagedAsync(query);
+        return Ok(result);
+    }
+
+    [HttpGet("stats")]
+    public async Task<ActionResult<MensagemAgendadaStatsDto>> GetStats()
+    {
+        var result = await _mensagemService.GetStatsAsync();
+        return Ok(result);
     }
 
     [HttpGet("{id}")]

@@ -36,8 +36,8 @@ public class VoluntariosControllerTests
     [Fact]
     public async Task Create_ReturnsCreated()
     {
-        var dto = new CriarVoluntarioDto { Nome = "V1", WhatsApp = "11999999999", Email = "v@x.com", EquipeId = 1, CargoId = 1 };
-        var created = new VoluntarioDto { Id = 2, Nome = dto.Nome, WhatsApp = dto.WhatsApp, Email = dto.Email, EquipeId = 1, CargoId = 1 };
+        var dto = new CriarVoluntarioDto { PessoaId = 1, WhatsApp = "11999999999", Email = "v@x.com", EquipeId = 1, CargoId = 1 };
+        var created = new VoluntarioDto { Id = 2, PessoaId = 1, Nome = "V1", WhatsApp = dto.WhatsApp, Email = dto.Email, EquipeId = 1, CargoId = 1, NomeEquipe = "Equipe", NomeCargo = "Cargo", DataCadastro = DateTime.UtcNow };
         _serviceMock.Setup(s => s.CreateAsync(dto)).ReturnsAsync(created);
         var result = await _controller.Create(dto);
         result.Result.Should().BeOfType<CreatedAtActionResult>();
@@ -46,7 +46,7 @@ public class VoluntariosControllerTests
     [Fact]
     public async Task Update_ReturnsNotFound_OnArgumentException()
     {
-        var dto = new AtualizarVoluntarioDto { Nome = "X", WhatsApp = "11888", Email = null, EquipeId = 2, CargoId = 3 };
+        var dto = new AtualizarVoluntarioDto { PessoaId = 1, WhatsApp = "11888", Email = null, EquipeId = 2, CargoId = 3 };
         _serviceMock.Setup(s => s.UpdateAsync(9, dto)).ThrowsAsync(new ArgumentException());
         var result = await _controller.Update(9, dto);
         result.Result.Should().BeOfType<NotFoundResult>();

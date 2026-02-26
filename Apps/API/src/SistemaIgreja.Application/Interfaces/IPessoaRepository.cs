@@ -1,10 +1,12 @@
 using SistemaIgreja.Domain.Entities;
+using SistemaIgreja.Application.DTOs.Pessoas;
 
 namespace SistemaIgreja.Application.Interfaces;
 
 public interface IPessoaRepository
 {
     Task<IEnumerable<Pessoa>> GetAllAsync();
+    Task<(IReadOnlyList<Pessoa> Items, int Total)> GetPagedAsync(PessoaPagedQuery query);
     Task<Pessoa?> GetByIdAsync(int id);
     Task<Pessoa?> GetByEmailAsync(string email);
     Task<Pessoa?> GetByWhatsAppAsync(string whatsApp);

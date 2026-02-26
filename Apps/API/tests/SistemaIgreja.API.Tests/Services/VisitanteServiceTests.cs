@@ -20,10 +20,9 @@ public class VisitanteServiceTests
     {
         _service = new VisitanteService(_repoMock.Object, _msgServiceMock.Object, _pessoaRepoMock.Object, _pessoaPerfilRepoMock.Object, _unitOfWorkMock.Object);
         
-        // Setup padrão para UnitOfWork
-        _unitOfWorkMock.Setup(u => u.BeginTransactionAsync()).Returns(Task.CompletedTask);
-        _unitOfWorkMock.Setup(u => u.CommitTransactionAsync()).Returns(Task.CompletedTask);
-        _unitOfWorkMock.Setup(u => u.RollbackTransactionAsync()).Returns(Task.CompletedTask);
+        // Setup UnitOfWork: ExecuteInTransactionAsync deve executar o delegate passado
+        _unitOfWorkMock.Setup(u => u.ExecuteInTransactionAsync(It.IsAny<Func<Task>>()))
+            .Returns<Func<Task>>(async (action) => await action());
         _unitOfWorkMock.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
     }
 

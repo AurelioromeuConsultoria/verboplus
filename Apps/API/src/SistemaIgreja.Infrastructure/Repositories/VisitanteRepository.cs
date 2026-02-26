@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SistemaIgreja.Application.DTOs.Visitantes;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
@@ -21,6 +22,68 @@ public class VisitanteRepository : IVisitanteRepository
                 .ThenInclude(p => p.Perfis)
             .OrderByDescending(v => v.DataCadastro)
             .ToListAsync();
+    }
+
+    public async Task<(IReadOnlyList<Visitante> Items, int Total)> GetPagedAsync(VisitantePagedQuery query)
+    {
+        var page = query.Page <= 0 ? 1 : query.Page;
+        var pageSize = query.PageSize <= 0 ? 20 : Math.Min(query.PageSize, 200);
+
+        var q = _context.Visitantes
+            .AsNoTracking()
+            .Include(v => v.Pessoa)
+                .ThenInclude(p => p.Perfis)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(query.Nome))
+        {
+            var nome = query.Nome.Trim().ToLower();
+            q = q.Where(v => v.Pessoa != null && v.Pessoa.Nome.ToLower().Contains(nome));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Email))
+        {
+            var email = query.Email.Trim().ToLower();
+            q = q.Where(v => v.Pessoa != null && v.Pessoa.Email != null && v.Pessoa.Email.ToLower().Contains(email));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Telefone))
+        {
+            var tel = query.Telefone.Trim();
+            q = q.Where(v => v.Pessoa != null && v.Pessoa.Telefone != null && v.Pessoa.Telefone.Contains(tel));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.WhatsApp))
+        {
+            var whats = query.WhatsApp.Trim();
+            q = q.Where(v => v.Pessoa != null && v.Pessoa.WhatsApp != null && v.Pessoa.WhatsApp.Contains(whats));
+        }
+
+        if (query.DataVisitaFrom.HasValue)
+        {
+            var from = query.DataVisitaFrom.Value.Date;
+            q = q.Where(v => v.DataVisita >= from);
+        }
+
+        if (query.DataVisitaTo.HasValue)
+        {
+            var to = query.DataVisitaTo.Value.Date.AddDays(1).AddTicks(-1);
+            q = q.Where(v => v.DataVisita <= to);
+        }
+
+        var sort = (query.Sort ?? "datavisita").Trim().ToLowerInvariant();
+        var desc = string.Equals(query.Direction, "desc", StringComparison.OrdinalIgnoreCase);
+
+        q = sort switch
+        {
+            "nome" => desc ? q.OrderByDescending(v => v.Pessoa!.Nome) : q.OrderBy(v => v.Pessoa!.Nome),
+            "datacadastro" => desc ? q.OrderByDescending(v => v.DataCadastro) : q.OrderBy(v => v.DataCadastro),
+            _ => desc ? q.OrderByDescending(v => v.DataVisita) : q.OrderBy(v => v.DataVisita),
+        };
+
+        var total = await q.CountAsync();
+        var items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        return (items, total);
     }
 
     public async Task<Visitante?> GetByIdAsync(int id)

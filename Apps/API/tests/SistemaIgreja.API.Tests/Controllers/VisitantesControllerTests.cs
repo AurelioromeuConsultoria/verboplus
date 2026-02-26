@@ -10,12 +10,14 @@ namespace SistemaIgreja.API.Tests.Controllers;
 public class VisitantesControllerTests
 {
     private readonly Mock<IVisitanteService> _serviceMock;
+    private readonly Mock<IMensagemAgendadaService> _mensagemServiceMock;
     private readonly VisitantesController _controller;
 
     public VisitantesControllerTests()
     {
         _serviceMock = new Mock<IVisitanteService>();
-        _controller = new VisitantesController(_serviceMock.Object);
+        _mensagemServiceMock = new Mock<IMensagemAgendadaService>();
+        _controller = new VisitantesController(_serviceMock.Object, _mensagemServiceMock.Object);
     }
 
     [Fact]

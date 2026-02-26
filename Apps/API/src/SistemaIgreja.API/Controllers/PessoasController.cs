@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
+using SistemaIgreja.Application.DTOs.Pessoas;
 using SistemaIgreja.Application.Services;
 
 namespace SistemaIgreja.API.Controllers;
@@ -21,9 +22,14 @@ public class PessoasController : ControllerBase
     /// Lista todas as pessoas com seus perfis
     /// </summary>
     [HttpGet("aniversariantes")]
-    public async Task<ActionResult<IEnumerable<AniversarianteDto>>> GetAniversariantes([FromQuery] int dias = 30, [FromQuery] int limite = 50)
+    public async Task<ActionResult<IEnumerable<AniversarianteDto>>> GetAniversariantes(
+        [FromQuery] int dias = 30,
+        [FromQuery] int limite = 50,
+        [FromQuery] int? mes = null)
     {
-        var items = await _service.GetProximosAniversariantesAsync(dias, limite);
+        var items = mes.HasValue
+            ? await _service.GetAniversariantesPorMesAsync(mes.Value, limite)
+            : await _service.GetProximosAniversariantesAsync(dias, limite);
         return Ok(items);
     }
 
@@ -38,6 +44,16 @@ public class PessoasController : ControllerBase
     }
 
     /// <summary>
+    /// Lista pessoas com paginação e filtros (server-side).
+    /// </summary>
+    [HttpGet("paged")]
+    public async Task<ActionResult<PagedResultDto<PessoaDto>>> GetPaged([FromQuery] PessoaPagedQueryDto query)
+    {
+        var result = await _service.GetPagedAsync(query);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Obtém detalhe de uma pessoa específica com seus perfis
     /// </summary>
     [HttpGet("{id}")]
@@ -48,6 +64,19 @@ public class PessoasController : ControllerBase
             return NotFound();
 
         return Ok(pessoa);
+    }
+
+    /// <summary>
+    /// Visão consolidada 360° da pessoa (perfis, visitas, voluntariado, usuário)
+    /// </summary>
+    [HttpGet("{id}/360")]
+    public async Task<ActionResult<Pessoa360Dto>> Get360(int id)
+    {
+        var result = await _service.Get360Async(id);
+        if (result == null)
+            return NotFound();
+
+        return Ok(result);
     }
 
     /// <summary>

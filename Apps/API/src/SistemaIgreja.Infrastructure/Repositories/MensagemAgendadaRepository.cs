@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SistemaIgreja.Application.DTOs.MensagensAgendadas;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
@@ -22,6 +23,84 @@ public class MensagemAgendadaRepository : IMensagemAgendadaRepository
             .Include(m => m.ConfiguracaoMensagem)
             .OrderByDescending(m => m.DataCriacao)
             .ToListAsync();
+    }
+
+    public async Task<(IReadOnlyList<MensagemAgendada> Items, int Total)> GetPagedAsync(MensagemAgendadaPagedQuery query)
+    {
+        var page = query.Page <= 0 ? 1 : query.Page;
+        var pageSize = query.PageSize <= 0 ? 20 : Math.Min(query.PageSize, 200);
+
+        var q = _context.MensagensAgendadas
+            .AsNoTracking()
+            .Include(m => m.Visitante)
+                .ThenInclude(v => v.Pessoa)
+            .Include(m => m.ConfiguracaoMensagem)
+            .AsQueryable();
+
+        if (query.Status.HasValue)
+        {
+            var status = query.Status.Value;
+            q = q.Where(m => m.Status == status);
+        }
+
+        if (query.VisitanteId.HasValue)
+        {
+            var visitanteId = query.VisitanteId.Value;
+            q = q.Where(m => m.VisitanteId == visitanteId);
+        }
+
+        if (query.DataEnvioFrom.HasValue)
+        {
+            var from = query.DataEnvioFrom.Value;
+            q = q.Where(m => m.DataEnvio >= from);
+        }
+
+        if (query.DataEnvioTo.HasValue)
+        {
+            var to = query.DataEnvioTo.Value;
+            q = q.Where(m => m.DataEnvio <= to);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Texto))
+        {
+            var t = query.Texto.Trim().ToLower();
+            q = q.Where(m =>
+                (m.TextoFinal != null && m.TextoFinal.ToLower().Contains(t)) ||
+                (m.ConfiguracaoMensagem != null && m.ConfiguracaoMensagem.Nome != null && m.ConfiguracaoMensagem.Nome.ToLower().Contains(t)) ||
+                (m.Visitante != null && m.Visitante.Pessoa != null && m.Visitante.Pessoa.Nome.ToLower().Contains(t)));
+        }
+
+        var sort = (query.Sort ?? "dataenvio").Trim().ToLowerInvariant();
+        var desc = string.Equals(query.Direction, "desc", StringComparison.OrdinalIgnoreCase);
+
+        q = sort switch
+        {
+            "datacriacao" => desc ? q.OrderByDescending(m => m.DataCriacao) : q.OrderBy(m => m.DataCriacao),
+            _ => desc ? q.OrderByDescending(m => m.DataEnvio) : q.OrderBy(m => m.DataEnvio),
+        };
+
+        var total = await q.CountAsync();
+        var items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        return (items, total);
+    }
+
+    public async Task<MensagemAgendadaStatsDto> GetStatsAsync()
+    {
+        var total = await _context.MensagensAgendadas.CountAsync();
+        var enviadas = await _context.MensagensAgendadas.CountAsync(m => m.Status == StatusMensagem.Enviada);
+        var erro = await _context.MensagensAgendadas.CountAsync(m => m.Status == StatusMensagem.Erro);
+        var agendadas = await _context.MensagensAgendadas.CountAsync(m =>
+            m.Status == StatusMensagem.Agendada ||
+            m.Status == StatusMensagem.ProntaParaEnvio ||
+            m.Status == StatusMensagem.EmProcessamento);
+
+        return new MensagemAgendadaStatsDto
+        {
+            Total = total,
+            Agendadas = agendadas,
+            Enviadas = enviadas,
+            Erro = erro
+        };
     }
 
     public async Task<MensagemAgendada?> GetByIdAsync(int id)

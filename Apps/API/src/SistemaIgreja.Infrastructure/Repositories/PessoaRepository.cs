@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SistemaIgreja.Application.DTOs.Pessoas;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
@@ -19,6 +20,83 @@ public class PessoaRepository : IPessoaRepository
         return await _context.Set<Pessoa>()
             .OrderBy(p => p.Nome)
             .ToListAsync();
+    }
+
+    public async Task<(IReadOnlyList<Pessoa> Items, int Total)> GetPagedAsync(PessoaPagedQuery query)
+    {
+        var page = query.Page <= 0 ? 1 : query.Page;
+        var pageSize = query.PageSize <= 0 ? 20 : Math.Min(query.PageSize, 200);
+
+        var q = _context.Set<Pessoa>()
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(query.Nome))
+        {
+            var nome = query.Nome.Trim().ToLower();
+            q = q.Where(p => p.Nome.ToLower().Contains(nome));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Email))
+        {
+            var email = query.Email.Trim().ToLower();
+            q = q.Where(p => p.Email != null && p.Email.ToLower().Contains(email));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Telefone))
+        {
+            var telefone = query.Telefone.Trim();
+            q = q.Where(p => p.Telefone != null && p.Telefone.Contains(telefone));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.WhatsApp))
+        {
+            var whats = query.WhatsApp.Trim();
+            q = q.Where(p => p.WhatsApp != null && p.WhatsApp.Contains(whats));
+        }
+
+        if (query.TipoPessoa.HasValue)
+        {
+            var tipo = query.TipoPessoa.Value;
+            q = q.Where(p => p.TipoPessoa == tipo);
+        }
+
+        if (query.Ativo.HasValue)
+        {
+            var ativo = query.Ativo.Value;
+            q = q.Where(p => p.Ativo == ativo);
+        }
+
+        if (query.Perfil.HasValue)
+        {
+            var perfil = query.Perfil.Value;
+            q = q.Where(p => p.Perfis.Any(pp => pp.DataFim == null && pp.Perfil == perfil));
+        }
+
+        // Ordenação
+        var sort = (query.Sort ?? "nome").Trim().ToLowerInvariant();
+        var desc = string.Equals(query.Direction, "desc", StringComparison.OrdinalIgnoreCase);
+
+        q = sort switch
+        {
+            "email" => desc ? q.OrderByDescending(p => p.Email) : q.OrderBy(p => p.Email),
+            "telefone" => desc ? q.OrderByDescending(p => p.Telefone) : q.OrderBy(p => p.Telefone),
+            "whatsapp" => desc ? q.OrderByDescending(p => p.WhatsApp) : q.OrderBy(p => p.WhatsApp),
+            "tipopessoa" => desc ? q.OrderByDescending(p => p.TipoPessoa) : q.OrderBy(p => p.TipoPessoa),
+            "ativo" => desc ? q.OrderByDescending(p => p.Ativo) : q.OrderBy(p => p.Ativo),
+            "datacriacao" => desc ? q.OrderByDescending(p => p.DataCriacao) : q.OrderBy(p => p.DataCriacao),
+            _ => desc ? q.OrderByDescending(p => p.Nome) : q.OrderBy(p => p.Nome),
+        };
+
+        var total = await q.CountAsync();
+
+        var items = await q
+            .Include(p => p.Perfis)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (items, total);
     }
 
     public async Task<Pessoa?> GetByIdAsync(int id)

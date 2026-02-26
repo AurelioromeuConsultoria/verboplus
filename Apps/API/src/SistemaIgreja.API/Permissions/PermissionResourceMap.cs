@@ -27,7 +27,8 @@ public static class PermissionResourceMap
         ["/api/kids"] = "kids",
         ["/api/hub"] = "hub",
         ["/api/fornecedores"] = "fornecedores",
-        ["/api/perfis-acesso"] = "perfis-acesso"
+        ["/api/perfis-acesso"] = "perfis-acesso",
+        ["/api/auditlogs"] = "usuarios"
     };
 
     public static string? GetResourceFromPath(string path)

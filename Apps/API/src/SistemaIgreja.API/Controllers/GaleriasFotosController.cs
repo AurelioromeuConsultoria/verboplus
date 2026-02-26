@@ -57,8 +57,8 @@ public class GaleriasFotosController : ControllerBase
     [HttpGet("{id}/fotos")]
     public async Task<ActionResult<List<FotoDto>>> ListarFotos(int id)
     {
-        var webRootPath = _environment.WebRootPath ?? _environment.ContentRootPath;
-        var fotos = await _service.ListarFotosAsync(id, webRootPath);
+        var basePath = GetUploadsBasePath();
+        var fotos = await _service.ListarFotosAsync(id, basePath);
         
         if (fotos == null || fotos.Count == 0)
         {
@@ -108,9 +108,9 @@ public class GaleriasFotosController : ControllerBase
         var galeria = await _service.GetByIdAsync(id);
         if (galeria == null) return NotFound();
 
-        // Deletar diretório físico
-        var webRootPath = _environment.WebRootPath ?? _environment.ContentRootPath;
-        var fullPath = Path.Combine(webRootPath, galeria.CaminhoDiretorio);
+        // Deletar diretório físico (mesmo path usado no upload)
+        var basePath = GetUploadsBasePath();
+        var fullPath = Path.Combine(basePath, galeria.CaminhoDiretorio.TrimStart('/', '\\'));
         if (Directory.Exists(fullPath))
         {
             Directory.Delete(fullPath, true);
@@ -144,8 +144,8 @@ public class GaleriasFotosController : ControllerBase
             }
         }
 
-        var webRootPath = _environment.WebRootPath ?? _environment.ContentRootPath;
-        var success = await _service.UploadFotosAsync(id, arquivosUpload, webRootPath);
+        var basePath = GetUploadsBasePath();
+        var success = await _service.UploadFotosAsync(id, arquivosUpload, basePath);
         if (!success) return NotFound("Galeria não encontrada");
 
         return Ok(new { message = "Fotos enviadas com sucesso" });
@@ -158,6 +158,20 @@ public class GaleriasFotosController : ControllerBase
         if (!success) return NotFound("Galeria ou arquivo não encontrado");
 
         return Ok(new { message = "Imagem de destaque definida com sucesso" });
+    }
+
+    /// <summary>
+    /// Retorna o caminho base para uploads (alinhado com Program.cs / UseStaticFiles).
+    /// Local: ContentRootPath. Azure: HOME/data (CaminhoDiretorio será montado sob uploads).
+    /// </summary>
+    private string GetUploadsBasePath()
+    {
+        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")))
+        {
+            var home = Environment.GetEnvironmentVariable("HOME") ?? @"D:\home";
+            return Path.Combine(home, "data");
+        }
+        return _environment.ContentRootPath;
     }
 }
 

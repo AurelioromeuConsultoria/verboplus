@@ -1,4 +1,5 @@
 using SistemaIgreja.Application.DTOs;
+using SistemaIgreja.Application.DTOs.MensagensAgendadas;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
 
@@ -7,6 +8,8 @@ namespace SistemaIgreja.Application.Services;
 public interface IMensagemAgendadaService
 {
     Task<IEnumerable<MensagemAgendadaDto>> GetAllAsync();
+    Task<PagedResultDto<MensagemAgendadaDto>> GetPagedAsync(MensagemAgendadaPagedQueryDto query);
+    Task<MensagemAgendadaStatsDto> GetStatsAsync();
     Task<MensagemAgendadaDto?> GetByIdAsync(int id);
     Task<IEnumerable<MensagemAgendadaDto>> GetMensagensProntasParaEnvioAsync();
     /// <summary>Reserva transacionalmente mensagens prontas (status → EmProcessamento). Apenas as reservadas devem ser processadas.</summary>
@@ -39,6 +42,47 @@ public class MensagemAgendadaService : IMensagemAgendadaService
     {
         var mensagens = await _mensagemRepository.GetAllAsync();
         return mensagens.Select(MapToDto);
+    }
+
+    public async Task<PagedResultDto<MensagemAgendadaDto>> GetPagedAsync(MensagemAgendadaPagedQueryDto queryDto)
+    {
+        var page = queryDto.Page <= 0 ? 1 : queryDto.Page;
+        var pageSize = queryDto.PageSize <= 0 ? 20 : Math.Min(queryDto.PageSize, 200);
+
+        StatusMensagem? status = null;
+        if (queryDto.Status.HasValue && Enum.IsDefined(typeof(StatusMensagem), queryDto.Status.Value))
+        {
+            status = (StatusMensagem)queryDto.Status.Value;
+        }
+
+        var query = new MensagemAgendadaPagedQuery
+        {
+            Page = page,
+            PageSize = pageSize,
+            Sort = queryDto.Sort,
+            Direction = queryDto.Direction,
+            Texto = queryDto.Texto,
+            VisitanteId = queryDto.VisitanteId,
+            Status = status,
+            DataEnvioFrom = queryDto.DataEnvioFrom,
+            DataEnvioTo = queryDto.DataEnvioTo
+        };
+
+        var (items, total) = await _mensagemRepository.GetPagedAsync(query);
+        var dtos = items.Select(MapToDto).ToList();
+
+        return new PagedResultDto<MensagemAgendadaDto>
+        {
+            Items = dtos,
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
+
+    public Task<MensagemAgendadaStatsDto> GetStatsAsync()
+    {
+        return _mensagemRepository.GetStatsAsync();
     }
 
     public async Task<MensagemAgendadaDto?> GetByIdAsync(int id)

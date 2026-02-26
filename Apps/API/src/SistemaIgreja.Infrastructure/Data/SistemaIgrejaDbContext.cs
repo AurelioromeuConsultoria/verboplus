@@ -12,6 +12,7 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<Pessoa> Pessoas { get; set; }
     public DbSet<PessoaPerfil> PessoasPerfis { get; set; }
     public DbSet<Visitante> Visitantes { get; set; }
+    public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<ConfiguracaoMensagem> ConfiguracoesMensagens { get; set; }
     public DbSet<MensagemAgendada> MensagensAgendadas { get; set; }
     public DbSet<Equipe> Equipes { get; set; }
@@ -100,6 +101,21 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithMany(p => p.Visitantes)
                   .HasForeignKey(v => v.PessoaId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EntityName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.EntityId).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Action).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.UserName).HasMaxLength(200);
+            entity.Property(e => e.UserEmail).HasMaxLength(200);
+            entity.Property(e => e.IpAddress).HasMaxLength(60);
+            entity.Property(e => e.CreatedAt).IsRequired();
+
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => new { e.EntityName, e.EntityId });
         });
 
         // Configuração da entidade ConfiguracaoMensagem
