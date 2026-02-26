@@ -251,19 +251,10 @@ builder.Services.AddCors(options =>
                       return true;
                   }
 
-                  // Permitir subdomínios do domínio oficial (ex.: admin.kingdombr.com.br)
-                  if (Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
-                      uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase) &&
-                      uri.Host.EndsWith(".kingdombr.com.br", StringComparison.OrdinalIgnoreCase))
-                  {
-                      return true;
-                  }
-
                   return false;
               })
               .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
+              .AllowAnyHeader();
     });
 });
 
