@@ -7,8 +7,6 @@ pool:
 variables:
   buildConfiguration: 'Release'
   projectPath: 'src/SistemaIgreja.API/SistemaIgreja.API.csproj'
-  appName: 'api-appigreja'
-  azureSubscription: 'sc-azure-appigreja'
 
 stages:
 - stage: Build
@@ -39,22 +37,3 @@ stages:
 
     - publish: '$(Build.ArtifactStagingDirectory)/app.zip'
       artifact: drop
-
-- stage: Deploy
-  dependsOn: Build
-  jobs:
-  - deployment: Deploy
-    environment: production
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - download: current
-            artifact: drop
-
-          - task: AzureWebApp@1
-            inputs:
-              azureSubscription: '$(azureSubscription)'
-              appType: 'webApp'
-              appName: '$(appName)'
-              package: '$(Pipeline.Workspace)/drop/app.zip'
