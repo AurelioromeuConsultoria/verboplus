@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { voluntariosApi, equipesApi, cargosApi, pessoasApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 const WHATSAPP_REGEX = /^\d{10,13}$/;
 
@@ -86,20 +88,20 @@ export default function VoluntarioForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.pessoaId) {
-      alert('Selecione uma Pessoa');
+      toast.error('Selecione uma Pessoa');
       return;
     }
     const onlyDigits = String(formData.whatsApp).replace(/\D/g, '');
     if (!formData.equipeId || !formData.cargoId) {
-      alert('Selecione Equipe e Cargo');
+      toast.error('Selecione Equipe e Cargo');
       return;
     }
     if (formData.email && !/.+@.+\..+/.test(formData.email)) {
-      alert('E-mail inválido');
+      toast.error('E-mail inválido');
       return;
     }
     if (formData.whatsApp && !WHATSAPP_REGEX.test(onlyDigits)) {
-      alert('WhatsApp inválido. Use apenas dígitos (10 a 13).');
+      toast.error('WhatsApp inválido. Use apenas dígitos (10 a 13).');
       return;
     }
     try {
@@ -114,9 +116,10 @@ export default function VoluntarioForm() {
       };
       if (isEditing) await voluntariosApi.update(id, payload);
       else await voluntariosApi.create(payload);
+      toast.success(isEditing ? 'Voluntário atualizado com sucesso' : 'Voluntário criado com sucesso');
       navigate('/voluntarios');
     } catch (err) {
-      alert('Erro ao salvar voluntário');
+      toast.error(getApiErrorMessage(err, 'Erro ao salvar voluntário'));
       console.error(err);
     } finally {
       setLoading(false);

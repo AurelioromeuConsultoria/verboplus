@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { fornecedoresApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 const EMAIL_REGEX = /.+@.+\..+/;
 
@@ -71,11 +73,11 @@ export default function FornecedorForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      alert('Nome é obrigatório');
+      toast.error('Nome é obrigatório');
       return;
     }
     if (formData.contatoEmail && !EMAIL_REGEX.test(formData.contatoEmail)) {
-      alert('E-mail do responsável inválido');
+      toast.error('E-mail do responsável inválido');
       return;
     }
 
@@ -96,9 +98,10 @@ export default function FornecedorForm() {
       };
       if (isEditing) await fornecedoresApi.update(id, payload);
       else await fornecedoresApi.create(payload);
+      toast.success(isEditing ? 'Fornecedor atualizado com sucesso' : 'Fornecedor criado com sucesso');
       navigate('/financeiro/fornecedores');
     } catch (err) {
-      alert('Erro ao salvar fornecedor');
+      toast.error(getApiErrorMessage(err, 'Erro ao salvar fornecedor'));
       console.error(err);
     } finally {
       setLoading(false);

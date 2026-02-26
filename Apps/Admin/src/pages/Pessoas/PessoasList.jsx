@@ -1,25 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Eye, Edit, Trash2, Phone, Mail, Download, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AdvancedSearch } from '@/components/ui/advanced-search';
 import { SortableTableHeader } from '@/components/ui/sortable-table-header';
-import { useTableSort } from '@/hooks/useTableSort';
 import { exportToCSV } from '@/utils/export';
 import { pessoasApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
 
-export function PessoasList() {
+const PERFIS_OPTIONS = [
+  { value: 'Visitante', label: 'Visitante' },
+  { value: 'Membro', label: 'Membro' },
+  { value: 'Voluntario', label: 'Voluntário' },
+  { value: 'Lider', label: 'Líder' },
+  { value: 'Kids', label: 'Kids' },
+  { value: 'Admin', label: 'Administrador' },
+];
+
+export default function PessoasList() {
   const [pessoas, setPessoas] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
@@ -33,17 +43,38 @@ export function PessoasList() {
   });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortConfig, setSortConfig] = useState({ field: 'nome', direction: 'asc' });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pessoaToDelete, setPessoaToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const { can } = useAuth();
 
-  const loadPessoas = async () => {
+  const loadPessoas = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await pessoasApi.getAll();
-      setPessoas(response.data || []);
+      const ativoParam =
+        filters.ativo === undefined ? undefined : (filters.ativo === true || filters.ativo === 'true');
+      const response = await pessoasApi.getPaged({
+        page,
+        pageSize,
+        sort: sortConfig.field,
+        direction: sortConfig.direction,
+        nome: filters.nome || undefined,
+        email: filters.email || undefined,
+        telefone: filters.telefone || undefined,
+        whatsApp: filters.whatsApp || undefined,
+        perfil: filters.perfil || undefined,
+        tipoPessoa: filters.tipoPessoa || undefined,
+        ativo: ativoParam,
+      });
+
+      const data = response.data || {};
+      setPessoas(data.items || []);
+      setTotal(Number(data.total || 0));
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.message || 'Erro ao carregar pessoas';
       setError(errorMessage);
@@ -52,7 +83,7 @@ export function PessoasList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, page, pageSize, sortConfig.direction, sortConfig.field]);
 
   const handleDeleteClick = (pessoa) => {
     setPessoaToDelete(pessoa);
@@ -61,6 +92,7 @@ export function PessoasList() {
 
   const handleDeleteConfirm = async () => {
     if (!pessoaToDelete) return;
+    const currentPageCount = pessoas.length;
 
     try {
       setDeleting(true);
@@ -68,9 +100,11 @@ export function PessoasList() {
       toast.success('Pessoa excluída com sucesso');
       setDeleteDialogOpen(false);
       setPessoaToDelete(null);
+      // Recarrega a página atual; se ficar vazia, volta uma página.
       await loadPessoas();
-      // Reset to first page if current page becomes empty
-      setPage(1);
+      if (page > 1 && currentPageCount === 1) {
+        setPage((p) => Math.max(1, p - 1));
+      }
     } catch (err) {
       toast.error('Erro ao excluir pessoa');
       console.error('Erro ao excluir pessoa:', err);
@@ -81,74 +115,123 @@ export function PessoasList() {
 
   useEffect(() => {
     loadPessoas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadPessoas]);
 
-  // Obter lista única de perfis para filtro
-  const perfisUnicos = [...new Set(
-    pessoas.flatMap(p => p.perfis?.map(perf => perf.perfil) || [])
-      .filter(perfil => perfil != null && typeof perfil === 'string')
-      .map(perfil => perfil.trim())
-      .filter(perfil => perfil !== '')
-  )];
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, filters]);
 
-  // Filtrar pessoas com busca avançada
-  const pessoasFiltradasRaw = pessoas.filter((pessoa) => {
-    // Busca por nome
-    if (filters.nome && !pessoa.nome?.toLowerCase().includes(filters.nome.toLowerCase())) {
-      return false;
+  const pageIds = pessoas.map((p) => p.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+
+  const toggleSelectAll = () => {
+    if (allPageSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.add(id));
+        return next;
+      });
     }
+  };
 
-    // Busca por email
-    if (filters.email && !pessoa.email?.toLowerCase().includes(filters.email.toLowerCase())) {
-      return false;
-    }
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
-    // Busca por telefone
-    if (filters.telefone && !pessoa.telefone?.includes(filters.telefone)) {
-      return false;
-    }
+  const handleBulkDeleteClick = () => {
+    if (selectedIds.size === 0) return;
+    setBulkDeleteDialogOpen(true);
+  };
 
-    // Busca por WhatsApp
-    if (filters.whatsApp && !pessoa.whatsApp?.includes(filters.whatsApp)) {
-      return false;
-    }
+  const handleBulkDeleteConfirm = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
 
-    // Filtro por perfil
-    if (filters.perfil && !pessoa.perfis?.some(p => p.perfil === filters.perfil)) {
-      return false;
-    }
-
-    // Filtro por tipo de pessoa
-    if (filters.tipoPessoa && pessoa.tipoPessoa !== filters.tipoPessoa) {
-      return false;
-    }
-
-    // Filtro por status ativo
-    if (filters.ativo !== undefined) {
-      const isAtivo = filters.ativo === 'true' || filters.ativo === true;
-      if (pessoa.ativo !== isAtivo) {
-        return false;
+    try {
+      setBulkDeleting(true);
+      let ok = 0;
+      let fail = 0;
+      for (const id of ids) {
+        try {
+          await pessoasApi.delete(id);
+          ok += 1;
+        } catch {
+          fail += 1;
+        }
       }
+      setSelectedIds(new Set());
+      setBulkDeleteDialogOpen(false);
+      await loadPessoas();
+      if (page > 1 && pessoas.length === ids.length) setPage((p) => Math.max(1, p - 1));
+      if (fail > 0) {
+        toast.warning(`${ok} excluída(s), ${fail} falha(s).`);
+      } else {
+        toast.success(`${ok} pessoa(s) excluída(s) com sucesso`);
+      }
+    } catch (err) {
+      toast.error('Erro ao excluir em lote');
+    } finally {
+      setBulkDeleting(false);
     }
+  };
 
-    return true;
-  });
-
-  // Ordenação
-  const { sortedData: pessoasFiltradas, sortConfig, handleSort } = useTableSort(pessoasFiltradasRaw, {
-    defaultSort: 'nome',
-    defaultDirection: 'asc',
-  });
-
-  // Paginação client-side
-  const startIndex = (page - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const pessoasPaginadas = pessoasFiltradas.slice(startIndex, endIndex);
+  const handleSort = (field) => {
+    setSortConfig((prev) => {
+      if (prev.field === field) {
+        return { field, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { field, direction: 'asc' };
+    });
+    setPage(1);
+  };
 
   // Exportação
-  const handleExport = () => {
-    const exportData = pessoasFiltradas.map(pessoa => ({
+  const handleExport = async () => {
+    try {
+      // Exporta TODOS os itens do filtro atual buscando páginas sequencialmente.
+      const all = [];
+      let p = 1;
+      let totalItems = Infinity;
+      const exportPageSize = 200;
+      const ativoParam =
+        filters.ativo === undefined ? undefined : (filters.ativo === true || filters.ativo === 'true');
+
+      while (all.length < totalItems) {
+        const resp = await pessoasApi.getPaged({
+          page: p,
+          pageSize: exportPageSize,
+          sort: sortConfig.field,
+          direction: sortConfig.direction,
+          nome: filters.nome || undefined,
+          email: filters.email || undefined,
+          telefone: filters.telefone || undefined,
+          whatsApp: filters.whatsApp || undefined,
+          perfil: filters.perfil || undefined,
+          tipoPessoa: filters.tipoPessoa || undefined,
+          ativo: ativoParam,
+        });
+
+        const data = resp.data || {};
+        const items = data.items || [];
+        totalItems = Number(data.total || 0);
+        all.push(...items);
+        if (items.length === 0) break;
+        p += 1;
+        if (p > 200) break; // trava de segurança
+      }
+
+      const exportData = all.map(pessoa => ({
       Nome: pessoa.nome || '',
       Email: pessoa.email || '',
       Telefone: pessoa.telefone || '',
@@ -171,6 +254,10 @@ export function PessoasList() {
     ]);
 
     toast.success('Dados exportados com sucesso!');
+    } catch (err) {
+      console.error('Erro ao exportar pessoas:', err);
+      toast.error('Erro ao exportar dados');
+    }
   };
 
   // Reset page when filters change
@@ -221,7 +308,7 @@ export function PessoasList() {
             key: 'perfil',
             label: 'Perfil',
             type: 'select',
-            options: perfisUnicos.map(perfil => ({ value: perfil, label: perfil })),
+            options: PERFIS_OPTIONS,
           },
           {
             key: 'tipoPessoa',
@@ -258,8 +345,8 @@ export function PessoasList() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Lista de Pessoas ({pessoasFiltradas.length})</CardTitle>
-            {pessoasFiltradas.length > 0 && (
+            <CardTitle>Lista de Pessoas ({total})</CardTitle>
+            {total > 0 && (
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
                 Exportar CSV
@@ -268,14 +355,28 @@ export function PessoasList() {
           </div>
         </CardHeader>
         <CardContent>
-          {pessoasFiltradas.length === 0 ? (
+          {selectedIds.size > 0 && canDelete && (
+            <div className="flex items-center justify-between rounded-md border bg-muted/50 px-4 py-2 mb-4">
+              <span className="text-sm font-medium">
+                {selectedIds.size} selecionada(s)
+              </span>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
+                  Limpar seleção
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleBulkDeleteClick}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir selecionadas
+                </Button>
+              </div>
+            </div>
+          )}
+          {pessoas.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">
-                {pessoas.length === 0 
-                  ? 'Nenhuma pessoa cadastrada ainda.'
-                  : 'Nenhuma pessoa encontrada com os filtros aplicados.'}
+                {total === 0 ? 'Nenhuma pessoa encontrada com os filtros aplicados.' : 'Nenhuma pessoa nesta página.'}
               </p>
-              {pessoas.length === 0 && canEdit && (
+              {total === 0 && canEdit && (
                 <Button asChild>
                   <Link to="/pessoas/novo">
                     <Plus className="h-4 w-4 mr-2" />
@@ -288,6 +389,15 @@ export function PessoasList() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {canDelete && (
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={allPageSelected}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Selecionar todas"
+                      />
+                    </TableHead>
+                  )}
                   <SortableTableHeader field="nome" onSort={handleSort} sortConfig={sortConfig}>
                     Nome
                   </SortableTableHeader>
@@ -311,8 +421,17 @@ export function PessoasList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pessoasPaginadas.map((pessoa) => (
+                {pessoas.map((pessoa) => (
                   <TableRow key={pessoa.id}>
+                    {canDelete && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(pessoa.id)}
+                          onCheckedChange={() => toggleSelect(pessoa.id)}
+                          aria-label={`Selecionar ${pessoa.nome}`}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">
                       {pessoa.nome}
                     </TableCell>
@@ -409,11 +528,11 @@ export function PessoasList() {
               </TableBody>
             </Table>
           )}
-          {pessoasFiltradas.length > 0 && (
+          {total > 0 && (
             <DataTablePagination
               page={page}
               pageSize={pageSize}
-              total={pessoasFiltradas.length}
+              total={total}
               onPageChange={setPage}
               onPageSizeChange={(newSize) => {
                 setPageSize(newSize);
@@ -434,6 +553,18 @@ export function PessoasList() {
         cancelText="Cancelar"
         variant="destructive"
         loading={deleting}
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        onConfirm={handleBulkDeleteConfirm}
+        title="Excluir em lote"
+        description={`Tem certeza que deseja excluir ${selectedIds.size} pessoa(s) selecionada(s)? Esta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="destructive"
+        loading={bulkDeleting}
       />
     </div>
   );

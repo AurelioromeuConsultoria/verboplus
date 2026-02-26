@@ -1,78 +1,81 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { RequirePermission } from './components/RequirePermission';
 import { Layout } from './components/Layout/Layout';
 import Login from './pages/Login/Login';
-import { Dashboard } from './pages/Dashboard';
-import { VisitantesList } from './pages/Visitantes/VisitantesList';
-import { VisitanteForm } from './pages/Visitantes/VisitanteForm';
-import { VisitanteDetails } from './pages/Visitantes/VisitanteDetails';
-import { PessoasList } from './pages/Pessoas/PessoasList';
-import { PessoaForm } from './pages/Pessoas/PessoaForm';
-import { PessoaDetails } from './pages/Pessoas/PessoaDetails';
-import Aniversariantes from './pages/Pessoas/Aniversariantes';
-import { PerfisList } from './pages/Perfis/PerfisList';
-import ConfiguracoesList from './pages/ConfiguracoesMensagens/ConfiguracoesList';
-import ConfiguracaoForm from './pages/ConfiguracoesMensagens/ConfiguracaoForm';
-import MensagensAgendadas from './pages/MensagensAgendadas/MensagensAgendadas';
-import EquipesList from './pages/Equipes/EquipesList';
-import EquipeForm from './pages/Equipes/EquipeForm';
-import CargosList from './pages/Cargos/CargosList';
-import CargoForm from './pages/Cargos/CargoForm';
-import VoluntariosList from './pages/Voluntarios/VoluntariosList';
-import VoluntarioForm from './pages/Voluntarios/VoluntarioForm';
-import EscalasList from './pages/Voluntariado/EscalasList';
-import EscalaEditor from './pages/Voluntariado/EscalaEditor';
-import RelatorioVinculosVoluntariado from './pages/Voluntariado/RelatorioVinculosVoluntariado';
-import EventosList from './pages/Eventos/EventosList';
-import EventoForm from './pages/Eventos/EventoForm';
-import DestaquesSiteList from './pages/DestaquesSite/DestaquesSiteList';
-import DestaqueSiteForm from './pages/DestaquesSite/DestaqueSiteForm';
-import CategoriasNoticiasList from './pages/CategoriasNoticias/CategoriasNoticiasList';
-import CategoriaNoticiaForm from './pages/CategoriasNoticias/CategoriaNoticiaForm';
-import NoticiasList from './pages/Noticias/NoticiasList';
-import NoticiaForm from './pages/Noticias/NoticiaForm';
-import ContatosList from './pages/Contatos/ContatosList';
-import ContatoForm from './pages/Contatos/ContatoForm';
-import InscricoesEventosList from './pages/InscricoesEventos/InscricoesEventosList';
-import InscricaoEventoDetails from './pages/InscricoesEventos/InscricaoEventoDetails';
-import InscricaoEventoForm from './pages/InscricoesEventos/InscricaoEventoForm';
-import EventoInscricoes from './pages/InscricoesEventos/EventoInscricoes';
-import UsuariosList from './pages/Usuarios/UsuariosList';
-import Perfil from './pages/Perfil/Perfil';
-import CategoriasMidiasList from './pages/CategoriasMidias/CategoriasMidiasList';
-import CategoriaMidiaForm from './pages/CategoriasMidias/CategoriaMidiaForm';
-import GaleriasFotosList from './pages/GaleriasFotos/GaleriasFotosList';
-import GaleriaFotoForm from './pages/GaleriasFotos/GaleriaFotoForm';
-import GaleriaFotos from './pages/GaleriasFotos/GaleriaFotos';
-import EnquetesList from './pages/Enquetes/EnquetesList';
-import EnqueteForm from './pages/Enquetes/EnqueteForm';
-import KidsCheckinsList from './pages/Kids/KidsCheckinsList';
-import ConfiguracaoPortal from './pages/ConfiguracaoPortal/ConfiguracaoPortal';
-import CasasList from './pages/Hub/CasasList';
-import CasaForm from './pages/Hub/CasaForm';
-import FornecedoresList from './pages/Fornecedores/FornecedoresList';
-import FornecedorForm from './pages/Fornecedores/FornecedorForm';
-import CategoriasDespesasList from './pages/Financeiro/CategoriasDespesas/CategoriasDespesasList';
-import CategoriaDespesaForm from './pages/Financeiro/CategoriasDespesas/CategoriaDespesaForm';
-import ContasBancariasList from './pages/Financeiro/ContasBancarias/ContasBancariasList';
-import ContaBancariaForm from './pages/Financeiro/ContasBancarias/ContaBancariaForm';
-import CentrosCustosList from './pages/Financeiro/CentrosCustos/CentrosCustosList';
-import CentroCustoForm from './pages/Financeiro/CentrosCustos/CentroCustoForm';
-import ProjetosList from './pages/Financeiro/Projetos/ProjetosList';
-import ProjetoForm from './pages/Financeiro/Projetos/ProjetoForm';
-import DespesasList from './pages/Financeiro/Despesas/DespesasList';
-import DespesaForm from './pages/Financeiro/Despesas/DespesaForm';
-import ReceitasList from './pages/Financeiro/Receitas/ReceitasList';
-import ReceitaForm from './pages/Financeiro/Receitas/ReceitaForm';
-import CategoriasReceitasList from './pages/Financeiro/CategoriasReceitas/CategoriasReceitasList';
-import CategoriaReceitaForm from './pages/Financeiro/CategoriasReceitas/CategoriaReceitaForm';
-import DashboardFinanceiro from './pages/Financeiro/DashboardFinanceiro';
-import RelatoriosFinanceiros from './pages/Financeiro/RelatoriosFinanceiros';
-import PerfisAcessoList from './pages/PerfisAcesso/PerfisAcessoList';
-import PerfilAcessoForm from './pages/PerfisAcesso/PerfilAcessoForm';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const VisitantesList = lazy(() => import('./pages/Visitantes/VisitantesList'));
+const VisitanteForm = lazy(() => import('./pages/Visitantes/VisitanteForm'));
+const VisitanteDetails = lazy(() => import('./pages/Visitantes/VisitanteDetails'));
+const PessoasList = lazy(() => import('./pages/Pessoas/PessoasList'));
+const PessoaForm = lazy(() => import('./pages/Pessoas/PessoaForm'));
+const PessoaDetails = lazy(() => import('./pages/Pessoas/PessoaDetails'));
+const Aniversariantes = lazy(() => import('./pages/Pessoas/Aniversariantes'));
+const PerfisList = lazy(() => import('./pages/Perfis/PerfisList'));
+const ConfiguracoesList = lazy(() => import('./pages/ConfiguracoesMensagens/ConfiguracoesList'));
+const ConfiguracaoForm = lazy(() => import('./pages/ConfiguracoesMensagens/ConfiguracaoForm'));
+const MensagensAgendadas = lazy(() => import('./pages/MensagensAgendadas/MensagensAgendadas'));
+const EquipesList = lazy(() => import('./pages/Equipes/EquipesList'));
+const EquipeForm = lazy(() => import('./pages/Equipes/EquipeForm'));
+const CargosList = lazy(() => import('./pages/Cargos/CargosList'));
+const CargoForm = lazy(() => import('./pages/Cargos/CargoForm'));
+const VoluntariosList = lazy(() => import('./pages/Voluntarios/VoluntariosList'));
+const VoluntarioForm = lazy(() => import('./pages/Voluntarios/VoluntarioForm'));
+const EscalasList = lazy(() => import('./pages/Voluntariado/EscalasList'));
+const EscalaEditor = lazy(() => import('./pages/Voluntariado/EscalaEditor'));
+const RelatorioVinculosVoluntariado = lazy(() => import('./pages/Voluntariado/RelatorioVinculosVoluntariado'));
+const EventosList = lazy(() => import('./pages/Eventos/EventosList'));
+const EventoForm = lazy(() => import('./pages/Eventos/EventoForm'));
+const DestaquesSiteList = lazy(() => import('./pages/DestaquesSite/DestaquesSiteList'));
+const DestaqueSiteForm = lazy(() => import('./pages/DestaquesSite/DestaqueSiteForm'));
+const CategoriasNoticiasList = lazy(() => import('./pages/CategoriasNoticias/CategoriasNoticiasList'));
+const CategoriaNoticiaForm = lazy(() => import('./pages/CategoriasNoticias/CategoriaNoticiaForm'));
+const NoticiasList = lazy(() => import('./pages/Noticias/NoticiasList'));
+const NoticiaForm = lazy(() => import('./pages/Noticias/NoticiaForm'));
+const ContatosList = lazy(() => import('./pages/Contatos/ContatosList'));
+const ContatoForm = lazy(() => import('./pages/Contatos/ContatoForm'));
+const InscricoesEventosList = lazy(() => import('./pages/InscricoesEventos/InscricoesEventosList'));
+const InscricaoEventoDetails = lazy(() => import('./pages/InscricoesEventos/InscricaoEventoDetails'));
+const InscricaoEventoForm = lazy(() => import('./pages/InscricoesEventos/InscricaoEventoForm'));
+const EventoInscricoes = lazy(() => import('./pages/InscricoesEventos/EventoInscricoes'));
+const UsuariosList = lazy(() => import('./pages/Usuarios/UsuariosList'));
+const AuditoriaList = lazy(() => import('./pages/Auditoria/AuditoriaList'));
+const Perfil = lazy(() => import('./pages/Perfil/Perfil'));
+const CategoriasMidiasList = lazy(() => import('./pages/CategoriasMidias/CategoriasMidiasList'));
+const CategoriaMidiaForm = lazy(() => import('./pages/CategoriasMidias/CategoriaMidiaForm'));
+const GaleriasFotosList = lazy(() => import('./pages/GaleriasFotos/GaleriasFotosList'));
+const GaleriaFotoForm = lazy(() => import('./pages/GaleriasFotos/GaleriaFotoForm'));
+const GaleriaFotos = lazy(() => import('./pages/GaleriasFotos/GaleriaFotos'));
+const EnquetesList = lazy(() => import('./pages/Enquetes/EnquetesList'));
+const EnqueteForm = lazy(() => import('./pages/Enquetes/EnqueteForm'));
+const KidsCheckinsList = lazy(() => import('./pages/Kids/KidsCheckinsList'));
+const ConfiguracaoPortal = lazy(() => import('./pages/ConfiguracaoPortal/ConfiguracaoPortal'));
+const CasasList = lazy(() => import('./pages/Hub/CasasList'));
+const CasaForm = lazy(() => import('./pages/Hub/CasaForm'));
+const FornecedoresList = lazy(() => import('./pages/Fornecedores/FornecedoresList'));
+const FornecedorForm = lazy(() => import('./pages/Fornecedores/FornecedorForm'));
+const CategoriasDespesasList = lazy(() => import('./pages/Financeiro/CategoriasDespesas/CategoriasDespesasList'));
+const CategoriaDespesaForm = lazy(() => import('./pages/Financeiro/CategoriasDespesas/CategoriaDespesaForm'));
+const ContasBancariasList = lazy(() => import('./pages/Financeiro/ContasBancarias/ContasBancariasList'));
+const ContaBancariaForm = lazy(() => import('./pages/Financeiro/ContasBancarias/ContaBancariaForm'));
+const CentrosCustosList = lazy(() => import('./pages/Financeiro/CentrosCustos/CentrosCustosList'));
+const CentroCustoForm = lazy(() => import('./pages/Financeiro/CentrosCustos/CentroCustoForm'));
+const ProjetosList = lazy(() => import('./pages/Financeiro/Projetos/ProjetosList'));
+const ProjetoForm = lazy(() => import('./pages/Financeiro/Projetos/ProjetoForm'));
+const DespesasList = lazy(() => import('./pages/Financeiro/Despesas/DespesasList'));
+const DespesaForm = lazy(() => import('./pages/Financeiro/Despesas/DespesaForm'));
+const ReceitasList = lazy(() => import('./pages/Financeiro/Receitas/ReceitasList'));
+const ReceitaForm = lazy(() => import('./pages/Financeiro/Receitas/ReceitaForm'));
+const CategoriasReceitasList = lazy(() => import('./pages/Financeiro/CategoriasReceitas/CategoriasReceitasList'));
+const CategoriaReceitaForm = lazy(() => import('./pages/Financeiro/CategoriasReceitas/CategoriaReceitaForm'));
+const DashboardFinanceiro = lazy(() => import('./pages/Financeiro/DashboardFinanceiro'));
+const RelatoriosFinanceiros = lazy(() => import('./pages/Financeiro/RelatoriosFinanceiros'));
+const PerfisAcessoList = lazy(() => import('./pages/PerfisAcesso/PerfisAcessoList'));
+const PerfilAcessoForm = lazy(() => import('./pages/PerfisAcesso/PerfilAcessoForm'));
 import { RESOURCES, ACTIONS } from './utils/permissions';
 import './App.css';
 
@@ -81,6 +84,7 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <Router>
+        <Suspense fallback={<div className="p-6 text-muted-foreground">Carregando...</div>}>
         <Routes>
           {/* Rota pública de login */}
           <Route path="/login" element={<Login />} />
@@ -364,6 +368,11 @@ function App() {
               <UsuariosList />
             </RequirePermission>
           } />
+          <Route path="auditoria" element={
+            <RequirePermission resource={RESOURCES.USUARIOS}>
+              <AuditoriaList />
+            </RequirePermission>
+          } />
           <Route path="perfis-acesso" element={
             <RequirePermission resource={RESOURCES.PERFIS_ACESSO}>
               <PerfisAcessoList />
@@ -614,6 +623,7 @@ function App() {
         {/* Redirecionar rotas não encontradas para login ou dashboard */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
         </Router>
       </AuthProvider>
     </ThemeProvider>

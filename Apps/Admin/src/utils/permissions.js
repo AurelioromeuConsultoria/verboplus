@@ -2,6 +2,7 @@ export const RESOURCES = {
   DASHBOARD: 'dashboard',
   USUARIOS: 'usuarios',
   PERFIS_ACESSO: 'perfis-acesso',
+  AUDITORIA: 'auditoria',
   PESSOAS: 'pessoas',
   PERFIS: 'perfis',
   VISITANTES: 'visitantes',

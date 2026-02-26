@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { Toaster } from '@/components/ui/sonner';
+import { GlobalSearchPalette } from '@/components/GlobalSearchPalette';
 
 export function Layout() {
   return (
@@ -13,6 +14,7 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+      <GlobalSearchPalette />
       <Toaster />
     </div>
   );

@@ -10,7 +10,7 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { visitantesApi, mensagensAgendadasApi } from '@/lib/api';
 import { toast } from 'sonner';
 
-export function VisitanteDetails() {
+export default function VisitanteDetails() {
   const { id } = useParams();
   const [visitante, setVisitante] = useState(null);
   const [mensagens, setMensagens] = useState([]);

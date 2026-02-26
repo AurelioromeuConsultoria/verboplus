@@ -6,13 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { categoriasMidiasApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 export default function CategoriasMidiasList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
+  const confirmDialog = useConfirmDialog();
 
   const load = async () => {
     try {
@@ -33,14 +38,27 @@ export default function CategoriasMidiasList() {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir esta categoria de mídia?')) return;
-    try {
-      await categoriasMidiasApi.delete(id);
-      await load();
-    } catch (err) {
-      alert('Erro ao excluir. Pode haver galerias usando esta categoria.');
-      console.error(err);
-    }
+    const categoria = items.find((c) => c.id === id);
+    confirmDialog.show({
+      title: 'Excluir categoria de mídia?',
+      description: `Tem certeza que deseja excluir "${categoria?.nome || 'esta categoria'}"?`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await categoriasMidiasApi.delete(id);
+          toast.success('Categoria excluída com sucesso');
+          await load();
+        } catch (err) {
+          toast.error(
+            getApiErrorMessage(err, 'Erro ao excluir. Pode haver galerias usando esta categoria.')
+          );
+          console.error(err);
+          throw err;
+        }
+      },
+    });
   };
 
   const filtered = items.filter((c) => {
@@ -126,6 +144,20 @@ export default function CategoriasMidiasList() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => {
+          if (!open) confirmDialog.hide();
+        }}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

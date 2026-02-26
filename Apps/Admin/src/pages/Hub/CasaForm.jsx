@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { hubCasasApi, usuariosApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 export default function CasaForm() {
   const navigate = useNavigate();
@@ -64,19 +66,19 @@ export default function CasaForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      alert('Nome é obrigatório');
+      toast.error('Nome é obrigatório');
       return;
     }
     if (!formData.enderecoCompleto.trim()) {
-      alert('Endereço completo é obrigatório');
+      toast.error('Endereço completo é obrigatório');
       return;
     }
     if (!formData.anfitriao.trim()) {
-      alert('Anfitrião é obrigatório');
+      toast.error('Anfitrião é obrigatório');
       return;
     }
     if (!formData.abertoPorId || !formData.liderId || !formData.timoteoId) {
-      alert('Selecione Aberto por, Líder e Timóteo');
+      toast.error('Selecione Aberto por, Líder e Timóteo');
       return;
     }
 
@@ -92,9 +94,10 @@ export default function CasaForm() {
       };
       if (isEditing) await hubCasasApi.update(id, payload);
       else await hubCasasApi.create(payload);
+      toast.success(isEditing ? 'Casa atualizada com sucesso' : 'Casa criada com sucesso');
       navigate('/hub/casas');
     } catch (err) {
-      alert('Erro ao salvar casa');
+      toast.error(getApiErrorMessage(err, 'Erro ao salvar casa'));
       console.error(err);
     } finally {
       setLoading(false);

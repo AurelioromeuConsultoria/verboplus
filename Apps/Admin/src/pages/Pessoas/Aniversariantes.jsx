@@ -15,13 +15,15 @@ export default function Aniversariantes() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dias, setDias] = useState('30');
+  const [mes, setMes] = useState(''); // 1-12
 
   const load = async () => {
     try {
       setLoading(true);
       setError(null);
       const diasNum = Number(dias) || 30;
-      const res = await pessoasApi.getAniversariantes(diasNum, 200);
+      const mesNum = mes ? Number(mes) : null;
+      const res = await pessoasApi.getAniversariantes(diasNum, 500, mesNum);
       setItems(res.data || []);
     } catch (err) {
       setError('Erro ao carregar aniversariantes');
@@ -60,7 +62,7 @@ export default function Aniversariantes() {
           <CardTitle>Filtro</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-4 md:items-end">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Dias</label>
               <Input
@@ -68,10 +70,38 @@ export default function Aniversariantes() {
                 onChange={(e) => setDias(e.target.value)}
                 placeholder="Ex: 30"
                 inputMode="numeric"
+                disabled={!!mes}
               />
+              {mes && (
+                <p className="text-xs text-muted-foreground">
+                  Com mês selecionado, o filtro de dias é ignorado.
+                </p>
+              )}
             </div>
-            <div className="flex items-end">
-              <Button onClick={load}>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mês do ano</label>
+              <select
+                value={mes || ''}
+                onChange={(e) => setMes(e.target.value)}
+                className="w-full px-3 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
+              >
+                <option value="">Todos (próximos dias)</option>
+                <option value="1">Janeiro</option>
+                <option value="2">Fevereiro</option>
+                <option value="3">Março</option>
+                <option value="4">Abril</option>
+                <option value="5">Maio</option>
+                <option value="6">Junho</option>
+                <option value="7">Julho</option>
+                <option value="8">Agosto</option>
+                <option value="9">Setembro</option>
+                <option value="10">Outubro</option>
+                <option value="11">Novembro</option>
+                <option value="12">Dezembro</option>
+              </select>
+            </div>
+            <div className="flex md:justify-end">
+              <Button onClick={load} className="w-full md:w-auto">
                 <CalendarDays className="h-4 w-4 mr-2" /> Atualizar
               </Button>
             </div>

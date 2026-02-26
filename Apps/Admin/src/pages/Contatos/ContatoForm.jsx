@@ -10,6 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { contatosApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 export default function ContatoForm() {
   const navigate = useNavigate();
@@ -62,7 +64,7 @@ export default function ContatoForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      alert('Nome é obrigatório');
+      toast.error('Nome é obrigatório');
       return;
     }
     try {
@@ -76,9 +78,10 @@ export default function ContatoForm() {
       };
       if (isEditing) await contatosApi.update(id, payload);
       else await contatosApi.create(payload);
+      toast.success(isEditing ? 'Contato atualizado com sucesso' : 'Contato criado com sucesso');
       navigate('/contatos');
     } catch (err) {
-      alert('Erro ao salvar contato');
+      toast.error(getApiErrorMessage(err, 'Erro ao salvar contato'));
       console.error(err);
     } finally {
       setLoading(false);

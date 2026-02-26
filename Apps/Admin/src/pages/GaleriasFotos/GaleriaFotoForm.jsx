@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { galeriasFotosApi, eventosApi, categoriasMidiasApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 export default function GaleriaFotoForm() {
   const navigate = useNavigate();
@@ -72,7 +74,7 @@ export default function GaleriaFotoForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      alert('Nome é obrigatório');
+      toast.error('Nome é obrigatório');
       return;
     }
     try {
@@ -94,13 +96,15 @@ export default function GaleriaFotoForm() {
       }
       
       if (!isEditing && result.data?.id) {
+        toast.success('Galeria criada com sucesso');
         // Redirecionar para upload após criar
         navigate(`/galerias-fotos/${result.data.id}/fotos`);
       } else {
+        toast.success('Galeria salva com sucesso');
         navigate('/galerias-fotos');
       }
     } catch (err) {
-      alert('Erro ao salvar galeria');
+      toast.error(getApiErrorMessage(err, 'Erro ao salvar galeria'));
       console.error(err);
     } finally {
       setLoading(false);

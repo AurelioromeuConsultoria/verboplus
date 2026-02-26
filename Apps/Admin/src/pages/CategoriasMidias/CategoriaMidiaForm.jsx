@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { categoriasMidiasApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 export default function CategoriaMidiaForm() {
   const navigate = useNavigate();
@@ -51,7 +53,7 @@ export default function CategoriaMidiaForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      alert('Nome é obrigatório');
+      toast.error('Nome é obrigatório');
       return;
     }
     try {
@@ -62,9 +64,10 @@ export default function CategoriaMidiaForm() {
       };
       if (isEditing) await categoriasMidiasApi.update(id, payload);
       else await categoriasMidiasApi.create(payload);
+      toast.success(isEditing ? 'Categoria atualizada com sucesso' : 'Categoria criada com sucesso');
       navigate('/categorias-midias');
     } catch (err) {
-      alert('Erro ao salvar categoria de mídia');
+      toast.error(getApiErrorMessage(err, 'Erro ao salvar categoria de mídia'));
       console.error(err);
     } finally {
       setLoading(false);

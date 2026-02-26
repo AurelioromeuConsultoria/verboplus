@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Phone, Mail, Plus, X, Calendar, UserPlus } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft, Edit, Phone, Mail, Plus, X, UserPlus, Users, CalendarClock, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,22 +11,24 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { pessoasApi, pessoasPerfisApi, visitantesApi } from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/apiError';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
 import { toast } from 'sonner';
 
-export function PessoaDetails() {
+export default function PessoaDetails() {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const [pessoa, setPessoa] = useState(null);
-  const [perfis, setPerfis] = useState([]);
+  const [dados360, setDados360] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddPerfil, setShowAddPerfil] = useState(false);
   const [showAddVisita, setShowAddVisita] = useState(false);
   const [saving, setSaving] = useState(false);
   const { can } = useAuth();
+  const confirmDialog = useConfirmDialog();
 
   // Formulário de perfil
   const [perfilForm, setPerfilForm] = useState({
@@ -44,14 +46,8 @@ export function PessoaDetails() {
     try {
       setLoading(true);
       setError(null);
-      
-      const [pessoaResponse, perfisResponse] = await Promise.all([
-        pessoasApi.getById(id),
-        pessoasPerfisApi.getByPessoa(id),
-      ]);
-      
-      setPessoa(pessoaResponse.data);
-      setPerfis(perfisResponse.data || []);
+      const response = await pessoasApi.get360(id);
+      setDados360(response.data);
     } catch (err) {
       setError('Erro ao carregar dados da pessoa');
       console.error('Erro ao carregar dados:', err);
@@ -83,7 +79,7 @@ export function PessoaDetails() {
       setPerfilForm({ perfil: '', dataInicio: new Date().toISOString().split('T')[0] });
       await loadData();
     } catch (err) {
-      toast.error('Erro ao adicionar perfil');
+      toast.error(getApiErrorMessage(err, 'Erro ao adicionar perfil'));
       console.error('Erro ao adicionar perfil:', err);
     } finally {
       setSaving(false);
@@ -91,39 +87,55 @@ export function PessoaDetails() {
   };
 
   const handleEncerrarPerfil = async (perfilId) => {
-    if (!confirm('Tem certeza que deseja encerrar este perfil?')) {
-      return;
-    }
-
-    try {
-      await pessoasPerfisApi.update(perfilId, {
-        dataFim: new Date().toISOString(),
-      });
-      toast.success('Perfil encerrado com sucesso');
-      await loadData();
-    } catch (err) {
-      toast.error('Erro ao encerrar perfil');
-      console.error('Erro ao encerrar perfil:', err);
-    }
+    const perfis = dados360?.pessoa?.perfis ?? [];
+    const perfil = perfis.find((p) => p.id === perfilId);
+    confirmDialog.show({
+      title: 'Encerrar perfil?',
+      description: `Deseja encerrar o perfil "${perfil?.perfil || 'este perfil'}" agora?`,
+      confirmText: 'Encerrar',
+      cancelText: 'Cancelar',
+      variant: 'default',
+      onConfirm: async () => {
+        try {
+          await pessoasPerfisApi.update(perfilId, {
+            dataFim: new Date().toISOString(),
+          });
+          toast.success('Perfil encerrado com sucesso');
+          await loadData();
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, 'Erro ao encerrar perfil'));
+          console.error('Erro ao encerrar perfil:', err);
+          throw err;
+        }
+      },
+    });
   };
 
   const handleRemoverPerfil = async (perfilId) => {
-    if (!confirm('Tem certeza que deseja remover este perfil?')) {
-      return;
-    }
-
-    try {
-      await pessoasPerfisApi.delete(perfilId);
-      toast.success('Perfil removido com sucesso');
-      await loadData();
-    } catch (err) {
-      toast.error('Erro ao remover perfil');
-      console.error('Erro ao remover perfil:', err);
-    }
+    const perfis = dados360?.pessoa?.perfis ?? [];
+    const perfil = perfis.find((p) => p.id === perfilId);
+    confirmDialog.show({
+      title: 'Remover perfil?',
+      description: `Tem certeza que deseja remover o perfil "${perfil?.perfil || 'este perfil'}"? Essa ação não pode ser desfeita.`,
+      confirmText: 'Remover',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await pessoasPerfisApi.delete(perfilId);
+          toast.success('Perfil removido com sucesso');
+          await loadData();
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, 'Erro ao remover perfil'));
+          console.error('Erro ao remover perfil:', err);
+          throw err;
+        }
+      },
+    });
   };
 
   const handleAddVisita = async () => {
-    if (!visitaForm.dataVisita) {
+    if (!visitaForm.dataVisita || !dados360?.pessoa) {
       toast.error('Data da visita é obrigatória');
       return;
     }
@@ -131,20 +143,20 @@ export function PessoaDetails() {
     try {
       setSaving(true);
       await visitantesApi.create({
-        nome: pessoa.nome,
-        email: pessoa.email,
-        telefone: pessoa.telefone,
-        whatsApp: pessoa.whatsApp,
-        dataNascimento: pessoa.dataNascimento,
+        nome: dados360.pessoa.nome,
+        email: dados360.pessoa.email,
+        telefone: dados360.pessoa.telefone,
+        whatsApp: dados360.pessoa.whatsApp,
+        dataNascimento: dados360.pessoa.dataNascimento,
         dataVisita: new Date(visitaForm.dataVisita + 'T00:00:00').toISOString(),
         observacoes: visitaForm.observacoes || null,
       });
       toast.success('Visita registrada com sucesso');
       setShowAddVisita(false);
       setVisitaForm({ dataVisita: new Date().toISOString().split('T')[0], observacoes: '' });
-      navigate('/visitantes');
+      await loadData();
     } catch (err) {
-      toast.error('Erro ao registrar visita');
+      toast.error(getApiErrorMessage(err, 'Erro ao registrar visita'));
       console.error('Erro ao registrar visita:', err);
     } finally {
       setSaving(false);
@@ -159,12 +171,17 @@ export function PessoaDetails() {
     return <ErrorPage message={error} onRetry={loadData} />;
   }
 
-  if (!pessoa) {
+  if (!dados360?.pessoa) {
     return <ErrorPage message="Pessoa não encontrada" />;
   }
 
+  const pessoa = dados360.pessoa;
+  const perfis = pessoa.perfis ?? [];
   const perfisAtivos = perfis.filter(p => !p.dataFim);
   const perfisHistorico = perfis.filter(p => p.dataFim);
+  const visitantes = dados360.visitantes ?? [];
+  const voluntarios = dados360.voluntarios ?? [];
+  const usuario = dados360.usuario;
   const canCreateUsuario = can(RESOURCES.USUARIOS, ACTIONS.EDIT);
 
   return (
@@ -180,12 +197,12 @@ export function PessoaDetails() {
           <div>
             <h1 className="text-3xl font-bold">{pessoa.nome}</h1>
             <p className="text-muted-foreground">
-              Detalhes da pessoa
+              Visão 360° — perfis, visitas, voluntariado e acesso
             </p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          {canCreateUsuario && (
+          {canCreateUsuario && !usuario && (
             <Button variant="outline" asChild>
               <Link to={`/usuarios?pessoaId=${id}`}>
                 <UserPlus className="h-4 w-4 mr-2" />
@@ -446,6 +463,130 @@ export function PessoaDetails() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Histórico de Visitas */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarClock className="h-5 w-5" />
+            Histórico de Visitas ({visitantes.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {visitantes.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Nenhuma visita registrada.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Observações</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visitantes.map((v) => (
+                  <TableRow key={v.id}>
+                    <TableCell>
+                      {v.dataVisita ? new Date(v.dataVisita).toLocaleDateString('pt-BR') : '-'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {v.observacoes ? (v.observacoes.length > 60 ? v.observacoes.slice(0, 60) + '...' : v.observacoes) : '-'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link to={`/visitantes/${v.id}`}>Ver</Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Voluntariado */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Voluntariado ({voluntarios.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {voluntarios.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Nenhum vínculo de voluntariado.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {voluntarios.map((v) => (
+                <div key={v.id} className="flex items-center justify-between p-3 border rounded">
+                  <div>
+                    <span className="font-medium">{v.nomeEquipe}</span>
+                    <span className="text-muted-foreground mx-2">—</span>
+                    <span>{v.nomeCargo}</span>
+                  </div>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to={`/voluntarios/${v.id}/editar`}>Editar</Link>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Acesso ao Sistema */}
+      {usuario && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <LogIn className="h-5 w-5" />
+              Acesso ao Sistema
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{usuario.emailLogin}</p>
+                <p className="text-xs text-muted-foreground">
+                  {usuario.tipoUsuarioDescricao}
+                  {usuario.perfilAcessoNome && ` • ${usuario.perfilAcessoNome}`}
+                  {usuario.ultimoAcesso && ` • Último acesso: ${new Date(usuario.ultimoAcesso).toLocaleString('pt-BR')}`}
+                </p>
+              </div>
+              <Badge variant={usuario.ativo ? 'default' : 'secondary'}>
+                {usuario.ativo ? 'Ativo' : 'Inativo'}
+              </Badge>
+            </div>
+            {canCreateUsuario && (
+              <Button variant="outline" size="sm" asChild>
+                <Link to={`/usuarios?pessoaId=${id}`}>
+                  Gerenciar usuário
+                </Link>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => {
+          if (!open) confirmDialog.hide();
+        }}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

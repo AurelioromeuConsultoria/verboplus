@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { inscricoesEventosApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 const STATUS_OPTIONS = [
   { value: 1, label: 'Pendente' },
@@ -72,9 +74,10 @@ export default function InscricaoEventoForm() {
         observacoesInternas: formData.observacoesInternas.trim() || null,
       };
       await inscricoesEventosApi.update(id, payload);
+      toast.success('Inscrição salva com sucesso');
       navigate(`/inscricoes-eventos/${id}`);
     } catch (err) {
-      alert('Erro ao salvar inscrição');
+      toast.error(getApiErrorMessage(err, 'Erro ao salvar inscrição'));
       console.error(err);
     } finally {
       setLoading(false);

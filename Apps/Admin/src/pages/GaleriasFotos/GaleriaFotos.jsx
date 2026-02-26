@@ -403,10 +403,7 @@ export default function GaleriaFotos() {
               <div className="text-center py-8">
                 <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600 mb-2">
-                  Nenhuma foto encontrada para listar.
-                </p>
-                <p className="text-sm text-gray-500">
-                  O endpoint <code className="bg-gray-100 px-2 py-1 rounded">GET /api/galeriasFotos/{id}/fotos</code> pode não estar disponível.
+                  Nenhuma foto encontrada. Faça upload de fotos acima.
                 </p>
                 {imagemDestaqueUrl && (
                   <div className="mt-6">

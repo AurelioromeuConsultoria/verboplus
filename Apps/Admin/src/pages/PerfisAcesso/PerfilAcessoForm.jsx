@@ -9,6 +9,8 @@ import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { perfisAcessoApi } from '@/lib/api';
 import { RESOURCES } from '@/utils/permissions';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 const RESOURCE_LABELS = {
   [RESOURCES.DASHBOARD]: 'Dashboard',
@@ -118,7 +120,7 @@ export default function PerfilAcessoForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      alert('Nome é obrigatório');
+      toast.error('Nome é obrigatório');
       return;
     }
 
@@ -132,9 +134,10 @@ export default function PerfilAcessoForm() {
 
       if (isEditing) await perfisAcessoApi.update(id, payload);
       else await perfisAcessoApi.create(payload);
+      toast.success(isEditing ? 'Perfil atualizado com sucesso' : 'Perfil criado com sucesso');
       navigate('/perfis-acesso');
     } catch (err) {
-      alert('Erro ao salvar perfil');
+      toast.error(getApiErrorMessage(err, 'Erro ao salvar perfil'));
       console.error(err);
     } finally {
       setLoading(false);

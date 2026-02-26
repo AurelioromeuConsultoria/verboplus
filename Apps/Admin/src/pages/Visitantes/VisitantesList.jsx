@@ -1,25 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Eye, Edit, Trash2, Phone, Mail, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AdvancedSearch } from '@/components/ui/advanced-search';
 import { SortableTableHeader } from '@/components/ui/sortable-table-header';
-import { useTableSort } from '@/hooks/useTableSort';
-import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { exportToCSV } from '@/utils/export';
 import { visitantesApi } from '@/lib/api';
 import { toast } from 'sonner';
 
-export function VisitantesList() {
+export default function VisitantesList() {
   const [visitantes, setVisitantes] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
@@ -30,14 +30,34 @@ export function VisitantesList() {
     dataVisita_from: '',
     dataVisita_to: '',
   });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [sortConfig, setSortConfig] = useState({ field: 'dataVisita', direction: 'desc' });
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const confirmDialog = useConfirmDialog();
 
-  const loadVisitantes = async () => {
+  const loadVisitantes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await visitantesApi.getAll();
-      setVisitantes(response.data || []);
+      const response = await visitantesApi.getPaged({
+        page,
+        pageSize,
+        sort: sortConfig.field,
+        direction: sortConfig.direction,
+        nome: filters.nome || undefined,
+        email: filters.email || undefined,
+        telefone: filters.telefone || undefined,
+        whatsApp: filters.whatsApp || undefined,
+        dataVisitaFrom: filters.dataVisita_from || undefined,
+        dataVisitaTo: filters.dataVisita_to || undefined,
+      });
+
+      const data = response.data || {};
+      setVisitantes(data.items || []);
+      setTotal(Number(data.total || 0));
     } catch (err) {
       setError('Erro ao carregar visitantes');
       console.error('Erro ao carregar visitantes:', err);
@@ -45,11 +65,12 @@ export function VisitantesList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, page, pageSize, sortConfig.direction, sortConfig.field]);
 
   const handleDelete = async (id) => {
     const visitante = visitantes.find(v => v.id === id);
     const pessoaNome = visitante?.nome || 'esta visita';
+    const currentPageCount = visitantes.length;
     confirmDialog.show({
       title: 'Excluir Visita',
       description: `Tem certeza que deseja excluir a visita de "${pessoaNome}"? Esta ação não pode ser desfeita.`,
@@ -61,6 +82,9 @@ export function VisitantesList() {
           await visitantesApi.delete(id);
           toast.success('Visita excluída com sucesso');
           await loadVisitantes();
+          if (page > 1 && currentPageCount === 1) {
+            setPage((p) => Math.max(1, p - 1));
+          }
         } catch (err) {
           toast.error('Erro ao excluir visita');
           console.error('Erro ao excluir visita:', err);
@@ -72,79 +96,139 @@ export function VisitantesList() {
 
   useEffect(() => {
     loadVisitantes();
-  }, []);
+  }, [loadVisitantes]);
 
-  // Filtrar visitantes com busca avançada
-  const visitantesFiltradosRaw = visitantes.filter((visitante) => {
-    // Busca por nome
-    if (filters.nome && !visitante.nome?.toLowerCase().includes(filters.nome.toLowerCase())) {
-      return false;
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, filters]);
+
+  const pageIds = visitantes.map((v) => v.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+
+  const toggleSelectAll = () => {
+    if (allPageSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.add(id));
+        return next;
+      });
     }
+  };
 
-    // Busca por email
-    if (filters.email && !visitante.email?.toLowerCase().includes(filters.email.toLowerCase())) {
-      return false;
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDeleteClick = () => {
+    if (selectedIds.size === 0) return;
+    setBulkDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+
+    try {
+      setBulkDeleting(true);
+      let ok = 0;
+      let fail = 0;
+      for (const id of ids) {
+        try {
+          await visitantesApi.delete(id);
+          ok += 1;
+        } catch {
+          fail += 1;
+        }
+      }
+      setSelectedIds(new Set());
+      setBulkDeleteDialogOpen(false);
+      await loadVisitantes();
+      if (page > 1 && visitantes.length === ids.length) setPage((p) => Math.max(1, p - 1));
+      if (fail > 0) {
+        toast.warning(`${ok} excluída(s), ${fail} falha(s).`);
+      } else {
+        toast.success(`${ok} visita(s) excluída(s) com sucesso`);
+      }
+    } catch {
+      toast.error('Erro ao excluir em lote');
+    } finally {
+      setBulkDeleting(false);
     }
+  };
 
-    // Busca por telefone
-    if (filters.telefone && !visitante.telefone?.includes(filters.telefone)) {
-      return false;
-    }
-
-    // Busca por WhatsApp
-    if (filters.whatsApp && !visitante.whatsApp?.includes(filters.whatsApp)) {
-      return false;
-    }
-
-    // Filtro por data de visita
-    const dataVisita = new Date(visitante.dataVisita);
-    if (filters.dataVisita_from) {
-      const dataFrom = new Date(filters.dataVisita_from + 'T00:00:00');
-      if (dataVisita < dataFrom) return false;
-    }
-    if (filters.dataVisita_to) {
-      const dataTo = new Date(filters.dataVisita_to + 'T23:59:59');
-      if (dataVisita > dataTo) return false;
-    }
-
-    return true;
-  });
-
-  // Ordenação - precisa ordenar por propriedades aninhadas
-  const visitantesFiltradosComNome = visitantesFiltradosRaw.map(v => ({
-    ...v,
-    nome: v.nome || '',
-    email: v.email || '',
-    telefone: v.telefone || '',
-    whatsApp: v.whatsApp || '',
-  }));
-
-  const { sortedData: visitantesFiltrados, sortConfig, handleSort } = useTableSort(visitantesFiltradosComNome, {
-    defaultSort: 'dataVisita',
-    defaultDirection: 'desc',
-  });
-
-  const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(visitantesFiltrados, 20);
+  const handleSort = (field) => {
+    setSortConfig((prev) => {
+      if (prev.field === field) {
+        return { field, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { field, direction: 'asc' };
+    });
+    setPage(1);
+  };
 
   // Exportação
-  const handleExport = () => {
-    const exportData = visitantesFiltrados.map(v => ({
-      Nome: v.nome || '',
-      Email: v.email || '',
-      Telefone: v.telefone || '',
-      WhatsApp: v.whatsApp || '',
-      'Data da Visita': v.dataVisita ? new Date(v.dataVisita).toLocaleDateString('pt-BR') : '',
-      Observações: v.observacoes || '',
-    }));
+  const handleExport = async () => {
+    try {
+      const all = [];
+      let p = 1;
+      let totalItems = Infinity;
+      const exportPageSize = 200;
 
-    exportToCSV(exportData, 'visitantes');
-    toast.success('Dados exportados com sucesso!');
+      while (all.length < totalItems) {
+        const resp = await visitantesApi.getPaged({
+          page: p,
+          pageSize: exportPageSize,
+          sort: sortConfig.field,
+          direction: sortConfig.direction,
+          nome: filters.nome || undefined,
+          email: filters.email || undefined,
+          telefone: filters.telefone || undefined,
+          whatsApp: filters.whatsApp || undefined,
+          dataVisitaFrom: filters.dataVisita_from || undefined,
+          dataVisitaTo: filters.dataVisita_to || undefined,
+        });
+
+        const data = resp.data || {};
+        const items = data.items || [];
+        totalItems = Number(data.total || 0);
+        all.push(...items);
+        if (items.length === 0) break;
+        p += 1;
+        if (p > 200) break;
+      }
+
+      const exportData = all.map(v => ({
+        Nome: v.nome || '',
+        Email: v.email || '',
+        Telefone: v.telefone || '',
+        WhatsApp: v.whatsApp || '',
+        'Data da Visita': v.dataVisita ? new Date(v.dataVisita).toLocaleDateString('pt-BR') : '',
+        Observações: v.observacoes || '',
+      }));
+
+      exportToCSV(exportData, 'visitantes');
+      toast.success('Dados exportados com sucesso!');
+    } catch (err) {
+      console.error('Erro ao exportar visitantes:', err);
+      toast.error('Erro ao exportar dados');
+    }
   };
 
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [filters, setPage]);
+  }, [filters]);
 
   if (loading) {
     return <LoadingPage text="Carregando visitantes..." />;
@@ -203,7 +287,7 @@ export function VisitantesList() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Lista de Visitas ({total})</CardTitle>
-            {visitantesFiltrados.length > 0 && (
+            {total > 0 && (
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
                 Exportar CSV
@@ -212,14 +296,28 @@ export function VisitantesList() {
           </div>
         </CardHeader>
         <CardContent>
-          {visitantesFiltrados.length === 0 ? (
+          {selectedIds.size > 0 && (
+            <div className="flex items-center justify-between rounded-md border bg-muted/50 px-4 py-2 mb-4">
+              <span className="text-sm font-medium">
+                {selectedIds.size} selecionada(s)
+              </span>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
+                  Limpar seleção
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleBulkDeleteClick}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir selecionadas
+                </Button>
+              </div>
+            </div>
+          )}
+          {visitantes.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">
-                {visitantes.length === 0 
-                  ? 'Nenhuma visita cadastrada ainda.'
-                  : 'Nenhuma visita encontrada com os filtros aplicados.'}
+                {total === 0 ? 'Nenhuma visita encontrada com os filtros aplicados.' : 'Nenhuma visita nesta página.'}
               </p>
-              {visitantes.length === 0 && (
+              {total === 0 && (
                 <Button asChild>
                   <Link to="/visitantes/novo">
                     <Plus className="h-4 w-4 mr-2" />
@@ -232,6 +330,13 @@ export function VisitantesList() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={allPageSelected}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Selecionar todas"
+                    />
+                  </TableHead>
                   <SortableTableHeader field="dataVisita" onSort={handleSort} sortConfig={sortConfig}>
                     Data da Visita
                   </SortableTableHeader>
@@ -245,14 +350,21 @@ export function VisitantesList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedItems.map((visitante) => {
+                {visitantes.map((visitante) => {
                   const contato = visitante.email || visitante.whatsApp || visitante.telefone || '-';
                   const perfisAtivos = visitante.perfis || [];
                   
                   return (
                     <TableRow key={visitante.id}>
                       <TableCell>
-                        {new Date(visitante.dataVisita).toLocaleDateString('pt-BR')}
+                        <Checkbox
+                          checked={selectedIds.has(visitante.id)}
+                          onCheckedChange={() => toggleSelect(visitante.id)}
+                          aria-label={`Selecionar ${visitante.nome || 'visita'}`}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {visitante.dataVisita ? new Date(visitante.dataVisita).toLocaleDateString('pt-BR') : '-'}
                       </TableCell>
                       <TableCell className="font-medium">
                         {visitante.nome || '-'}
@@ -329,13 +441,16 @@ export function VisitantesList() {
               </TableBody>
             </Table>
           )}
-          {visitantesFiltrados.length > 0 && (
+          {total > 0 && (
             <DataTablePagination
               page={page}
               pageSize={pageSize}
               total={total}
               onPageChange={setPage}
-              onPageSizeChange={setPageSize}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setPage(1);
+              }}
             />
           )}
         </CardContent>
@@ -351,6 +466,18 @@ export function VisitantesList() {
         cancelText={confirmDialog.config.cancelText}
         variant={confirmDialog.config.variant}
         loading={confirmDialog.loading}
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        onConfirm={handleBulkDeleteConfirm}
+        title="Excluir em lote"
+        description={`Tem certeza que deseja excluir ${selectedIds.size} visita(s) selecionada(s)? Esta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="destructive"
+        loading={bulkDeleting}
       />
     </div>
   );

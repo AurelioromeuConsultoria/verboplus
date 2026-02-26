@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { cargosApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 export default function CargoForm() {
   const navigate = useNavigate();
@@ -46,7 +48,7 @@ export default function CargoForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      alert('Nome é obrigatório');
+      toast.error('Nome é obrigatório');
       return;
     }
     try {
@@ -54,9 +56,10 @@ export default function CargoForm() {
       const payload = { nome: formData.nome.trim() };
       if (isEditing) await cargosApi.update(id, payload);
       else await cargosApi.create(payload);
+      toast.success(isEditing ? 'Cargo atualizado com sucesso' : 'Cargo criado com sucesso');
       navigate('/cargos');
     } catch (err) {
-      alert('Erro ao salvar cargo');
+      toast.error(getApiErrorMessage(err, 'Erro ao salvar cargo'));
       console.error(err);
     } finally {
       setLoading(false);

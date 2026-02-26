@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { equipesApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 export default function EquipeForm() {
   const navigate = useNavigate();
@@ -47,11 +49,11 @@ export default function EquipeForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      alert('Nome é obrigatório');
+      toast.error('Nome é obrigatório');
       return;
     }
     if (!['1', '2', '3'].includes(formData.area)) {
-      alert('Área inválida');
+      toast.error('Área inválida');
       return;
     }
     try {
@@ -59,9 +61,10 @@ export default function EquipeForm() {
       const payload = { nome: formData.nome.trim(), area: Number(formData.area) };
       if (isEditing) await equipesApi.update(id, payload);
       else await equipesApi.create(payload);
+      toast.success(isEditing ? 'Equipe atualizada com sucesso' : 'Equipe criada com sucesso');
       navigate('/equipes');
     } catch (err) {
-      alert('Erro ao salvar equipe');
+      toast.error(getApiErrorMessage(err, 'Erro ao salvar equipe'));
       console.error(err);
     } finally {
       setLoading(false);

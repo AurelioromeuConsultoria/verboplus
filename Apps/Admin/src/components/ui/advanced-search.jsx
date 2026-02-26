@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, Filter, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
+import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 
 /**
  * Componente de busca avançada reutilizável
@@ -27,10 +28,43 @@ export function AdvancedSearch({
   defaultOpen = false,
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const valuesRef = useRef(values);
+
+  useEffect(() => {
+    valuesRef.current = values;
+  }, [values]);
+
+  const searchKeys = useMemo(() => searchFields.map((f) => f.key), [searchFields]);
+  const searchKeysSig = useMemo(() => searchKeys.join('|'), [searchKeys]);
+  const [localSearch, setLocalSearch] = useState(() => {
+    const initial = {};
+    searchKeys.forEach((k) => {
+      initial[k] = values[k] || '';
+    });
+    return initial;
+  });
+
+  useEffect(() => {
+    setLocalSearch((prev) => {
+      const next = { ...prev };
+      searchKeys.forEach((k) => {
+        next[k] = values[k] || '';
+      });
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchKeysSig, values]);
+
+  const debouncedApplySearchChange = useDebouncedCallback((fieldKey, value) => {
+    onChange({
+      ...valuesRef.current,
+      [fieldKey]: value,
+    });
+  }, 300);
 
   const handleSearchChange = (fieldKey, value) => {
     onChange({
-      ...values,
+      ...valuesRef.current,
       [fieldKey]: value,
     });
   };
@@ -123,8 +157,12 @@ export function AdvancedSearch({
                 </Label>
                 {field.type === 'text' || !field.type ? (
                   <Input
-                    value={values[field.key] || ''}
-                    onChange={(e) => handleSearchChange(field.key, e.target.value)}
+                    value={localSearch[field.key] ?? ''}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setLocalSearch((prev) => ({ ...prev, [field.key]: v }));
+                      debouncedApplySearchChange(field.key, v);
+                    }}
                     placeholder={field.placeholder || `Buscar por ${field.label.toLowerCase()}...`}
                     className="w-full"
                   />

@@ -4,14 +4,19 @@ import { Plus, Edit, Trash2, Clock, MessageSquare, ToggleLeft, ToggleRight } fro
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import api from '../../lib/api';
-import Loading from '../../components/ui/loading';
-import ErrorMessage from '../../components/ui/error-message';
+import { LoadingPage } from '@/components/ui/loading';
+import { ErrorPage } from '@/components/ui/error-message';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { configuracoesMensagensApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 const ConfiguracoesList = () => {
   const [configuracoes, setConfiguracoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const confirmDialog = useConfirmDialog();
 
   useEffect(() => {
     fetchConfiguracoes();
@@ -20,26 +25,39 @@ const ConfiguracoesList = () => {
   const fetchConfiguracoes = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/configuracoesMensagens');
-      setConfiguracoes(response.data);
+      setError(null);
+      const response = await configuracoesMensagensApi.getAll();
+      setConfiguracoes(response.data || []);
     } catch (err) {
       setError('Erro ao carregar configurações de mensagens');
       console.error('Erro ao buscar configurações:', err);
+      toast.error(getApiErrorMessage(err, 'Erro ao carregar configurações de mensagens'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Tem certeza que deseja excluir esta configuração?')) {
-      try {
-        await api.delete(`/configuracoesMensagens/${id}`);
-        setConfiguracoes(configuracoes.filter(config => config.id !== id));
-      } catch (err) {
-        setError('Erro ao excluir configuração');
-        console.error('Erro ao excluir configuração:', err);
-      }
-    }
+    const config = configuracoes.find((c) => c.id === id);
+    confirmDialog.show({
+      title: 'Excluir configuração?',
+      description: `Tem certeza que deseja excluir a configuração da mensagem #${config?.id ?? id}?`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await configuracoesMensagensApi.delete(id);
+          toast.success('Configuração excluída com sucesso');
+          setConfiguracoes((prev) => prev.filter((c) => c.id !== id));
+        } catch (err) {
+          setError('Erro ao excluir configuração');
+          console.error('Erro ao excluir configuração:', err);
+          toast.error(getApiErrorMessage(err, 'Erro ao excluir configuração'));
+          throw err;
+        }
+      },
+    });
   };
 
   const toggleStatus = async (id, currentStatus) => {
@@ -47,14 +65,16 @@ const ConfiguracoesList = () => {
       const configuracao = configuracoes.find(c => c.id === id);
       const updatedConfig = { ...configuracao, ativo: !currentStatus };
       
-      await api.put(`/configuracoesMensagens/${id}`, updatedConfig);
+      await configuracoesMensagensApi.update(id, updatedConfig);
       
       setConfiguracoes(configuracoes.map(config => 
         config.id === id ? { ...config, ativo: !currentStatus } : config
       ));
+      toast.success(updatedConfig.ativo ? 'Configuração ativada' : 'Configuração desativada');
     } catch (err) {
       setError('Erro ao alterar status da configuração');
       console.error('Erro ao alterar status:', err);
+      toast.error(getApiErrorMessage(err, 'Erro ao alterar status da configuração'));
     }
   };
 
@@ -63,7 +83,8 @@ const ConfiguracoesList = () => {
     return horario.substring(0, 5); // HH:MM
   };
 
-  if (loading) return <Loading />;
+  if (loading) return <LoadingPage text="Carregando configurações..." />;
+  if (error) return <ErrorPage message={error} onRetry={fetchConfiguracoes} />;
 
   return (
     <div className="space-y-6">
@@ -80,8 +101,6 @@ const ConfiguracoesList = () => {
           </Link>
         </Button>
       </div>
-
-      {error && <ErrorMessage message={error} />}
 
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -179,6 +198,20 @@ const ConfiguracoesList = () => {
           </Button>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => {
+          if (!open) confirmDialog.hide();
+        }}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 };

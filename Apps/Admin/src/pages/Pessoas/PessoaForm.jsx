@@ -13,7 +13,7 @@ import { useFormValidation } from '@/hooks/useFormValidation';
 import { pessoasApi } from '@/lib/api';
 import { toast } from 'sonner';
 
-export function PessoaForm() {
+export default function PessoaForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);

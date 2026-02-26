@@ -28,7 +28,8 @@ import {
   BarChart3,
   Baby,
   LogIn,
-  Cog
+  Cog,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -47,6 +48,12 @@ const menuItems = [
     title: 'Usuários',
     href: '/usuarios',
     icon: UserCog,
+    permission: RESOURCES.USUARIOS,
+  },
+  {
+    title: 'Auditoria',
+    href: '/auditoria',
+    icon: Shield,
     permission: RESOURCES.USUARIOS,
   },
   {

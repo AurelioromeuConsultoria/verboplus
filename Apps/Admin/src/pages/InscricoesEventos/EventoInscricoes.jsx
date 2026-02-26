@@ -9,6 +9,10 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { inscricoesEventosApi, eventosApi } from '@/lib/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import InscricaoEventoPublicForm from '@/components/InscricaoEvento/InscricaoEventoPublicForm';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 const STATUS_LABELS = {
   1: 'Pendente',
@@ -33,6 +37,7 @@ export default function EventoInscricoes() {
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const confirmDialog = useConfirmDialog();
 
   const load = async () => {
     try {
@@ -59,43 +64,65 @@ export default function EventoInscricoes() {
   }, [eventoId]);
 
   const handleDelete = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir esta inscrição?')) return;
-    try {
-      await inscricoesEventosApi.delete(id);
-      await load();
-    } catch (err) {
-      alert('Erro ao excluir inscrição');
-      console.error(err);
-    }
+    confirmDialog.show({
+      title: 'Excluir inscrição?',
+      description: 'Essa ação não pode ser desfeita.',
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await inscricoesEventosApi.delete(id);
+          toast.success('Inscrição excluída');
+          await load();
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, 'Erro ao excluir inscrição'));
+          console.error(err);
+          throw err;
+        }
+      },
+    });
   };
 
   const handleConfirmar = async (id) => {
     try {
       await inscricoesEventosApi.confirmar(id);
+      toast.success('Inscrição confirmada');
       await load();
     } catch (err) {
-      alert('Erro ao confirmar inscrição');
+      toast.error(getApiErrorMessage(err, 'Erro ao confirmar inscrição'));
       console.error(err);
     }
   };
 
   const handleCancelar = async (id) => {
-    if (!confirm('Tem certeza que deseja cancelar esta inscrição?')) return;
-    try {
-      await inscricoesEventosApi.cancelar(id);
-      await load();
-    } catch (err) {
-      alert('Erro ao cancelar inscrição');
-      console.error(err);
-    }
+    confirmDialog.show({
+      title: 'Cancelar inscrição?',
+      description: 'A inscrição ficará com status cancelada.',
+      confirmText: 'Cancelar',
+      cancelText: 'Voltar',
+      variant: 'default',
+      onConfirm: async () => {
+        try {
+          await inscricoesEventosApi.cancelar(id);
+          toast.success('Inscrição cancelada');
+          await load();
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, 'Erro ao cancelar inscrição'));
+          console.error(err);
+          throw err;
+        }
+      },
+    });
   };
 
   const handleMarcaPresente = async (id) => {
     try {
       await inscricoesEventosApi.update(id, { status: 4 });
+      toast.success('Presença marcada');
       await load();
     } catch (err) {
-      alert('Erro ao marcar presença');
+      toast.error(getApiErrorMessage(err, 'Erro ao marcar presença'));
       console.error(err);
     }
   };
@@ -317,6 +344,20 @@ export default function EventoInscricoes() {
           />
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => {
+          if (!open) confirmDialog.hide();
+        }}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

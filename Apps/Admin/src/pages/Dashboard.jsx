@@ -6,7 +6,7 @@ import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export function Dashboard() {
+export default function Dashboard() {
   const [estatisticas, setEstatisticas] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

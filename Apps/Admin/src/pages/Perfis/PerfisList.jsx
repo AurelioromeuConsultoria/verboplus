@@ -15,7 +15,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { pessoasPerfisApi } from '@/lib/api';
 import { toast } from 'sonner';
 
-export function PerfisList() {
+export default function PerfisList() {
   const [perfis, setPerfis] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

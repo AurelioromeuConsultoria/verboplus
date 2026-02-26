@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { categoriasNoticiasApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 export default function CategoriaNoticiaForm() {
   const navigate = useNavigate();
@@ -46,7 +48,7 @@ export default function CategoriaNoticiaForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      alert('Nome é obrigatório');
+      toast.error('Nome é obrigatório');
       return;
     }
     try {
@@ -54,9 +56,10 @@ export default function CategoriaNoticiaForm() {
       const payload = { nome: formData.nome.trim() };
       if (isEditing) await categoriasNoticiasApi.update(id, payload);
       else await categoriasNoticiasApi.create(payload);
+      toast.success(isEditing ? 'Categoria atualizada com sucesso' : 'Categoria criada com sucesso');
       navigate('/categorias-noticias');
     } catch (err) {
-      alert('Erro ao salvar categoria de notícia');
+      toast.error(getApiErrorMessage(err, 'Erro ao salvar categoria de notícia'));
       console.error(err);
     } finally {
       setLoading(false);

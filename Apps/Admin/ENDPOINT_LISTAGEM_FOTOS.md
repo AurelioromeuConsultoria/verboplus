@@ -1,10 +1,10 @@
 # 📸 Endpoint para Listagem de Fotos da Galeria
 
-## Problema
-Atualmente, a página de visualização de fotos da galeria só exibe a foto de destaque porque não há um endpoint no backend para listar todas as fotos de uma galeria.
+## Status
+✅ **Implementado** — O endpoint existe e está em uso. A listagem de fotos está funcional.
 
-## Solução
-É necessário criar um endpoint no backend que retorne uma lista com todos os arquivos de uma galeria.
+## Descrição
+O backend expõe um endpoint que retorna a lista de todas as fotos de uma galeria.
 
 ## Especificação do Endpoint
 

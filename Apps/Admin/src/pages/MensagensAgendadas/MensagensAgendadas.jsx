@@ -1,28 +1,28 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Calendar, 
   Clock, 
   MessageSquare, 
   User, 
-  Filter, 
-  Search,
   CheckCircle,
   XCircle,
   AlertCircle,
   Eye,
-  X,
   RefreshCw
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import api from '../../lib/api';
-import Loading from '../../components/ui/loading';
-import ErrorMessage from '../../components/ui/error-message';
+import { LoadingPage } from '@/components/ui/loading';
+import { ErrorPage } from '@/components/ui/error-message';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { AdvancedSearch } from '@/components/ui/advanced-search';
+import { mensagensAgendadasApi, visitantesApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 const MensagensAgendadas = () => {
   const [mensagens, setMensagens] = useState([]);
@@ -31,11 +31,15 @@ const MensagensAgendadas = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [autoRefreshSeconds, setAutoRefreshSeconds] = useState(30);
   const [error, setError] = useState(null);
-  const [filtros, setFiltros] = useState({
-    status: '',
-    visitanteId: '',
-    dataInicio: '',
-    dataFim: ''
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [filters, setFilters] = useState({
+    texto: '',
+    status: undefined,
+    visitanteId: undefined,
+    dataEnvio_from: '',
+    dataEnvio_to: '',
   });
 
   // Estados para estatísticas
@@ -46,36 +50,63 @@ const MensagensAgendadas = () => {
     erro: 0
   });
 
-  const fetchData = useCallback(async ({ showLoader = false } = {}) => {
+  const fetchVisitantes = useCallback(async () => {
+    const visitantesResponse = await visitantesApi.getAll();
+    setVisitantes(visitantesResponse.data || []);
+  }, []);
+
+  const fetchMensagens = useCallback(async ({ showLoader = false } = {}) => {
     try {
       setError(null);
       if (showLoader) setLoading(true);
       else setRefreshing(true);
 
-      const [mensagensResponse, visitantesResponse] = await Promise.all([
-        api.get('/mensagensAgendadas'),
-        api.get('/visitantes')
+      const [mensagensResponse, statsResponse] = await Promise.all([
+        mensagensAgendadasApi.getPaged({
+          page,
+          pageSize,
+          sort: 'dataEnvio',
+          direction: 'desc',
+          texto: filters.texto || undefined,
+          status: filters.status ? Number(filters.status) : undefined,
+          visitanteId: filters.visitanteId ? Number(filters.visitanteId) : undefined,
+          dataEnvioFrom: filters.dataEnvio_from || undefined,
+          dataEnvioTo: filters.dataEnvio_to || undefined,
+        }),
+        mensagensAgendadasApi.getStats(),
       ]);
-      
-      console.log('Dados das mensagens recebidos:', mensagensResponse.data);
-      setMensagens(mensagensResponse.data);
-      setVisitantes(visitantesResponse.data);
+
+      const data = mensagensResponse.data || {};
+      setMensagens(data.items || []);
+      setTotal(Number(data.total || 0));
+
+      const s = statsResponse.data || {};
+      setStats({
+        total: Number(s.total || 0),
+        agendadas: Number(s.agendadas || 0),
+        enviadas: Number(s.enviadas || 0),
+        erro: Number(s.erro || 0),
+      });
     } catch (err) {
-      setError('Erro ao carregar dados');
+      const msg = getApiErrorMessage(err, 'Erro ao carregar dados');
+      setError(msg);
       console.error('Erro ao buscar dados:', err);
+      toast.error(msg);
     } finally {
       if (showLoader) setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [filters.dataEnvio_from, filters.dataEnvio_to, filters.status, filters.texto, filters.visitanteId, page, pageSize]);
 
   useEffect(() => {
-    calcularEstatisticas();
-  }, [mensagens]);
+    fetchVisitantes().catch((err) => {
+      console.error('Erro ao carregar visitantes:', err);
+    });
+  }, [fetchVisitantes]);
 
   useEffect(() => {
-    fetchData({ showLoader: true });
-  }, [fetchData]);
+    fetchMensagens({ showLoader: true });
+  }, [fetchMensagens]);
 
   useEffect(() => {
     if (!autoRefreshSeconds || autoRefreshSeconds <= 0) return;
@@ -84,57 +115,17 @@ const MensagensAgendadas = () => {
     const id = window.setInterval(() => {
       if (document.visibilityState !== 'visible') return;
       if (loading || refreshing) return;
-      fetchData();
+      fetchMensagens();
     }, intervalMs);
 
     return () => window.clearInterval(id);
-  }, [autoRefreshSeconds, fetchData, loading, refreshing]);
+  }, [autoRefreshSeconds, fetchMensagens, loading, refreshing]);
 
-  const calcularEstatisticas = () => {
-    const total = mensagens.length;
-    const agendadas = mensagens.filter(m => [1, 2, 6].includes(Number(m.status))).length; // Agendada, ProntaParaEnvio, EmProcessamento
-    const enviadas = mensagens.filter(m => Number(m.status) === 3).length;
-    const erro = mensagens.filter(m => Number(m.status) === 4).length;
-
-    setStats({ total, agendadas, enviadas, erro });
-  };
-
-  const handleFiltroChange = (e) => {
-    const { name, value } = e.target;
-    setFiltros(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const limparFiltros = () => {
-    setFiltros({
-      status: '',
-      visitanteId: '',
-      dataInicio: '',
-      dataFim: ''
-    });
-  };
-
-  const mensagensFiltradas = mensagens.filter(mensagem => {
-    if (filtros.status && String(mensagem.status) !== String(filtros.status)) return false;
-    if (filtros.visitanteId && String(mensagem.visitanteId) !== String(filtros.visitanteId)) return false;
-    
-    if (filtros.dataInicio) {
-      const dataEnvio = new Date(mensagem.dataEnvio);
-      const dataInicio = new Date(filtros.dataInicio);
-      if (dataEnvio < dataInicio) return false;
-    }
-    
-    if (filtros.dataFim) {
-      const dataEnvio = new Date(mensagem.dataEnvio);
-      const dataFim = new Date(filtros.dataFim);
-      dataFim.setHours(23, 59, 59, 999); // Final do dia
-      if (dataEnvio > dataFim) return false;
-    }
-    
-    return true;
-  });
+  const visitanteNomeById = useMemo(() => {
+    const map = new Map();
+    visitantes.forEach((v) => map.set(String(v.id), v.nome));
+    return map;
+  }, [visitantes]);
 
   const getStatusText = (status) => {
     switch (Number(status)) {
@@ -205,13 +196,18 @@ const MensagensAgendadas = () => {
 
   const getVisitanteNome = (mensagem) => {
     if (mensagem?.nomeVisitante) return mensagem.nomeVisitante;
-    const visitante = visitantes.find(v => v.id === mensagem.visitanteId);
-    return visitante ? visitante.nome : 'Visitante não encontrado';
+    const nome = visitanteNomeById.get(String(mensagem.visitanteId));
+    return nome || 'Visitante não encontrado';
   };
 
   // Cancelamento não está implementado na API atualmente.
 
-  if (loading) return <Loading />;
+  useEffect(() => {
+    setPage(1);
+  }, [filters]);
+
+  if (loading) return <LoadingPage text="Carregando mensagens..." />;
+  if (error) return <ErrorPage message={error} onRetry={() => fetchMensagens({ showLoader: true })} />;
 
   return (
     <div className="space-y-6">
@@ -225,23 +221,23 @@ const MensagensAgendadas = () => {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground whitespace-nowrap">Auto-atualizar</span>
-            <select
-              value={String(autoRefreshSeconds)}
-              onChange={(e) => setAutoRefreshSeconds(Number(e.target.value))}
-              className="px-3 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm"
-              title="Intervalo de atualização automática"
-            >
-              <option value="0">Desligado</option>
-              <option value="10">10s</option>
-              <option value="30">30s</option>
-              <option value="60">60s</option>
-            </select>
+            <Select value={String(autoRefreshSeconds)} onValueChange={(v) => setAutoRefreshSeconds(Number(v))}>
+              <SelectTrigger className="w-[140px]" title="Intervalo de atualização automática">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Desligado</SelectItem>
+                <SelectItem value="10">10s</SelectItem>
+                <SelectItem value="30">30s</SelectItem>
+                <SelectItem value="60">60s</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <Button
             type="button"
             variant="outline"
-            onClick={() => fetchData()}
+            onClick={() => fetchMensagens()}
             disabled={refreshing}
             title="Atualizar lista"
           >
@@ -250,8 +246,6 @@ const MensagensAgendadas = () => {
           </Button>
         </div>
       </div>
-
-      {error && <ErrorMessage message={error} />}
 
       {/* Cards de Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -312,108 +306,67 @@ const MensagensAgendadas = () => {
         </Card>
       </div>
 
-      {/* Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">Status</label>
-              <select
-                name="status"
-                value={filtros.status}
-                onChange={handleFiltroChange}
-                className="w-full px-3 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
-              >
-                <option value="">Todos os status</option>
-                <option value="1">Agendada</option>
-                <option value="2">Pronta para envio</option>
-                <option value="6">Em processamento</option>
-                <option value="3">Enviada</option>
-                <option value="4">Erro</option>
-                <option value="5">Cancelada</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">Visitante</label>
-              <select
-                name="visitanteId"
-                value={filtros.visitanteId}
-                onChange={handleFiltroChange}
-                className="w-full px-3 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
-              >
-                <option value="">Todos os visitantes</option>
-                {visitantes.map(visitante => (
-                  <option key={visitante.id} value={visitante.id}>
-                    {visitante.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">Data Início</label>
-              <input
-                type="date"
-                name="dataInicio"
-                value={filtros.dataInicio}
-                onChange={handleFiltroChange}
-                className="w-full px-3 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">Data Fim</label>
-              <input
-                type="date"
-                name="dataFim"
-                value={filtros.dataFim}
-                onChange={handleFiltroChange}
-                className="w-full px-3 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
-              />
-            </div>
-          </div>
-
-          {(filtros.status || filtros.visitanteId || filtros.dataInicio || filtros.dataFim) && (
-            <div className="mt-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={limparFiltros}
-              >
-                <X className="w-4 h-4 mr-1" />
-                Limpar filtros
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <AdvancedSearch
+        searchFields={[
+          { key: 'texto', label: 'Mensagem/Visitante', type: 'text', placeholder: 'Buscar por texto ou nome do visitante...' },
+        ]}
+        filterFields={[
+          {
+            key: 'status',
+            label: 'Status',
+            type: 'select',
+            options: [
+              { value: '1', label: 'Agendada' },
+              { value: '2', label: 'Pronta para envio' },
+              { value: '6', label: 'Em processamento' },
+              { value: '3', label: 'Enviada' },
+              { value: '4', label: 'Erro' },
+              { value: '5', label: 'Cancelada' },
+            ],
+          },
+          {
+            key: 'visitanteId',
+            label: 'Visitante',
+            type: 'select',
+            options: visitantes.map((v) => ({ value: String(v.id), label: v.nome })),
+          },
+          {
+            key: 'dataEnvio',
+            label: 'Data de Envio',
+            type: 'date-range',
+          },
+        ]}
+        values={filters}
+        onChange={setFilters}
+        onReset={() =>
+          setFilters({
+            texto: '',
+            status: undefined,
+            visitanteId: undefined,
+            dataEnvio_from: '',
+            dataEnvio_to: '',
+          })
+        }
+      />
 
       {/* Tabela de Mensagens */}
       <Card>
         <CardHeader>
           <CardTitle>
-            Mensagens ({mensagensFiltradas.length})
+            Mensagens ({total})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {mensagensFiltradas.length === 0 ? (
+          {mensagens.length === 0 ? (
             <div className="text-center py-12">
               <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">
-                {mensagens.length === 0 ? 'Nenhuma mensagem encontrada' : 'Nenhuma mensagem corresponde aos filtros'}
+                {total === 0 ? 'Nenhuma mensagem encontrada' : 'Nenhuma mensagem nesta página'}
               </h3>
               <p className="text-muted-foreground">
-                {mensagens.length === 0 
+                {total === 0
                   ? 'As mensagens aparecerão aqui quando visitantes forem cadastrados.'
-                  : 'Tente ajustar os filtros para encontrar as mensagens desejadas.'
-                }
+                  : 'Tente navegar para outra página ou ajustar os filtros.'}
               </p>
             </div>
           ) : (
@@ -429,7 +382,7 @@ const MensagensAgendadas = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mensagensFiltradas.map((mensagem) => (
+                  {mensagens.map((mensagem) => (
                     <TableRow key={mensagem.id}>
                       <TableCell>
                         <div className="flex items-center">
@@ -483,6 +436,19 @@ const MensagensAgendadas = () => {
                 </TableBody>
               </Table>
             </div>
+          )}
+
+          {total > 0 && (
+            <DataTablePagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setPage(1);
+              }}
+            />
           )}
         </CardContent>
       </Card>

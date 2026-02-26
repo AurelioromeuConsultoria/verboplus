@@ -7,6 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { inscricoesEventosApi, eventosApi } from '@/lib/api';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 const STATUS_LABELS = {
   1: 'Pendente',
@@ -30,6 +33,8 @@ export default function InscricoesEventosList() {
   const [busca, setBusca] = useState('');
   const [eventoFilter, setEventoFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [confirmState, setConfirmState] = useState({ open: false, action: null, id: null });
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const load = async () => {
     try {
@@ -54,34 +59,46 @@ export default function InscricoesEventosList() {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir esta inscrição?')) return;
-    try {
-      await inscricoesEventosApi.delete(id);
-      await load();
-    } catch (err) {
-      alert('Erro ao excluir inscrição');
-      console.error(err);
-    }
+    setConfirmState({ open: true, action: 'delete', id });
   };
 
   const handleConfirmar = async (id) => {
     try {
       await inscricoesEventosApi.confirmar(id);
+      toast.success('Inscrição confirmada!');
       await load();
     } catch (err) {
-      alert('Erro ao confirmar inscrição');
-      console.error(err);
+      toast.error(getApiErrorMessage(err, 'Erro ao confirmar inscrição'));
     }
   };
 
   const handleCancelar = async (id) => {
-    if (!confirm('Tem certeza que deseja cancelar esta inscrição?')) return;
+    setConfirmState({ open: true, action: 'cancel', id });
+  };
+
+  const runConfirmedAction = async () => {
+    const { action, id } = confirmState;
+    if (!action || !id) return;
     try {
-      await inscricoesEventosApi.cancelar(id);
+      setConfirmLoading(true);
+      if (action === 'delete') {
+        await inscricoesEventosApi.delete(id);
+        toast.success('Inscrição excluída!');
+      } else if (action === 'cancel') {
+        await inscricoesEventosApi.cancelar(id);
+        toast.success('Inscrição cancelada!');
+      }
+      setConfirmState({ open: false, action: null, id: null });
       await load();
     } catch (err) {
-      alert('Erro ao cancelar inscrição');
-      console.error(err);
+      toast.error(
+        getApiErrorMessage(
+          err,
+          action === 'delete' ? 'Erro ao excluir inscrição' : 'Erro ao cancelar inscrição'
+        )
+      );
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -242,6 +259,24 @@ export default function InscricoesEventosList() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={(open) => {
+          if (!open) setConfirmState({ open: false, action: null, id: null });
+          else setConfirmState((s) => ({ ...s, open: true }));
+        }}
+        onConfirm={runConfirmedAction}
+        loading={confirmLoading}
+        variant={confirmState.action === 'delete' ? 'destructive' : 'default'}
+        title={confirmState.action === 'delete' ? 'Excluir inscrição?' : 'Cancelar inscrição?'}
+        description={
+          confirmState.action === 'delete'
+            ? 'Essa ação não pode ser desfeita.'
+            : 'A inscrição ficará com status cancelada.'
+        }
+        confirmText={confirmState.action === 'delete' ? 'Excluir' : 'Cancelar'}
+      />
     </div>
   );
 }

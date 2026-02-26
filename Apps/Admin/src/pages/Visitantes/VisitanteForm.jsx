@@ -11,7 +11,7 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { visitantesApi } from '@/lib/api';
 import { toast } from 'sonner';
 
-export function VisitanteForm() {
+export default function VisitanteForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = !!id;
