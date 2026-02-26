@@ -227,9 +227,11 @@ builder.Services.AddSwaggerGen(c =>
 // CORS
 // ==========================
 
+const string CorsPolicyName = "DefaultCors";
+
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy =>
+    options.AddPolicy(CorsPolicyName, policy =>
     {
         var allowedOrigins = builder.Configuration
             .GetSection("Cors:AllowedOrigins")
@@ -268,7 +270,7 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseRouting();
-app.UseCors();
+app.UseCors(CorsPolicyName);
 
 
 app.UseSwagger();
@@ -322,6 +324,6 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<SistemaIgreja.API.Permissions.PermissionMiddleware>();
-app.MapControllers();
+app.MapControllers().RequireCors(CorsPolicyName);
 
 app.Run();
