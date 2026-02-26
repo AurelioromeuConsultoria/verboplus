@@ -17,7 +17,7 @@ public class VoluntarioDto
 
 public class CriarVoluntarioDto
 {
-    public string Nome { get; set; } = string.Empty;
+    public int PessoaId { get; set; }
     public string? WhatsApp { get; set; }
     public string? Email { get; set; }
     public string? Telefone { get; set; }
@@ -28,7 +28,7 @@ public class CriarVoluntarioDto
 
 public class AtualizarVoluntarioDto
 {
-    public string Nome { get; set; } = string.Empty;
+    public int PessoaId { get; set; }
     public string? WhatsApp { get; set; }
     public string? Email { get; set; }
     public string? Telefone { get; set; }

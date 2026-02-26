@@ -46,38 +46,15 @@ public class VoluntarioService : IVoluntarioService
         var equipe = await _equipeRepository.GetByIdAsync(dto.EquipeId) ?? throw new ArgumentException("Equipe inválida");
         var cargo = await _cargoRepository.GetByIdAsync(dto.CargoId) ?? throw new ArgumentException("Cargo inválido");
 
-        // Verificar se pessoa já existe pelo email (se fornecido)
-        Pessoa? pessoa = null;
-        if (!string.IsNullOrEmpty(dto.Email))
-        {
-            pessoa = await _pessoaRepository.GetByEmailAsync(dto.Email);
-        }
+        if (dto.PessoaId <= 0) throw new ArgumentException("Pessoa inválida");
+        var pessoa = await _pessoaRepository.GetByIdAsync(dto.PessoaId) ?? throw new ArgumentException("Pessoa não encontrada");
 
-        // Criar pessoa se não existir
-        if (pessoa == null)
-        {
-            pessoa = new Pessoa
-            {
-                Nome = dto.Nome,
-                Email = dto.Email,
-                Telefone = dto.Telefone,
-                WhatsApp = dto.WhatsApp,
-                DataNascimento = dto.DataNascimento,
-                TipoPessoa = TipoPessoa.Adulto,
-                Ativo = true,
-                DataCriacao = DateTime.Now
-            };
-            pessoa = await _pessoaRepository.CreateAsync(pessoa);
-        }
-        else
-        {
-            // Atualizar dados da pessoa se necessário
-            pessoa.Nome = dto.Nome;
-            pessoa.Telefone = dto.Telefone ?? pessoa.Telefone;
-            pessoa.WhatsApp = dto.WhatsApp ?? pessoa.WhatsApp;
-            pessoa.DataNascimento = dto.DataNascimento ?? pessoa.DataNascimento;
-            await _pessoaRepository.UpdateAsync(pessoa);
-        }
+        // Evitar duplicar o mesmo vínculo (Pessoa + Equipe + Cargo)
+        if (await _repository.ExistsByPessoaEquipeCargoAsync(pessoa.Id, dto.EquipeId, dto.CargoId))
+            throw new ArgumentException("Esta pessoa já está cadastrada como voluntária para esta equipe e cargo");
+
+        // Opcional: atualizar dados de contato da pessoa a partir do cadastro de voluntário
+        await AtualizarContatoPessoaSeNecessarioAsync(pessoa, dto.Email, dto.Telefone, dto.WhatsApp, dto.DataNascimento);
 
         var entity = new Voluntario
         {
@@ -104,23 +81,18 @@ public class VoluntarioService : IVoluntarioService
         var equipe = await _equipeRepository.GetByIdAsync(dto.EquipeId) ?? throw new ArgumentException("Equipe inválida");
         var cargo = await _cargoRepository.GetByIdAsync(dto.CargoId) ?? throw new ArgumentException("Cargo inválido");
 
-        // Atualizar pessoa
-        var pessoa = await _pessoaRepository.GetByIdAsync(entity.PessoaId);
-        if (pessoa == null) throw new ArgumentException("Pessoa não encontrada");
+        if (dto.PessoaId <= 0) throw new ArgumentException("Pessoa inválida");
+        var pessoa = await _pessoaRepository.GetByIdAsync(dto.PessoaId) ?? throw new ArgumentException("Pessoa não encontrada");
 
-        // Verificar se email já existe em outra pessoa (se fornecido)
-        if (!string.IsNullOrEmpty(dto.Email) && dto.Email != pessoa.Email)
-        {
-            var existePessoa = await _pessoaRepository.GetByEmailAsync(dto.Email);
-            if (existePessoa != null && existePessoa.Id != pessoa.Id) throw new ArgumentException("Email já cadastrado para outra pessoa");
-        }
+        // Evitar duplicar o mesmo vínculo (Pessoa + Equipe + Cargo)
+        if (await _repository.ExistsByPessoaEquipeCargoAsync(pessoa.Id, dto.EquipeId, dto.CargoId, ignoreVoluntarioId: entity.Id))
+            throw new ArgumentException("Esta pessoa já está cadastrada como voluntária para esta equipe e cargo");
 
-        pessoa.Nome = dto.Nome;
-        pessoa.Email = dto.Email;
-        pessoa.Telefone = dto.Telefone;
-        pessoa.WhatsApp = dto.WhatsApp;
-        pessoa.DataNascimento = dto.DataNascimento;
-        await _pessoaRepository.UpdateAsync(pessoa);
+        // Atualizar vínculo (permite corrigir pessoa selecionada)
+        entity.PessoaId = pessoa.Id;
+
+        // Opcional: atualizar dados de contato da pessoa a partir do cadastro de voluntário
+        await AtualizarContatoPessoaSeNecessarioAsync(pessoa, dto.Email, dto.Telefone, dto.WhatsApp, dto.DataNascimento);
 
         // Atualizar voluntário
         entity.EquipeId = dto.EquipeId;
@@ -153,5 +125,48 @@ public class VoluntarioService : IVoluntarioService
             NomeCargo = v.Cargo?.Nome ?? string.Empty,
             DataCadastro = v.DataCadastro
         };
+    }
+
+    private async Task AtualizarContatoPessoaSeNecessarioAsync(
+        Pessoa pessoa,
+        string? email,
+        string? telefone,
+        string? whatsApp,
+        DateTime? dataNascimento)
+    {
+        var mudou = false;
+
+        if (!string.IsNullOrWhiteSpace(email) && !string.Equals(email, pessoa.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            var existePessoa = await _pessoaRepository.GetByEmailAsync(email);
+            if (existePessoa != null && existePessoa.Id != pessoa.Id)
+                throw new ArgumentException("Email já cadastrado para outra pessoa");
+
+            pessoa.Email = email;
+            mudou = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(telefone) && telefone != pessoa.Telefone)
+        {
+            pessoa.Telefone = telefone;
+            mudou = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(whatsApp) && whatsApp != pessoa.WhatsApp)
+        {
+            pessoa.WhatsApp = whatsApp;
+            mudou = true;
+        }
+
+        if (dataNascimento.HasValue && dataNascimento.Value != pessoa.DataNascimento)
+        {
+            pessoa.DataNascimento = dataNascimento;
+            mudou = true;
+        }
+
+        if (mudou)
+        {
+            await _pessoaRepository.UpdateAsync(pessoa);
+        }
     }
 }

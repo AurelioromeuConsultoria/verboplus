@@ -44,6 +44,20 @@ public class VoluntarioRepository : IVoluntarioRepository
             .FirstOrDefaultAsync(v => v.Id == id);
     }
 
+    public async Task<bool> ExistsByPessoaEquipeCargoAsync(int pessoaId, int equipeId, int cargoId, int? ignoreVoluntarioId = null)
+    {
+        var q = _context.Set<Voluntario>()
+            .AsNoTracking()
+            .Where(v => v.PessoaId == pessoaId && v.EquipeId == equipeId && v.CargoId == cargoId);
+
+        if (ignoreVoluntarioId.HasValue)
+        {
+            q = q.Where(v => v.Id != ignoreVoluntarioId.Value);
+        }
+
+        return await q.AnyAsync();
+    }
+
     public async Task<Voluntario> CreateAsync(Voluntario voluntario)
     {
         _context.Set<Voluntario>().Add(voluntario);
