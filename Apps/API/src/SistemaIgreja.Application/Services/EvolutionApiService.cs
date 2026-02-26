@@ -87,6 +87,7 @@ public class EvolutionApiService : IEvolutionApiService
         {
             Number = numeroFormatado,
             Text = mensagem,
+            Delay = Math.Max(0, _settings.DelayMs),
             LinkPreview = false
         };
 
@@ -390,7 +391,19 @@ public class EvolutionApiService : IEvolutionApiService
         {
             var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var parsed = JsonSerializer.Deserialize<EvolutionApiErrorResponse>(responseContent, opts);
-            var msg = parsed?.Message ?? parsed?.Error ?? responseContent;
+            var msg = parsed?.Message ?? parsed?.Error;
+
+            // Alguns erros da Evolution v2 vêm em: { response: { message: [[ "..."]] } }
+            if (string.IsNullOrWhiteSpace(msg))
+            {
+                var detailed = TryExtractEvolutionValidationMessage(responseContent);
+                if (!string.IsNullOrWhiteSpace(detailed))
+                {
+                    msg = detailed;
+                }
+            }
+
+            msg ??= responseContent;
             return new EvolutionApiResponse
             {
                 Sucesso = false,
@@ -463,5 +476,52 @@ public class EvolutionApiService : IEvolutionApiService
         }
 
         return null;
+    }
+
+    private static string? TryExtractEvolutionValidationMessage(string responseContent)
+    {
+        if (string.IsNullOrWhiteSpace(responseContent)) return null;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(responseContent);
+            if (!doc.RootElement.TryGetProperty("response", out var resp)) return null;
+            if (!resp.TryGetProperty("message", out var msgEl)) return null;
+
+            if (msgEl.ValueKind == JsonValueKind.String) return msgEl.GetString();
+
+            // Pode vir como array de arrays: [[ "Enter a value..." ]]
+            if (msgEl.ValueKind == JsonValueKind.Array)
+            {
+                var parts = new List<string>();
+                foreach (var item in msgEl.EnumerateArray())
+                {
+                    if (item.ValueKind == JsonValueKind.String)
+                    {
+                        var s = item.GetString();
+                        if (!string.IsNullOrWhiteSpace(s)) parts.Add(s);
+                        continue;
+                    }
+
+                    if (item.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var inner in item.EnumerateArray())
+                        {
+                            if (inner.ValueKind != JsonValueKind.String) continue;
+                            var s = inner.GetString();
+                            if (!string.IsNullOrWhiteSpace(s)) parts.Add(s);
+                        }
+                    }
+                }
+
+                return parts.Count > 0 ? string.Join("; ", parts) : null;
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

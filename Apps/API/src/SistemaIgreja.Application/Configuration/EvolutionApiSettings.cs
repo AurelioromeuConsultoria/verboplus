@@ -39,4 +39,9 @@ public class EvolutionApiSettings
     /// Código do país padrão para formatação de telefone (padrão: 55 para Brasil)
     /// </summary>
     public string CodigoPaisPadrao { get; set; } = "55";
+
+    /// <summary>
+    /// Delay padrão (em ms) para envio de mensagens (algumas instalações exigem este campo).
+    /// </summary>
+    public int DelayMs { get; set; } = 0;
 }
