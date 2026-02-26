@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge"
+import { API_BASE_URL } from "@/lib/env";
 
 export function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -25,6 +26,5 @@ export function getAbsoluteUrl(url) {
   const cleanUrl = normalizedUrl.replace(/\/+/g, '/');
   
   // Retorna URL absoluta usando a base da API
-  const API_BASE_URL = 'http://localhost:5000';
   return `${API_BASE_URL}/${cleanUrl}`;
 }

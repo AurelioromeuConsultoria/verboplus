@@ -8,8 +8,8 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { galeriasFotosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { API_BASE_URL } from '@/lib/env';
 
-const API_BASE_URL = 'http://localhost:5000';
 const FORMATOS_PERMITIDOS = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 const TAMANHO_MAXIMO = 10 * 1024 * 1024; // 10MB
 

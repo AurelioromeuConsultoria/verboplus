@@ -13,9 +13,8 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { galeriasFotosApi, eventosApi, categoriasMidiasApi } from '@/lib/api';
+import { API_BASE_URL } from '@/lib/env';
 import { toast } from 'sonner';
-
-const API_BASE_URL = 'http://localhost:5000';
 
 export default function GaleriasFotosList() {
   const [items, setItems] = useState([]);

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
-import { voluntariosApi, equipesApi, cargosApi } from '@/lib/api';
+import { voluntariosApi, equipesApi, cargosApi, pessoasApi } from '@/lib/api';
 
 const WHATSAPP_REGEX = /^\d{10,13}$/;
 
@@ -16,15 +16,18 @@ export default function VoluntarioForm() {
   const { id } = useParams();
   const isEditing = Boolean(id);
 
+  const [pessoas, setPessoas] = useState([]);
+  const [pessoaBusca, setPessoaBusca] = useState('');
   const [equipes, setEquipes] = useState([]);
   const [cargos, setCargos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
-    nome: '',
+    pessoaId: '',
     whatsApp: '',
     email: '',
+    telefone: '',
     equipeId: '',
     cargoId: '',
   });
@@ -33,10 +36,12 @@ export default function VoluntarioForm() {
     try {
       setLoading(true);
       setError(null);
-      const [e, c] = await Promise.all([
+      const [p, e, c] = await Promise.all([
+        pessoasApi.getAll(),
         equipesApi.getAll(),
         cargosApi.getAll(),
       ]);
+      setPessoas(p.data || []);
       setEquipes(e.data || []);
       setCargos(c.data || []);
 
@@ -44,9 +49,10 @@ export default function VoluntarioForm() {
         const res = await voluntariosApi.getById(id);
         const v = res.data;
         setFormData({
-          nome: v.nome || '',
+          pessoaId: String(v.pessoaId || ''),
           whatsApp: v.whatsApp || '',
           email: v.email || '',
+          telefone: v.telefone || '',
           equipeId: String(v.equipeId || ''),
           cargoId: String(v.cargoId || ''),
         });
@@ -66,17 +72,24 @@ export default function VoluntarioForm() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const pessoasFiltradas = pessoas.filter((p) => {
+    if (!pessoaBusca) return true;
+    const b = pessoaBusca.toLowerCase();
+    const nome = (p.nome || '').toLowerCase();
+    const email = (p.email || '').toLowerCase();
+    const whats = String(p.whatsApp || '').toLowerCase();
+    return nome.includes(b) || email.includes(b) || whats.includes(b);
+  });
+
+  const pessoaSelecionada = pessoas.find((p) => String(p.id) === String(formData.pessoaId));
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.nome.trim()) {
-      alert('Nome é obrigatório');
+    if (!formData.pessoaId) {
+      alert('Selecione uma Pessoa');
       return;
     }
     const onlyDigits = String(formData.whatsApp).replace(/\D/g, '');
-    if (!WHATSAPP_REGEX.test(onlyDigits)) {
-      alert('WhatsApp inválido. Use apenas dígitos (10 a 13).');
-      return;
-    }
     if (!formData.equipeId || !formData.cargoId) {
       alert('Selecione Equipe e Cargo');
       return;
@@ -85,12 +98,17 @@ export default function VoluntarioForm() {
       alert('E-mail inválido');
       return;
     }
+    if (formData.whatsApp && !WHATSAPP_REGEX.test(onlyDigits)) {
+      alert('WhatsApp inválido. Use apenas dígitos (10 a 13).');
+      return;
+    }
     try {
       setLoading(true);
       const payload = {
-        nome: formData.nome.trim(),
-        whatsApp: onlyDigits,
+        pessoaId: Number(formData.pessoaId),
+        whatsApp: formData.whatsApp ? onlyDigits : null,
         email: formData.email?.trim() || null,
+        telefone: formData.telefone?.trim() || null,
         equipeId: Number(formData.equipeId),
         cargoId: Number(formData.cargoId),
       };
@@ -130,16 +148,47 @@ export default function VoluntarioForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
-                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder="Nome completo" required />
+                <Label htmlFor="pessoaBusca">Pessoa *</Label>
+                <Input
+                  id="pessoaBusca"
+                  name="pessoaBusca"
+                  value={pessoaBusca}
+                  onChange={(e) => setPessoaBusca(e.target.value)}
+                  placeholder="Buscar pessoa por nome, email ou WhatsApp"
+                />
+                <select
+                  id="pessoaId"
+                  name="pessoaId"
+                  value={formData.pessoaId}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border rounded"
+                  required
+                >
+                  <option value="">Selecione</option>
+                  {pessoasFiltradas.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nome}{p.email ? ` — ${p.email}` : ''}{p.whatsApp ? ` — ${p.whatsApp}` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="whatsApp">WhatsApp *</Label>
-                <Input id="whatsApp" name="whatsApp" value={formData.whatsApp} onChange={handleChange} placeholder="11999998888 (apenas dígitos)" required />
+                <Label htmlFor="whatsApp">WhatsApp</Label>
+                <Input
+                  id="whatsApp"
+                  name="whatsApp"
+                  value={formData.whatsApp}
+                  onChange={handleChange}
+                  placeholder={pessoaSelecionada?.whatsApp ? `Atual: ${pessoaSelecionada.whatsApp}` : '11999998888 (apenas dígitos)'}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} placeholder="email@exemplo.com" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input id="telefone" name="telefone" value={formData.telefone} onChange={handleChange} placeholder="11999998888 (apenas dígitos)" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="equipeId">Equipe *</Label>
