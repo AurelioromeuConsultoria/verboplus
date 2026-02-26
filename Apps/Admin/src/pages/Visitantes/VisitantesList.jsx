@@ -49,7 +49,7 @@ export function VisitantesList() {
 
   const handleDelete = async (id) => {
     const visitante = visitantes.find(v => v.id === id);
-    const pessoaNome = visitante?.pessoa?.nome || 'esta visita';
+    const pessoaNome = visitante?.nome || 'esta visita';
     confirmDialog.show({
       title: 'Excluir Visita',
       description: `Tem certeza que deseja excluir a visita de "${pessoaNome}"? Esta ação não pode ser desfeita.`,
@@ -77,22 +77,22 @@ export function VisitantesList() {
   // Filtrar visitantes com busca avançada
   const visitantesFiltradosRaw = visitantes.filter((visitante) => {
     // Busca por nome
-    if (filters.nome && !visitante.pessoa?.nome?.toLowerCase().includes(filters.nome.toLowerCase())) {
+    if (filters.nome && !visitante.nome?.toLowerCase().includes(filters.nome.toLowerCase())) {
       return false;
     }
 
     // Busca por email
-    if (filters.email && !visitante.pessoa?.email?.toLowerCase().includes(filters.email.toLowerCase())) {
+    if (filters.email && !visitante.email?.toLowerCase().includes(filters.email.toLowerCase())) {
       return false;
     }
 
     // Busca por telefone
-    if (filters.telefone && !visitante.pessoa?.telefone?.includes(filters.telefone)) {
+    if (filters.telefone && !visitante.telefone?.includes(filters.telefone)) {
       return false;
     }
 
     // Busca por WhatsApp
-    if (filters.whatsApp && !visitante.pessoa?.whatsApp?.includes(filters.whatsApp)) {
+    if (filters.whatsApp && !visitante.whatsApp?.includes(filters.whatsApp)) {
       return false;
     }
 
@@ -113,10 +113,10 @@ export function VisitantesList() {
   // Ordenação - precisa ordenar por propriedades aninhadas
   const visitantesFiltradosComNome = visitantesFiltradosRaw.map(v => ({
     ...v,
-    nome: v.pessoa?.nome || '',
-    email: v.pessoa?.email || '',
-    telefone: v.pessoa?.telefone || '',
-    whatsApp: v.pessoa?.whatsApp || '',
+    nome: v.nome || '',
+    email: v.email || '',
+    telefone: v.telefone || '',
+    whatsApp: v.whatsApp || '',
   }));
 
   const { sortedData: visitantesFiltrados, sortConfig, handleSort } = useTableSort(visitantesFiltradosComNome, {
@@ -129,10 +129,10 @@ export function VisitantesList() {
   // Exportação
   const handleExport = () => {
     const exportData = visitantesFiltrados.map(v => ({
-      Nome: v.pessoa?.nome || '',
-      Email: v.pessoa?.email || '',
-      Telefone: v.pessoa?.telefone || '',
-      WhatsApp: v.pessoa?.whatsApp || '',
+      Nome: v.nome || '',
+      Email: v.email || '',
+      Telefone: v.telefone || '',
+      WhatsApp: v.whatsApp || '',
       'Data da Visita': v.dataVisita ? new Date(v.dataVisita).toLocaleDateString('pt-BR') : '',
       Observações: v.observacoes || '',
     }));
@@ -246,10 +246,8 @@ export function VisitantesList() {
               </TableHeader>
               <TableBody>
                 {paginatedItems.map((visitante) => {
-                  const pessoa = visitante.pessoa || {};
-                  const contato = pessoa.email || pessoa.whatsApp || pessoa.telefone || '-';
-                  const perfis = pessoa.perfis || [];
-                  const perfisAtivos = perfis.filter(p => !p.dataFim);
+                  const contato = visitante.email || visitante.whatsApp || visitante.telefone || '-';
+                  const perfisAtivos = visitante.perfis || [];
                   
                   return (
                     <TableRow key={visitante.id}>
@@ -257,25 +255,25 @@ export function VisitantesList() {
                         {new Date(visitante.dataVisita).toLocaleDateString('pt-BR')}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {pessoa.nome || '-'}
+                        {visitante.nome || '-'}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <span className="text-sm">{contato}</span>
-                          {pessoa.email && (
+                          {visitante.email && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => window.open(`mailto:${pessoa.email}`)}
+                              onClick={() => window.open(`mailto:${visitante.email}`)}
                             >
                               <Mail className="h-4 w-4" />
                             </Button>
                           )}
-                          {pessoa.whatsApp && (
+                          {visitante.whatsApp && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => window.open(`https://wa.me/55${pessoa.whatsApp.replace(/\D/g, '')}`)}
+                              onClick={() => window.open(`https://wa.me/55${visitante.whatsApp.replace(/\D/g, '')}`)}
                             >
                               <Phone className="h-4 w-4" />
                             </Button>
@@ -296,7 +294,7 @@ export function VisitantesList() {
                           {perfisAtivos.length > 0 ? (
                             perfisAtivos.map((perfil, idx) => (
                               <Badge key={idx} variant="secondary" className="text-xs">
-                                {perfil.perfil}
+                                {perfil}
                               </Badge>
                             ))
                           ) : (

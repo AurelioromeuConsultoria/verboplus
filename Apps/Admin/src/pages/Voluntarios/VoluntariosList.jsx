@@ -14,6 +14,8 @@ import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { voluntariosApi, equipesApi, cargosApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { RESOURCES, ACTIONS } from '@/utils/permissions';
 
 export default function VoluntariosList() {
   const [items, setItems] = useState([]);
@@ -25,6 +27,7 @@ export default function VoluntariosList() {
   const [equipeId, setEquipeId] = useState('');
   const [cargoId, setCargoId] = useState('');
   const confirmDialog = useConfirmDialog();
+  const { can } = useAuth();
 
   const load = async () => {
     try {
@@ -84,6 +87,9 @@ export default function VoluntariosList() {
   if (loading) return <LoadingPage text="Carregando voluntários..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
+  const canEdit = can(RESOURCES.VOLUNTARIOS, ACTIONS.EDIT);
+  const canDelete = can(RESOURCES.VOLUNTARIOS, ACTIONS.DELETE);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -91,11 +97,13 @@ export default function VoluntariosList() {
           <h1 className="text-3xl font-bold">Voluntários</h1>
           <p className="text-muted-foreground">Gerencie os voluntários</p>
         </div>
-        <Button asChild>
-          <Link to="/voluntarios/novo">
-            <Plus className="h-4 w-4 mr-2" /> Novo Voluntário
-          </Link>
-        </Button>
+        {canEdit && (
+          <Button asChild>
+            <Link to="/voluntarios/novo">
+              <Plus className="h-4 w-4 mr-2" /> Novo Voluntário
+            </Link>
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -184,14 +192,18 @@ export default function VoluntariosList() {
                     <TableCell>{vol.nomeCargo}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/voluntarios/${vol.id}/editar`}>
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(vol.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canEdit && (
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/voluntarios/${vol.id}/editar`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(vol.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -225,5 +237,4 @@ export default function VoluntariosList() {
     </div>
   );
 }
-
 

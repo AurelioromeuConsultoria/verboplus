@@ -73,6 +73,16 @@ export function AuthProvider({ children }) {
 
   const isAuthenticated = !!usuario;
 
+  const can = (resource, action = 'view') => {
+    if (!usuario) return false;
+    const perm = usuario.permissoes?.find((p) => String(p.recurso).toLowerCase() === String(resource).toLowerCase());
+    if (!perm) return false;
+    if (action === 'view') return !!perm.podeVer;
+    if (action === 'edit') return !!perm.podeEditar;
+    if (action === 'delete') return !!perm.podeExcluir;
+    return false;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -82,6 +92,7 @@ export function AuthProvider({ children }) {
         logout,
         atualizarUsuario,
         isAuthenticated,
+        can,
       }}
     >
       {children}
@@ -96,4 +107,3 @@ export function useAuth() {
   }
   return context;
 }
-

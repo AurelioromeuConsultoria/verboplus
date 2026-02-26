@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Edit, Trash2, Filter, UserCheck, UserX, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +16,8 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { usuariosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import UsuarioForm from './UsuarioForm';
+import { useAuth } from '@/context/AuthContext';
+import { RESOURCES, ACTIONS } from '@/utils/permissions';
 
 const TIPO_USUARIO_LABELS = {
   1: 'Administrador',
@@ -29,6 +32,7 @@ const TIPO_USUARIO_COLORS = {
 };
 
 export default function UsuariosList() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -38,6 +42,9 @@ export default function UsuariosList() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const confirmDialog = useConfirmDialog();
+  const { can } = useAuth();
+  const pessoaIdParam = searchParams.get('pessoaId');
+  const pessoaIdInicial = pessoaIdParam ? Number(pessoaIdParam) : null;
 
   const load = async () => {
     try {
@@ -56,6 +63,13 @@ export default function UsuariosList() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!showForm && pessoaIdInicial) {
+      setEditingId(null);
+      setShowForm(true);
+    }
+  }, [pessoaIdInicial, showForm]);
 
   const handleDelete = async (id) => {
     const usuario = items.find(u => u.id === id);
@@ -86,6 +100,7 @@ export default function UsuariosList() {
         email: usuario.email,
         tipoUsuario: usuario.tipoUsuario,
         ativo: !usuario.ativo,
+        perfilAcessoId: usuario.perfilAcessoId,
       });
       toast.success(`Usuário ${!usuario.ativo ? 'ativado' : 'desativado'} com sucesso`);
       await load();
@@ -103,6 +118,9 @@ export default function UsuariosList() {
   const handleCloseForm = () => {
     setShowForm(false);
     setEditingId(null);
+    if (pessoaIdParam) {
+      setSearchParams({});
+    }
   };
 
   const handleFormSuccess = () => {
@@ -122,6 +140,9 @@ export default function UsuariosList() {
   if (loading) return <LoadingPage text="Carregando usuários..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
+  const canEdit = can(RESOURCES.USUARIOS, ACTIONS.EDIT);
+  const canDelete = can(RESOURCES.USUARIOS, ACTIONS.DELETE);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -129,9 +150,17 @@ export default function UsuariosList() {
           <h1 className="text-3xl font-bold">Usuários</h1>
           <p className="text-muted-foreground">Gerencie os usuários do sistema</p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" /> Novo Usuário
-        </Button>
+        {canEdit && (
+          <Button
+            onClick={() => {
+              setSearchParams({});
+              setEditingId(null);
+              setShowForm(true);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" /> Novo Usuário
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -193,6 +222,7 @@ export default function UsuariosList() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Tipo</TableHead>
+                  <TableHead>Perfil</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Data Criação</TableHead>
                   <TableHead>Último Acesso</TableHead>
@@ -209,6 +239,7 @@ export default function UsuariosList() {
                         {TIPO_USUARIO_LABELS[usuario.tipoUsuario] || usuario.tipoUsuarioDescricao}
                       </Badge>
                     </TableCell>
+                    <TableCell>{usuario.perfilAcessoNome || '-'}</TableCell>
                     <TableCell>
                       <Badge variant={usuario.ativo ? 'default' : 'secondary'}>
                         {usuario.ativo ? 'Ativo' : 'Inativo'}
@@ -218,15 +249,21 @@ export default function UsuariosList() {
                     <TableCell>{usuario.ultimoAcesso ? new Date(usuario.ultimoAcesso).toLocaleString('pt-BR') : 'Nunca'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleToggleAtivo(usuario)} title={usuario.ativo ? 'Desativar' : 'Ativar'}>
-                          {usuario.ativo ? <UserX className="h-4 w-4 text-red-600" /> : <UserCheck className="h-4 w-4 text-green-600" />}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(usuario.id)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(usuario.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canEdit && (
+                          <Button variant="ghost" size="sm" onClick={() => handleToggleAtivo(usuario)} title={usuario.ativo ? 'Desativar' : 'Ativar'}>
+                            {usuario.ativo ? <UserX className="h-4 w-4 text-red-600" /> : <UserCheck className="h-4 w-4 text-green-600" />}
+                          </Button>
+                        )}
+                        {canEdit && (
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(usuario.id)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(usuario.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -261,6 +298,7 @@ export default function UsuariosList() {
       {showForm && (
         <UsuarioForm
           id={editingId}
+          pessoaIdInicial={editingId ? null : pessoaIdInicial}
           onClose={handleCloseForm}
           onSuccess={handleFormSuccess}
         />
@@ -268,7 +306,6 @@ export default function UsuariosList() {
     </div>
   );
 }
-
 
 
 

@@ -16,6 +16,8 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { exportToCSV } from '@/utils/export';
 import { eventosApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { RESOURCES, ACTIONS } from '@/utils/permissions';
 
 export default function EventosList() {
   const [items, setItems] = useState([]);
@@ -28,6 +30,7 @@ export default function EventosList() {
     dataInicio_to: '',
   });
   const confirmDialog = useConfirmDialog();
+  const { can } = useAuth();
 
   const load = async () => {
     try {
@@ -121,6 +124,9 @@ export default function EventosList() {
   if (loading) return <LoadingPage text="Carregando eventos..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
+  const canEdit = can(RESOURCES.EVENTOS, ACTIONS.EDIT);
+  const canDelete = can(RESOURCES.EVENTOS, ACTIONS.DELETE);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -128,11 +134,13 @@ export default function EventosList() {
           <h1 className="text-3xl font-bold">Eventos</h1>
           <p className="text-muted-foreground">Gerencie os eventos da igreja</p>
         </div>
-        <Button asChild>
-          <Link to="/eventos/novo">
-            <Plus className="h-4 w-4 mr-2" /> Novo Evento
-          </Link>
-        </Button>
+        {canEdit && (
+          <Button asChild>
+            <Link to="/eventos/novo">
+              <Plus className="h-4 w-4 mr-2" /> Novo Evento
+            </Link>
+          </Button>
+        )}
       </div>
 
       <AdvancedSearch
@@ -215,14 +223,18 @@ export default function EventosList() {
                             <Users className="h-4 w-4" />
                           </Link>
                         </Button>
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/eventos/${evento.id}/editar`}>
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(evento.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canEdit && (
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/eventos/${evento.id}/editar`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(evento.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -256,5 +268,4 @@ export default function EventosList() {
     </div>
   );
 }
-
 

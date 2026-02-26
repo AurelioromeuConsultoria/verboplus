@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Calendar, 
@@ -11,7 +11,8 @@ import {
   XCircle,
   AlertCircle,
   Eye,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,8 @@ const MensagensAgendadas = () => {
   const [mensagens, setMensagens] = useState([]);
   const [visitantes, setVisitantes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [autoRefreshSeconds, setAutoRefreshSeconds] = useState(30);
   const [error, setError] = useState(null);
   const [filtros, setFiltros] = useState({
     status: '',
@@ -43,17 +46,12 @@ const MensagensAgendadas = () => {
     erro: 0
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    calcularEstatisticas();
-  }, [mensagens]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async ({ showLoader = false } = {}) => {
     try {
-      setLoading(true);
+      setError(null);
+      if (showLoader) setLoading(true);
+      else setRefreshing(true);
+
       const [mensagensResponse, visitantesResponse] = await Promise.all([
         api.get('/mensagensAgendadas'),
         api.get('/visitantes')
@@ -66,15 +64,37 @@ const MensagensAgendadas = () => {
       setError('Erro ao carregar dados');
       console.error('Erro ao buscar dados:', err);
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    calcularEstatisticas();
+  }, [mensagens]);
+
+  useEffect(() => {
+    fetchData({ showLoader: true });
+  }, [fetchData]);
+
+  useEffect(() => {
+    if (!autoRefreshSeconds || autoRefreshSeconds <= 0) return;
+
+    const intervalMs = autoRefreshSeconds * 1000;
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      if (loading || refreshing) return;
+      fetchData();
+    }, intervalMs);
+
+    return () => window.clearInterval(id);
+  }, [autoRefreshSeconds, fetchData, loading, refreshing]);
 
   const calcularEstatisticas = () => {
     const total = mensagens.length;
-    const agendadas = mensagens.filter(m => m.status === 'Agendada' || m.status === 1).length;
-    const enviadas = mensagens.filter(m => m.status === 'Enviada' || m.status === 2).length;
-    const erro = mensagens.filter(m => m.status === 'Erro' || m.status === 3).length;
+    const agendadas = mensagens.filter(m => [1, 2, 6].includes(Number(m.status))).length; // Agendada, ProntaParaEnvio, EmProcessamento
+    const enviadas = mensagens.filter(m => Number(m.status) === 3).length;
+    const erro = mensagens.filter(m => Number(m.status) === 4).length;
 
     setStats({ total, agendadas, enviadas, erro });
   };
@@ -97,17 +117,17 @@ const MensagensAgendadas = () => {
   };
 
   const mensagensFiltradas = mensagens.filter(mensagem => {
-    if (filtros.status && mensagem.status !== filtros.status) return false;
-    if (filtros.visitanteId && mensagem.visitanteId.toString() !== filtros.visitanteId) return false;
+    if (filtros.status && String(mensagem.status) !== String(filtros.status)) return false;
+    if (filtros.visitanteId && String(mensagem.visitanteId) !== String(filtros.visitanteId)) return false;
     
     if (filtros.dataInicio) {
-      const dataEnvio = new Date(mensagem.dataHoraEnvio);
+      const dataEnvio = new Date(mensagem.dataEnvio);
       const dataInicio = new Date(filtros.dataInicio);
       if (dataEnvio < dataInicio) return false;
     }
     
     if (filtros.dataFim) {
-      const dataEnvio = new Date(mensagem.dataHoraEnvio);
+      const dataEnvio = new Date(mensagem.dataEnvio);
       const dataFim = new Date(filtros.dataFim);
       dataFim.setHours(23, 59, 59, 999); // Final do dia
       if (dataEnvio > dataFim) return false;
@@ -117,18 +137,14 @@ const MensagensAgendadas = () => {
   });
 
   const getStatusText = (status) => {
-    switch (status) {
-      case 'Agendada':
-      case 1:
-        return 'Agendada';
-      case 'Enviada':
-      case 2:
-        return 'Enviada';
-      case 'Erro':
-      case 3:
-        return 'Erro';
-      default:
-        return `Status ${status}`;
+    switch (Number(status)) {
+      case 1: return 'Agendada';
+      case 2: return 'Pronta para envio';
+      case 3: return 'Enviada';
+      case 4: return 'Erro';
+      case 5: return 'Cancelada';
+      case 6: return 'Em processamento';
+      default: return `Status ${status}`;
     }
   };
 
@@ -152,10 +168,16 @@ const MensagensAgendadas = () => {
     switch (statusText) {
       case 'Agendada':
         return <Badge variant="default" className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700">Agendada</Badge>;
+      case 'Pronta para envio':
+        return <Badge variant="secondary">Pronta</Badge>;
+      case 'Em processamento':
+        return <Badge variant="secondary">Processando</Badge>;
       case 'Enviada':
         return <Badge variant="default" className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700">Enviada</Badge>;
       case 'Erro':
         return <Badge variant="destructive">Erro</Badge>;
+      case 'Cancelada':
+        return <Badge variant="outline">Cancelada</Badge>;
       default:
         return <Badge variant="secondary">{statusText}</Badge>;
     }
@@ -181,31 +203,52 @@ const MensagensAgendadas = () => {
     });
   };
 
-  const getVisitanteNome = (visitanteId) => {
-    const visitante = visitantes.find(v => v.id === visitanteId);
+  const getVisitanteNome = (mensagem) => {
+    if (mensagem?.nomeVisitante) return mensagem.nomeVisitante;
+    const visitante = visitantes.find(v => v.id === mensagem.visitanteId);
     return visitante ? visitante.nome : 'Visitante não encontrado';
   };
 
-  const cancelarMensagem = async (id) => {
-    if (window.confirm('Tem certeza que deseja cancelar esta mensagem?')) {
-      try {
-        await api.delete(`/mensagensAgendadas/${id}`);
-        setMensagens(mensagens.filter(m => m.id !== id));
-      } catch (err) {
-        setError('Erro ao cancelar mensagem');
-        console.error('Erro ao cancelar mensagem:', err);
-      }
-    }
-  };
+  // Cancelamento não está implementado na API atualmente.
 
   if (loading) return <Loading />;
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Mensagens Agendadas</h1>
-        <p className="text-muted-foreground mt-1">Acompanhe o status das mensagens automáticas</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Mensagens Agendadas</h1>
+          <p className="text-muted-foreground mt-1">Acompanhe o status das mensagens automáticas</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Auto-atualizar</span>
+            <select
+              value={String(autoRefreshSeconds)}
+              onChange={(e) => setAutoRefreshSeconds(Number(e.target.value))}
+              className="px-3 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm"
+              title="Intervalo de atualização automática"
+            >
+              <option value="0">Desligado</option>
+              <option value="10">10s</option>
+              <option value="30">30s</option>
+              <option value="60">60s</option>
+            </select>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fetchData()}
+            disabled={refreshing}
+            title="Atualizar lista"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Atualizando...' : 'Atualizar'}
+          </Button>
+        </div>
       </div>
 
       {error && <ErrorMessage message={error} />}
@@ -288,9 +331,12 @@ const MensagensAgendadas = () => {
                 className="w-full px-3 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               >
                 <option value="">Todos os status</option>
-                <option value="Agendada">Agendada</option>
-                <option value="Enviada">Enviada</option>
-                <option value="Erro">Erro</option>
+                <option value="1">Agendada</option>
+                <option value="2">Pronta para envio</option>
+                <option value="6">Em processamento</option>
+                <option value="3">Enviada</option>
+                <option value="4">Erro</option>
+                <option value="5">Cancelada</option>
               </select>
             </div>
 
@@ -390,7 +436,7 @@ const MensagensAgendadas = () => {
                           <User className="w-4 h-4 text-muted-foreground mr-2" />
                           <div>
                             <div className="text-sm font-medium text-foreground">
-                              {getVisitanteNome(mensagem.visitanteId)}
+                              {getVisitanteNome(mensagem)}
                             </div>
                             <div className="text-sm text-muted-foreground">
                               ID: {mensagem.visitanteId}
@@ -400,13 +446,14 @@ const MensagensAgendadas = () => {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm text-foreground max-w-xs truncate">
-                          {mensagem.textoMensagem}
+                          {mensagem.nomeConfiguracao ? `${mensagem.nomeConfiguracao}: ` : ''}
+                          {mensagem.textoFinal}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center text-sm text-foreground">
                           <Calendar className="w-4 h-4 text-muted-foreground mr-2" />
-                          {formatDateTime(mensagem.dataHoraEnvio)}
+                          {formatDateTime(mensagem.dataEnvio)}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -429,16 +476,6 @@ const MensagensAgendadas = () => {
                               <Eye className="w-4 h-4" />
                             </Link>
                           </Button>
-                          {mensagem.status === 'Agendada' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => cancelarMensagem(mensagem.id)}
-                              title="Cancelar mensagem"
-                            >
-                              <X className="w-4 h-4 text-destructive" />
-                            </Button>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>

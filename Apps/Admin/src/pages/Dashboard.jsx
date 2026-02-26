@@ -67,6 +67,8 @@ export function Dashboard() {
     totalEventos: 0,
     totalInscricoes: 0,
     totalVoluntarios: 0,
+    totalAniversariantesProximos: 0,
+    proximosAniversariantes: [],
   };
 
   return (
@@ -200,7 +202,47 @@ export function Dashboard() {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Aniversariantes (30 dias)
+            </CardTitle>
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalAniversariantesProximos}</div>
+            <p className="text-xs text-muted-foreground">
+              Próximos aniversários
+            </p>
+          </CardContent>
+        </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Próximos Aniversariantes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {stats.proximosAniversariantes?.length ? (
+            <div className="space-y-3">
+              {stats.proximosAniversariantes.map((p) => (
+                <div key={p.id} className="flex items-center justify-between border-b pb-2 last:border-b-0 last:pb-0">
+                  <div>
+                    <div className="font-medium">{p.nome}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Próximo aniversário: {p.proximoAniversario ? new Date(p.proximoAniversario).toLocaleDateString('pt-BR') : '-'}
+                    </div>
+                  </div>
+                  <div className="text-sm font-semibold">{p.diasParaAniversario} dias</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">Nenhum aniversariante nos próximos dias.</div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -216,4 +258,3 @@ export function Dashboard() {
     </div>
   );
 }
-

@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { pessoasApi, pessoasPerfisApi, visitantesApi } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { RESOURCES, ACTIONS } from '@/utils/permissions';
 import { toast } from 'sonner';
 
 export function PessoaDetails() {
@@ -24,6 +26,7 @@ export function PessoaDetails() {
   const [showAddPerfil, setShowAddPerfil] = useState(false);
   const [showAddVisita, setShowAddVisita] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { can } = useAuth();
 
   // Formulário de perfil
   const [perfilForm, setPerfilForm] = useState({
@@ -162,6 +165,7 @@ export function PessoaDetails() {
 
   const perfisAtivos = perfis.filter(p => !p.dataFim);
   const perfisHistorico = perfis.filter(p => p.dataFim);
+  const canCreateUsuario = can(RESOURCES.USUARIOS, ACTIONS.EDIT);
 
   return (
     <div className="space-y-6">
@@ -181,6 +185,14 @@ export function PessoaDetails() {
           </div>
         </div>
         <div className="flex items-center space-x-2">
+          {canCreateUsuario && (
+            <Button variant="outline" asChild>
+              <Link to={`/usuarios?pessoaId=${id}`}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Criar Acesso
+              </Link>
+            </Button>
+          )}
           <Dialog open={showAddVisita} onOpenChange={setShowAddVisita}>
             <DialogTrigger asChild>
               <Button variant="outline">

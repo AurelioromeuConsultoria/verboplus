@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Eye, Edit, Trash2, Phone, Mail, Download } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, Phone, Mail, Download, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,6 +15,8 @@ import { useTableSort } from '@/hooks/useTableSort';
 import { exportToCSV } from '@/utils/export';
 import { pessoasApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { RESOURCES, ACTIONS } from '@/utils/permissions';
 
 export function PessoasList() {
   const [pessoas, setPessoas] = useState([]);
@@ -34,6 +36,7 @@ export function PessoasList() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pessoaToDelete, setPessoaToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const { can } = useAuth();
 
   const loadPessoas = async () => {
     try {
@@ -183,6 +186,10 @@ export function PessoasList() {
     return <ErrorPage message={error} onRetry={loadPessoas} />;
   }
 
+  const canEdit = can(RESOURCES.PESSOAS, ACTIONS.EDIT);
+  const canDelete = can(RESOURCES.PESSOAS, ACTIONS.DELETE);
+  const canCreateUsuario = can(RESOURCES.USUARIOS, ACTIONS.EDIT);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -192,12 +199,14 @@ export function PessoasList() {
             Gerencie as pessoas cadastradas no sistema
           </p>
         </div>
-        <Button asChild>
-          <Link to="/pessoas/novo">
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Pessoa
-          </Link>
-        </Button>
+        {canEdit && (
+          <Button asChild>
+            <Link to="/pessoas/novo">
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Pessoa
+            </Link>
+          </Button>
+        )}
       </div>
 
       <AdvancedSearch
@@ -266,7 +275,7 @@ export function PessoasList() {
                   ? 'Nenhuma pessoa cadastrada ainda.'
                   : 'Nenhuma pessoa encontrada com os filtros aplicados.'}
               </p>
-              {pessoas.length === 0 && (
+              {pessoas.length === 0 && canEdit && (
                 <Button asChild>
                   <Link to="/pessoas/novo">
                     <Plus className="h-4 w-4 mr-2" />
@@ -370,18 +379,29 @@ export function PessoasList() {
                             <Eye className="h-4 w-4" />
                           </Link>
                         </Button>
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/pessoas/${pessoa.id}/editar`}>
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteClick(pessoa)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canEdit && (
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/pessoas/${pessoa.id}/editar`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        )}
+                        {canCreateUsuario && (
+                          <Button variant="ghost" size="sm" asChild title="Criar acesso para esta pessoa">
+                            <Link to={`/usuarios?pessoaId=${pessoa.id}`}>
+                              <UserPlus className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(pessoa)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -418,7 +438,6 @@ export function PessoasList() {
     </div>
   );
 }
-
 
 
 

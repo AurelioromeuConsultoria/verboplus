@@ -10,6 +10,7 @@ import {
   Briefcase,
   Handshake,
   CalendarDays,
+  ArrowRightLeft,
   Star,
   Tag,
   Newspaper,
@@ -32,17 +33,27 @@ import {
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/context/AuthContext';
+import { RESOURCES } from '@/utils/permissions';
 
 const menuItems = [
   {
     title: 'Dashboard',
     href: '/',
     icon: Home,
+    permission: RESOURCES.DASHBOARD,
   },
   {
     title: 'Usuários',
     href: '/usuarios',
     icon: UserCog,
+    permission: RESOURCES.USUARIOS,
+  },
+  {
+    title: 'Perfis de Acesso',
+    href: '/perfis-acesso',
+    icon: UserCog,
+    permission: RESOURCES.PERFIS_ACESSO,
   },
 ];
 
@@ -55,26 +66,37 @@ const menuGroups = [
         title: 'Pessoas',
         href: '/pessoas',
         icon: Users,
+        permission: RESOURCES.PESSOAS,
+      },
+      {
+        title: 'Aniversariantes',
+        href: '/pessoas/aniversariantes',
+        icon: CalendarDays,
+        permission: RESOURCES.PESSOAS,
       },
       {
         title: 'Perfis',
         href: '/perfis',
         icon: User,
+        permission: RESOURCES.PERFIS,
       },
       {
         title: 'Visitantes',
         href: '/visitantes',
         icon: Users,
+        permission: RESOURCES.VISITANTES,
       },
       {
         title: 'Configurações de Mensagens',
         href: '/configuracoes-mensagens',
         icon: MessageSquare,
+        permission: RESOURCES.CONFIG_MENSAGENS,
       },
       {
         title: 'Mensagens Agendadas',
         href: '/mensagens-agendadas',
         icon: CalendarDays,
+        permission: RESOURCES.MENSAGENS_AGENDADAS,
       },
     ],
   },
@@ -86,16 +108,31 @@ const menuGroups = [
         title: 'Equipes',
         href: '/equipes',
         icon: Group,
+        permission: RESOURCES.EQUIPES,
       },
       {
         title: 'Cargos',
         href: '/cargos',
         icon: Briefcase,
+        permission: RESOURCES.CARGOS,
       },
       {
         title: 'Voluntários',
         href: '/voluntarios',
         icon: Handshake,
+        permission: RESOURCES.VOLUNTARIOS,
+      },
+      {
+        title: 'Escalas',
+        href: '/voluntariado/escalas',
+        icon: CalendarDays,
+        permission: RESOURCES.VOLUNTARIOS,
+      },
+      {
+        title: 'Relatório Vínculos',
+        href: '/voluntariado/relatorio-vinculos',
+        icon: ArrowRightLeft,
+        permission: RESOURCES.VOLUNTARIOS,
       },
     ],
   },
@@ -118,11 +155,79 @@ const menuGroups = [
         title: 'Eventos',
         href: '/eventos',
         icon: Calendar,
+        permission: RESOURCES.EVENTOS,
       },
       {
         title: 'Inscrições',
         href: '/inscricoes-eventos',
         icon: ClipboardList,
+        permission: RESOURCES.INSCRICOES_EVENTOS,
+      },
+    ],
+  },
+  {
+    title: 'Financeiro',
+    icon: Briefcase,
+    items: [
+      {
+        title: 'Fornecedores',
+        href: '/financeiro/fornecedores',
+        icon: Contact,
+        permission: RESOURCES.FORNECEDORES,
+      },
+      {
+        title: 'Categorias de Despesas',
+        href: '/financeiro/categorias-despesas',
+        icon: Tag,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        title: 'Contas Bancárias',
+        href: '/financeiro/contas-bancarias',
+        icon: Briefcase,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        title: 'Centros de Custos',
+        href: '/financeiro/centros-custos',
+        icon: BarChart3,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        title: 'Projetos',
+        href: '/financeiro/projetos',
+        icon: Calendar,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        title: 'Despesas',
+        href: '/financeiro/despesas',
+        icon: Briefcase,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        title: 'Receitas',
+        href: '/financeiro/receitas',
+        icon: BarChart3,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        title: 'Categorias de Receitas',
+        href: '/financeiro/categorias-receitas',
+        icon: Tag,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        title: 'Dashboard Financeiro',
+        href: '/financeiro/dashboard',
+        icon: BarChart3,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        title: 'Relatórios Financeiros',
+        href: '/financeiro/relatorios',
+        icon: BarChart3,
+        permission: RESOURCES.FINANCEIRO,
       },
     ],
   },
@@ -134,31 +239,37 @@ const menuGroups = [
         title: 'Categorias de Notícias',
         href: '/categorias-noticias',
         icon: Tag,
+        permission: RESOURCES.CATEGORIAS_NOTICIAS,
       },
       {
         title: 'Notícias',
         href: '/noticias',
         icon: Newspaper,
+        permission: RESOURCES.NOTICIAS,
       },
       {
         title: 'Enquetes',
         href: '/enquetes',
         icon: BarChart3,
+        permission: RESOURCES.ENQUETES,
       },
       {
         title: 'Contatos',
         href: '/contatos',
         icon: Contact,
+        permission: RESOURCES.CONTATOS,
       },
       {
         title: 'Destaques do Site',
         href: '/destaques-site',
         icon: Star,
+        permission: RESOURCES.DESTAQUES_SITE,
       },
       {
         title: 'Configuração',
         href: '/configuracao-portal',
         icon: Cog,
+        permission: RESOURCES.PORTAL,
       },
     ],
   },
@@ -170,11 +281,13 @@ const menuGroups = [
         title: 'Categorias de Mídia',
         href: '/categorias-midias',
         icon: Folder,
+        permission: RESOURCES.MIDIA,
       },
       {
         title: 'Galerias de Fotos',
         href: '/galerias-fotos',
         icon: Images,
+        permission: RESOURCES.GALERIAS_FOTOS,
       },
     ],
   },
@@ -186,6 +299,7 @@ const menuGroups = [
         title: 'Check-ins',
         href: '/kids/checkins',
         icon: LogIn,
+        permission: RESOURCES.KIDS,
       },
     ],
   },
@@ -193,10 +307,12 @@ const menuGroups = [
 
 export function Sidebar() {
   const location = useLocation();
+  const { can } = useAuth();
   const [openGroups, setOpenGroups] = useState({
     connect: true,
     voluntariado: true,
     eventos: true,
+    financeiro: true,
     portal: true,
     mídia: true,
     kids: true,
@@ -272,7 +388,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-        {menuItems.map((item) => {
+        {menuItems.filter((item) => !item.permission || can(item.permission, 'view')).map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.href || 
             (item.href !== '/' && location.pathname.startsWith(item.href));
@@ -296,9 +412,11 @@ export function Sidebar() {
 
         {/* Menu Groups */}
         {menuGroups.map((group, groupIndex) => {
+          const visibleItems = group.items.filter((item) => !item.permission || can(item.permission, 'view'));
+          if (visibleItems.length === 0) return null;
           const groupKey = group.title.toLowerCase().replace(/\s+/g, '');
           const isOpen = openGroups[groupKey] ?? false;
-          const isActiveGroup = isGroupActive(group.items);
+          const isActiveGroup = isGroupActive(visibleItems);
           const GroupIcon = group.icon;
 
           return (
@@ -327,7 +445,7 @@ export function Sidebar() {
                 )}
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-1 mt-1">
-                {group.items.map((item) => {
+                {visibleItems.map((item) => {
                   const ItemIcon = item.icon;
                   const isActive = location.pathname === item.href || 
                     (item.href !== '/' && location.pathname.startsWith(item.href));

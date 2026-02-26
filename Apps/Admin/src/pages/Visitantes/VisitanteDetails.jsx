@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Edit, Phone, Mail, Calendar, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Edit, Phone, Mail, Calendar, MessageSquare, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { visitantesApi, mensagensAgendadasApi } from '@/lib/api';
+import { toast } from 'sonner';
 
 export function VisitanteDetails() {
   const { id } = useParams();
@@ -15,6 +16,7 @@ export function VisitanteDetails() {
   const [mensagens, setMensagens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [regenerando, setRegenerando] = useState(false);
 
   const loadData = async () => {
     try {
@@ -46,15 +48,33 @@ export function VisitanteDetails() {
   };
 
   const getStatusBadge = (status) => {
-    const statusConfig = {
-      'Agendada': { variant: 'secondary', text: 'Agendada' },
-      'Enviada': { variant: 'default', text: 'Enviada' },
-      'Erro': { variant: 'destructive', text: 'Erro' },
-      'Cancelada': { variant: 'outline', text: 'Cancelada' }
-    };
+    const value = Number(status);
+    if (value === 1) return <Badge variant="secondary">Agendada</Badge>;
+    if (value === 2) return <Badge variant="secondary">Pronta</Badge>;
+    if (value === 3) return <Badge variant="default">Enviada</Badge>;
+    if (value === 4) return <Badge variant="destructive">Erro</Badge>;
+    if (value === 5) return <Badge variant="outline">Cancelada</Badge>;
+    if (value === 6) return <Badge variant="secondary">Processando</Badge>;
+    return <Badge variant="secondary">{String(status)}</Badge>;
+  };
 
-    const config = statusConfig[status] || { variant: 'secondary', text: status };
-    return <Badge variant={config.variant}>{config.text}</Badge>;
+  const handleRegerarMensagens = async () => {
+    try {
+      setRegenerando(true);
+      const res = await visitantesApi.regerarMensagens(id);
+      toast.success(
+        `Mensagens regeradas: ${res.data?.mensagensCriadas ?? 0} criadas, ${res.data?.mensagensCanceladas ?? 0} canceladas`
+      );
+      await loadData();
+    } catch (err) {
+      const msg = typeof err.response?.data === 'string'
+        ? err.response.data
+        : (err.response?.data?.message || err.response?.data?.error || 'Erro ao regerar mensagens');
+      toast.error(msg);
+      console.error(err);
+    } finally {
+      setRegenerando(false);
+    }
   };
 
   useEffect(() => {
@@ -85,19 +105,25 @@ export function VisitanteDetails() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">
-              {visitante.pessoa?.nome || visitante.nome || 'Visitante'}
+              {visitante.nome || visitante.pessoa?.nome || 'Visitante'}
             </h1>
             <p className="text-muted-foreground">
               Detalhes da visita
             </p>
           </div>
         </div>
-        <Button asChild>
-          <Link to={`/visitantes/${id}/editar`}>
-            <Edit className="h-4 w-4 mr-2" />
-            Editar
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleRegerarMensagens} disabled={regenerando}>
+            <RefreshCcw className="h-4 w-4 mr-2" />
+            {regenerando ? 'Regerando...' : 'Regerar Mensagens'}
+          </Button>
+          <Button asChild>
+            <Link to={`/visitantes/${id}/editar`}>
+              <Edit className="h-4 w-4 mr-2" />
+              Editar
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -137,60 +163,58 @@ export function VisitanteDetails() {
             <div>
               <p className="text-sm font-medium">Nome</p>
               <p className="text-sm text-muted-foreground">
-                {visitante.pessoa?.nome || visitante.nome || '-'}
+                {visitante.nome || visitante.pessoa?.nome || '-'}
               </p>
             </div>
 
-            {visitante.pessoa?.email && (
+            {visitante.email && (
               <div className="flex items-center space-x-2">
                 <div>
                   <p className="text-sm font-medium">Email</p>
-                  <p className="text-sm text-muted-foreground">{visitante.pessoa.email}</p>
+                  <p className="text-sm text-muted-foreground">{visitante.email}</p>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => window.open(`mailto:${visitante.pessoa.email}`)}
+                  onClick={() => window.open(`mailto:${visitante.email}`)}
                 >
                   <Mail className="h-4 w-4" />
                 </Button>
               </div>
             )}
 
-            {visitante.pessoa?.telefone && (
+            {visitante.telefone && (
               <div>
                 <p className="text-sm font-medium">Telefone</p>
-                <p className="text-sm text-muted-foreground">{visitante.pessoa.telefone}</p>
+                <p className="text-sm text-muted-foreground">{visitante.telefone}</p>
               </div>
             )}
 
-            {visitante.pessoa?.whatsApp && (
+            {visitante.whatsApp && (
               <div className="flex items-center space-x-2">
                 <div>
                   <p className="text-sm font-medium">WhatsApp</p>
-                  <p className="text-sm text-muted-foreground">{visitante.pessoa.whatsApp}</p>
+                  <p className="text-sm text-muted-foreground">{visitante.whatsApp}</p>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => window.open(`https://wa.me/55${visitante.pessoa.whatsApp.replace(/\D/g, '')}`)}
+                  onClick={() => window.open(`https://wa.me/55${visitante.whatsApp.replace(/\D/g, '')}`)}
                 >
                   <Phone className="h-4 w-4" />
                 </Button>
               </div>
             )}
 
-            {visitante.pessoa?.perfis && visitante.pessoa.perfis.length > 0 && (
+            {visitante.perfis && visitante.perfis.length > 0 && (
               <div>
                 <p className="text-sm font-medium mb-2">Perfis</p>
                 <div className="flex flex-wrap gap-1">
-                  {visitante.pessoa.perfis
-                    .filter(p => !p.dataFim)
-                    .map((perfil, idx) => (
+                  {visitante.perfis.map((perfil, idx) => (
                       <Badge key={idx} variant="secondary">
-                        {perfil.perfil}
+                        {perfil}
                       </Badge>
-                    ))}
+                  ))}
                 </div>
               </div>
             )}

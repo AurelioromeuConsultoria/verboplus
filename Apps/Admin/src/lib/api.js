@@ -46,6 +46,7 @@ api.interceptors.response.use(
 export const pessoasApi = {
   getAll: () => api.get('/pessoas'),
   getById: (id) => api.get(`/pessoas/${id}`),
+  getAniversariantes: (dias = 30, limite = 50) => api.get('/pessoas/aniversariantes', { params: { dias, limite } }),
   create: (data) => api.post('/pessoas', data),
   update: (id, data) => api.put(`/pessoas/${id}`, data),
   delete: (id) => api.delete(`/pessoas/${id}`),
@@ -68,6 +69,7 @@ export const visitantesApi = {
   create: (data) => api.post('/visitantes', data),
   update: (id, data) => api.put(`/visitantes/${id}`, data),
   delete: (id) => api.delete(`/visitantes/${id}`),
+  regerarMensagens: (id) => api.post(`/visitantes/${id}/regerar-mensagens`),
 };
 
 export const configuracoesMensagensApi = {
@@ -120,6 +122,88 @@ export const hubCasasApi = {
   delete: (id) => api.delete(`/hub/casas/${id}`),
 };
 
+// Fornecedores
+export const fornecedoresApi = {
+  getAll: () => api.get('/fornecedores'),
+  getById: (id) => api.get(`/fornecedores/${id}`),
+  create: (data) => api.post('/fornecedores', data),
+  update: (id, data) => api.put(`/fornecedores/${id}`, data),
+  delete: (id) => api.delete(`/fornecedores/${id}`),
+};
+
+// Financeiro - Categorias de Despesas
+export const categoriasDespesasApi = {
+  getAll: () => api.get('/categoriasDespesas'),
+  getById: (id) => api.get(`/categoriasDespesas/${id}`),
+  create: (data) => api.post('/categoriasDespesas', data),
+  update: (id, data) => api.put(`/categoriasDespesas/${id}`, data),
+  delete: (id) => api.delete(`/categoriasDespesas/${id}`),
+};
+
+// Financeiro - Contas Bancárias
+export const contasBancariasApi = {
+  getAll: () => api.get('/contasBancarias'),
+  getById: (id) => api.get(`/contasBancarias/${id}`),
+  create: (data) => api.post('/contasBancarias', data),
+  update: (id, data) => api.put(`/contasBancarias/${id}`, data),
+  delete: (id) => api.delete(`/contasBancarias/${id}`),
+};
+
+// Financeiro - Centros de Custos
+export const centrosCustosApi = {
+  getAll: () => api.get('/centrosCustos'),
+  getById: (id) => api.get(`/centrosCustos/${id}`),
+  create: (data) => api.post('/centrosCustos', data),
+  update: (id, data) => api.put(`/centrosCustos/${id}`, data),
+  delete: (id) => api.delete(`/centrosCustos/${id}`),
+};
+
+// Financeiro - Projetos
+export const projetosApi = {
+  getAll: () => api.get('/projetos'),
+  getById: (id) => api.get(`/projetos/${id}`),
+  create: (data) => api.post('/projetos', data),
+  update: (id, data) => api.put(`/projetos/${id}`, data),
+  delete: (id) => api.delete(`/projetos/${id}`),
+};
+
+// Financeiro - Despesas
+export const despesasApi = {
+  getAll: () => api.get('/despesas'),
+  getById: (id) => api.get(`/despesas/${id}`),
+  create: (data) => api.post('/despesas', data),
+  update: (id, data) => api.put(`/despesas/${id}`, data),
+  delete: (id) => api.delete(`/despesas/${id}`),
+};
+
+// Financeiro - Receitas
+export const receitasApi = {
+  getAll: () => api.get('/receitas'),
+  getById: (id) => api.get(`/receitas/${id}`),
+  create: (data) => api.post('/receitas', data),
+  update: (id, data) => api.put(`/receitas/${id}`, data),
+  delete: (id) => api.delete(`/receitas/${id}`),
+};
+
+export const categoriasReceitasApi = {
+  getAll: () => api.get('/categoriasreceitas'),
+  getById: (id) => api.get(`/categoriasreceitas/${id}`),
+  create: (data) => api.post('/categoriasreceitas', data),
+  update: (id, data) => api.put(`/categoriasreceitas/${id}`, data),
+  delete: (id) => api.delete(`/categoriasreceitas/${id}`),
+};
+
+export const dashboardFinanceiroApi = {
+  getDashboard: () => api.get('/dashboardfinanceiro'),
+};
+
+export const relatoriosFinanceirosApi = {
+  getFluxoCaixa: (dataInicio, dataFim) => api.get('/relatoriosfinanceiros/fluxo-caixa', { params: { dataInicio, dataFim } }),
+  getPorCategoria: (dataInicio, dataFim) => api.get('/relatoriosfinanceiros/por-categoria', { params: { dataInicio, dataFim } }),
+  getPorCentroCusto: (dataInicio, dataFim) => api.get('/relatoriosfinanceiros/por-centro-custo', { params: { dataInicio, dataFim } }),
+  getPorProjeto: (dataInicio, dataFim) => api.get('/relatoriosfinanceiros/por-projeto', { params: { dataInicio, dataFim } }),
+};
+
 // Eventos
 export const eventosApi = {
   getAll: () => api.get('/Eventos'),
@@ -128,6 +212,33 @@ export const eventosApi = {
   update: (id, data) => api.put(`/Eventos/${id}`, data),
   delete: (id) => api.delete(`/Eventos/${id}`),
   getByPeriodo: () => api.get('/Eventos/periodo'),
+};
+
+// Eventos - Ocorrências
+export const eventosOcorrenciasApi = {
+  getByEvento: (eventoId) => api.get(`/EventosOcorrencias/evento/${eventoId}`),
+  getByPeriodo: (dataInicio, dataFim, eventoId) =>
+    api.get('/EventosOcorrencias/periodo', { params: { dataInicio, dataFim, eventoId } }),
+  getById: (id) => api.get(`/EventosOcorrencias/${id}`),
+  create: (data) => api.post('/EventosOcorrencias', data),
+  update: (id, data) => api.put(`/EventosOcorrencias/${id}`, data),
+  delete: (id) => api.delete(`/EventosOcorrencias/${id}`),
+  gerarRecorrencia: (eventoId, dataInicio, dataFim) =>
+    api.post('/EventosOcorrencias/gerar-recorrencia', null, { params: { eventoId, dataInicio, dataFim } }),
+};
+
+// Voluntariado - Escalas
+export const escalasApi = {
+  getById: (id) => api.get(`/Escalas/${id}`),
+  getByOcorrencia: (eventoOcorrenciaId) => api.get(`/Escalas/ocorrencia/${eventoOcorrenciaId}`),
+  getSugestoes: (escalaId, equipeId) => api.get(`/Escalas/${escalaId}/sugestoes`, { params: { equipeId } }),
+  create: (data) => api.post('/Escalas', data),
+  update: (id, data) => api.put(`/Escalas/${id}`, data),
+  delete: (id) => api.delete(`/Escalas/${id}`),
+  addItem: (escalaId, data) => api.post(`/Escalas/${escalaId}/itens`, data),
+  updateItem: (escalaId, escalaItemId, data) => api.put(`/Escalas/${escalaId}/itens/${escalaItemId}`, data),
+  deleteItem: (escalaId, escalaItemId) => api.delete(`/Escalas/${escalaId}/itens/${escalaItemId}`),
+  publicar: (escalaId) => api.post(`/Escalas/${escalaId}/publicar`),
 };
 
 // Destaques Site
@@ -219,6 +330,15 @@ export const usuariosApi = {
   create: (data) => api.post('/usuarios', data),
   update: (id, data) => api.put(`/usuarios/${id}`, data),
   delete: (id) => api.delete(`/usuarios/${id}`),
+};
+
+// Perfis de Acesso
+export const perfisAcessoApi = {
+  getAll: () => api.get('/perfis-acesso'),
+  getById: (id) => api.get(`/perfis-acesso/${id}`),
+  create: (data) => api.post('/perfis-acesso', data),
+  update: (id, data) => api.put(`/perfis-acesso/${id}`, data),
+  delete: (id) => api.delete(`/perfis-acesso/${id}`),
 };
 
 // Categorias de Mídia

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
-import { usuariosApi } from '@/lib/api';
+import { usuariosApi, perfisAcessoApi, pessoasApi } from '@/lib/api';
 import { toast } from 'sonner';
 
 const TIPO_USUARIO_OPTIONS = [
@@ -15,34 +15,72 @@ const TIPO_USUARIO_OPTIONS = [
   { value: 3, label: 'Ambos' },
 ];
 
-export default function UsuarioForm({ id, onClose, onSuccess }) {
+export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = null }) {
   const isEditing = Boolean(id);
   const [formData, setFormData] = useState({
+    modoPessoa: pessoaIdInicial ? 'existente' : 'nova',
+    pessoaId: pessoaIdInicial ? String(pessoaIdInicial) : '',
     nome: '',
     email: '',
     senha: '',
     confirmarSenha: '',
     tipoUsuario: 1,
     ativo: true,
+    perfilAcessoId: '',
   });
+  const [perfis, setPerfis] = useState([]);
+  const [pessoas, setPessoas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const load = async () => {
-    if (!isEditing) return;
     try {
       setLoading(true);
       setError(null);
-      const res = await usuariosApi.getById(id);
-      const u = res.data;
-      setFormData({
-        nome: u.nome || '',
-        email: u.email || '',
-        senha: '',
-        confirmarSenha: '',
-        tipoUsuario: u.tipoUsuario || 1,
-        ativo: u.ativo !== undefined ? u.ativo : true,
+
+      if (isEditing) {
+        const [res, perfisRes] = await Promise.all([
+          usuariosApi.getById(id),
+          perfisAcessoApi.getAll(),
+        ]);
+        const u = res.data;
+        setPerfis(perfisRes.data || []);
+        setFormData({
+          modoPessoa: 'existente',
+          pessoaId: '',
+          nome: u.nome || '',
+          email: u.email || '',
+          senha: '',
+          confirmarSenha: '',
+          tipoUsuario: u.tipoUsuario || 1,
+          ativo: u.ativo !== undefined ? u.ativo : true,
+          perfilAcessoId: String(u.perfilAcessoId || ''),
+        });
+        return;
+      }
+
+      const [perfisRes, pessoasRes, usuariosRes] = await Promise.all([
+        perfisAcessoApi.getAll(),
+        pessoasApi.getAll(),
+        usuariosApi.getAll(),
+      ]);
+      setPerfis(perfisRes.data || []);
+      const pessoaIdsComUsuario = new Set((usuariosRes.data || []).map((u) => u.pessoaId));
+      const pessoaIdInicialNumero = pessoaIdInicial ? Number(pessoaIdInicial) : null;
+      const pessoasFiltradas = (pessoasRes.data || []).filter((p) => {
+        if (!p.ativo) return false;
+        if (pessoaIdInicialNumero && p.id === pessoaIdInicialNumero) return true;
+        return !pessoaIdsComUsuario.has(p.id);
       });
+      setPessoas(pessoasFiltradas);
+
+      if (pessoaIdInicial) {
+        setFormData((prev) => ({
+          ...prev,
+          modoPessoa: 'existente',
+          pessoaId: String(pessoaIdInicial),
+        }));
+      }
     } catch (err) {
       setError('Erro ao carregar usuário');
       console.error(err);
@@ -53,7 +91,11 @@ export default function UsuarioForm({ id, onClose, onSuccess }) {
 
   useEffect(() => {
     load();
-  }, [id]);
+  }, [id, pessoaIdInicial]);
+
+  const pessoaSelecionada = !isEditing && formData.pessoaId
+    ? pessoas.find((p) => String(p.id) === String(formData.pessoaId))
+    : null;
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -66,19 +108,26 @@ export default function UsuarioForm({ id, onClose, onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.nome.trim()) {
-      toast.error('Nome é obrigatório');
+    if (!isEditing && formData.modoPessoa === 'existente' && !formData.pessoaId) {
+      toast.error('Selecione uma pessoa');
       return;
     }
 
-    if (!formData.email.trim()) {
-      toast.error('Email é obrigatório');
-      return;
-    }
+    if (!isEditing && formData.modoPessoa === 'nova') {
+      if (!formData.nome.trim()) {
+        toast.error('Nome é obrigatório');
+        return;
+      }
 
-    if (!/.+@.+\..+/.test(formData.email)) {
-      toast.error('Email inválido');
-      return;
+      if (!formData.email.trim()) {
+        toast.error('Email é obrigatório');
+        return;
+      }
+
+      if (!/.+@.+\..+/.test(formData.email)) {
+        toast.error('Email inválido');
+        return;
+      }
     }
 
     if (!isEditing && !formData.senha) {
@@ -96,6 +145,11 @@ export default function UsuarioForm({ id, onClose, onSuccess }) {
       return;
     }
 
+    if (!formData.perfilAcessoId) {
+      toast.error('Perfil de acesso é obrigatório');
+      return;
+    }
+
     try {
       setLoading(true);
       if (isEditing) {
@@ -104,20 +158,25 @@ export default function UsuarioForm({ id, onClose, onSuccess }) {
           email: formData.email.trim(),
           tipoUsuario: formData.tipoUsuario,
           ativo: formData.ativo,
+          perfilAcessoId: Number(formData.perfilAcessoId),
         });
         toast.success('Usuário atualizado com sucesso');
       } else {
         await usuariosApi.create({
-          nome: formData.nome.trim(),
-          email: formData.email.trim(),
+          pessoaId: formData.modoPessoa === 'existente' ? Number(formData.pessoaId) : null,
+          nome: formData.modoPessoa === 'nova' ? formData.nome.trim() : '',
+          email: formData.modoPessoa === 'nova' ? formData.email.trim() : null,
           senha: formData.senha,
           tipoUsuario: formData.tipoUsuario,
+          perfilAcessoId: Number(formData.perfilAcessoId),
         });
         toast.success('Usuário criado com sucesso');
       }
       if (onSuccess) onSuccess();
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Erro ao salvar usuário';
+      const errorMessage = typeof err.response?.data === 'string'
+        ? err.response.data
+        : (err.response?.data?.message || 'Erro ao salvar usuário');
       toast.error(errorMessage);
       console.error(err);
     } finally {
@@ -139,31 +198,75 @@ export default function UsuarioForm({ id, onClose, onSuccess }) {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            {!isEditing && (
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
-                <Input
-                  id="nome"
-                  name="nome"
-                  value={formData.nome}
+                <Label htmlFor="modoPessoa">Vínculo com Pessoa *</Label>
+                <select
+                  id="modoPessoa"
+                  name="modoPessoa"
+                  value={formData.modoPessoa}
                   onChange={handleChange}
-                  placeholder="Nome completo"
-                  required
-                />
+                  className="w-full px-3 py-2 border rounded"
+                >
+                  <option value="existente">Usar pessoa existente</option>
+                  <option value="nova">Criar nova pessoa</option>
+                </select>
               </div>
+            )}
+
+            {!isEditing && formData.modoPessoa === 'existente' && (
               <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
+                <Label htmlFor="pessoaId">Pessoa *</Label>
+                <select
+                  id="pessoaId"
+                  name="pessoaId"
+                  value={formData.pessoaId}
                   onChange={handleChange}
-                  placeholder="email@exemplo.com"
+                  className="w-full px-3 py-2 border rounded"
                   required
-                />
+                >
+                  <option value="">Selecione</option>
+                  {pessoas.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nome} {p.email ? `(${p.email})` : ''}
+                    </option>
+                  ))}
+                </select>
+                {pessoaSelecionada && (
+                  <p className="text-xs text-muted-foreground">
+                    Será criado acesso para: {pessoaSelecionada.nome}
+                  </p>
+                )}
               </div>
-            </div>
+            )}
+
+            {(isEditing || formData.modoPessoa === 'nova') && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="nome">Nome *</Label>
+                  <Input
+                    id="nome"
+                    name="nome"
+                    value={formData.nome}
+                    onChange={handleChange}
+                    placeholder="Nome completo"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="email@exemplo.com"
+                    required
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -180,6 +283,22 @@ export default function UsuarioForm({ id, onClose, onSuccess }) {
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="perfilAcessoId">Perfil de Acesso *</Label>
+                <select
+                  id="perfilAcessoId"
+                  name="perfilAcessoId"
+                  value={formData.perfilAcessoId}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border rounded"
+                  required
+                >
+                  <option value="">Selecione</option>
+                  {perfis.map((p) => (
+                    <option key={p.id} value={p.id}>{p.nome}</option>
                   ))}
                 </select>
               </div>
@@ -242,7 +361,6 @@ export default function UsuarioForm({ id, onClose, onSuccess }) {
     </div>
   );
 }
-
 
 
 

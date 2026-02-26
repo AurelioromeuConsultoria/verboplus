@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,7 @@ export function VisitanteForm() {
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [regenerando, setRegenerando] = useState(false);
   const [error, setError] = useState(null);
 
   const loadVisitante = async () => {
@@ -37,14 +38,12 @@ export function VisitanteForm() {
       setError(null);
       const response = await visitantesApi.getById(id);
       const visitante = response.data;
-      
-      const pessoa = visitante.pessoa || {};
       setFormData({
-        nome: pessoa.nome || '',
-        telefone: pessoa.telefone || '',
-        whatsApp: pessoa.whatsApp || '',
-        email: pessoa.email || '',
-        dataNascimento: pessoa.dataNascimento ? pessoa.dataNascimento.split('T')[0] : '',
+        nome: visitante.nome || '',
+        telefone: visitante.telefone || '',
+        whatsApp: visitante.whatsApp || '',
+        email: visitante.email || '',
+        dataNascimento: visitante.dataNascimento ? visitante.dataNascimento.split('T')[0] : '',
         dataVisita: visitante.dataVisita ? visitante.dataVisita.split('T')[0] : new Date().toISOString().split('T')[0],
         observacoes: visitante.observacoes || ''
       });
@@ -118,6 +117,25 @@ export function VisitanteForm() {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleRegerarMensagens = async () => {
+    if (!isEditing) return;
+    try {
+      setRegenerando(true);
+      const res = await visitantesApi.regerarMensagens(id);
+      toast.success(
+        `Mensagens regeradas: ${res.data?.mensagensCriadas ?? 0} criadas, ${res.data?.mensagensCanceladas ?? 0} canceladas`
+      );
+    } catch (err) {
+      const msg = typeof err.response?.data === 'string'
+        ? err.response.data
+        : (err.response?.data?.message || err.response?.data?.error || 'Erro ao regerar mensagens');
+      toast.error(msg);
+      console.error(err);
+    } finally {
+      setRegenerando(false);
+    }
   };
 
   useEffect(() => {
@@ -252,6 +270,12 @@ export function VisitanteForm() {
                 <Save className="h-4 w-4 mr-2" />
                 {saving ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
               </Button>
+              {isEditing && (
+                <Button type="button" variant="outline" onClick={handleRegerarMensagens} disabled={regenerando}>
+                  <RefreshCcw className="h-4 w-4 mr-2" />
+                  {regenerando ? 'Regerando...' : 'Regerar Mensagens'}
+                </Button>
+              )}
               <Button type="button" variant="outline" asChild>
                 <Link to="/visitantes">Cancelar</Link>
               </Button>

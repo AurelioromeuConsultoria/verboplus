@@ -13,6 +13,8 @@ import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { cargosApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { RESOURCES, ACTIONS } from '@/utils/permissions';
 
 export default function CargosList() {
   const [items, setItems] = useState([]);
@@ -20,6 +22,7 @@ export default function CargosList() {
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const confirmDialog = useConfirmDialog();
+  const { can } = useAuth();
 
   const load = async () => {
     try {
@@ -72,6 +75,9 @@ export default function CargosList() {
   if (loading) return <LoadingPage text="Carregando cargos..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
+  const canEdit = can(RESOURCES.CARGOS, ACTIONS.EDIT);
+  const canDelete = can(RESOURCES.CARGOS, ACTIONS.DELETE);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -79,11 +85,13 @@ export default function CargosList() {
           <h1 className="text-3xl font-bold">Cargos</h1>
           <p className="text-muted-foreground">Gerencie os cargos</p>
         </div>
-        <Button asChild>
-          <Link to="/cargos/novo">
-            <Plus className="h-4 w-4 mr-2" /> Novo Cargo
-          </Link>
-        </Button>
+        {canEdit && (
+          <Button asChild>
+            <Link to="/cargos/novo">
+              <Plus className="h-4 w-4 mr-2" /> Novo Cargo
+            </Link>
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -127,14 +135,18 @@ export default function CargosList() {
                     <TableCell>{new Date(cargo.dataCriacao).toLocaleDateString('pt-BR')}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/cargos/${cargo.id}/editar`}>
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(cargo.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canEdit && (
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/cargos/${cargo.id}/editar`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(cargo.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -168,5 +180,4 @@ export default function CargosList() {
     </div>
   );
 }
-
 

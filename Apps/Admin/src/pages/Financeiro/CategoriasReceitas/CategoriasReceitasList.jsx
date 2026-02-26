@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,14 +11,13 @@ import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { hubCasasApi, usuariosApi } from '@/lib/api';
+import { categoriasReceitasApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
 
-export default function CasasList() {
+export default function CategoriasReceitasList() {
   const [items, setItems] = useState([]);
-  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
@@ -29,14 +28,10 @@ export default function CasasList() {
     try {
       setLoading(true);
       setError(null);
-      const [c, u] = await Promise.all([
-        hubCasasApi.getAll(),
-        usuariosApi.getAll(),
-      ]);
-      setItems(c.data || []);
-      setUsuarios(u.data || []);
+      const res = await categoriasReceitasApi.getAll();
+      setItems(res.data || []);
     } catch (err) {
-      setError('Erro ao carregar casas');
+      setError('Erro ao carregar categorias de receitas');
       console.error(err);
     } finally {
       setLoading(false);
@@ -47,40 +42,21 @@ export default function CasasList() {
     load();
   }, []);
 
-  const usuariosById = useMemo(() => {
-    return new Map((usuarios || []).map((u) => [String(u.id), u.nome || u.email || String(u.id)]));
-  }, [usuarios]);
-
-  const getUsuarioNome = (casa, key) => {
-    const nomeDireto = casa?.[`${key}Nome`] || casa?.[`${key}nome`];
-    if (nomeDireto) return nomeDireto;
-
-    const obj = casa?.[key];
-    if (obj?.nome) return obj.nome;
-
-    const id = casa?.[`${key}Id`] ?? obj?.id;
-    if (id !== undefined && id !== null) {
-      return usuariosById.get(String(id)) || `#${id}`;
-    }
-
-    return '-';
-  };
-
   const handleDelete = async (id) => {
-    const casa = items.find((c) => c.id === id);
+    const categoria = items.find((c) => c.id === id);
     confirmDialog.show({
-      title: 'Excluir Casa',
-      description: `Tem certeza que deseja excluir "${casa?.nome || 'esta casa'}"? Esta ação não pode ser desfeita.`,
+      title: 'Excluir Categoria de Receita',
+      description: `Tem certeza que deseja excluir "${categoria?.nome || 'esta categoria'}"? Esta ação não pode ser desfeita.`,
       confirmText: 'Excluir',
       cancelText: 'Cancelar',
       variant: 'destructive',
       onConfirm: async () => {
         try {
-          await hubCasasApi.delete(id);
-          toast.success('Casa excluída com sucesso');
+          await categoriasReceitasApi.delete(id);
+          toast.success('Categoria de receita excluída com sucesso');
           await load();
         } catch (err) {
-          toast.error('Erro ao excluir casa');
+          toast.error('Erro ao excluir categoria de receita');
           console.error(err);
           throw err;
         }
@@ -88,30 +64,30 @@ export default function CasasList() {
     });
   };
 
-  const filtered = items.filter((casa) => {
-    if (busca && !String(casa.nome || '').toLowerCase().includes(busca.toLowerCase())) return false;
+  const filtered = items.filter((c) => {
+    if (busca && !String(c.nome || '').toLowerCase().includes(busca.toLowerCase())) return false;
     return true;
   });
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text="Carregando casas..." />;
+  if (loading) return <LoadingPage text="Carregando categorias de receitas..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
-  const canEdit = can(RESOURCES.HUB, ACTIONS.EDIT);
-  const canDelete = can(RESOURCES.HUB, ACTIONS.DELETE);
+  const canEdit = can(RESOURCES.FINANCEIRO, ACTIONS.EDIT);
+  const canDelete = can(RESOURCES.FINANCEIRO, ACTIONS.DELETE);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Hub - Casas</h1>
-          <p className="text-muted-foreground">Gerencie as casas abertas para evangelização</p>
+          <h1 className="text-3xl font-bold">Categorias de Receitas</h1>
+          <p className="text-muted-foreground">Gerencie as categorias de receitas</p>
         </div>
         {canEdit && (
           <Button asChild>
-            <Link to="/hub/casas/novo">
-              <Plus className="h-4 w-4 mr-2" /> Nova Casa
+            <Link to="/financeiro/categorias-receitas/novo">
+              <Plus className="h-4 w-4 mr-2" /> Nova Categoria
             </Link>
           </Button>
         )}
@@ -128,7 +104,7 @@ export default function CasasList() {
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite o nome da casa"
+                placeholder="Digite o nome da categoria"
               />
             </div>
           </div>
@@ -137,46 +113,42 @@ export default function CasasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Casas ({total})</CardTitle>
+          <CardTitle>Lista de Categorias ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhuma casa encontrada.</div>
+            <div className="text-center py-8 text-muted-foreground">Nenhuma categoria encontrada.</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Aberto por</TableHead>
-                  <TableHead>Líder</TableHead>
-                  <TableHead>Timóteo</TableHead>
-                  <TableHead>Anfitrião</TableHead>
-                  <TableHead>Endereço</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedItems.map((casa) => (
-                  <TableRow key={casa.id}>
-                    <TableCell className="font-medium">{casa.nome}</TableCell>
-                    <TableCell>{getUsuarioNome(casa, 'abertoPor')}</TableCell>
-                    <TableCell>{getUsuarioNome(casa, 'lider')}</TableCell>
-                    <TableCell>{getUsuarioNome(casa, 'timoteo')}</TableCell>
-                    <TableCell>{casa.anfitriao || '-'}</TableCell>
-                    <TableCell className="max-w-[260px] truncate" title={casa.enderecoCompleto || casa.endereco || ''}>
-                      {casa.enderecoCompleto || casa.endereco || '-'}
+                {paginatedItems.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.nome}</TableCell>
+                    <TableCell>{c.descricao || '-'}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded text-xs ${c.ativo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {c.ativo ? 'Ativa' : 'Inativa'}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
                         {canEdit && (
                           <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/hub/casas/${casa.id}/editar`}>
+                            <Link to={`/financeiro/categorias-receitas/${c.id}/editar`}>
                               <Edit className="h-4 w-4" />
                             </Link>
                           </Button>
                         )}
                         {canDelete && (
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(casa.id)}>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}

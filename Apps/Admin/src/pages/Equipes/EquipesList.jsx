@@ -14,6 +14,8 @@ import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { equipesApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { RESOURCES, ACTIONS } from '@/utils/permissions';
 
 const AREA_LABEL = {
   1: 'Verde',
@@ -28,6 +30,7 @@ export default function EquipesList() {
   const [busca, setBusca] = useState('');
   const [area, setArea] = useState('');
   const confirmDialog = useConfirmDialog();
+  const { can } = useAuth();
 
   const load = async () => {
     try {
@@ -81,6 +84,9 @@ export default function EquipesList() {
   if (loading) return <LoadingPage text="Carregando equipes..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
+  const canEdit = can(RESOURCES.EQUIPES, ACTIONS.EDIT);
+  const canDelete = can(RESOURCES.EQUIPES, ACTIONS.DELETE);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -88,11 +94,13 @@ export default function EquipesList() {
           <h1 className="text-3xl font-bold">Equipes</h1>
           <p className="text-muted-foreground">Gerencie as equipes da igreja</p>
         </div>
-        <Button asChild>
-          <Link to="/equipes/novo">
-            <Plus className="h-4 w-4 mr-2" /> Nova Equipe
-          </Link>
-        </Button>
+        {canEdit && (
+          <Button asChild>
+            <Link to="/equipes/novo">
+              <Plus className="h-4 w-4 mr-2" /> Nova Equipe
+            </Link>
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -152,14 +160,18 @@ export default function EquipesList() {
                     <TableCell>{new Date(equipe.dataCriacao).toLocaleDateString('pt-BR')}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/equipes/${equipe.id}/editar`}>
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(equipe.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canEdit && (
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/equipes/${equipe.id}/editar`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(equipe.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -193,5 +205,4 @@ export default function EquipesList() {
     </div>
   );
 }
-
 
