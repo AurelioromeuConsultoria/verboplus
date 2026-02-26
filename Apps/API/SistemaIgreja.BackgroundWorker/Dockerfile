@@ -1,5 +1,5 @@
 # Build stage
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /app
 
 # Copia o repositório inteiro (porque a worker referencia projetos em /src)
@@ -10,7 +10,7 @@ RUN dotnet restore "SistemaIgreja.BackgroundWorker/SistemaIgreja.BackgroundWorke
 RUN dotnet publish "SistemaIgreja.BackgroundWorker/SistemaIgreja.BackgroundWorker.csproj" -c Release -o /out --no-restore
 
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/runtime:8.0
+FROM mcr.microsoft.com/dotnet/runtime:10.0
 WORKDIR /app
 
 COPY --from=build /out .
