@@ -16,7 +16,7 @@ stages:
     - task: UseDotNet@2
       inputs:
         packageType: 'sdk'
-        version: '8.x'
+        version: '10.x'
 
     - script: dotnet restore "$(projectPath)"
       displayName: Restore
