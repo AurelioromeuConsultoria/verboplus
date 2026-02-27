@@ -235,23 +235,23 @@ builder.Services.AddSwaggerGen(c =>
 // ==========================
 // CORS
 // ==========================
-// Ordem: UseRouting → UseCors → UseAuthentication → UseAuthorization → MapControllers
-// Sem AllowCredentials (JWT via header). Sem .RequireCors() em MapControllers.
 
 const string CorsPolicyName = "DefaultCors";
+var allowedCorsOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+{
+    "https://portal.kingdombr.com.br",
+    "http://portal.kingdombr.com.br",
+    "https://admin.kingdombr.com.br",
+    "http://admin.kingdombr.com.br",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:4173"
+};
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicyName, policy =>
-        policy.WithOrigins(
-            "https://portal.kingdombr.com.br",
-            "http://portal.kingdombr.com.br",
-            "https://admin.kingdombr.com.br",
-            "http://admin.kingdombr.com.br",
-            "http://localhost:3000",
-            "http://localhost:5173",
-            "http://localhost:4173"
-        )
+        policy.WithOrigins(allowedCorsOrigins.ToArray())
         .AllowAnyHeader()
         .AllowAnyMethod()
     );
@@ -259,8 +259,28 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Middleware CORS explícito - garante headers em TODA resposta (evita falhas com proxy/ordem)
+app.Use(async (context, next) =>
+{
+    var origin = context.Request.Headers["Origin"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(origin) && allowedCorsOrigins.Contains(origin))
+    {
+        context.Response.Headers.Append("Access-Control-Allow-Origin", origin);
+        context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+        context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept");
+    }
+
+    if (context.Request.Method == "OPTIONS")
+    {
+        context.Response.StatusCode = StatusCodes.Status204NoContent;
+        return;
+    }
+
+    await next();
+});
+
 app.UseRouting();
-app.UseCors(CorsPolicyName); // Entre UseRouting e UseAuthentication
+app.UseCors(CorsPolicyName);
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseStaticFiles();
