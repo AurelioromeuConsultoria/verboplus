@@ -41,7 +41,9 @@ public class MembroCadastroService : IMembroCadastroService
         if (string.IsNullOrWhiteSpace(whatsAppNormalizado) || whatsAppNormalizado.Length < 10)
             return new CadastroMembroResultadoDto { Sucesso = false, Mensagem = "WhatsApp inválido. Informe um número com DDD." };
 
-        if (!string.IsNullOrWhiteSpace(dto.Email) && !IsValidEmail(dto.Email))
+        if (string.IsNullOrWhiteSpace(dto.Email))
+            return new CadastroMembroResultadoDto { Sucesso = false, Mensagem = "Email é obrigatório" };
+        if (!IsValidEmail(dto.Email))
             return new CadastroMembroResultadoDto { Sucesso = false, Mensagem = "Email inválido" };
 
         var pessoaId = 0;
@@ -49,11 +51,7 @@ public class MembroCadastroService : IMembroCadastroService
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             // 1. Buscar pessoa existente por email ou whatsapp
-            Pessoa? pessoa = null;
-            if (!string.IsNullOrWhiteSpace(dto.Email))
-            {
-                pessoa = await _pessoaRepository.GetByEmailAsync(dto.Email);
-            }
+            Pessoa? pessoa = await _pessoaRepository.GetByEmailAsync(dto.Email);
             if (pessoa == null && !string.IsNullOrWhiteSpace(whatsAppNormalizado))
             {
                 pessoa = await _pessoaRepository.GetByWhatsAppAsync(whatsAppNormalizado);
@@ -65,7 +63,7 @@ public class MembroCadastroService : IMembroCadastroService
                 pessoa = new Pessoa
                 {
                     Nome = dto.Nome.Trim(),
-                    Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim(),
+                    Email = dto.Email.Trim(),
                     WhatsApp = whatsAppNormalizado,
                     DataNascimento = dto.DataNascimento,
                     TipoPessoa = TipoPessoa.Adulto,

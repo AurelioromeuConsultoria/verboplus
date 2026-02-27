@@ -11,9 +11,10 @@ public class CadastroMembroDto
     [MaxLength(100)]
     public string Nome { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "Email é obrigatório")]
     [EmailAddress(ErrorMessage = "Email inválido")]
     [MaxLength(100)]
-    public string? Email { get; set; }
+    public string Email { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "WhatsApp é obrigatório")]
     [MaxLength(20)]
