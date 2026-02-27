@@ -97,6 +97,7 @@ builder.Services.AddScoped<IKidsNotificacaoRepository, KidsNotificacaoRepository
 // Services
 builder.Services.AddScoped<IPessoaService, PessoaService>();
 builder.Services.AddScoped<IPessoaPerfilService, PessoaPerfilService>();
+builder.Services.AddScoped<IMembroCadastroService, MembroCadastroService>();
 builder.Services.AddScoped<IVisitanteService, VisitanteService>();
 builder.Services.AddScoped<IConfiguracaoMensagemService, ConfiguracaoMensagemService>();
 builder.Services.AddScoped<IMensagemAgendadaService, MensagemAgendadaService>();
@@ -252,12 +253,15 @@ builder.Services.AddCors(options =>
                   if (string.IsNullOrWhiteSpace(origin)) return false;
                   if (allowedSet.Contains(origin)) return true;
 
-                  // Conveniência para dev local (porta variável)
+                  // Dev local (porta variável)
                   if (origin.StartsWith("http://localhost:", StringComparison.OrdinalIgnoreCase) ||
                       origin.StartsWith("https://localhost:", StringComparison.OrdinalIgnoreCase))
-                  {
                       return true;
-                  }
+
+                  // Azure Static Web Apps (ex: https://xxx.azurestaticapps.net)
+                  if (origin.EndsWith(".azurestaticapps.net", StringComparison.OrdinalIgnoreCase) &&
+                      (origin.StartsWith("https://", StringComparison.OrdinalIgnoreCase)))
+                      return true;
 
                   return false;
               })
@@ -269,6 +273,7 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseRouting();
+// CORS após Routing - crítico para Portal (Azure) chamar API (VPS)
 app.UseCors(CorsPolicyName);
 
 
