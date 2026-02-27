@@ -235,52 +235,34 @@ builder.Services.AddSwaggerGen(c =>
 // ==========================
 // CORS
 // ==========================
+// Ordem: UseRouting → UseCors → UseAuthentication → UseAuthorization → MapControllers
+// Sem AllowCredentials (JWT via header). Sem .RequireCors() em MapControllers.
 
 const string CorsPolicyName = "DefaultCors";
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicyName, policy =>
-    {
-        var allowedOrigins = builder.Configuration
-            .GetSection("Cors:AllowedOrigins")
-            .Get<string[]>() ?? Array.Empty<string>();
-
-        var allowedSet = new HashSet<string>(allowedOrigins, StringComparer.OrdinalIgnoreCase);
-
-        policy.SetIsOriginAllowed(origin =>
-              {
-                  if (string.IsNullOrWhiteSpace(origin)) return false;
-                  if (allowedSet.Contains(origin)) return true;
-
-                  // Dev local (porta variável)
-                  if (origin.StartsWith("http://localhost:", StringComparison.OrdinalIgnoreCase) ||
-                      origin.StartsWith("https://localhost:", StringComparison.OrdinalIgnoreCase))
-                      return true;
-
-                  // Azure Static Web Apps (ex: https://xxx.azurestaticapps.net)
-                  if (origin.EndsWith(".azurestaticapps.net", StringComparison.OrdinalIgnoreCase) &&
-                      (origin.StartsWith("https://", StringComparison.OrdinalIgnoreCase)))
-                      return true;
-
-                  return false;
-              })
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
+        policy.WithOrigins(
+            "https://portal.kingdombr.com.br",
+            "http://portal.kingdombr.com.br",
+            "https://admin.kingdombr.com.br",
+            "http://admin.kingdombr.com.br",
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://localhost:4173"
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+    );
 });
 
 var app = builder.Build();
 
 app.UseRouting();
-// CORS após Routing - crítico para Portal (Azure) chamar API (VPS)
-app.UseCors(CorsPolicyName);
-
-
+app.UseCors(CorsPolicyName); // Entre UseRouting e UseAuthentication
 app.UseSwagger();
 app.UseSwaggerUI();
-
-
 app.UseStaticFiles();
 
 // ==========================
@@ -328,6 +310,6 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<SistemaIgreja.API.Permissions.PermissionMiddleware>();
-app.MapControllers().RequireCors(CorsPolicyName);
+app.MapControllers();
 
 app.Run();
