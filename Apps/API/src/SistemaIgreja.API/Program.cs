@@ -324,7 +324,15 @@ app.Logger.LogInformation("UploadsPath definido como: {UploadsPath}", uploadsPat
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(uploadsPath),
-    RequestPath = "/uploads"
+    RequestPath = "/uploads",
+    OnPrepareResponse = ctx =>
+    {
+        var origin = ctx.Context.Request.Headers["Origin"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(origin) && allowedCorsOrigins.Contains(origin))
+        {
+            ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", origin);
+        }
+    }
 });
 
 app.UseAuthentication();
