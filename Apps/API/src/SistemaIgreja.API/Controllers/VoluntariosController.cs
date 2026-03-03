@@ -24,6 +24,20 @@ public class VoluntariosController : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("pessoa/{pessoaId}")]
+    public async Task<ActionResult<IEnumerable<VoluntarioDto>>> GetByPessoa(int pessoaId)
+    {
+        var items = await _service.GetVoluntariosPorPessoaAsync(pessoaId);
+        return Ok(items);
+    }
+
+    [HttpGet("equipe/{equipeId}")]
+    public async Task<ActionResult<IEnumerable<VoluntarioDto>>> GetByEquipe(int equipeId)
+    {
+        var items = await _service.GetVoluntariosPorEquipeAsync(equipeId);
+        return Ok(items);
+    }
+
     [HttpGet("{id}")]
     public async Task<ActionResult<VoluntarioDto>> GetById(int id)
     {

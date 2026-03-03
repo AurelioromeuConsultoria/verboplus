@@ -9,6 +9,7 @@ public interface IVoluntarioService
     Task<IEnumerable<VoluntarioDto>> GetAllAsync();
     Task<VoluntarioDto?> GetByIdAsync(int id);
     Task<IEnumerable<VoluntarioDto>> GetVoluntariosPorPessoaAsync(int pessoaId);
+    Task<IEnumerable<VoluntarioDto>> GetVoluntariosPorEquipeAsync(int equipeId);
     Task<VoluntarioDto> CreateAsync(CriarVoluntarioDto dto);
     Task<VoluntarioDto> UpdateAsync(int id, AtualizarVoluntarioDto dto);
     Task DeleteAsync(int id);
@@ -44,6 +45,12 @@ public class VoluntarioService : IVoluntarioService
     public async Task<IEnumerable<VoluntarioDto>> GetVoluntariosPorPessoaAsync(int pessoaId)
     {
         var entities = await _repository.GetByPessoaIdAsync(pessoaId);
+        return entities.Select(MapToDto);
+    }
+
+    public async Task<IEnumerable<VoluntarioDto>> GetVoluntariosPorEquipeAsync(int equipeId)
+    {
+        var entities = await _repository.GetByEquipeAsync(equipeId);
         return entities.Select(MapToDto);
     }
 
