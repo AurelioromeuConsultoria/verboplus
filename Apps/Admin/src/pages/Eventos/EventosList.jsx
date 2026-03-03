@@ -14,7 +14,7 @@ import { useTableSort } from '@/hooks/useTableSort';
 import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { exportToCSV } from '@/utils/export';
-import { eventosApi } from '@/lib/api';
+import { eventosApi, normalizeEvento } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
@@ -37,7 +37,8 @@ export default function EventosList() {
       setLoading(true);
       setError(null);
       const res = await eventosApi.getAll();
-      setItems(res.data || []);
+      const raw = res.data || [];
+      setItems(Array.isArray(raw) ? raw.map(normalizeEvento) : raw);
     } catch (err) {
       setError('Erro ao carregar eventos');
       console.error(err);
@@ -107,13 +108,21 @@ export default function EventosList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
+  // Exibe data formatada ou '-' se vazia ou data default (ex: 0001-01-01)
+  const formatEventDate = (value) => {
+    if (!value) return '-';
+    const d = new Date(value);
+    if (isNaN(d.getTime()) || d.getFullYear() < 1900) return '-';
+    return d.toLocaleString('pt-BR');
+  };
+
   // Exportação
   const handleExport = () => {
     const exportData = filtered.map(evento => ({
       Título: evento.titulo || '',
       Descrição: evento.descricao || '',
-      'Data Início': evento.dataInicio ? new Date(evento.dataInicio).toLocaleString('pt-BR') : '',
-      'Data Fim': evento.dataFim ? new Date(evento.dataFim).toLocaleString('pt-BR') : '',
+      'Data Início': formatEventDate(evento.dataInicio),
+      'Data Fim': formatEventDate(evento.dataFim),
       URL: evento.url || '',
     }));
 
@@ -207,8 +216,8 @@ export default function EventosList() {
                   <TableRow key={evento.id}>
                     <TableCell className="font-medium">{evento.titulo || '-'}</TableCell>
                     <TableCell>{evento.descricao ? (evento.descricao.length > 50 ? `${evento.descricao.substring(0, 50)}...` : evento.descricao) : '-'}</TableCell>
-                    <TableCell>{evento.dataInicio ? new Date(evento.dataInicio).toLocaleString('pt-BR') : '-'}</TableCell>
-                    <TableCell>{evento.dataFim ? new Date(evento.dataFim).toLocaleString('pt-BR') : '-'}</TableCell>
+                    <TableCell>{formatEventDate(evento.dataInicio)}</TableCell>
+                    <TableCell>{formatEventDate(evento.dataFim)}</TableCell>
                     <TableCell>
                       {evento.url ? (
                         <a href={evento.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">

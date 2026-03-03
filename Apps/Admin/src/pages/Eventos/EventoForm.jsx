@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { ImageUpload } from '@/components/ImageUpload';
-import { eventosApi } from '@/lib/api';
+import { eventosApi, normalizeEvento } from '@/lib/api';
 import { toast } from 'sonner';
 
 export default function EventoForm() {
@@ -28,20 +28,32 @@ export default function EventoForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Considera data vazia se for null/undefined ou data default do backend (ex: 0001-01-01)
+  const toDateTimeLocal = (value) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (isNaN(d.getTime()) || d.getFullYear() < 1900) return '';
+    return d.toISOString().slice(0, 16);
+  };
+
   const load = async () => {
     if (!isEditing) return;
     try {
       setLoading(true);
       setError(null);
       const res = await eventosApi.getById(id);
-      const e = res.data;
+      const e = normalizeEvento(res.data);
+      if (!e) {
+        setError('Evento não encontrado');
+        return;
+      }
       setFormData({
         titulo: e.titulo || '',
         descricao: e.descricao || '',
         imagemDestaque: e.imagemDestaque || '',
         url: e.url || '',
-        dataInicio: e.dataInicio ? new Date(e.dataInicio).toISOString().slice(0, 16) : '',
-        dataFim: e.dataFim ? new Date(e.dataFim).toISOString().slice(0, 16) : '',
+        dataInicio: toDateTimeLocal(e.dataInicio),
+        dataFim: toDateTimeLocal(e.dataFim),
       });
     } catch (err) {
       setError('Erro ao carregar evento');
@@ -78,14 +90,17 @@ export default function EventoForm() {
     e.preventDefault();
     try {
       setLoading(true);
+      const dataInicio = formData.dataInicio ? new Date(formData.dataInicio).toISOString() : null;
+      const dataFim = formData.dataFim ? new Date(formData.dataFim).toISOString() : dataInicio;
       const payload = {
-        titulo: formData.titulo.trim() || null,
+        titulo: formData.titulo.trim() || '',
         descricao: formData.descricao.trim() || null,
         imagemDestaque: formData.imagemDestaque.trim() || null,
         url: normalizeUrl(formData.url),
-        dataInicio: formData.dataInicio ? new Date(formData.dataInicio).toISOString() : null,
-        dataFim: formData.dataFim ? new Date(formData.dataFim).toISOString() : null,
+        dataInicio,
+        dataFim,
       };
+      // Backend espera o body direto (não dentro de "dto"); DataFim obrigatório → usa dataInicio quando vazio
       if (isEditing) await eventosApi.update(id, payload);
       else await eventosApi.create(payload);
       toast.success(isEditing ? 'Evento atualizado com sucesso!' : 'Evento criado com sucesso!');
@@ -162,8 +177,8 @@ export default function EventoForm() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="dataInicio">Data e Hora de Início</Label>
-                <Input id="dataInicio" name="dataInicio" type="datetime-local" value={formData.dataInicio} onChange={handleChange} />
+                <Label htmlFor="dataInicio">Data e Hora de Início *</Label>
+                <Input id="dataInicio" name="dataInicio" type="datetime-local" value={formData.dataInicio} onChange={handleChange} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="dataFim">Data e Hora de Fim</Label>

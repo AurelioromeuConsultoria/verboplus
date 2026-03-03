@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ export default function VoluntarioForm() {
   const [pessoaBusca, setPessoaBusca] = useState('');
   const [equipes, setEquipes] = useState([]);
   const [cargos, setCargos] = useState([]);
+  const [vinculosExistentes, setVinculosExistentes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -30,8 +31,7 @@ export default function VoluntarioForm() {
     whatsApp: '',
     email: '',
     telefone: '',
-    equipeId: '',
-    cargoId: '',
+    vinculos: [{ equipeId: '', cargoId: '', id: null }],
   });
 
   const load = async () => {
@@ -55,9 +55,12 @@ export default function VoluntarioForm() {
           whatsApp: v.whatsApp || '',
           email: v.email || '',
           telefone: v.telefone || '',
-          equipeId: String(v.equipeId || ''),
-          cargoId: String(v.cargoId || ''),
+          vinculos: [{ equipeId: String(v.equipeId || ''), cargoId: String(v.cargoId || ''), id: v.id }],
         });
+        if (v.pessoaId) {
+          const vinculosRes = await voluntariosApi.getByPessoa(v.pessoaId);
+          setVinculosExistentes(vinculosRes.data || []);
+        }
       }
     } catch (err) {
       setError('Erro ao carregar dados');
@@ -69,9 +72,30 @@ export default function VoluntarioForm() {
 
   useEffect(() => { load(); }, [id]);
 
-  const handleChange = (e) => {
+  const handleChange = async (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === 'pessoaId' && value) {
+        const pessoa = pessoas.find((p) => String(p.id) === String(value));
+        if (pessoa) {
+          next.whatsApp = pessoa.whatsApp || prev.whatsApp || '';
+          next.email = pessoa.email || prev.email || '';
+          next.telefone = pessoa.telefone || prev.telefone || '';
+        }
+      }
+      return next;
+    });
+    if (name === 'pessoaId' && value) {
+      try {
+        const res = await voluntariosApi.getByPessoa(value);
+        setVinculosExistentes(res.data || []);
+      } catch {
+        setVinculosExistentes([]);
+      }
+    } else if (name === 'pessoaId' && !value) {
+      setVinculosExistentes([]);
+    }
   };
 
   const pessoasFiltradas = pessoas.filter((p) => {
@@ -85,6 +109,27 @@ export default function VoluntarioForm() {
 
   const pessoaSelecionada = pessoas.find((p) => String(p.id) === String(formData.pessoaId));
 
+  const addVinculo = () => {
+    setFormData((prev) => ({
+      ...prev,
+      vinculos: [...prev.vinculos, { equipeId: '', cargoId: '', id: null }],
+    }));
+  };
+
+  const removeVinculo = (idx) => {
+    setFormData((prev) => {
+      if (prev.vinculos.length <= 1) return prev;
+      return { ...prev, vinculos: prev.vinculos.filter((_, i) => i !== idx) };
+    });
+  };
+
+  const updateVinculo = (idx, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      vinculos: prev.vinculos.map((v, i) => (i === idx ? { ...v, [field]: value } : v)),
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.pessoaId) {
@@ -92,8 +137,9 @@ export default function VoluntarioForm() {
       return;
     }
     const onlyDigits = String(formData.whatsApp).replace(/\D/g, '');
-    if (!formData.equipeId || !formData.cargoId) {
-      toast.error('Selecione Equipe e Cargo');
+    const validVinculos = formData.vinculos.filter((v) => v.equipeId && v.cargoId);
+    if (validVinculos.length === 0) {
+      toast.error('Adicione ao menos uma equipe com cargo');
       return;
     }
     if (formData.email && !/.+@.+\..+/.test(formData.email)) {
@@ -106,17 +152,42 @@ export default function VoluntarioForm() {
     }
     try {
       setLoading(true);
-      const payload = {
+      const basePayload = {
         pessoaId: Number(formData.pessoaId),
         whatsApp: formData.whatsApp ? onlyDigits : null,
         email: formData.email?.trim() || null,
         telefone: formData.telefone?.trim() || null,
-        equipeId: Number(formData.equipeId),
-        cargoId: Number(formData.cargoId),
       };
-      if (isEditing) await voluntariosApi.update(id, payload);
-      else await voluntariosApi.create(payload);
-      toast.success(isEditing ? 'Voluntário atualizado com sucesso' : 'Voluntário criado com sucesso');
+      if (isEditing) {
+        const rowToUpdate = validVinculos.find((v) => v.id && String(v.id) === String(id));
+        const toCreate = validVinculos.filter((v) => !v.id);
+        const rowRemoved = !formData.vinculos.some((v) => v.id && String(v.id) === String(id));
+        if (rowRemoved) await voluntariosApi.delete(id);
+        else if (rowToUpdate) {
+          await voluntariosApi.update(rowToUpdate.id, {
+            ...basePayload,
+            equipeId: Number(rowToUpdate.equipeId),
+            cargoId: Number(rowToUpdate.cargoId),
+          });
+        }
+        for (const v of toCreate) {
+          await voluntariosApi.create({
+            ...basePayload,
+            equipeId: Number(v.equipeId),
+            cargoId: Number(v.cargoId),
+          });
+        }
+        toast.success('Voluntário atualizado com sucesso');
+      } else {
+        for (const v of validVinculos) {
+          await voluntariosApi.create({
+            ...basePayload,
+            equipeId: Number(v.equipeId),
+            cargoId: Number(v.cargoId),
+          });
+        }
+        toast.success(validVinculos.length > 1 ? 'Voluntário cadastrado em múltiplas equipes' : 'Voluntário criado com sucesso');
+      }
       navigate('/voluntarios');
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'Erro ao salvar voluntário'));
@@ -187,29 +258,83 @@ export default function VoluntarioForm() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} placeholder="email@exemplo.com" />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder={pessoaSelecionada?.email ? `Atual: ${pessoaSelecionada.email}` : 'email@exemplo.com'}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="telefone">Telefone</Label>
-                <Input id="telefone" name="telefone" value={formData.telefone} onChange={handleChange} placeholder="11999998888 (apenas dígitos)" />
+                <Input
+                  id="telefone"
+                  name="telefone"
+                  value={formData.telefone}
+                  onChange={handleChange}
+                  placeholder={pessoaSelecionada?.telefone ? `Atual: ${pessoaSelecionada.telefone}` : '11999998888 (apenas dígitos)'}
+                />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="equipeId">Equipe *</Label>
-                <select id="equipeId" name="equipeId" value={formData.equipeId} onChange={handleChange} className="w-full px-3 py-2 border rounded" required>
-                  <option value="">Selecione</option>
-                  {equipes.map((e) => (
-                    <option key={e.id} value={e.id}>{e.nome}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cargoId">Cargo *</Label>
-                <select id="cargoId" name="cargoId" value={formData.cargoId} onChange={handleChange} className="w-full px-3 py-2 border rounded" required>
-                  <option value="">Selecione</option>
-                  {cargos.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nome}</option>
-                  ))}
-                </select>
+              {vinculosExistentes.length > 0 && (
+                <div className="md:col-span-2 p-3 rounded-md bg-muted/50 text-sm">
+                  <p className="font-medium text-muted-foreground mb-1">Esta pessoa já atua em:</p>
+                  <p className="text-foreground">
+                    {vinculosExistentes.map((v) => `${v.nomeEquipe || 'Equipe'} (${v.nomeCargo || 'Cargo'})`).join(' • ')}
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Adicione novas equipes e cargos abaixo. A mesma pessoa pode ter cargos diferentes em equipes diferentes.
+                  </p>
+                </div>
+              )}
+              <div className="md:col-span-2 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Equipes e Cargos</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={addVinculo}>
+                    <Plus className="h-4 w-4 mr-1" /> Adicionar equipe
+                  </Button>
+                </div>
+                {formData.vinculos.map((vinculo, idx) => (
+                  <div key={idx} className="flex gap-2 items-end flex-wrap">
+                    <div className="flex-1 min-w-[140px] space-y-1">
+                      <Label className="text-xs">Equipe</Label>
+                      <select
+                        value={vinculo.equipeId}
+                        onChange={(e) => updateVinculo(idx, 'equipeId', e.target.value)}
+                        className="w-full px-3 py-2 border rounded"
+                      >
+                        <option value="">Selecione</option>
+                        {equipes.map((e) => (
+                          <option key={e.id} value={e.id}>{e.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex-1 min-w-[140px] space-y-1">
+                      <Label className="text-xs">Cargo</Label>
+                      <select
+                        value={vinculo.cargoId}
+                        onChange={(e) => updateVinculo(idx, 'cargoId', e.target.value)}
+                        className="w-full px-3 py-2 border rounded"
+                      >
+                        <option value="">Selecione</option>
+                        {cargos.map((c) => (
+                          <option key={c.id} value={c.id}>{c.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeVinculo(idx)}
+                      disabled={formData.vinculos.length === 1}
+                      title="Remover"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             </div>
 

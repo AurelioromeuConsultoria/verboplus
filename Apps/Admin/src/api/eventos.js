@@ -1,5 +1,21 @@
 import { api } from '@/lib/apiClient';
 
+/** Normaliza evento da API (aceita PascalCase ou camelCase e objeto dentro de dto). */
+export function normalizeEvento(e) {
+  if (!e) return e;
+  const d = e?.dto ?? e;
+  return {
+    ...d,
+    id: d.id,
+    titulo: d.titulo ?? d.Titulo ?? '',
+    descricao: d.descricao ?? d.Descricao ?? '',
+    dataInicio: d.dataInicio ?? d.DataInicio,
+    dataFim: d.dataFim ?? d.DataFim,
+    url: d.url ?? d.Url ?? '',
+    imagemDestaque: d.imagemDestaque ?? d.ImagemDestaque ?? '',
+  };
+}
+
 export const eventosApi = {
   getAll: () => api.get('/Eventos'),
   getById: (id) => api.get(`/Eventos/${id}`),

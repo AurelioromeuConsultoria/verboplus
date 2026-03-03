@@ -316,14 +316,14 @@ export function Sidebar() {
   const location = useLocation();
   const { can } = useAuth();
   const [openGroups, setOpenGroups] = useState({
-    connect: true,
-    voluntariado: true,
-    eventos: true,
-    financeiro: true,
-    portal: true,
-    mídia: true,
-    kids: true,
-    hub: true,
+    connect: false,
+    voluntariado: false,
+    eventos: false,
+    financeiro: false,
+    portal: false,
+    mídia: false,
+    kids: false,
+    hub: false,
   });
 
   const toggleGroup = (groupKey) => {
