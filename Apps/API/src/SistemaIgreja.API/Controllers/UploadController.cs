@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace SistemaIgreja.API.Controllers;
 
@@ -11,14 +12,20 @@ public class UploadController : ControllerBase
     private readonly IWebHostEnvironment _environment;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
+    private readonly ILogger<UploadController> _logger;
     private const long MaxFileSize = 500 * 1024 * 1024; // 500MB
     private static readonly string[] AllowedImageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
 
-    public UploadController(IWebHostEnvironment environment, IHttpClientFactory httpClientFactory, IConfiguration configuration)
+    public UploadController(
+        IWebHostEnvironment environment,
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
+        ILogger<UploadController> logger)
     {
         _environment = environment;
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
+        _logger = logger;
     }
 
     [HttpPost("images")]
@@ -150,7 +157,7 @@ public class UploadController : ControllerBase
                 catch (Exception ex)
                 {
                     // Log mas não falha a requisição; a imagem ficou salva localmente
-                    Logger.LogWarning(ex, "Falha ao enviar imagem para produção (sync). Imagem salva apenas localmente.");
+                    _logger.LogWarning(ex, "Falha ao enviar imagem para produção (sync). Imagem salva apenas localmente.");
                 }
             }
 
