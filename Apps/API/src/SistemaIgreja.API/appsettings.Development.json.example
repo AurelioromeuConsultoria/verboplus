@@ -43,5 +43,9 @@
     "BaseIntervalMinutes": 5,
     "JitterSecondsMax": 20,
     "BatchSizeReserva": 50
+  },
+  "ProductionUploadSync": {
+    "BaseUrl": "https://api.kingdombr.com.br",
+    "ApiKey": "MESMO-SEGREDO-CONFIGURADO-EM-PRODUCAO"
   }
 }

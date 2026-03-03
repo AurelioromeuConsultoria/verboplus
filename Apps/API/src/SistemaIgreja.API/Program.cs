@@ -147,6 +147,9 @@ builder.Services.Configure<MessageSchedulerSettings>(
 
 builder.Services.AddHttpClient<IEvolutionApiService, EvolutionApiService>();
 
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<NoticiaUrlExtractorService>();
+
 if (builder.Configuration.GetValue<bool>("Scheduler:Enabled"))
     builder.Services.AddHostedService<MessageSchedulerService>();
 

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.API.Services;
 
 namespace SistemaIgreja.API.Controllers;
 
@@ -10,10 +11,12 @@ namespace SistemaIgreja.API.Controllers;
 public class NoticiasController : ControllerBase
 {
     private readonly INoticiaService _service;
+    private readonly NoticiaUrlExtractorService _extractor;
 
-    public NoticiasController(INoticiaService service)
+    public NoticiasController(INoticiaService service, NoticiaUrlExtractorService extractor)
     {
         _service = service;
+        _extractor = extractor;
     }
 
     [AllowAnonymous]
@@ -39,6 +42,21 @@ public class NoticiasController : ControllerBase
     {
         var items = await _service.GetByCategoriaAsync(categoriaId);
         return Ok(items);
+    }
+
+    /// <summary>
+    /// Extrai título, data, descrição e texto de uma URL de notícia (ex.: site de notícias).
+    /// Útil para importar notícias de links externos.
+    /// </summary>
+    [HttpPost("extrair-de-url")]
+    public async Task<ActionResult<NoticiaExtraidaDto>> ExtrairDeUrl([FromBody] ExtrairNoticiaUrlRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request?.Url))
+            return BadRequest("URL é obrigatória.");
+        var result = await _extractor.ExtrairAsync(request.Url, HttpContext.RequestAborted);
+        if (result == null)
+            return BadRequest("Não foi possível acessar a URL ou extrair o conteúdo. Verifique o link e tente novamente.");
+        return Ok(result);
     }
 
     [HttpPost]
