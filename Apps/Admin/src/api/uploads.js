@@ -7,6 +7,9 @@ export const uploadApi = {
         'Content-Type': 'multipart/form-data',
       },
     }),
+  /** Baixa imagem de uma URL e salva nos uploads (o backend pode fazer sync para produção se configurado); retorna { url } */
+  uploadImageFromUrl: (imageUrl) =>
+    api.post('/admin/upload/image-from-url', { url: imageUrl }),
   uploadVideo: (formData) =>
     api.post('/admin/upload/videos', formData, {
       headers: {

@@ -13,7 +13,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { galeriasFotosApi, eventosApi, categoriasMidiasApi } from '@/lib/api';
-import { API_BASE_URL } from '@/lib/env';
+import { UPLOADS_BASE_URL } from '@/lib/env';
 import { toast } from 'sonner';
 
 export default function GaleriasFotosList() {
@@ -88,7 +88,7 @@ export default function GaleriasFotosList() {
     if (!caminho) return null;
     // Normalizar o caminho (remover barra inicial se existir para evitar duplicação)
     const caminhoNormalizado = caminho.startsWith('/') ? caminho.substring(1) : caminho;
-    return `${API_BASE_URL}/${caminhoNormalizado}`;
+    return `${UPLOADS_BASE_URL}/${caminhoNormalizado}`;
   };
 
   if (loading) return <LoadingPage text="Carregando galerias..." />;

@@ -8,3 +8,6 @@ export const API_BASE_URL = normalizeBaseUrl(import.meta.env.VITE_API_URL || 'ht
 // Os endpoints do backend usam prefixo /api
 export const API_BASE_URL_WITH_API = `${API_BASE_URL}/api`;
 
+// URL base para imagens/uploads (sempre produção para centralizar), mesmo rodando local
+export const UPLOADS_BASE_URL = normalizeBaseUrl(import.meta.env.VITE_UPLOADS_BASE_URL || 'https://api.kingdombr.com.br');
+

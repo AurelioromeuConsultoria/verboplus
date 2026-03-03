@@ -8,7 +8,7 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { galeriasFotosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { API_BASE_URL } from '@/lib/env';
+import { UPLOADS_BASE_URL } from '@/lib/env';
 
 const FORMATOS_PERMITIDOS = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 const TAMANHO_MAXIMO = 10 * 1024 * 1024; // 10MB
@@ -195,18 +195,18 @@ export default function GaleriaFotos() {
     let caminhoNormalizado = caminho.startsWith('/') ? caminho.substring(1) : caminho;
     // Garantir que não tenha barras duplas
     caminhoNormalizado = caminhoNormalizado.replace(/\/+/g, '/');
-    const url = `${API_BASE_URL}/${caminhoNormalizado}`;
+    const url = `${UPLOADS_BASE_URL}/${caminhoNormalizado}`;
     return url;
   };
 
   const getThumbnailUrl = (nomeArquivo) => {
     if (!galeria?.caminhoDiretorio || !nomeArquivo) return null;
-    return `${API_BASE_URL}/${galeria.caminhoDiretorio}/thumbnail/${nomeArquivo}`;
+    return `${UPLOADS_BASE_URL}/${galeria.caminhoDiretorio}/thumbnail/${nomeArquivo}`;
   };
 
   const getOriginalUrl = (nomeArquivo) => {
     if (!galeria?.caminhoDiretorio || !nomeArquivo) return null;
-    return `${API_BASE_URL}/${galeria.caminhoDiretorio}/original/${nomeArquivo}`;
+    return `${UPLOADS_BASE_URL}/${galeria.caminhoDiretorio}/original/${nomeArquivo}`;
   };
 
   if (loading) return <LoadingPage text="Carregando galeria..." />;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Link as LinkIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { ImageUpload } from '@/components/ImageUpload';
 import { RichTextEditor } from '@/components/RichTextEditor';
-import { noticiasApi, categoriasNoticiasApi } from '@/lib/api';
+import { noticiasApi, categoriasNoticiasApi, uploadApi } from '@/lib/api';
 import { toast } from 'sonner';
 
 export default function NoticiaForm() {
@@ -30,6 +30,8 @@ export default function NoticiaForm() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [urlImportar, setUrlImportar] = useState('');
+  const [extraindo, setExtraindo] = useState(false);
 
   const load = async () => {
     try {
@@ -64,6 +66,45 @@ export default function NoticiaForm() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleExtrairDeUrl = async () => {
+    const url = urlImportar?.trim();
+    if (!url) {
+      toast.error('Informe a URL do artigo');
+      return;
+    }
+    try {
+      setExtraindo(true);
+      const res = await noticiasApi.extrairDeUrl(url);
+      const d = res.data;
+      let imagemPath = '';
+      if (d.imagemUrl) {
+        try {
+          const imgRes = await uploadApi.uploadImageFromUrl(d.imagemUrl);
+          imagemPath = imgRes.data?.url || imgRes.data?.path || '';
+          // Se o backend tiver ProductionUploadSync configurado, a imagem já foi enviada para produção
+        } catch (_) {
+          toast.info('Conteúdo extraído. Imagem do link não foi possível baixar; adicione manualmente se quiser.');
+        }
+      }
+      setFormData((prev) => ({
+        ...prev,
+        titulo: d.titulo || prev.titulo,
+        descricao: d.descricao || prev.descricao,
+        texto: d.texto || prev.texto,
+        data: d.data ? new Date(d.data).toISOString().slice(0, 16) : prev.data,
+        url: d.url || url || prev.url,
+        imagem: imagemPath || prev.imagem,
+      }));
+      toast.success(imagemPath ? 'Conteúdo e imagem extraídos. Revise e salve.' : 'Conteúdo extraído. Revise e salve a notícia.');
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data || 'Não foi possível extrair o conteúdo do link.';
+      toast.error(typeof msg === 'string' ? msg : 'Erro ao extrair conteúdo');
+      console.error(err);
+    } finally {
+      setExtraindo(false);
+    }
   };
 
   // Função para normalizar URL (adiciona https:// se não tiver protocolo, mas preserva URLs relativas)
@@ -134,6 +175,32 @@ export default function NoticiaForm() {
           <CardTitle>{isEditing ? 'Editar Notícia' : 'Cadastrar Notícia'}</CardTitle>
         </CardHeader>
         <CardContent>
+          {!isEditing && (
+            <div className="mb-6 p-4 rounded-lg border bg-muted/40 space-y-3">
+              <Label className="text-sm font-medium">Importar de link</Label>
+              <p className="text-sm text-muted-foreground">
+                Cole a URL de uma notícia (ex.: CPAD News, Guiame) para preencher título, data, descrição e texto automaticamente.
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                <Input
+                  type="url"
+                  placeholder="https://exemplo.com/noticia/..."
+                  value={urlImportar}
+                  onChange={(e) => setUrlImportar(e.target.value)}
+                  className="flex-1 min-w-[200px]"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleExtrairDeUrl}
+                  disabled={extraindo}
+                >
+                  {extraindo ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
+                  {extraindo ? ' Extraindo...' : ' Extrair conteúdo'}
+                </Button>
+              </div>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">

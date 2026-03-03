@@ -23,6 +23,8 @@ export const noticiasApi = {
   update: (id, data) => api.put(`/Noticias/${id}`),
   delete: (id) => api.delete(`/Noticias/${id}`),
   getByCategoria: (categoriaId) => api.get(`/Noticias/categoria/${categoriaId}`),
+  /** Extrai título, data, descrição e texto de uma URL de notícia */
+  extrairDeUrl: (url) => api.post('/Noticias/extrair-de-url', { url }),
 };
 
 export const contatosApi = {
