@@ -5,7 +5,10 @@ using System.Text.RegularExpressions;
 namespace SistemaIgreja.API.Services;
 
 /// <summary>
-/// Extrai título, data, descrição e texto de uma URL de notícia (meta tags e conteúdo).
+/// Extrai título, data, descrição, imagem e texto de uma URL de notícia (qualquer portal).
+/// Funciona de forma genérica: tenta várias fontes em ordem (meta tags, &lt;article&gt;, classes comuns de CMS, etc.),
+/// sem depender de um site específico. Quanto mais padrões forem adicionados nas listas (classes, ids, meta),
+/// mais portais diferentes passarão a funcionar.
 /// </summary>
 public class NoticiaUrlExtractorService
 {
@@ -44,9 +47,13 @@ public class NoticiaUrlExtractorService
         if (string.IsNullOrWhiteSpace(html))
             return null;
 
-        var titulo = ExtrairMetaContent(html, "og:title")
-            ?? ExtrairMetaContent(html, "twitter:title")
-            ?? ExtrairTitle(html);
+        // Preferir o título mais longo quando og:title e <title> existem (muitos sites truncam og:title para redes sociais)
+        var ogTitle = ExtrairMetaContent(html, "og:title")?.Trim();
+        var twitterTitle = ExtrairMetaContent(html, "twitter:title")?.Trim();
+        var titleTag = ExtrairTitle(html)?.Trim();
+        var titulo = ogTitle ?? twitterTitle ?? titleTag;
+        if (!string.IsNullOrEmpty(titleTag) && titleTag.Length > (titulo?.Length ?? 0))
+            titulo = titleTag;
 
         var dataStr = ExtrairMetaContent(html, "article:published_time")
             ?? ExtrairMetaContent(html, "date")
@@ -56,8 +63,9 @@ public class NoticiaUrlExtractorService
             data = parsed;
 
         var texto = ExtrairCorpoTexto(html);
+        texto = LimparInicioDoTexto(texto, titulo);
 
-        // Descrição: 1) trecho abaixo do título no HTML  2) primeira frase/parágrafo do corpo  3) meta (se não for autor/site)  4) início do texto
+        // Descrição: 1) trecho abaixo do título no HTML  2) primeira frase/parágrafo do corpo  3) meta (se não for autor/site e tiver tamanho razoável)  4) início do texto
         var descricao = ExtrairTrechoAbaixoDoTitulo(html)
             ?? (string.IsNullOrWhiteSpace(texto) ? null : ExtrairPrimeiraFraseOuParagrafo(texto));
 
@@ -66,10 +74,11 @@ public class NoticiaUrlExtractorService
             var metaDesc = ExtrairMetaContent(html, "og:description")
                 ?? ExtrairMetaContent(html, "twitter:description")
                 ?? ExtrairMetaContent(html, "description", byProperty: false);
-            if (!DescricaoPareceAutorOuSite(metaDesc))
+            if (!DescricaoPareceAutorOuSite(metaDesc) && !string.IsNullOrWhiteSpace(metaDesc) && metaDesc.Trim().Length >= 40)
                 descricao = metaDesc?.Trim();
         }
 
+        // Quando o portal não traz descrição (ou meta é curta/ruim), usar início do texto
         if (string.IsNullOrWhiteSpace(descricao) && !string.IsNullOrWhiteSpace(texto))
         {
             var inicio = texto!.Trim();
@@ -201,32 +210,161 @@ public class NoticiaUrlExtractorService
         return m.Success ? DecodeHtml(m.Groups[1].Value).Trim() : null;
     }
 
+    /// <summary>
+    /// Extrai o corpo do texto do artigo. Tenta vários padrões em ordem (tags semânticas, classes e ids comuns em vários portais/CMS).
+    /// Novos portais podem ser cobertos adicionando mais itens nas listas estáticas.
+    /// </summary>
     private static string? ExtrairCorpoTexto(string html)
     {
-        // Tenta primeiro <article> e <main>
-        foreach (var tag in new[] { "article", "main" })
+        const int minLength = 100;
+        const int maxLength = 5000;
+
+        // 1) Tags semânticas (funcionam em muitos sites)
+        foreach (var tag in new[] { "article", "main", "section" })
         {
-            var pattern = $@"<{tag}[^>]*>([\s\S]*?)</{tag}>";
-            var m = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
-            if (!m.Success) continue;
-            var texto = StripTags(m.Groups[1].Value);
-            if (!string.IsNullOrWhiteSpace(texto) && texto.Length > 100)
-                return texto.Length > 5000 ? texto.Substring(0, 5000) + "…" : texto;
+            var texto = ExtrairConteudoPorTag(html, tag, minLength, maxLength);
+            if (texto != null) return texto;
         }
-        // Tenta divs com classes comuns de conteúdo
-        foreach (var className in new[] { "post-content", "entry-content", "content-body", "article-body", "single-content", "post-body", "conteudo", "content" })
+
+        // 2) Divs por classe (WordPress, Joomla, CPAD, Guiame, temas genéricos)
+        var classesConteudo = new[]
         {
-            var pattern = $@"<div[^>]*class=[""'][^""']*{Regex.Escape(className)}[^""']*[""'][^>]*>([\s\S]*?)</div>";
-            var m = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
-            if (!m.Success) continue;
-            var texto = StripTags(m.Groups[1].Value);
-            if (!string.IsNullOrWhiteSpace(texto) && texto.Length > 100)
-                return texto.Length > 5000 ? texto.Substring(0, 5000) + "…" : texto;
+            "post-content", "entry-content", "content-body", "article-body", "single-content", "post-body",
+            "conteudo", "content", "article-content", "post-entry", "entry-body", "noticia-corpo",
+            "materia-corpo", "texto-noticia", "corpo-materia", "itemFullText", "story-body", "article__body",
+            "news-content", "single-post-content", "tdb-block-inner", "elementor-widget-theme-post-content",
+            "wpb_wrapper", "the-content", "blog-post-content", "news-body", "noticia-conteudo"
+        };
+        foreach (var className in classesConteudo)
+        {
+            var texto = ExtrairConteudoPorClasse(html, className, minLength, maxLength);
+            if (texto != null) return texto;
         }
-        var full = StripTags(html);
-        if (!string.IsNullOrWhiteSpace(full) && full.Length > 150)
-            return full.Length > 5000 ? full.Substring(0, 5000) + "…" : full;
+
+        // 3) Por id (comum em layouts antigos ou custom)
+        foreach (var id in new[] { "content", "main-content", "article-content", "conteudo", "post-content", "article-body", "corpo" })
+        {
+            var texto = ExtrairConteudoPorId(html, id, minLength, maxLength);
+            if (texto != null) return texto;
+        }
+
+        // 4) Fallback: maior bloco de texto que pareça artigo (remove scripts e pega body)
+        var full = StripTagsPreservandoParagrafos(html);
+        if (!string.IsNullOrWhiteSpace(full) && full.Length > minLength)
+            return full.Length > maxLength ? full.Substring(0, maxLength) + "…" : full;
         return null;
+    }
+
+    private static string? ExtrairConteudoPorTag(string html, string tagName, int minLength, int maxLength)
+    {
+        var pattern = $@"<{Regex.Escape(tagName)}[^>]*>([\s\S]*?)</{tagName}>";
+        var m = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
+        if (!m.Success) return null;
+        var texto = StripTagsPreservandoParagrafos(m.Groups[1].Value);
+        return string.IsNullOrWhiteSpace(texto) || texto.Length < minLength ? null
+            : texto.Length > maxLength ? texto.Substring(0, maxLength) + "…" : texto;
+    }
+
+    private static string? ExtrairConteudoPorClasse(string html, string className, int minLength, int maxLength)
+    {
+        // div ou section com a classe (pode ter outras classes)
+        var pattern = $@"<(?:div|section|article)[^>]*class=[""'][^""']*{Regex.Escape(className)}[^""']*[""'][^>]*>([\s\S]*?)</(?:div|section|article)>";
+        var m = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
+        if (!m.Success) return null;
+        var texto = StripTagsPreservandoParagrafos(m.Groups[1].Value);
+        return string.IsNullOrWhiteSpace(texto) || texto.Length < minLength ? null
+            : texto.Length > maxLength ? texto.Substring(0, maxLength) + "…" : texto;
+    }
+
+    private static string? ExtrairConteudoPorId(string html, string id, int minLength, int maxLength)
+    {
+        // Captura div/section com esse id; \1 garante fechar com a mesma tag (evita parar em div interno)
+        var pattern = $@"<(div|section)[^>]*id=[""'][^""']*{Regex.Escape(id)}[^""']*[""'][^>]*>([\s\S]*?)</\1>";
+        var m = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
+        if (!m.Success) return null;
+        var texto = StripTagsPreservandoParagrafos(m.Groups[2].Value);
+        return string.IsNullOrWhiteSpace(texto) || texto.Length < minLength ? null
+            : texto.Length > maxLength ? texto.Substring(0, maxLength) + "…" : texto;
+    }
+
+    /// <summary>
+    /// Remove tags HTML preservando quebras de parágrafo (espaçamento entre blocos).
+    /// </summary>
+    private static string StripTagsPreservandoParagrafos(string html)
+    {
+        html = Regex.Replace(html, @"<script[\s\S]*?</script>", " ", RegexOptions.IgnoreCase);
+        html = Regex.Replace(html, @"<style[\s\S]*?</style>", " ", RegexOptions.IgnoreCase);
+        // Marcar limites de bloco com quebra de linha dupla antes de remover tags
+        html = Regex.Replace(html, @"</p>", "\n\n", RegexOptions.IgnoreCase);
+        html = Regex.Replace(html, @"<p[^>]*>", "\n\n", RegexOptions.IgnoreCase);
+        html = Regex.Replace(html, @"<br\s*/?>", "\n\n", RegexOptions.IgnoreCase);
+        html = Regex.Replace(html, @"</div>", "\n\n", RegexOptions.IgnoreCase);
+        html = Regex.Replace(html, @"</li>", "\n\n", RegexOptions.IgnoreCase);
+        html = Regex.Replace(html, @"<[^>]+>", " ", RegexOptions.IgnoreCase);
+        html = DecodeHtml(html);
+        // Colapsar apenas espaços e tabs (não quebras de linha) dentro da mesma linha
+        html = Regex.Replace(html, @"[ \t]+", " ");
+        // Colapsar múltiplas quebras em no máximo duas (parágrafo)
+        html = Regex.Replace(html, @"\n[\s\n]*\n", "\n\n");
+        return html.Trim();
+    }
+
+    /// <summary>
+    /// Remove do início do texto metadados/UI até o primeiro parágrafo de corpo (lead). O texto deve começar no primeiro trecho longo de prosa.
+    /// </summary>
+    private static string? LimparInicioDoTexto(string? texto, string? titulo)
+    {
+        if (string.IsNullOrWhiteSpace(texto)) return texto;
+        var linhas = texto!.Split(new[] { "\n\n", "\r\n\r\n", "\n", "\r\n" }, StringSplitOptions.None);
+        var sb = new StringBuilder();
+        var comecouConteudo = false;
+        foreach (var linha in linhas)
+        {
+            var t = linha.Trim();
+            if (string.IsNullOrEmpty(t)) { if (!comecouConteudo) continue; sb.AppendLine(); sb.AppendLine(); continue; }
+            // Se ainda não começou o conteúdo: descarta lixo explícito OU trechos curtos (título/metadata têm menos que um parágrafo de lead)
+            if (!comecouConteudo)
+            {
+                if (LinhaEhLixoInicial(t, titulo)) continue;
+                // Parágrafo de lead costuma ter pelo menos ~100 caracteres; ignora blocos curtos no início
+                if (t.Length < 100) continue;
+            }
+            comecouConteudo = true;
+            // Se o bloco começa com lixo mas tem conteúdo depois (ex.: "ADVERTISEMENT\n\nA confirmação..."), usa só a partir do conteúdo
+            var parteUtil = CortarPrefixoLixo(t, titulo);
+            if (string.IsNullOrWhiteSpace(parteUtil)) continue;
+            if (sb.Length > 0) sb.AppendLine(); sb.AppendLine();
+            sb.Append(parteUtil.Trim());
+        }
+        return sb.ToString().Trim();
+    }
+
+    /// <summary>Se o texto começa com uma linha de lixo seguida de parágrafo, retorna só o parágrafo.</summary>
+    private static string CortarPrefixoLixo(string bloco, string? titulo)
+    {
+        var idx = bloco.IndexOf("\n\n", StringComparison.Ordinal);
+        if (idx <= 0) return bloco;
+        var primeiraLinha = bloco.Substring(0, idx).Trim();
+        if (!LinhaEhLixoInicial(primeiraLinha, titulo)) return bloco;
+        var resto = bloco.Substring(idx + 2).Trim();
+        return string.IsNullOrWhiteSpace(resto) ? bloco : resto;
+    }
+
+    private static bool LinhaEhLixoInicial(string linha, string? titulo)
+    {
+        if (string.IsNullOrWhiteSpace(linha)) return true;
+        if (linha.Equals("capa", StringComparison.OrdinalIgnoreCase)) return true;
+        if (linha.Equals("em", StringComparison.OrdinalIgnoreCase)) return true;
+        if (!string.IsNullOrEmpty(titulo) && linha.Equals(titulo.Trim(), StringComparison.OrdinalIgnoreCase)) return true;
+        if (Regex.IsMatch(linha, @"^\d+\s*(hora|horas|dia|dias|minuto|minutos)\s+atrás$", RegexOptions.IgnoreCase)) return true;
+        if (Regex.IsMatch(linha, @"^em\s+\d{1,2}\s+de\s+\w+\s+de\s+\d{4}$", RegexOptions.IgnoreCase)) return true;
+        if (Regex.IsMatch(linha, @"^\d{1,2}\s+de\s+\w+\s+de\s+\d{4}$", RegexOptions.IgnoreCase)) return true;
+        if (Regex.IsMatch(linha, @"^Por\s+.+$", RegexOptions.IgnoreCase) && linha.Length < 80) return true;
+        if (linha.Equals("ADVERTISEMENT", StringComparison.OrdinalIgnoreCase)) return true;
+        if (linha.Contains("Ver essa foto no Instagram", StringComparison.OrdinalIgnoreCase)) return true;
+        if (Regex.IsMatch(linha, @"^Um post compartilhado por\s+.+$", RegexOptions.IgnoreCase)) return true;
+        if (linha.Contains("post compartilhado por", StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
     }
 
     private static string StripTags(string html)

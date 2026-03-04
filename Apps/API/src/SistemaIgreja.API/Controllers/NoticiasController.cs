@@ -60,7 +60,9 @@ public class NoticiasController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<NoticiaDto>> Create(CriarNoticiaDto dto)
+    [Consumes("application/json")]
+    [Produces("application/json")]
+    public async Task<ActionResult<NoticiaDto>> Create([FromBody] CriarNoticiaDto dto)
     {
         try
         {
@@ -74,7 +76,9 @@ public class NoticiasController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<NoticiaDto>> Update(int id, AtualizarNoticiaDto dto)
+    [Consumes("application/json")]
+    [Produces("application/json")]
+    public async Task<ActionResult<NoticiaDto>> Update(int id, [FromBody] AtualizarNoticiaDto dto)
     {
         try
         {
