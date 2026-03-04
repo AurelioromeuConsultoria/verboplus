@@ -20,7 +20,7 @@ export const noticiasApi = {
   getAll: () => api.get('/Noticias'),
   getById: (id) => api.get(`/Noticias/${id}`),
   create: (data) => api.post('/Noticias', data),
-  update: (id, data) => api.put(`/Noticias/${id}`),
+  update: (id, data) => api.put(`/Noticias/${id}`, data),
   delete: (id) => api.delete(`/Noticias/${id}`),
   getByCategoria: (categoriaId) => api.get(`/Noticias/categoria/${categoriaId}`),
   /** Extrai título, data, descrição e texto de uma URL de notícia */
