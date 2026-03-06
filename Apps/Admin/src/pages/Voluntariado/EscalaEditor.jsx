@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Send } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Send, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -24,7 +24,7 @@ function getEscalaStatusLabel(status) {
 }
 
 export default function EscalaEditor() {
-  const { ocorrenciaId } = useParams();
+  const { ocorrenciaId, equipeId } = useParams();
   const { usuario } = useAuth();
   const confirmDialog = useConfirmDialog();
 
@@ -47,8 +47,10 @@ export default function EscalaEditor() {
     forcarConflito: false,
     motivoExcecao: '',
   });
+  const [gerandoAuto, setGerandoAuto] = useState(false);
 
   const isAdmin = Number(usuario?.tipoUsuario) === 1 || Number(usuario?.tipoUsuario) === 3;
+  const escalaRascunho = escala && Number(escala.status) === 1;
 
   const voluntariosFiltrados = useMemo(() => {
     if (!formItem.equipeId) return voluntarios;
@@ -85,7 +87,7 @@ export default function EscalaEditor() {
       setVoluntarios(voluntariosRes.data || []);
 
       try {
-        const escalaRes = await escalasApi.getByOcorrencia(ocorrenciaId);
+        const escalaRes = await escalasApi.getByOcorrenciaAndEquipe(ocorrenciaId, equipeId);
         setEscala(escalaRes.data);
       } catch (errEscala) {
         if (errEscala.response?.status === 404) {
@@ -104,7 +106,11 @@ export default function EscalaEditor() {
 
   useEffect(() => {
     load();
-  }, [ocorrenciaId]);
+  }, [ocorrenciaId, equipeId]);
+
+  useEffect(() => {
+    if (equipeId) setFormItem((p) => ({ ...p, equipeId: String(equipeId) }));
+  }, [equipeId]);
 
   useEffect(() => {
     const carregarSugestoes = async () => {
@@ -129,10 +135,11 @@ export default function EscalaEditor() {
 
     const created = await escalasApi.create({
       eventoOcorrenciaId: Number(ocorrenciaId),
+      equipeId: Number(equipeId),
       observacoes: null,
     });
     setEscala(created.data);
-    toast.success('Escala criada com sucesso');
+    toast.success('Escala criada');
     return created.data;
   };
 
@@ -203,6 +210,23 @@ export default function EscalaEditor() {
     });
   };
 
+  const handleGerarAutomatico = async () => {
+    try {
+      setGerandoAuto(true);
+      await escalasApi.gerarAutomatico(ocorrenciaId, equipeId);
+      toast.success('Escala preenchida automaticamente');
+      await load();
+    } catch (err) {
+      console.error(err);
+      const message = typeof err.response?.data === 'string'
+        ? err.response.data
+        : (err.response?.data?.message || 'Erro ao preencher escala');
+      toast.error(message);
+    } finally {
+      setGerandoAuto(false);
+    }
+  };
+
   const handlePublicar = async () => {
     if (!escala) return;
     try {
@@ -229,20 +253,30 @@ export default function EscalaEditor() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" asChild>
-            <Link to="/voluntariado/escalas">
+            <Link to={`/voluntariado/escalas/ocorrencia/${ocorrenciaId}`}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Montagem de Escala</h1>
+            <h1 className="text-3xl font-bold">Escala {escala?.equipeNome ? `— ${escala.equipeNome}` : ''}</h1>
             <p className="text-muted-foreground">
-              {ocorrencia.eventoTitulo} - {new Date(ocorrencia.dataHoraInicio).toLocaleString('pt-BR')}
+              {ocorrencia.eventoTitulo} — {new Date(ocorrencia.dataHoraInicio).toLocaleString('pt-BR')}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">Status: {escalaStatusLabel}</span>
+          {escalaRascunho && (
+            <Button
+              variant="outline"
+              onClick={handleGerarAutomatico}
+              disabled={gerandoAuto}
+            >
+              <Wand2 className="h-4 w-4 mr-2" />
+              {gerandoAuto ? 'Preenchendo...' : 'Preencher automaticamente'}
+            </Button>
+          )}
           <Button
             onClick={handlePublicar}
             disabled={!escala || !escala.itens?.length}
@@ -259,25 +293,35 @@ export default function EscalaEditor() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAddItem} className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Equipe *</Label>
-              <Select
-                value={formItem.equipeId || 'all'}
-                onValueChange={(value) => setFormItem((p) => ({ ...p, equipeId: value === 'all' ? '' : value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a equipe" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Selecione</SelectItem>
-                  {equipes.map((equipe) => (
-                    <SelectItem key={equipe.id} value={String(equipe.id)}>
-                      {equipe.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {equipeId && (
+              <div className="space-y-2">
+                <Label>Equipe</Label>
+                <p className="text-sm py-2 text-muted-foreground">
+                  {escala?.equipeNome || equipes.find((e) => String(e.id) === String(equipeId))?.nome || `Equipe ${equipeId}`}
+                </p>
+              </div>
+            )}
+            {!equipeId && (
+              <div className="space-y-2">
+                <Label>Equipe *</Label>
+                <Select
+                  value={formItem.equipeId || 'all'}
+                  onValueChange={(value) => setFormItem((p) => ({ ...p, equipeId: value === 'all' ? '' : value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a equipe" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Selecione</SelectItem>
+                    {equipes.map((equipe) => (
+                      <SelectItem key={equipe.id} value={String(equipe.id)}>
+                        {equipe.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Cargo</Label>

@@ -26,7 +26,12 @@ const CargoForm = lazy(() => import('./pages/Cargos/CargoForm'));
 const VoluntariosList = lazy(() => import('./pages/Voluntarios/VoluntariosList'));
 const VoluntarioForm = lazy(() => import('./pages/Voluntarios/VoluntarioForm'));
 const EscalasList = lazy(() => import('./pages/Voluntariado/EscalasList'));
+const EscalasPorOcorrencia = lazy(() => import('./pages/Voluntariado/EscalasPorOcorrencia'));
 const EscalaEditor = lazy(() => import('./pages/Voluntariado/EscalaEditor'));
+const ModelosEscalaList = lazy(() => import('./pages/Voluntariado/ModelosEscalaList'));
+const ModeloEscalaForm = lazy(() => import('./pages/Voluntariado/ModeloEscalaForm'));
+const IndisponibilidadesList = lazy(() => import('./pages/Voluntariado/IndisponibilidadesList'));
+const OcorrenciasList = lazy(() => import('./pages/Eventos/OcorrenciasList'));
 const RelatorioVinculosVoluntariado = lazy(() => import('./pages/Voluntariado/RelatorioVinculosVoluntariado'));
 const EventosList = lazy(() => import('./pages/Eventos/EventosList'));
 const EventoForm = lazy(() => import('./pages/Eventos/EventoForm'));
@@ -240,8 +245,33 @@ function App() {
             </RequirePermission>
           } />
           <Route path="voluntariado/escalas/ocorrencia/:ocorrenciaId" element={
+            <RequirePermission resource={RESOURCES.VOLUNTARIOS}>
+              <EscalasPorOcorrencia />
+            </RequirePermission>
+          } />
+          <Route path="voluntariado/escalas/ocorrencia/:ocorrenciaId/equipe/:equipeId" element={
             <RequirePermission resource={RESOURCES.VOLUNTARIOS} action={ACTIONS.EDIT}>
               <EscalaEditor />
+            </RequirePermission>
+          } />
+          <Route path="voluntariado/modelos-escala" element={
+            <RequirePermission resource={RESOURCES.VOLUNTARIOS}>
+              <ModelosEscalaList />
+            </RequirePermission>
+          } />
+          <Route path="voluntariado/modelos-escala/novo" element={
+            <RequirePermission resource={RESOURCES.VOLUNTARIOS} action={ACTIONS.EDIT}>
+              <ModeloEscalaForm />
+            </RequirePermission>
+          } />
+          <Route path="voluntariado/modelos-escala/:id" element={
+            <RequirePermission resource={RESOURCES.VOLUNTARIOS} action={ACTIONS.EDIT}>
+              <ModeloEscalaForm />
+            </RequirePermission>
+          } />
+          <Route path="voluntariado/indisponibilidades" element={
+            <RequirePermission resource={RESOURCES.VOLUNTARIOS} action={ACTIONS.EDIT}>
+              <IndisponibilidadesList />
             </RequirePermission>
           } />
           <Route path="voluntariado/relatorio-vinculos" element={
@@ -264,6 +294,11 @@ function App() {
           <Route path="eventos/:id/editar" element={
             <RequirePermission resource={RESOURCES.EVENTOS} action={ACTIONS.EDIT}>
               <EventoForm />
+            </RequirePermission>
+          } />
+          <Route path="eventos/ocorrencias" element={
+            <RequirePermission resource={RESOURCES.EVENTOS}>
+              <OcorrenciasList />
             </RequirePermission>
           } />
 

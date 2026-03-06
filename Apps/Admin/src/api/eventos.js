@@ -13,6 +13,10 @@ export function normalizeEvento(e) {
     dataFim: d.dataFim ?? d.DataFim,
     url: d.url ?? d.Url ?? '',
     imagemDestaque: d.imagemDestaque ?? d.ImagemDestaque ?? '',
+    tipo: d.tipo ?? d.Tipo ?? 1,
+    tipoDescricao: d.tipoDescricao ?? d.TipoDescricao ?? 'Evento',
+    ehRecorrente: d.ehRecorrente ?? d.EhRecorrente ?? false,
+    ativo: d.ativo ?? d.Ativo ?? true,
   };
 }
 
@@ -23,6 +27,15 @@ export const eventosApi = {
   update: (id, data) => api.put(`/Eventos/${id}`, data),
   delete: (id) => api.delete(`/Eventos/${id}`),
   getByPeriodo: () => api.get('/Eventos/periodo'),
+};
+
+/** Recorrências do evento (dia da semana, horário, periodicidade). */
+export const eventosRecorrenciasApi = {
+  getByEvento: (eventoId) => api.get(`/Eventos/${eventoId}/recorrencias`),
+  getById: (eventoId, id) => api.get(`/Eventos/${eventoId}/recorrencias/${id}`),
+  create: (eventoId, data) => api.post(`/Eventos/${eventoId}/recorrencias`, data),
+  update: (eventoId, id, data) => api.put(`/Eventos/${eventoId}/recorrencias/${id}`, data),
+  delete: (eventoId, id) => api.delete(`/Eventos/${eventoId}/recorrencias/${id}`),
 };
 
 export const eventosOcorrenciasApi = {

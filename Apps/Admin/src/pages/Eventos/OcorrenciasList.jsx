@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, RefreshCcw, Settings } from 'lucide-react';
+import { CalendarDays, PlusCircle, RefreshCcw, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,6 +12,9 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { eventosApi, eventosOcorrenciasApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { RESOURCES, ACTIONS } from '@/utils/permissions';
 
 function getStatusOcorrenciaLabel(status) {
   const value = Number(status);
@@ -21,7 +24,8 @@ function getStatusOcorrenciaLabel(status) {
   return 'Desconhecido';
 }
 
-export default function EscalasList() {
+export default function OcorrenciasList() {
+  const { can } = useAuth();
   const [initialLoad, setInitialLoad] = useState(true);
   const [loadingOcorrencias, setLoadingOcorrencias] = useState(false);
   const [error, setError] = useState(null);
@@ -39,6 +43,8 @@ export default function EscalasList() {
     d.setDate(d.getDate() + 30);
     return d.toISOString().slice(0, 10);
   });
+
+  const canEdit = can(RESOURCES.EVENTOS, ACTIONS.EDIT);
 
   const loadBase = async () => {
     try {
@@ -63,7 +69,7 @@ export default function EscalasList() {
       setOcorrencias(res.data || []);
     } catch (err) {
       console.error(err);
-      setError('Erro ao carregar ocorrências para escala');
+      setError('Erro ao carregar ocorrências');
     } finally {
       setLoadingOcorrencias(false);
       setInitialLoad(false);
@@ -78,27 +84,59 @@ export default function EscalasList() {
     loadOcorrencias();
   }, [filtroEventoId, dataInicio, dataFim]);
 
+  const handleGerarOcorrencias = async () => {
+    if (filtroEventoId === 'all') {
+      toast.error('Selecione um evento para gerar ocorrências');
+      return;
+    }
+
+    try {
+      const res = await eventosOcorrenciasApi.gerarRecorrencia(
+        Number(filtroEventoId),
+        `${dataInicio}T00:00:00`,
+        `${dataFim}T23:59:59`
+      );
+      const total = res.data?.totalCriadas ?? 0;
+      if (total > 0) {
+        toast.success(`${total} ocorrência(s) criada(s)`);
+        await loadOcorrencias();
+      } else {
+        toast.warning(
+          'Nenhuma ocorrência nova foi criada. Verifique se o evento tem recorrências configuradas (Editar evento → Recorrências) e se a vigência cobre o período escolhido.'
+        );
+        await loadOcorrencias();
+      }
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.message ?? err.response?.data ?? 'Erro ao gerar ocorrências';
+      toast.error(typeof msg === 'string' ? msg : 'Erro ao gerar ocorrências');
+    }
+  };
+
   const sorted = [...ocorrencias].sort((a, b) => new Date(a.dataHoraInicio) - new Date(b.dataHoraInicio));
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(sorted, 20);
 
-  if (initialLoad) return <LoadingPage text="Carregando escalas..." />;
+  if (initialLoad) return <LoadingPage text="Carregando ocorrências..." />;
   if (error) return <ErrorPage message={error} onRetry={loadOcorrencias} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Escalas de Voluntariado</h1>
-          <p className="text-muted-foreground">Monte as escalas por ocorrência e por equipe. Para gerar ocorrências use Eventos → Ocorrências.</p>
+          <h1 className="text-3xl font-bold">Ocorrências de Eventos</h1>
+          <p className="text-muted-foreground">Gere e liste ocorrências (datas) dos eventos. Depois monte as escalas em Voluntariado → Escalas.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" asChild>
-            <Link to="/eventos/ocorrencias">Eventos → Ocorrências</Link>
-          </Button>
           <Button variant="outline" onClick={loadOcorrencias}>
             <RefreshCcw className="h-4 w-4 mr-2" />
             Atualizar
           </Button>
+          {canEdit && (
+            <Button onClick={handleGerarOcorrencias}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Gerar Ocorrências
+            </Button>
+          )}
         </div>
       </div>
 
@@ -151,8 +189,8 @@ export default function EscalasList() {
                 <TableRow>
                   <TableHead>Evento</TableHead>
                   <TableHead>Data/Hora</TableHead>
-                  <TableHead>Status da ocorrência</TableHead>
-                  <TableHead>Escala</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Escalas</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -169,16 +207,16 @@ export default function EscalasList() {
                     <TableCell>{getStatusOcorrenciaLabel(item.status)}</TableCell>
                     <TableCell>
                       {item.possuiEscala ? (
-                        <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800">Criada</span>
+                        <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800">Há escala(s)</span>
                       ) : (
-                        <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">Não criada</span>
+                        <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">Nenhuma</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="outline" size="sm" asChild>
                         <Link to={`/voluntariado/escalas/ocorrencia/${item.id}`}>
                           <Settings className="h-4 w-4 mr-2" />
-                          {item.possuiEscala ? 'Editar Escala' : 'Montar Escala'}
+                          Montar escalas
                         </Link>
                       </Button>
                     </TableCell>

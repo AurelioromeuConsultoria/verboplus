@@ -116,6 +116,12 @@ export default function EventosList() {
     return d.toLocaleString('pt-BR');
   };
 
+  const getTipoLabel = (tipo, tipoDescricao) => {
+    if (tipoDescricao) return tipoDescricao;
+    const map = { 1: 'Evento', 2: 'Culto', 3: 'Reunião', 4: 'Outro' };
+    return map[tipo] ?? 'Evento';
+  };
+
   // Exportação
   const handleExport = () => {
     const exportData = filtered.map(evento => ({
@@ -198,6 +204,7 @@ export default function EventosList() {
                   <SortableTableHeader field="titulo" onSort={handleSort} sortConfig={sortConfig}>
                     Título
                   </SortableTableHeader>
+                  <TableHead>Tipo</TableHead>
                   <SortableTableHeader field="descricao" onSort={handleSort} sortConfig={sortConfig}>
                     Descrição
                   </SortableTableHeader>
@@ -215,6 +222,7 @@ export default function EventosList() {
                 {paginatedItems.map((evento) => (
                   <TableRow key={evento.id}>
                     <TableCell className="font-medium">{evento.titulo || '-'}</TableCell>
+                    <TableCell>{getTipoLabel(evento.tipo, evento.tipoDescricao)}</TableCell>
                     <TableCell>{evento.descricao ? (evento.descricao.length > 50 ? `${evento.descricao.substring(0, 50)}...` : evento.descricao) : '-'}</TableCell>
                     <TableCell>{formatEventDate(evento.dataInicio)}</TableCell>
                     <TableCell>{formatEventDate(evento.dataFim)}</TableCell>

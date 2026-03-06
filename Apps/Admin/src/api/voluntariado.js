@@ -29,6 +29,9 @@ export const voluntariosApi = {
 export const escalasApi = {
   getById: (id) => api.get(`/Escalas/${id}`),
   getByOcorrencia: (eventoOcorrenciaId) => api.get(`/Escalas/ocorrencia/${eventoOcorrenciaId}`),
+  getAllByOcorrencia: (eventoOcorrenciaId) => api.get(`/Escalas/ocorrencia/${eventoOcorrenciaId}/escalas`),
+  getByOcorrenciaAndEquipe: (eventoOcorrenciaId, equipeId) =>
+    api.get(`/Escalas/ocorrencia/${eventoOcorrenciaId}/equipe/${equipeId}`),
   getSugestoes: (escalaId, equipeId) => api.get(`/Escalas/${escalaId}/sugestoes`, { params: { equipeId } }),
   create: (data) => api.post('/Escalas', data),
   update: (id, data) => api.put(`/Escalas/${id}`, data),
@@ -37,5 +40,26 @@ export const escalasApi = {
   updateItem: (escalaId, escalaItemId, data) => api.put(`/Escalas/${escalaId}/itens/${escalaItemId}`, data),
   deleteItem: (escalaId, escalaItemId) => api.delete(`/Escalas/${escalaId}/itens/${escalaItemId}`),
   publicar: (escalaId) => api.post(`/Escalas/${escalaId}/publicar`),
+  gerarAutomatico: (eventoOcorrenciaId, equipeId) =>
+    api.post(`/Escalas/ocorrencia/${eventoOcorrenciaId}/equipe/${equipeId}/gerar-automatico`),
+};
+
+export const escalasModelosApi = {
+  getById: (id) => api.get(`/EscalasModelos/${id}`),
+  getByEquipe: (equipeId) => api.get(`/EscalasModelos/equipe/${equipeId}`),
+  getByEvento: (eventoId) => api.get(`/EscalasModelos/evento/${eventoId}`),
+  getByEventoAndEquipe: (eventoId, equipeId) =>
+    api.get('/EscalasModelos/evento-equipe', { params: { eventoId: eventoId ?? undefined, equipeId } }),
+  create: (data) => api.post('/EscalasModelos', data),
+  update: (id, data) => api.put(`/EscalasModelos/${id}`, data),
+  delete: (id) => api.delete(`/EscalasModelos/${id}`),
+};
+
+export const indisponibilidadesVoluntariosApi = {
+  getById: (id) => api.get(`/IndisponibilidadesVoluntarios/${id}`),
+  getByVoluntario: (voluntarioId, params) =>
+    api.get(`/IndisponibilidadesVoluntarios/voluntario/${voluntarioId}`, { params }),
+  create: (data) => api.post('/IndisponibilidadesVoluntarios', data),
+  delete: (id) => api.delete(`/IndisponibilidadesVoluntarios/${id}`),
 };
 

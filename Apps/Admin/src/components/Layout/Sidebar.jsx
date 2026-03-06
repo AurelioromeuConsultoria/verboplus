@@ -10,6 +10,7 @@ import {
   Briefcase,
   Handshake,
   CalendarDays,
+  CalendarOff,
   ArrowRightLeft,
   Star,
   Tag,
@@ -136,6 +137,18 @@ const menuGroups = [
         permission: RESOURCES.VOLUNTARIOS,
       },
       {
+        title: 'Modelos de Escala',
+        href: '/voluntariado/modelos-escala',
+        icon: ClipboardList,
+        permission: RESOURCES.VOLUNTARIOS,
+      },
+      {
+        title: 'Indisponibilidades',
+        href: '/voluntariado/indisponibilidades',
+        icon: CalendarOff,
+        permission: RESOURCES.VOLUNTARIOS,
+      },
+      {
         title: 'Relatório Vínculos',
         href: '/voluntariado/relatorio-vinculos',
         icon: ArrowRightLeft,
@@ -161,6 +174,12 @@ const menuGroups = [
       {
         title: 'Eventos',
         href: '/eventos',
+        icon: Calendar,
+        permission: RESOURCES.EVENTOS,
+      },
+      {
+        title: 'Ocorrências',
+        href: '/eventos/ocorrencias',
         icon: Calendar,
         permission: RESOURCES.EVENTOS,
       },
