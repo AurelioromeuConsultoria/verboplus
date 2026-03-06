@@ -11,6 +11,10 @@ public class Escala
     public virtual EventoOcorrencia EventoOcorrencia { get; set; } = null!;
 
     [Required]
+    public int EquipeId { get; set; }
+    public virtual Equipe Equipe { get; set; } = null!;
+
+    [Required]
     public StatusEscala Status { get; set; } = StatusEscala.Rascunho;
 
     [MaxLength(500)]

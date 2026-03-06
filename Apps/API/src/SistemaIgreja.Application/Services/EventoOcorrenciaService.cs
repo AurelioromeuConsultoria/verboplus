@@ -114,10 +114,10 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
         var entity = await _repository.GetByIdAsync(id);
         if (entity == null) return;
 
-        var escala = await _escalaRepository.GetByEventoOcorrenciaIdAsync(id);
-        if (escala != null)
+        var escalas = await _escalaRepository.GetAllByEventoOcorrenciaAsync(id);
+        if (escalas.Any())
         {
-            throw new ArgumentException("Não é possível remover ocorrência que já possui escala");
+            throw new ArgumentException("Não é possível remover ocorrência que já possui escala(s)");
         }
 
         await _repository.DeleteAsync(id);
@@ -133,7 +133,13 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
         var evento = await _eventoRepository.GetByIdAsync(eventoId);
         if (evento == null) throw new ArgumentException("Evento não encontrado");
 
-        var recorrencias = await _repository.GetRecorrenciasAtivasByEventoAsync(eventoId);
+        var recorrencias = (await _repository.GetRecorrenciasAtivasByEventoAsync(eventoId)).ToList();
+        if (recorrencias.Count == 0)
+        {
+            throw new ArgumentException(
+                "Este evento não possui recorrências configuradas. Edite o evento em Eventos e, na seção Recorrências, adicione ao menos uma (dia da semana, horário e periodicidade).");
+        }
+
         var totalCriadas = 0;
 
         foreach (var recorrencia in recorrencias)
@@ -216,8 +222,8 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
             Status = o.Status,
             GeradaAutomaticamente = o.GeradaAutomaticamente,
             DataCriacao = o.DataCriacao,
-            PossuiEscala = o.Escala != null,
-            EscalaId = o.Escala?.Id
+            PossuiEscala = o.Escalas?.Any() == true,
+            EscalaId = o.Escalas?.FirstOrDefault()?.Id
         };
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SistemaIgreja.Infrastructure.Data;
@@ -11,9 +12,11 @@ using SistemaIgreja.Infrastructure.Data;
 namespace SistemaIgreja.Infrastructure.Migrations
 {
     [DbContext(typeof(SistemaIgrejaDbContext))]
-    partial class SistemaIgrejaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260304021313_EscalaPorEquipe")]
+    partial class EscalaPorEquipe
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -671,9 +674,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<DateTime?>("DataPublicacao")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<int>("EquipeId")
-                        .HasColumnType("integer");
-
                     b.Property<int>("EventoOcorrenciaId")
                         .HasColumnType("integer");
 
@@ -688,9 +688,7 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasIndex("CriadoPorUsuarioId");
 
-                    b.HasIndex("EquipeId");
-
-                    b.HasIndex("EventoOcorrenciaId", "EquipeId")
+                    b.HasIndex("EventoOcorrenciaId")
                         .IsUnique();
 
                     b.ToTable("Escalas");
@@ -750,75 +748,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasIndex("EscalaId", "VoluntarioId");
 
                     b.ToTable("EscalasItens");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.EscalaModelo", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<int?>("DiasFolgaAposEscala")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("EquipeId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("EventoId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Nome")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EquipeId");
-
-                    b.HasIndex("EventoId", "EquipeId")
-                        .IsUnique();
-
-                    b.ToTable("EscalasModelos");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.EscalaModeloItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CargoId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<int>("EscalaModeloId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Ordem")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Quantidade")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CargoId");
-
-                    b.HasIndex("EscalaModeloId");
-
-                    b.ToTable("EscalasModelosItens");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Evento", b =>
@@ -1113,35 +1042,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasIndex("TimoteoId");
 
                     b.ToTable("HubCasas");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.IndisponibilidadeVoluntario", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("Data")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Motivo")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int>("VoluntarioId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("VoluntarioId", "Data")
-                        .IsUnique();
-
-                    b.ToTable("IndisponibilidadesVoluntarios");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.InscricaoEvento", b =>
@@ -1988,9 +1888,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("EquipeId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("MaxEscalasPorMes")
-                        .HasColumnType("integer");
-
                     b.Property<int>("PessoaId")
                         .HasColumnType("integer");
 
@@ -2105,21 +2002,13 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasForeignKey("CriadoPorUsuarioId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("SistemaIgreja.Domain.Entities.Equipe", "Equipe")
-                        .WithMany()
-                        .HasForeignKey("EquipeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("SistemaIgreja.Domain.Entities.EventoOcorrencia", "EventoOcorrencia")
-                        .WithMany("Escalas")
-                        .HasForeignKey("EventoOcorrenciaId")
+                        .WithOne("Escala")
+                        .HasForeignKey("SistemaIgreja.Domain.Entities.Escala", "EventoOcorrenciaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("CriadoPorUsuario");
-
-                    b.Navigation("Equipe");
 
                     b.Navigation("EventoOcorrencia");
                 });
@@ -2163,42 +2052,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Escala");
 
                     b.Navigation("Voluntario");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.EscalaModelo", b =>
-                {
-                    b.HasOne("SistemaIgreja.Domain.Entities.Equipe", "Equipe")
-                        .WithMany()
-                        .HasForeignKey("EquipeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.Evento", "Evento")
-                        .WithMany()
-                        .HasForeignKey("EventoId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.Navigation("Equipe");
-
-                    b.Navigation("Evento");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.EscalaModeloItem", b =>
-                {
-                    b.HasOne("SistemaIgreja.Domain.Entities.Cargo", "Cargo")
-                        .WithMany()
-                        .HasForeignKey("CargoId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.EscalaModelo", "EscalaModelo")
-                        .WithMany("Itens")
-                        .HasForeignKey("EscalaModeloId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Cargo");
-
-                    b.Navigation("EscalaModelo");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.EventoOcorrencia", b =>
@@ -2272,17 +2125,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Lider");
 
                     b.Navigation("Timoteo");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.IndisponibilidadeVoluntario", b =>
-                {
-                    b.HasOne("SistemaIgreja.Domain.Entities.Voluntario", "Voluntario")
-                        .WithMany("Indisponibilidades")
-                        .HasForeignKey("VoluntarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Voluntario");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.InscricaoEvento", b =>
@@ -2571,11 +2413,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Itens");
                 });
 
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.EscalaModelo", b =>
-                {
-                    b.Navigation("Itens");
-                });
-
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Evento", b =>
                 {
                     b.Navigation("Inscricoes");
@@ -2587,7 +2424,7 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.EventoOcorrencia", b =>
                 {
-                    b.Navigation("Escalas");
+                    b.Navigation("Escala");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.EventoRecorrencia", b =>
@@ -2639,11 +2476,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Visitante", b =>
                 {
                     b.Navigation("MensagensAgendadas");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Voluntario", b =>
-                {
-                    b.Navigation("Indisponibilidades");
                 });
 #pragma warning restore 612, 618
         }

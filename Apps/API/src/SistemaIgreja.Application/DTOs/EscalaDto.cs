@@ -6,6 +6,8 @@ public class EscalaDto
 {
     public int Id { get; set; }
     public int EventoOcorrenciaId { get; set; }
+    public int EquipeId { get; set; }
+    public string EquipeNome { get; set; } = string.Empty;
     public DateTime EventoDataHoraInicio { get; set; }
     public string EventoTitulo { get; set; } = string.Empty;
     public StatusEscala Status { get; set; }
@@ -40,6 +42,7 @@ public class EscalaItemDto
 public class CriarEscalaDto
 {
     public int EventoOcorrenciaId { get; set; }
+    public int EquipeId { get; set; }
     public string? Observacoes { get; set; }
 }
 

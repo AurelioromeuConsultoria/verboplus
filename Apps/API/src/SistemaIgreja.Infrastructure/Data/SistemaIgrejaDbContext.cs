@@ -32,6 +32,9 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<EventoOcorrencia> EventosOcorrencias { get; set; }
     public DbSet<Escala> Escalas { get; set; }
     public DbSet<EscalaItem> EscalasItens { get; set; }
+    public DbSet<EscalaModelo> EscalasModelos { get; set; }
+    public DbSet<EscalaModeloItem> EscalasModelosItens { get; set; }
+    public DbSet<IndisponibilidadeVoluntario> IndisponibilidadesVoluntarios { get; set; }
     public DbSet<DestaqueSite> DestaquesSite { get; set; }
     public DbSet<ConfiguracaoPortal> ConfiguracoesPortal { get; set; }
     public DbSet<CategoriaNoticia> CategoriasNoticias { get; set; }
@@ -520,7 +523,7 @@ public class SistemaIgrejaDbContext : DbContext
             entity.HasIndex(e => new { e.EventoId, e.DataHoraInicio });
         });
 
-        // Configuração da entidade Escala
+        // Configuração da entidade Escala (uma por EventoOcorrencia + Equipe)
         modelBuilder.Entity<Escala>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -529,16 +532,21 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.DataCriacao).IsRequired();
 
             entity.HasOne(e => e.EventoOcorrencia)
-                  .WithOne(eo => eo.Escala)
-                  .HasForeignKey<Escala>(e => e.EventoOcorrenciaId)
+                  .WithMany(eo => eo.Escalas)
+                  .HasForeignKey(e => e.EventoOcorrenciaId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Equipe)
+                  .WithMany()
+                  .HasForeignKey(e => e.EquipeId)
+                  .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(e => e.CriadoPorUsuario)
                   .WithMany()
                   .HasForeignKey(e => e.CriadoPorUsuarioId)
                   .OnDelete(DeleteBehavior.SetNull);
 
-            entity.HasIndex(e => e.EventoOcorrenciaId).IsUnique();
+            entity.HasIndex(e => new { e.EventoOcorrenciaId, e.EquipeId }).IsUnique();
         });
 
         // Configuração da entidade EscalaItem
@@ -577,6 +585,60 @@ public class SistemaIgrejaDbContext : DbContext
 
             entity.HasIndex(e => new { e.EscalaId, e.VoluntarioId });
             entity.HasIndex(e => new { e.EscalaId, e.EquipeId });
+        });
+
+        // EscalaModelo (modelo de escala por evento + equipe)
+        modelBuilder.Entity<EscalaModelo>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).HasMaxLength(200);
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(e => e.Evento)
+                  .WithMany()
+                  .HasForeignKey(e => e.EventoId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Equipe)
+                  .WithMany()
+                  .HasForeignKey(e => e.EquipeId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => new { e.EventoId, e.EquipeId }).IsUnique();
+        });
+
+        modelBuilder.Entity<EscalaModeloItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Quantidade).IsRequired();
+            entity.Property(e => e.Ordem).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(e => e.EscalaModelo)
+                  .WithMany(m => m.Itens)
+                  .HasForeignKey(e => e.EscalaModeloId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Cargo)
+                  .WithMany()
+                  .HasForeignKey(e => e.CargoId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<IndisponibilidadeVoluntario>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Data).IsRequired();
+            entity.Property(e => e.Motivo).HasMaxLength(500);
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(e => e.Voluntario)
+                  .WithMany(v => v.Indisponibilidades)
+                  .HasForeignKey(e => e.VoluntarioId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.VoluntarioId, e.Data }).IsUnique();
         });
 
         // Configuração da entidade DestaqueSite

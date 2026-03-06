@@ -18,7 +18,7 @@ public class EventoOcorrenciaRepository : IEventoOcorrenciaRepository
     {
         return await _context.EventosOcorrencias
             .Include(o => o.Evento)
-            .Include(o => o.Escala)
+            .Include(o => o.Escalas)
             .Where(o => o.EventoId == eventoId)
             .OrderBy(o => o.DataHoraInicio)
             .ToListAsync();
@@ -28,7 +28,7 @@ public class EventoOcorrenciaRepository : IEventoOcorrenciaRepository
     {
         var query = _context.EventosOcorrencias
             .Include(o => o.Evento)
-            .Include(o => o.Escala)
+            .Include(o => o.Escalas)
             .Where(o => o.DataHoraInicio >= dataInicio && o.DataHoraInicio <= dataFim);
 
         if (eventoId.HasValue)
@@ -45,7 +45,7 @@ public class EventoOcorrenciaRepository : IEventoOcorrenciaRepository
     {
         return await _context.EventosOcorrencias
             .Include(o => o.Evento)
-            .Include(o => o.Escala)
+            .Include(o => o.Escalas)
             .FirstOrDefaultAsync(o => o.Id == id);
     }
 

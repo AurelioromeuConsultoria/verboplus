@@ -26,7 +26,8 @@ public class EventoOcorrencia
 
     public DateTime DataCriacao { get; set; } = DateTime.Now;
 
-    public virtual Escala? Escala { get; set; }
+    /// <summary>Uma escala por equipe para esta ocorrência.</summary>
+    public virtual ICollection<Escala> Escalas { get; set; } = new List<Escala>();
 }
 
 public enum StatusEventoOcorrencia

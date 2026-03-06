@@ -35,6 +35,21 @@ public class EscalasController : ControllerBase
         return Ok(item);
     }
 
+    [HttpGet("ocorrencia/{eventoOcorrenciaId}/escalas")]
+    public async Task<ActionResult<IEnumerable<EscalaDto>>> GetAllByEventoOcorrencia(int eventoOcorrenciaId)
+    {
+        var items = await _service.GetAllByEventoOcorrenciaAsync(eventoOcorrenciaId);
+        return Ok(items);
+    }
+
+    [HttpGet("ocorrencia/{eventoOcorrenciaId}/equipe/{equipeId}")]
+    public async Task<ActionResult<EscalaDto>> GetByEventoOcorrenciaAndEquipe(int eventoOcorrenciaId, int equipeId)
+    {
+        var item = await _service.GetByEventoOcorrenciaAndEquipeAsync(eventoOcorrenciaId, equipeId);
+        if (item == null) return NotFound();
+        return Ok(item);
+    }
+
     [HttpGet("{escalaId}/sugestoes")]
     public async Task<ActionResult<IEnumerable<SugestaoEscalaVoluntarioDto>>> GetSugestoes(int escalaId, [FromQuery] int equipeId)
     {
@@ -163,6 +178,21 @@ public class EscalasController : ControllerBase
             return Ok(updated);
         }
         catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("ocorrencia/{eventoOcorrenciaId}/equipe/{equipeId}/gerar-automatico")]
+    public async Task<ActionResult<EscalaDto>> GerarAutomatico(int eventoOcorrenciaId, int equipeId)
+    {
+        try
+        {
+            var usuarioId = GetUsuarioId();
+            var escala = await _service.GerarAutomaticoAsync(eventoOcorrenciaId, equipeId, usuarioId);
+            return Ok(escala);
+        }
+        catch (ArgumentException ex)
         {
             return BadRequest(ex.Message);
         }

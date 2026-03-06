@@ -18,6 +18,11 @@ public class Voluntario
     public int CargoId { get; set; }
     public virtual Cargo Cargo { get; set; } = null!;
 
+    /// <summary>Máximo de escalas no mês (null = sem limite). Usado na geração automática.</summary>
+    public int? MaxEscalasPorMes { get; set; }
+
     [Required]
     public DateTime DataCadastro { get; set; } = DateTime.Now;
+
+    public virtual ICollection<IndisponibilidadeVoluntario> Indisponibilidades { get; set; } = new List<IndisponibilidadeVoluntario>();
 }

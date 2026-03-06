@@ -43,6 +43,7 @@ public class EventoService : IEventoService
 
     public async Task<EventoDto> CreateAsync(CriarEventoDto dto)
     {
+        var tipo = Enum.IsDefined(typeof(TipoEvento), dto.Tipo) ? (TipoEvento)dto.Tipo : TipoEvento.Evento;
         var entity = new Evento
         {
             Titulo = dto.Titulo,
@@ -51,6 +52,9 @@ public class EventoService : IEventoService
             Url = dto.Url,
             DataInicio = dto.DataInicio,
             DataFim = dto.DataFim,
+            Tipo = tipo,
+            EhRecorrente = dto.EhRecorrente,
+            Ativo = dto.Ativo,
             DataCriacao = DateTime.Now
         };
 
@@ -69,6 +73,9 @@ public class EventoService : IEventoService
         entity.Url = dto.Url;
         entity.DataInicio = dto.DataInicio;
         entity.DataFim = dto.DataFim;
+        entity.Tipo = Enum.IsDefined(typeof(TipoEvento), dto.Tipo) ? (TipoEvento)dto.Tipo : entity.Tipo;
+        entity.EhRecorrente = dto.EhRecorrente;
+        entity.Ativo = dto.Ativo;
 
         var updated = await _repository.UpdateAsync(entity);
         return MapToDto(updated);
@@ -90,7 +97,23 @@ public class EventoService : IEventoService
             Url = e.Url,
             DataInicio = e.DataInicio,
             DataFim = e.DataFim,
+            Tipo = (int)e.Tipo,
+            TipoDescricao = GetTipoDescricao(e.Tipo),
+            EhRecorrente = e.EhRecorrente,
+            Ativo = e.Ativo,
             DataCriacao = e.DataCriacao
+        };
+    }
+
+    private static string GetTipoDescricao(TipoEvento tipo)
+    {
+        return tipo switch
+        {
+            TipoEvento.Evento => "Evento",
+            TipoEvento.Culto => "Culto",
+            TipoEvento.Reuniao => "Reunião",
+            TipoEvento.Outro => "Outro",
+            _ => tipo.ToString()
         };
     }
 }

@@ -8,6 +8,8 @@ public interface IEscalaService
 {
     Task<EscalaDto?> GetByIdAsync(int id);
     Task<EscalaDto?> GetByEventoOcorrenciaAsync(int eventoOcorrenciaId);
+    Task<EscalaDto?> GetByEventoOcorrenciaAndEquipeAsync(int eventoOcorrenciaId, int equipeId);
+    Task<IEnumerable<EscalaDto>> GetAllByEventoOcorrenciaAsync(int eventoOcorrenciaId);
     Task<IEnumerable<SugestaoEscalaVoluntarioDto>> GetSugestoesAsync(int escalaId, int equipeId);
     Task<EscalaDto> CreateAsync(CriarEscalaDto dto, int usuarioId);
     Task<EscalaDto> UpdateAsync(int id, AtualizarEscalaDto dto);
@@ -17,6 +19,7 @@ public interface IEscalaService
     Task<EscalaItemDto> UpdateItemAsync(int escalaId, int escalaItemId, AtualizarEscalaItemDto dto, int usuarioId, bool isAdmin);
     Task DeleteItemAsync(int escalaId, int escalaItemId);
     Task<EscalaDto> PublicarAsync(int escalaId);
+    Task<EscalaDto> GerarAutomaticoAsync(int eventoOcorrenciaId, int equipeId, int usuarioId);
 }
 
 public class EscalaService : IEscalaService
@@ -24,15 +27,21 @@ public class EscalaService : IEscalaService
     private readonly IEscalaRepository _repository;
     private readonly IEventoOcorrenciaRepository _eventoOcorrenciaRepository;
     private readonly IVoluntarioRepository _voluntarioRepository;
+    private readonly IEscalaModeloRepository _escalaModeloRepository;
+    private readonly IIndisponibilidadeVoluntarioRepository _indisponibilidadeRepository;
 
     public EscalaService(
         IEscalaRepository repository,
         IEventoOcorrenciaRepository eventoOcorrenciaRepository,
-        IVoluntarioRepository voluntarioRepository)
+        IVoluntarioRepository voluntarioRepository,
+        IEscalaModeloRepository escalaModeloRepository,
+        IIndisponibilidadeVoluntarioRepository indisponibilidadeRepository)
     {
         _repository = repository;
         _eventoOcorrenciaRepository = eventoOcorrenciaRepository;
         _voluntarioRepository = voluntarioRepository;
+        _escalaModeloRepository = escalaModeloRepository;
+        _indisponibilidadeRepository = indisponibilidadeRepository;
     }
 
     public async Task<EscalaDto?> GetByIdAsync(int id)
@@ -45,6 +54,18 @@ public class EscalaService : IEscalaService
     {
         var escala = await _repository.GetByEventoOcorrenciaIdAsync(eventoOcorrenciaId);
         return escala != null ? MapToDto(escala) : null;
+    }
+
+    public async Task<EscalaDto?> GetByEventoOcorrenciaAndEquipeAsync(int eventoOcorrenciaId, int equipeId)
+    {
+        var escala = await _repository.GetByEventoOcorrenciaAndEquipeAsync(eventoOcorrenciaId, equipeId);
+        return escala != null ? MapToDto(escala) : null;
+    }
+
+    public async Task<IEnumerable<EscalaDto>> GetAllByEventoOcorrenciaAsync(int eventoOcorrenciaId)
+    {
+        var escalas = await _repository.GetAllByEventoOcorrenciaAsync(eventoOcorrenciaId);
+        return escalas.Select(MapToDto);
     }
 
     public async Task<IEnumerable<SugestaoEscalaVoluntarioDto>> GetSugestoesAsync(int escalaId, int equipeId)
@@ -88,12 +109,13 @@ public class EscalaService : IEscalaService
         var ocorrencia = await _eventoOcorrenciaRepository.GetByIdAsync(dto.EventoOcorrenciaId);
         if (ocorrencia == null) throw new ArgumentException("Ocorrência não encontrada");
 
-        var existente = await _repository.GetByEventoOcorrenciaIdAsync(dto.EventoOcorrenciaId);
-        if (existente != null) throw new ArgumentException("Já existe escala para esta ocorrência");
+        var existente = await _repository.GetByEventoOcorrenciaAndEquipeAsync(dto.EventoOcorrenciaId, dto.EquipeId);
+        if (existente != null) throw new ArgumentException("Já existe escala para esta ocorrência e equipe");
 
         var escala = new Escala
         {
             EventoOcorrenciaId = dto.EventoOcorrenciaId,
+            EquipeId = dto.EquipeId,
             Status = StatusEscala.Rascunho,
             Observacoes = dto.Observacoes,
             CriadoPorUsuarioId = usuarioId > 0 ? usuarioId : null,
@@ -128,6 +150,7 @@ public class EscalaService : IEscalaService
         var escala = await _repository.GetByIdAsync(escalaId);
         if (escala == null) throw new ArgumentException("Escala não encontrada");
         if (escala.Status == StatusEscala.Fechada) throw new ArgumentException("Escala fechada não pode ser alterada");
+        if (dto.EquipeId != escala.EquipeId) throw new ArgumentException("O item deve ser da mesma equipe da escala");
 
         var voluntario = await _voluntarioRepository.GetByIdAsync(dto.VoluntarioId);
         if (voluntario == null) throw new ArgumentException("Voluntário não encontrado");
@@ -137,7 +160,7 @@ public class EscalaService : IEscalaService
         var item = new EscalaItem
         {
             EscalaId = escalaId,
-            EquipeId = dto.EquipeId,
+            EquipeId = escala.EquipeId,
             CargoId = dto.CargoId,
             VoluntarioId = dto.VoluntarioId,
             Ordem = dto.Ordem,
@@ -161,13 +184,14 @@ public class EscalaService : IEscalaService
 
         var item = await _repository.GetItemByIdAsync(escalaItemId);
         if (item == null || item.EscalaId != escalaId) throw new ArgumentException("Item da escala não encontrado");
+        if (dto.EquipeId != escala.EquipeId) throw new ArgumentException("O item deve ser da mesma equipe da escala");
 
         var voluntario = await _voluntarioRepository.GetByIdAsync(dto.VoluntarioId);
         if (voluntario == null) throw new ArgumentException("Voluntário não encontrado");
 
         await ValidarConflitoPessoaAsync(escalaId, dto.VoluntarioId, dto.ForcarConflito, dto.MotivoExcecao, usuarioId, isAdmin, escalaItemId);
 
-        item.EquipeId = dto.EquipeId;
+        item.EquipeId = escala.EquipeId;
         item.CargoId = dto.CargoId;
         item.VoluntarioId = dto.VoluntarioId;
         item.Ordem = dto.Ordem;
@@ -208,6 +232,86 @@ public class EscalaService : IEscalaService
 
         var updated = await _repository.UpdateAsync(escala);
         var updatedFull = await _repository.GetByIdAsync(updated.Id);
+        return MapToDto(updatedFull!);
+    }
+
+    public async Task<EscalaDto> GerarAutomaticoAsync(int eventoOcorrenciaId, int equipeId, int usuarioId)
+    {
+        var ocorrencia = await _eventoOcorrenciaRepository.GetByIdAsync(eventoOcorrenciaId);
+        if (ocorrencia == null) throw new ArgumentException("Ocorrência não encontrada.");
+        var eventoId = ocorrencia.EventoId;
+        var dataOcorrencia = ocorrencia.DataHoraInicio;
+
+        var modelo = await _escalaModeloRepository.GetByEventoAndEquipeAsync(eventoId, equipeId);
+        if (modelo == null || !modelo.Itens.Any())
+            throw new ArgumentException("Não há modelo de escala ativo para este evento e equipe. Cadastre um em Voluntariado → Modelos de Escala.");
+
+        var escala = await _repository.GetByEventoOcorrenciaAndEquipeAsync(eventoOcorrenciaId, equipeId);
+        if (escala == null)
+        {
+            escala = new Escala
+            {
+                EventoOcorrenciaId = eventoOcorrenciaId,
+                EquipeId = equipeId,
+                Status = StatusEscala.Rascunho,
+                CriadoPorUsuarioId = usuarioId > 0 ? usuarioId : null,
+                DataCriacao = DateTime.Now
+            };
+            escala = await _repository.CreateAsync(escala);
+        }
+        else if (escala.Status != StatusEscala.Rascunho)
+            throw new ArgumentException("Só é possível gerar automaticamente em escala em rascunho.");
+
+        foreach (var item in escala.Itens.ToList())
+            await _repository.DeleteItemAsync(item.Id);
+
+        var voluntarios = (await _voluntarioRepository.GetByEquipeAsync(equipeId)).ToList();
+        var pessoaIdsJaEscaladas = await _repository.GetPessoaIdsJaEscaladasAsync(escala.Id);
+        var voluntarioIds = voluntarios.Select(v => v.Id).ToList();
+        var indisponiveis = await _indisponibilidadeRepository.GetVoluntarioIdsIndisponiveisNaDataAsync(voluntarioIds, dataOcorrencia);
+        var ano = dataOcorrencia.Year;
+        var mes = dataOcorrencia.Month;
+        var escalasNoMes = await _repository.GetQuantidadeEscalasNoMesPorVoluntarioAsync(equipeId, ano, mes);
+        var diasFolga = modelo.DiasFolgaAposEscala ?? 0;
+        var dataInicioFolga = dataOcorrencia.Date.AddDays(-diasFolga);
+        var escalasPeriodoFolga = diasFolga > 0
+            ? await _repository.GetQuantidadeEscalasEmPeriodoPorVoluntarioAsync(equipeId, dataInicioFolga, dataOcorrencia)
+            : new Dictionary<int, int>();
+        var cargaRecente = await _repository.GetCargaRecentePorVoluntarioAsync(equipeId, dataOcorrencia.AddDays(-60));
+
+        var ordemGlobal = 0;
+        foreach (var itemModelo in modelo.Itens.OrderBy(i => i.Ordem).ThenBy(i => i.Id))
+        {
+            var candidatos = voluntarios
+                .Where(v =>
+                    (itemModelo.CargoId == null || v.CargoId == itemModelo.CargoId) &&
+                    !pessoaIdsJaEscaladas.Contains(v.PessoaId) &&
+                    !indisponiveis.Contains(v.Id) &&
+                    (!v.MaxEscalasPorMes.HasValue || !escalasNoMes.TryGetValue(v.Id, out var noMes) || noMes < v.MaxEscalasPorMes.Value) &&
+                    (diasFolga == 0 || !escalasPeriodoFolga.TryGetValue(v.Id, out var noPeriodo) || noPeriodo == 0))
+                .OrderBy(v => cargaRecente.GetValueOrDefault(v.Id, 0))
+                .ThenBy(v => v.Pessoa?.Nome ?? string.Empty)
+                .Take(itemModelo.Quantidade)
+                .ToList();
+
+            foreach (var vol in candidatos)
+            {
+                var escalaItem = new EscalaItem
+                {
+                    EscalaId = escala.Id,
+                    EquipeId = equipeId,
+                    CargoId = vol.CargoId,
+                    VoluntarioId = vol.Id,
+                    Ordem = ordemGlobal++,
+                    ConflitoAprovado = false,
+                    DataCriacao = DateTime.Now
+                };
+                await _repository.AddItemAsync(escalaItem);
+                pessoaIdsJaEscaladas.Add(vol.PessoaId);
+            }
+        }
+
+        var updatedFull = await _repository.GetByIdAsync(escala.Id);
         return MapToDto(updatedFull!);
     }
 
@@ -252,6 +356,8 @@ public class EscalaService : IEscalaService
         {
             Id = e.Id,
             EventoOcorrenciaId = e.EventoOcorrenciaId,
+            EquipeId = e.EquipeId,
+            EquipeNome = e.Equipe?.Nome ?? string.Empty,
             EventoDataHoraInicio = e.EventoOcorrencia?.DataHoraInicio ?? DateTime.MinValue,
             EventoTitulo = e.EventoOcorrencia?.Evento?.Titulo ?? string.Empty,
             Status = e.Status,
