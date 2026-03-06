@@ -46,6 +46,7 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<PerfilAcessoPermissao> PerfisAcessoPermissoes { get; set; }
     public DbSet<CategoriaMidia> CategoriasMidias { get; set; }
     public DbSet<GaleriaFoto> GaleriasFotos { get; set; }
+    public DbSet<GaleriaFotoItem> GaleriasFotosItens { get; set; }
     public DbSet<Enquete> Enquetes { get; set; }
     public DbSet<EnqueteOpcao> EnqueteOpcoes { get; set; }
     public DbSet<EnqueteVoto> EnqueteVotos { get; set; }
@@ -778,6 +779,17 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithMany(c => c.Galerias)
                   .HasForeignKey(g => g.CategoriaMidiaId)
                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configuração da entidade GaleriaFotoItem (fotos listadas a partir do banco para funcionar com mesmo DB em dev)
+        modelBuilder.Entity<GaleriaFotoItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.NomeArquivo).IsRequired().HasMaxLength(260);
+            entity.HasOne(e => e.GaleriaFoto)
+                  .WithMany(g => g.Itens)
+                  .HasForeignKey(e => e.GaleriaFotoId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Configuração da entidade CriancaDetalhe

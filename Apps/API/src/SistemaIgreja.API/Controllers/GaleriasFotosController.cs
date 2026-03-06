@@ -161,6 +161,21 @@ public class GaleriasFotosController : ControllerBase
     }
 
     /// <summary>
+    /// Sincroniza a lista de fotos da galeria a partir dos arquivos no disco (backfill para GaleriaFotoItem).
+    /// Chamar uma vez em produção por galeria existente para que a listagem funcione localmente com o mesmo DB.
+    /// </summary>
+    [HttpPost("{id}/sync-itens")]
+    public async Task<ActionResult<object>> SyncItens(int id)
+    {
+        var galeria = await _service.GetByIdAsync(id);
+        if (galeria == null) return NotFound("Galeria não encontrada");
+
+        var basePath = GetUploadsBasePath();
+        var added = await _service.SyncItensFromDiskAsync(id, basePath);
+        return Ok(new { message = "Sincronização concluída", itensAdicionados = added });
+    }
+
+    /// <summary>
     /// Retorna o caminho base para uploads (alinhado com Program.cs / UseStaticFiles).
     /// Local: ContentRootPath. Azure: HOME/data (CaminhoDiretorio será montado sob uploads).
     /// </summary>

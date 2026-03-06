@@ -22,5 +22,11 @@ public interface IGaleriaFotoService
     Task<bool> UploadFotosAsync(int galeriaId, List<ArquivoUpload> arquivos, string webRootPath);
     Task<bool> DefinirImagemDestaqueAsync(int galeriaId, string nomeArquivo);
     Task<List<FotoDto>> ListarFotosAsync(int galeriaId, string webRootPath);
+
+    /// <summary>
+    /// Sincroniza itens da galeria a partir dos arquivos no disco (para popular a tabela em galerias já existentes).
+    /// Chamar uma vez em produção após o deploy para que a listagem funcione localmente com o mesmo DB.
+    /// </summary>
+    Task<int> SyncItensFromDiskAsync(int galeriaId, string webRootPath);
 }
 

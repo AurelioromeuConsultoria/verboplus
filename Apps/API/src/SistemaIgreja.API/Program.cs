@@ -88,6 +88,7 @@ builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<IPerfilAcessoRepository, PerfilAcessoRepository>();
 builder.Services.AddScoped<ICategoriaMidiaRepository, CategoriaMidiaRepository>();
 builder.Services.AddScoped<IGaleriaFotoRepository, GaleriaFotoRepository>();
+builder.Services.AddScoped<IGaleriaFotoItemRepository, GaleriaFotoItemRepository>();
 builder.Services.AddScoped<IEnqueteRepository, EnqueteRepository>();
 builder.Services.AddScoped<IConfiguracaoPortalRepository, ConfiguracaoPortalRepository>();
 
@@ -303,8 +304,13 @@ bool IsRunningOnAzure()
     return !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID"));
 }
 
-string GetUploadsPath(IWebHostEnvironment env)
+string GetUploadsPath(IWebHostEnvironment env, IConfiguration config)
 {
+    // Permite override em produção (ex.: storage compartilhado ou path diferente)
+    var configuredPath = config["Uploads:Path"] ?? Environment.GetEnvironmentVariable("UPLOADS_PATH");
+    if (!string.IsNullOrWhiteSpace(configuredPath))
+        return Path.GetFullPath(configuredPath.Trim());
+
     if (IsRunningOnAzure())
     {
         var home = Environment.GetEnvironmentVariable("HOME");
@@ -317,7 +323,7 @@ string GetUploadsPath(IWebHostEnvironment env)
     return Path.Combine(env.ContentRootPath, "uploads");
 }
 
-var uploadsPath = GetUploadsPath(app.Environment);
+var uploadsPath = GetUploadsPath(app.Environment, app.Configuration);
 
 try
 {

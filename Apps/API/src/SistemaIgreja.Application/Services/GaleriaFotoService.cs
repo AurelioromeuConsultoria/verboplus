@@ -9,10 +9,12 @@ namespace SistemaIgreja.Application.Services;
 public class GaleriaFotoService : IGaleriaFotoService
 {
     private readonly IGaleriaFotoRepository _repository;
+    private readonly IGaleriaFotoItemRepository _itemRepository;
 
-    public GaleriaFotoService(IGaleriaFotoRepository repository)
+    public GaleriaFotoService(IGaleriaFotoRepository repository, IGaleriaFotoItemRepository itemRepository)
     {
         _repository = repository;
+        _itemRepository = itemRepository;
     }
 
     public async Task<IEnumerable<GaleriaFotoDto>> GetAllAsync()
@@ -113,6 +115,7 @@ public class GaleriaFotoService : IGaleriaFotoService
 
         var uploadedCount = 0;
         var primeiraFoto = true;
+        var novosItens = new List<GaleriaFotoItem>();
         const int thumbnailSize = 400; // Tamanho máximo do thumbnail (largura ou altura)
 
         foreach (var arquivo in arquivos)
@@ -151,12 +154,24 @@ public class GaleriaFotoService : IGaleriaFotoService
 
             // Definir primeira foto como destaque se não houver
             // Usar o thumbnail como destaque (mais leve para carregar)
-            if (primeiraFoto && string.IsNullOrEmpty(galeria.ImagemDestaque))
+            var isDestaque = primeiraFoto && string.IsNullOrEmpty(galeria.ImagemDestaque);
+            if (isDestaque)
             {
                 galeria.ImagemDestaque = Path.Combine(galeria.CaminhoDiretorio, "thumbnail", fileName).Replace("\\", "/");
                 primeiraFoto = false;
             }
+
+            novosItens.Add(new GaleriaFotoItem
+            {
+                GaleriaFotoId = galeriaId,
+                NomeArquivo = fileName,
+                Destaque = isDestaque,
+                Ordem = uploadedCount - 1
+            });
         }
+
+        if (novosItens.Count > 0)
+            await _itemRepository.AddRangeAsync(novosItens);
 
         // Atualizar quantidade de fotos (contar apenas as originais)
         var fotoFiles = Directory.GetFiles(originalPath, "*.*", SearchOption.TopDirectoryOnly)
@@ -178,6 +193,7 @@ public class GaleriaFotoService : IGaleriaFotoService
         var filePath = Path.Combine(galeria.CaminhoDiretorio, "thumbnail", nomeArquivo).Replace("\\", "/");
         galeria.ImagemDestaque = filePath;
         await _repository.UpdateAsync(galeria);
+        await _itemRepository.SetDestaqueAsync(galeriaId, nomeArquivo);
 
         return true;
     }
@@ -187,15 +203,24 @@ public class GaleriaFotoService : IGaleriaFotoService
         var galeria = await _repository.GetByIdAsync(galeriaId);
         if (galeria == null) return new List<FotoDto>();
 
+        // Preferir listagem a partir do banco (permite mesmo DB em dev com arquivos em produção)
+        var itens = await _itemRepository.GetByGaleriaIdAsync(galeriaId);
+        if (itens.Count > 0)
+        {
+            return itens.Select(i => new FotoDto
+            {
+                NomeArquivo = i.NomeArquivo,
+                Destaque = i.Destaque
+            }).ToList();
+        }
+
+        // Fallback: listar do disco (comportamento anterior; galerias antigas sem itens no banco)
         var fotos = new List<FotoDto>();
         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-        
         var thumbnailPath = Path.Combine(webRootPath, galeria.CaminhoDiretorio, "thumbnail");
 
         if (!Directory.Exists(thumbnailPath))
-        {
             return fotos;
-        }
 
         var arquivos = Directory.GetFiles(thumbnailPath, "*.*", SearchOption.TopDirectoryOnly)
             .Where(f => allowedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
@@ -205,8 +230,8 @@ public class GaleriaFotoService : IGaleriaFotoService
         foreach (var arquivo in arquivos)
         {
             var nomeArquivo = Path.GetFileName(arquivo);
-            var isDestaque = galeria.ImagemDestaque != null && 
-                           galeria.ImagemDestaque.Contains(nomeArquivo);
+            var isDestaque = galeria.ImagemDestaque != null &&
+                             galeria.ImagemDestaque.Contains(nomeArquivo);
 
             fotos.Add(new FotoDto
             {
@@ -215,7 +240,47 @@ public class GaleriaFotoService : IGaleriaFotoService
             });
         }
 
-        return await Task.FromResult(fotos);
+        return fotos;
+    }
+
+    public async Task<int> SyncItensFromDiskAsync(int galeriaId, string webRootPath)
+    {
+        var galeria = await _repository.GetByIdAsync(galeriaId);
+        if (galeria == null) return 0;
+
+        var existing = await _itemRepository.GetByGaleriaIdAsync(galeriaId);
+        var existingNames = new HashSet<string>(existing.Select(i => i.NomeArquivo), StringComparer.OrdinalIgnoreCase);
+
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+        var thumbnailPath = Path.Combine(webRootPath, galeria.CaminhoDiretorio, "thumbnail");
+        if (!Directory.Exists(thumbnailPath)) return 0;
+
+        var arquivos = Directory.GetFiles(thumbnailPath, "*.*", SearchOption.TopDirectoryOnly)
+            .Where(f => allowedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+            .OrderBy(f => Path.GetFileName(f))
+            .ToList();
+
+        var ordem = existing.Count;
+        var novos = new List<GaleriaFotoItem>();
+        foreach (var arquivo in arquivos)
+        {
+            var nomeArquivo = Path.GetFileName(arquivo);
+            if (existingNames.Contains(nomeArquivo)) continue;
+
+            var isDestaque = galeria.ImagemDestaque != null && galeria.ImagemDestaque.Contains(nomeArquivo);
+            novos.Add(new GaleriaFotoItem
+            {
+                GaleriaFotoId = galeriaId,
+                NomeArquivo = nomeArquivo,
+                Destaque = isDestaque,
+                Ordem = ordem++
+            });
+        }
+
+        if (novos.Count > 0)
+            await _itemRepository.AddRangeAsync(novos);
+
+        return novos.Count;
     }
 
     private static GaleriaFotoDto MapToDto(GaleriaFoto g)

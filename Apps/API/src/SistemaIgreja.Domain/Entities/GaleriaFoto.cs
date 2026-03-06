@@ -39,6 +39,9 @@ public class GaleriaFoto
     public virtual CategoriaMidia? CategoriaMidia { get; set; }
 
     public DateTime DataCriacao { get; set; } = DateTime.Now;
+
+    /// <summary>Fotos da galeria (persistidas no banco para listagem sem depender do disco).</summary>
+    public virtual ICollection<GaleriaFotoItem> Itens { get; set; } = new List<GaleriaFotoItem>();
 }
 
 
