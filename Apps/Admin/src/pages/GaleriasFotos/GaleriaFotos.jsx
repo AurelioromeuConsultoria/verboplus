@@ -24,15 +24,17 @@ export default function GaleriaFotos() {
   const [previewFiles, setPreviewFiles] = useState([]);
   const [viewingPhoto, setViewingPhoto] = useState(null);
   const [dragActive, setDragActive] = useState(false);
+  const [imageErrors, setImageErrors] = useState(new Set());
 
-  // Debug: verificar se o componente está sendo renderizado
+  // Limpar erros de imagem ao trocar de galeria ou ao recarregar fotos
   useEffect(() => {
-    console.log('GaleriaFotos component mounted/updated, id:', id);
+    setImageErrors(new Set());
   }, [id]);
 
-  const load = async () => {
+  const load = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      // Só mostra tela de loading no carregamento inicial; refresh (ex.: após definir destaque) não pisca
+      if (!isRefresh) setLoading(true);
       setError(null);
       if (!id) {
         setError('ID da galeria não informado');
@@ -65,6 +67,7 @@ export default function GaleriaFotos() {
       const res = await galeriasFotosApi.listarFotos(id);
       if (res?.data && Array.isArray(res.data)) {
         setFotos(res.data);
+        setImageErrors((prev) => new Set()); // reset erros ao recarregar lista
       } else {
         // Se o endpoint não retornar dados válidos, criar lista vazia
         setFotos([]);
@@ -167,7 +170,7 @@ export default function GaleriaFotos() {
       
       setSelectedFiles([]);
       setPreviewFiles([]);
-      await load();
+      await load(true); // refresh sem piscar a tela
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'Erro ao fazer upload das fotos';
       toast.error(errorMessage);
@@ -181,7 +184,7 @@ export default function GaleriaFotos() {
     try {
       await galeriasFotosApi.definirDestaque(id, nomeArquivo);
       toast.success('Imagem de destaque definida com sucesso!');
-      await load();
+      await load(true); // refresh sem piscar a tela
     } catch (err) {
       toast.error('Erro ao definir imagem de destaque');
       console.error(err);
@@ -201,7 +204,9 @@ export default function GaleriaFotos() {
 
   const getThumbnailUrl = (nomeArquivo) => {
     if (!galeria?.caminhoDiretorio || !nomeArquivo) return null;
-    return `${UPLOADS_BASE_URL}/${galeria.caminhoDiretorio}/thumbnail/${nomeArquivo}`;
+    const dir = galeria.caminhoDiretorio.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\//, '');
+    const url = `${UPLOADS_BASE_URL}/${dir}/thumbnail/${nomeArquivo}`;
+    return url;
   };
 
   const getOriginalUrl = (nomeArquivo) => {
@@ -209,8 +214,9 @@ export default function GaleriaFotos() {
     return `${UPLOADS_BASE_URL}/${galeria.caminhoDiretorio}/original/${nomeArquivo}`;
   };
 
-  if (loading) return <LoadingPage text="Carregando galeria..." />;
-  if (error) return <ErrorPage message={error} onRetry={load} />;
+  // Só mostra tela de loading no carregamento inicial (evita piscar ao definir destaque ou após upload)
+  if (loading && !galeria) return <LoadingPage text="Carregando galeria..." />;
+  if (error) return <ErrorPage message={error} onRetry={() => load(false)} />;
   if (!galeria) return <div>Galeria não encontrada</div>;
 
   // Calcular valores após garantir que galeria existe
@@ -335,27 +341,33 @@ export default function GaleriaFotos() {
           <CardContent>
             {fotos.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {fotos.map((foto, index) => {
+                {fotos.map((foto) => {
                   const isDestaque = foto.destaque || (galeria.imagemDestaque && foto.nomeArquivo === nomeArquivoDestaque);
                   const thumbnailUrl = getThumbnailUrl(foto.nomeArquivo);
                   
                   return (
                     <div
-                      key={index}
+                      key={foto.nomeArquivo}
                       className="relative group cursor-pointer"
                       onClick={() => setViewingPhoto(foto.nomeArquivo)}
                     >
-                      <div className="relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-primary"
+                      <div className="relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-primary bg-muted/30"
                         style={{ borderColor: isDestaque ? 'var(--primary)' : 'transparent' }}>
-                        {thumbnailUrl ? (
+                        {thumbnailUrl && !imageErrors.has(foto.nomeArquivo) ? (
                           <img
                             src={thumbnailUrl}
                             alt={foto.nomeArquivo}
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.target.src = '/placeholder-image.png';
+                            loading="lazy"
+                            decoding="async"
+                            onError={() => {
+                              setImageErrors((prev) => new Set(prev).add(foto.nomeArquivo));
                             }}
                           />
+                        ) : thumbnailUrl && imageErrors.has(foto.nomeArquivo) ? (
+                          <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                            <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                          </div>
                         ) : (
                           <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                             <ImageIcon className="h-8 w-8 text-gray-400" />

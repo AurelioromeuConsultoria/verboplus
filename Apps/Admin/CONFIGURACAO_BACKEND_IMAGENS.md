@@ -146,6 +146,32 @@ app.Run();
 - Verifique as permissões da pasta `uploads` no sistema operacional
 - Certifique-se de que o servidor tem permissão de leitura na pasta
 
+## Galeria de fotos rodando local com mesmo DB e storage
+
+Quando o Portal ou o Admin rodam **localmente** usando a **mesma base de dados** (e mesmo storage em produção), a listagem de fotos da galeria passa a vir do **banco** (tabela `GaleriaFotoItem`), não do disco. Assim as fotos aparecem localmente mesmo sem os arquivos no seu PC.
+
+1. **Frontend (Portal e Admin):** Nos `.env.development` está definido `VITE_UPLOADS_BASE_URL=https://api.kingdombr.com.br`, para que as URLs das imagens apontem para a API de produção (onde estão os arquivos).
+
+2. **Backend – galerias já existentes:** Após o deploy, em **produção** chame uma vez por galeria o endpoint de sincronização para popular a tabela a partir do disco:
+   ```http
+   POST /api/galeriasFotos/{id}/sync-itens
+   ```
+   Exemplo: `POST https://api.kingdombr.com.br/api/galeriasFotos/1/sync-itens` (com autenticação admin). Novos uploads passam a gravar na tabela automaticamente.
+
+### 404 nas miniaturas em produção
+
+Se as requisições a `https://api.kingdombr.com.br/uploads/fotos/.../thumbnail/xxx.jpg` retornam **404**:
+
+1. **Arquivo existe no servidor?** Confirme no servidor (Kudu, SSH ou painel) que a pasta de uploads está em `HOME/data/uploads` (Azure) ou no path configurado, e que dentro existe `fotos/{guid}/thumbnail/` com os `.jpg`.
+2. **Várias instâncias (scale-out):** Em Azure App Service com mais de uma instância, cada uma tem seu próprio disco. Os uploads podem estar só em uma instância. Soluções:
+   - Use **uma única instância** para a API, ou
+   - Configure **storage compartilhado**: defina `Uploads:Path` em `appsettings.json` (ou a variável de ambiente `UPLOADS_PATH`) apontando para um caminho compartilhado (ex.: share de rede ou volume montado) onde os arquivos são gravados e lidos por todas as instâncias.
+3. **Path customizado:** Se os arquivos ficam em outro diretório no servidor, defina no `appsettings.json`:
+   ```json
+   "Uploads": { "Path": "D:\\caminho\\para\\uploads" }
+   ```
+   ou a variável de ambiente `UPLOADS_PATH`.
+
 
 
 
