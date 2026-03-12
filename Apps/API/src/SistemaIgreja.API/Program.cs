@@ -259,8 +259,17 @@ builder.Services.AddSwaggerGen(c =>
 const string CorsPolicyName = "DefaultCors";
 var allowedCorsOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 {
+    // Portal principal (novo domínio)
+    "https://www.kingdombr.com.br",
+    "http://www.kingdombr.com.br",
+    "https://kingdombr.com.br",
+    "http://kingdombr.com.br",
+
+    // Portal legacy (subdomínio antigo)
     "https://portal.kingdombr.com.br",
     "http://portal.kingdombr.com.br",
+
+    // Admin
     "https://admin.kingdombr.com.br",
     "http://admin.kingdombr.com.br",
     "http://localhost:3000",
