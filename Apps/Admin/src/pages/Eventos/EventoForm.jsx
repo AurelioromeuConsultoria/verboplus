@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, PlusCircle, Save, Trash2, Pencil } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Save, Trash2, Pencil, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -37,6 +37,21 @@ const PERIODICIDADE = [
   { value: 3, label: 'Mensal' },
 ];
 
+/** Colunas fixas: nome, whatsApp, email, observacoes. Outros campos ficam em DadosInscricao. */
+const CAMPOS_FORMULARIO_PADRAO = [
+  { slug: 'nome', label: 'Nome', tipo: 'texto', obrigatorio: true },
+  { slug: 'whatsApp', label: 'WhatsApp', tipo: 'texto', obrigatorio: true },
+  { slug: 'email', label: 'Email', tipo: 'texto', obrigatorio: false },
+  { slug: 'observacoes', label: 'Observações', tipo: 'texto', obrigatorio: false },
+];
+
+const TIPOS_CAMPO = [
+  { value: 'texto', label: 'Texto' },
+  { value: 'numero', label: 'Número' },
+  { value: 'email', label: 'Email' },
+  { value: 'tel', label: 'Telefone' },
+];
+
 export default function EventoForm() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -52,7 +67,10 @@ export default function EventoForm() {
     tipo: 1,
     ehRecorrente: false,
     ativo: true,
+    aceitaInscricoes: false,
   });
+  /** Lista de campos do formulário de inscrição: { slug, label, tipo, obrigatorio } */
+  const [camposFormulario, setCamposFormulario] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -99,7 +117,22 @@ export default function EventoForm() {
         tipo: e.tipo ?? 1,
         ehRecorrente: e.ehRecorrente ?? false,
         ativo: e.ativo ?? true,
+        aceitaInscricoes: e.aceitaInscricoes ?? false,
       });
+      // Campos do formulário de inscrição (JSON)
+      let campos = CAMPOS_FORMULARIO_PADRAO;
+      if (e.configuracaoFormularioInscricao && typeof e.configuracaoFormularioInscricao === 'string') {
+        try {
+          const parsed = JSON.parse(e.configuracaoFormularioInscricao);
+          if (Array.isArray(parsed) && parsed.length > 0) campos = parsed;
+        } catch (_) { /* mantém padrão */ }
+      }
+      setCamposFormulario(campos.map((c) => ({
+        slug: c.slug || '',
+        label: c.label || '',
+        tipo: c.tipo || 'texto',
+        obrigatorio: Boolean(c.obrigatorio),
+      })));
     } catch (err) {
       setError('Erro ao carregar evento');
       console.error(err);
@@ -124,6 +157,9 @@ export default function EventoForm() {
 
   useEffect(() => { load(); }, [id]);
   useEffect(() => {
+    if (!isEditing) setCamposFormulario([]);
+  }, [isEditing]);
+  useEffect(() => {
     if (isEditing && formData.ehRecorrente) loadRecorrencias();
     else setRecorrencias([]);
   }, [id, isEditing, formData.ehRecorrente]);
@@ -132,6 +168,38 @@ export default function EventoForm() {
     const { name, value, type } = e.target;
     const next = type === 'checkbox' ? e.target.checked : value;
     setFormData((prev) => ({ ...prev, [name]: next }));
+  };
+
+  const usarCamposPadrao = () => {
+    setCamposFormulario(CAMPOS_FORMULARIO_PADRAO.map((c) => ({ ...c })));
+  };
+
+  const addCampoFormulario = () => {
+    setCamposFormulario((prev) => [...prev, { slug: '', label: '', tipo: 'texto', obrigatorio: false }]);
+  };
+
+  const updateCampoFormulario = (index, field, value) => {
+    setCamposFormulario((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      if (field === 'label' && !next[index].slug) {
+        next[index].slug = value.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/gi, '') || '';
+      }
+      return next;
+    });
+  };
+
+  const removeCampoFormulario = (index) => {
+    setCamposFormulario((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const moveCampoFormulario = (index, dir) => {
+    if (dir < 0 && index <= 0) return;
+    if (dir > 0 && index >= camposFormulario.length - 1) return;
+    const next = [...camposFormulario];
+    const swap = index + dir;
+    [next[index], next[swap]] = [next[swap], next[index]];
+    setCamposFormulario(next);
   };
 
   const openNovaRecorrencia = () => {
@@ -235,7 +303,19 @@ export default function EventoForm() {
         tipo: Number(formData.tipo),
         ehRecorrente: Boolean(formData.ehRecorrente),
         ativo: Boolean(formData.ativo),
+        aceitaInscricoes: Boolean(formData.aceitaInscricoes),
       };
+      const camposValidos = camposFormulario.filter((c) => (c.slug || '').trim() && (c.label || '').trim());
+      if (formData.aceitaInscricoes && camposValidos.length > 0) {
+        payload.configuracaoFormularioInscricao = JSON.stringify(camposValidos.map((c) => ({
+          slug: String(c.slug).trim(),
+          label: String(c.label).trim(),
+          tipo: c.tipo || 'texto',
+          obrigatorio: Boolean(c.obrigatorio),
+        })));
+      } else {
+        payload.configuracaoFormularioInscricao = null;
+      }
       // Backend espera o body direto (não dentro de "dto"); DataFim obrigatório → usa dataInicio quando vazio
       if (isEditing) await eventosApi.update(id, payload);
       else await eventosApi.create(payload);
@@ -344,7 +424,103 @@ export default function EventoForm() {
                 <input type="checkbox" id="ativo" name="ativo" checked={formData.ativo} onChange={handleChange} className="rounded border-input" />
                 <Label htmlFor="ativo" className="cursor-pointer">Ativo</Label>
               </div>
+              <div className="flex items-center gap-2 pt-8">
+                <input type="checkbox" id="aceitaInscricoes" name="aceitaInscricoes" checked={formData.aceitaInscricoes} onChange={handleChange} className="rounded border-input" />
+                <Label htmlFor="aceitaInscricoes" className="cursor-pointer">Aceitar inscrições (exibir formulário no portal)</Label>
+              </div>
             </div>
+
+            {formData.aceitaInscricoes && (
+              <div className="rounded-lg border p-4 space-y-3 bg-muted/20">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h4 className="font-medium">Campos do formulário de inscrição</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Colunas fixas: Nome, WhatsApp, Email, Observações. Adicione outros campos (ex.: RG, CPF) ou use o padrão.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={usarCamposPadrao}>
+                      Usar campos padrão
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={addCampoFormulario}>
+                      <PlusCircle className="h-4 w-4 mr-1" /> Adicionar campo
+                    </Button>
+                  </div>
+                </div>
+                {camposFormulario.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum campo definido. Clique em &quot;Usar campos padrão&quot; ou &quot;Adicionar campo&quot;.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10" />
+                        <TableHead>Slug (identificador)</TableHead>
+                        <TableHead>Rótulo</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead className="w-24">Obrigatório</TableHead>
+                        <TableHead className="w-20">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {camposFormulario.map((campo, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="p-1">
+                            <div className="flex flex-col gap-0">
+                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveCampoFormulario(idx, -1)} disabled={idx === 0} title="Subir">
+                                <ChevronUp className="h-4 w-4" />
+                              </Button>
+                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveCampoFormulario(idx, 1)} disabled={idx === camposFormulario.length - 1} title="Descer">
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              className="h-8 font-mono text-sm"
+                              placeholder="ex: nome, rg"
+                              value={campo.slug}
+                              onChange={(e) => updateCampoFormulario(idx, 'slug', e.target.value)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              className="h-8"
+                              placeholder="Ex.: Nome completo"
+                              value={campo.label}
+                              onChange={(e) => updateCampoFormulario(idx, 'label', e.target.value)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Select value={campo.tipo} onValueChange={(v) => updateCampoFormulario(idx, 'tipo', v)}>
+                              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {TIPOS_CAMPO.map((t) => (
+                                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              checked={campo.obrigatorio}
+                              onChange={(e) => updateCampoFormulario(idx, 'obrigatorio', e.target.checked)}
+                              className="rounded border-input"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeCampoFormulario(idx)} title="Remover">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={loading}>

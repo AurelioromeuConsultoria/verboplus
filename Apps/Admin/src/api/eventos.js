@@ -17,6 +17,8 @@ export function normalizeEvento(e) {
     tipoDescricao: d.tipoDescricao ?? d.TipoDescricao ?? 'Evento',
     ehRecorrente: d.ehRecorrente ?? d.EhRecorrente ?? false,
     ativo: d.ativo ?? d.Ativo ?? true,
+    aceitaInscricoes: d.aceitaInscricoes ?? d.AceitaInscricoes ?? false,
+    configuracaoFormularioInscricao: d.configuracaoFormularioInscricao ?? d.ConfiguracaoFormularioInscricao ?? null,
   };
 }
 
