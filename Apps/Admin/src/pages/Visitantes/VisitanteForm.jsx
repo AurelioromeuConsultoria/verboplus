@@ -10,11 +10,13 @@ import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { visitantesApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function VisitanteForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = !!id;
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -161,7 +163,7 @@ export default function VisitanteForm() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold">
-            {isEditing ? 'Editar Visitante' : 'Novo Visitante'}
+            {isEditing ? t('visitors.edit') : t('visitors.new')}
           </h1>
           <p className="text-muted-foreground">
             {isEditing ? 'Atualize as informações do visitante' : 'Cadastre um novo visitante'}
@@ -172,7 +174,7 @@ export default function VisitanteForm() {
       <Card>
         <CardHeader>
           <CardTitle>
-            {isEditing ? 'Editar Visitante' : 'Cadastrar Visitante'}
+            {isEditing ? t('visitors.edit') : t('visitors.create')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -268,7 +270,7 @@ export default function VisitanteForm() {
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={saving}>
                 <Save className="h-4 w-4 mr-2" />
-                {saving ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+                {saving ? t('actions.saving') : (isEditing ? t('visitors.update') : t('visitors.create'))}
               </Button>
               {isEditing && (
                 <Button type="button" variant="outline" onClick={handleRegerarMensagens} disabled={regenerando}>
@@ -277,7 +279,7 @@ export default function VisitanteForm() {
                 </Button>
               )}
               <Button type="button" variant="outline" asChild>
-                <Link to="/visitantes">Cancelar</Link>
+                <Link to="/visitantes">{t('actions.cancel')}</Link>
               </Button>
             </div>
           </form>

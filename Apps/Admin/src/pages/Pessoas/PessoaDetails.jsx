@@ -18,6 +18,7 @@ import { getApiErrorMessage } from '@/lib/apiError';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function PessoaDetails() {
   const { id } = useParams();
@@ -29,6 +30,7 @@ export default function PessoaDetails() {
   const [saving, setSaving] = useState(false);
   const { can } = useAuth();
   const confirmDialog = useConfirmDialog();
+  const { t } = useTranslation();
 
   // Formulário de perfil
   const [perfilForm, setPerfilForm] = useState({

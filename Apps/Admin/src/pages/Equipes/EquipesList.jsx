@@ -16,6 +16,7 @@ import { equipesApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
 const AREA_LABEL = {
   1: 'Verde',
@@ -31,6 +32,7 @@ export default function EquipesList() {
   const [area, setArea] = useState('');
   const confirmDialog = useConfirmDialog();
   const { can } = useAuth();
+  const { t } = useTranslation();
 
   const load = async () => {
     try {
@@ -91,13 +93,13 @@ export default function EquipesList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Equipes</h1>
-          <p className="text-muted-foreground">Gerencie as equipes da igreja</p>
+          <h1 className="text-3xl font-bold">{t('volunteer.teams.title')}</h1>
+          <p className="text-muted-foreground">{t('volunteer.teams.subtitle')}</p>
         </div>
         {canEdit && (
           <Button asChild>
             <Link to="/equipes/novo">
-              <Plus className="h-4 w-4 mr-2" /> Nova Equipe
+              <Plus className="h-4 w-4 mr-2" /> {t('volunteer.teams.new')}
             </Link>
           </Button>
         )}
@@ -137,7 +139,7 @@ export default function EquipesList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Equipes ({total})</CardTitle>
+          <CardTitle>{t('volunteer.teams.listTitle')} ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (

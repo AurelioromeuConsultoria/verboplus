@@ -10,13 +10,14 @@ import { inscricoesEventosApi, eventosApi } from '@/lib/api';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { useTranslation } from 'react-i18next';
 
-const STATUS_LABELS = {
-  1: 'Pendente',
-  2: 'Confirmada',
-  3: 'Cancelada',
-  4: 'Presente',
-};
+const STATUS_LABELS = (t) => ({
+  1: t('eventRegistrations.status.pending'),
+  2: t('eventRegistrations.status.confirmed'),
+  3: t('eventRegistrations.status.canceled'),
+  4: t('eventRegistrations.status.present'),
+});
 
 const STATUS_COLORS = {
   1: 'bg-yellow-100 text-yellow-800',
@@ -26,6 +27,7 @@ const STATUS_COLORS = {
 };
 
 export default function InscricoesEventosList() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [eventos, setEventos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +49,7 @@ export default function InscricoesEventosList() {
       setItems(inscricoesRes.data || []);
       setEventos(eventosRes.data || []);
     } catch (err) {
-      setError('Erro ao carregar inscrições');
+      setError(t('eventRegistrations.errorLoad', 'Erro ao carregar inscrições'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -65,7 +67,7 @@ export default function InscricoesEventosList() {
   const handleConfirmar = async (id) => {
     try {
       await inscricoesEventosApi.confirmar(id);
-      toast.success('Inscrição confirmada!');
+      toast.success(t('eventRegistrations.confirmSuccess', 'Inscrição confirmada!'));
       await load();
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'Erro ao confirmar inscrição'));
@@ -109,50 +111,53 @@ export default function InscricoesEventosList() {
     return true;
   });
 
-  if (loading) return <LoadingPage text="Carregando inscrições..." />;
+  if (loading) return <LoadingPage text={t('eventRegistrations.loading', 'Carregando inscrições...')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Inscrições em Eventos</h1>
-          <p className="text-muted-foreground">Gerencie as inscrições nos eventos</p>
+          <h1 className="text-3xl font-bold">{t('eventRegistrations.title')}</h1>
+          <p className="text-muted-foreground">{t('eventRegistrations.subtitle')}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('eventRegistrations.filtersTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Filter className="h-4 w-4" />Buscar</label>
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                {t('eventRegistrations.searchLabel')}
+              </label>
               <input
                 className="w-full px-3 py-2 border rounded"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Nome ou WhatsApp"
+                placeholder={t('eventRegistrations.searchPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Evento</label>
+              <label className="text-sm font-medium">{t('eventRegistrations.eventLabel')}</label>
               <select className="w-full px-3 py-2 border rounded" value={eventoFilter} onChange={(e) => setEventoFilter(e.target.value)}>
-                <option value="">Todos</option>
+                <option value="">{t('eventRegistrations.eventAllOption')}</option>
                 {eventos.map((e) => (
                   <option key={e.id} value={e.id}>{e.titulo}</option>
                 ))}
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium">{t('eventRegistrations.statusLabel')}</label>
               <select className="w-full px-3 py-2 border rounded" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="">Todos</option>
-                <option value="1">Pendente</option>
-                <option value="2">Confirmada</option>
-                <option value="3">Cancelada</option>
-                <option value="4">Presente</option>
+                <option value="">{t('eventRegistrations.statusAllOption')}</option>
+                <option value="1">{t('eventRegistrations.status.pending')}</option>
+                <option value="2">{t('eventRegistrations.status.confirmed')}</option>
+                <option value="3">{t('eventRegistrations.status.canceled')}</option>
+                <option value="4">{t('eventRegistrations.status.present')}</option>
               </select>
             </div>
           </div>
@@ -161,23 +166,25 @@ export default function InscricoesEventosList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Inscrições ({filtered.length})</CardTitle>
+          <CardTitle>{t('eventRegistrations.listTitle')} ({filtered.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhuma inscrição encontrada.</div>
+            <div className="text-center py-8 text-muted-foreground">
+              {t('eventRegistrations.emptyMessage')}
+            </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>WhatsApp</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Evento</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Acompanhantes</TableHead>
-                  <TableHead>Data Inscrição</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('eventRegistrations.table.name')}</TableHead>
+                  <TableHead>{t('eventRegistrations.table.whatsapp')}</TableHead>
+                  <TableHead>{t('eventRegistrations.table.email')}</TableHead>
+                  <TableHead>{t('eventRegistrations.table.event')}</TableHead>
+                  <TableHead>{t('eventRegistrations.table.status')}</TableHead>
+                  <TableHead>{t('eventRegistrations.table.companions')}</TableHead>
+                  <TableHead>{t('eventRegistrations.table.registrationDate')}</TableHead>
+                  <TableHead className="text-right">{t('eventRegistrations.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -215,7 +222,7 @@ export default function InscricoesEventosList() {
                     <TableCell>{inscricao.eventoTitulo || '-'}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${STATUS_COLORS[inscricao.status] || 'bg-gray-100 text-gray-800'}`}>
-                        {STATUS_LABELS[inscricao.status] || inscricao.statusDescricao}
+                        {STATUS_LABELS(t)[inscricao.status] || inscricao.statusDescricao}
                       </span>
                     </TableCell>
                     <TableCell>

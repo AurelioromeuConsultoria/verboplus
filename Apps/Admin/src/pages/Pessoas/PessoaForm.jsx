@@ -12,11 +12,13 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { pessoasApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function PessoaForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -175,7 +177,7 @@ export default function PessoaForm() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold">
-            {isEditing ? 'Editar Pessoa' : 'Nova Pessoa'}
+            {isEditing ? t('people.edit') : t('people.new')}
           </h1>
           <p className="text-muted-foreground">
             {isEditing ? 'Atualize as informações da pessoa' : 'Cadastre uma nova pessoa'}
@@ -186,7 +188,7 @@ export default function PessoaForm() {
       <Card>
         <CardHeader>
           <CardTitle>
-            {isEditing ? 'Editar Pessoa' : 'Cadastrar Pessoa'}
+            {isEditing ? t('people.edit') : t('people.create')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -301,10 +303,10 @@ export default function PessoaForm() {
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={loading}>
                 <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+                {loading ? t('actions.saving') : (isEditing ? t('people.update') : t('people.create'))}
               </Button>
               <Button type="button" variant="outline" asChild>
-                <Link to="/pessoas">Cancelar</Link>
+                <Link to="/pessoas">{t('actions.cancel')}</Link>
               </Button>
             </div>
           </form>

@@ -13,6 +13,7 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { eventosApi, eventosRecorrenciasApi, normalizeEvento } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 const TIPOS_EVENTO = [
   { value: 1, label: 'Evento' },
@@ -56,6 +57,7 @@ export default function EventoForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
     titulo: '',
@@ -524,10 +526,10 @@ export default function EventoForm() {
 
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={loading}>
-                <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+                <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : (isEditing ? 'Atualizar' : 'Cadastrar')}
               </Button>
               <Button type="button" variant="outline" asChild>
-                <Link to="/eventos">Cancelar</Link>
+                <Link to="/eventos">{t('actions.cancel')}</Link>
               </Button>
             </div>
           </form>
@@ -596,8 +598,8 @@ export default function EventoForm() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button type="button" size="sm" onClick={saveRecorrencia}>Salvar</Button>
-                  <Button type="button" size="sm" variant="outline" onClick={cancelRecorrenciaForm}>Cancelar</Button>
+                  <Button type="button" size="sm" onClick={saveRecorrencia}>{t('actions.save')}</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={cancelRecorrenciaForm}>{t('actions.cancel')}</Button>
                 </div>
               </div>
             )}

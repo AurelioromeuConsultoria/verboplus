@@ -10,6 +10,7 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { voluntariosApi, equipesApi, cargosApi, pessoasApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { useTranslation } from 'react-i18next';
 
 const WHATSAPP_REGEX = /^\d{10,13}$/;
 
@@ -17,6 +18,7 @@ export default function VoluntarioForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
+  const { t } = useTranslation();
 
   const [pessoas, setPessoas] = useState([]);
   const [pessoaBusca, setPessoaBusca] = useState('');
@@ -209,14 +211,14 @@ export default function VoluntarioForm() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Voluntário' : 'Novo Voluntário'}</h1>
+          <h1 className="text-3xl font-bold">{isEditing ? t('volunteer.volunteers.edit') : t('volunteer.volunteers.new')}</h1>
           <p className="text-muted-foreground">{isEditing ? 'Atualize as informações do voluntário' : 'Cadastre um novo voluntário'}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isEditing ? 'Editar Voluntário' : 'Cadastrar Voluntário'}</CardTitle>
+          <CardTitle>{isEditing ? t('volunteer.volunteers.edit') : t('volunteer.volunteers.create')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -340,10 +342,10 @@ export default function VoluntarioForm() {
 
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={loading}>
-                <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+                <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : (isEditing ? t('volunteer.volunteers.update') : t('volunteer.volunteers.create'))}
               </Button>
               <Button type="button" variant="outline" asChild>
-                <Link to="/voluntarios">Cancelar</Link>
+                <Link to="/voluntarios">{t('actions.cancel')}</Link>
               </Button>
             </div>
           </form>

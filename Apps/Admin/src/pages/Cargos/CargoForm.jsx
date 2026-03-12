@@ -5,16 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LoadingPage } from '@/components/ui/loading';
-import { ErrorPage } from '@/components/ui/error-message';
+import { LoadingPage } from '@/components.ui/loading';
+import { ErrorPage } from '@/components.ui/error-message';
 import { cargosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { useTranslation } from 'react-i18next';
 
 export default function CargoForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -78,14 +80,14 @@ export default function CargoForm() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Cargo' : 'Novo Cargo'}</h1>
+          <h1 className="text-3xl font-bold">{isEditing ? t('volunteer.roles.edit') : t('volunteer.roles.new')}</h1>
           <p className="text-muted-foreground">{isEditing ? 'Atualize as informações do cargo' : 'Cadastre um novo cargo'}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isEditing ? 'Editar Cargo' : 'Cadastrar Cargo'}</CardTitle>
+          <CardTitle>{isEditing ? t('volunteer.roles.edit') : t('volunteer.roles.create')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -98,10 +100,10 @@ export default function CargoForm() {
 
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={loading}>
-                <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+                <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : (isEditing ? t('volunteer.roles.update') : t('volunteer.roles.create'))}
               </Button>
               <Button type="button" variant="outline" asChild>
-                <Link to="/cargos">Cancelar</Link>
+                <Link to="/cargos">{t('actions.cancel')}</Link>
               </Button>
             </div>
           </form>

@@ -1,4 +1,4 @@
-import { Bell, User, LogOut, Settings, Sun, Moon } from 'lucide-react';
+import { Bell, User, LogOut, Settings, Sun, Moon, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -20,35 +20,36 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useTranslation } from 'react-i18next';
 
-// Mapeamento de rotas para labels de breadcrumb
-const routeLabels = {
-  '': 'Dashboard',
-  'pessoas': 'Pessoas',
-  'visitantes': 'Visitantes',
-  'perfis': 'Perfis',
-  'configuracoes-mensagens': 'Configurações de Mensagens',
-  'mensagens-agendadas': 'Mensagens Agendadas',
-  'equipes': 'Equipes',
-  'cargos': 'Cargos',
-  'voluntarios': 'Voluntários',
-  'eventos': 'Eventos',
-  'inscricoes-eventos': 'Inscrições em Eventos',
-  'destaques-site': 'Destaques do Site',
-  'categorias-noticias': 'Categorias de Notícias',
-  'noticias': 'Notícias',
-  'contatos': 'Contatos',
-  'usuarios': 'Usuários',
-  'perfil': 'Meu Perfil',
-  'categorias-midias': 'Categorias de Mídia',
-  'galerias-fotos': 'Galerias de Fotos',
-  'novo': 'Novo',
-  'editar': 'Editar',
+// Mapeamento de rotas para chaves de i18n
+const routeLabelKeys = {
+  '': 'header.dashboard',
+  'pessoas': 'header.people',
+  'visitantes': 'header.visitors',
+  'perfis': 'header.profiles',
+  'configuracoes-mensagens': 'header.messageSettings',
+  'mensagens-agendadas': 'header.scheduledMessages',
+  'equipes': 'header.teams',
+  'cargos': 'header.roles',
+  'voluntarios': 'header.volunteers',
+  'eventos': 'header.events',
+  'inscricoes-eventos': 'header.eventRegistrations',
+  'destaques-site': 'header.siteHighlights',
+  'categorias-noticias': 'header.newsCategories',
+  'noticias': 'header.news',
+  'contatos': 'header.contacts',
+  'usuarios': 'header.users',
+  'perfil': 'header.profile',
+  'categorias-midias': 'header.mediaCategories',
+  'galerias-fotos': 'header.photoGalleries',
+  'novo': 'header.new',
+  'editar': 'header.edit',
 };
 
-function generateBreadcrumbs(pathname) {
+function generateBreadcrumbs(pathname, t) {
   const paths = pathname.split('/').filter(Boolean);
-  const breadcrumbs = [{ label: 'Dashboard', path: '/' }];
+  const breadcrumbs = [{ label: t('header.dashboard'), path: '/' }];
 
   if (paths.length === 0) {
     return breadcrumbs;
@@ -61,13 +62,15 @@ function generateBreadcrumbs(pathname) {
     
     // Se for um ID numérico, tentar manter o label anterior
     if (/^\d+$/.test(segment)) {
-      const prevLabel = routeLabels[paths[index - 1]] || segment;
+      const prevLabelKey = routeLabelKeys[paths[index - 1]];
+      const prevLabel = prevLabelKey ? t(prevLabelKey) : segment;
       breadcrumbs.push({
         label: prevLabel,
         path: isLast ? null : currentPath,
       });
     } else {
-      const label = routeLabels[segment] || segment.charAt(0).toUpperCase() + segment.slice(1);
+      const key = routeLabelKeys[segment];
+      const label = key ? t(key) : segment.charAt(0).toUpperCase() + segment.slice(1);
       breadcrumbs.push({
         label,
         path: isLast ? null : currentPath,
@@ -83,7 +86,12 @@ export function Header() {
   const { theme, toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const breadcrumbs = generateBreadcrumbs(location.pathname);
+  const { t, i18n } = useTranslation();
+  const breadcrumbs = generateBreadcrumbs(location.pathname, t);
+
+  const handleChangeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
+  };
 
   const handleLogout = () => {
     logout();
@@ -99,7 +107,7 @@ export function Header() {
     <header className="flex h-16 items-center justify-between border-b border-border bg-background px-6">
       <div className="flex items-center space-x-4 flex-1 min-w-0">
         <h1 className="text-xl font-semibold text-foreground hidden md:block">
-          Sistema Igreja
+          {t('app.name')}
         </h1>
         
         {breadcrumbs.length > 1 && (
@@ -125,6 +133,27 @@ export function Header() {
       </div>
 
       <div className="flex items-center space-x-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Globe className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuLabel>{t('language.label')}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => handleChangeLanguage('pt-BR')}>
+              {t('language.ptBR')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleChangeLanguage('en-US')}>
+              {t('language.enUS')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleChangeLanguage('es-ES')}>
+              {t('language.esES')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
@@ -132,7 +161,7 @@ export function Header() {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            {isDark ? 'Usar tema claro' : 'Usar tema escuro'}
+            {isDark ? t('header.useLightTheme') : t('header.useDarkTheme')}
           </TooltipContent>
         </Tooltip>
         
@@ -161,13 +190,13 @@ export function Header() {
               <DropdownMenuItem asChild>
                 <Link to="/perfil" className="flex items-center">
                   <Settings className="h-4 w-4 mr-2" />
-                  Meu Perfil
+                  {t('userMenu.myProfile')}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                 <LogOut className="h-4 w-4 mr-2" />
-                Sair
+                {t('userMenu.logout')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

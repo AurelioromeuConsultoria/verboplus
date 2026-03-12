@@ -16,6 +16,7 @@ import { voluntariosApi, equipesApi, cargosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
 export default function VoluntariosList() {
   const [items, setItems] = useState([]);
@@ -28,6 +29,7 @@ export default function VoluntariosList() {
   const [cargoId, setCargoId] = useState('');
   const confirmDialog = useConfirmDialog();
   const { can } = useAuth();
+  const { t } = useTranslation();
 
   const load = async () => {
     try {
@@ -94,13 +96,13 @@ export default function VoluntariosList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Voluntários</h1>
-          <p className="text-muted-foreground">Gerencie os voluntários</p>
+          <h1 className="text-3xl font-bold">{t('volunteer.volunteers.title')}</h1>
+          <p className="text-muted-foreground">{t('volunteer.volunteers.subtitle')}</p>
         </div>
         {canEdit && (
           <Button asChild>
             <Link to="/voluntarios/novo">
-              <Plus className="h-4 w-4 mr-2" /> Novo Voluntário
+              <Plus className="h-4 w-4 mr-2" /> {t('volunteer.volunteers.new')}
             </Link>
           </Button>
         )}
@@ -154,7 +156,7 @@ export default function VoluntariosList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Voluntários ({total})</CardTitle>
+          <CardTitle>{t('volunteer.volunteers.listTitle')} ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (

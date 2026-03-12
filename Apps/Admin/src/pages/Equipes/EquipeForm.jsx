@@ -10,11 +10,13 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { equipesApi, voluntariosApi, pessoasApi, cargosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { useTranslation } from 'react-i18next';
 
 export default function EquipeForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -137,14 +139,14 @@ export default function EquipeForm() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Equipe' : 'Nova Equipe'}</h1>
+          <h1 className="text-3xl font-bold">{isEditing ? t('volunteer.teams.edit') : t('volunteer.teams.new')}</h1>
           <p className="text-muted-foreground">{isEditing ? 'Atualize as informações da equipe' : 'Cadastre uma nova equipe'}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isEditing ? 'Editar Equipe' : 'Cadastrar Equipe'}</CardTitle>
+          <CardTitle>{isEditing ? t('volunteer.teams.edit') : t('volunteer.teams.create')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -166,10 +168,10 @@ export default function EquipeForm() {
 
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={loading}>
-                <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+                <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : (isEditing ? t('volunteer.teams.update') : t('volunteer.teams.create'))}
               </Button>
               <Button type="button" variant="outline" asChild>
-                <Link to="/equipes">Cancelar</Link>
+                <Link to="/equipes">{t('actions.cancel')}</Link>
               </Button>
             </div>
           </form>

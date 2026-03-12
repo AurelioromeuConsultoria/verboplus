@@ -18,8 +18,10 @@ import { eventosApi, normalizeEvento } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
 export default function EventosList() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -40,7 +42,7 @@ export default function EventosList() {
       const raw = res.data || [];
       setItems(Array.isArray(raw) ? raw.map(normalizeEvento) : raw);
     } catch (err) {
-      setError('Erro ao carregar eventos');
+      setError(t('events.errorLoad', 'Erro ao carregar eventos'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -118,25 +120,30 @@ export default function EventosList() {
 
   const getTipoLabel = (tipo, tipoDescricao) => {
     if (tipoDescricao) return tipoDescricao;
-    const map = { 1: 'Evento', 2: 'Culto', 3: 'Reunião', 4: 'Outro' };
-    return map[tipo] ?? 'Evento';
+    const map = {
+      1: t('events.type.event', 'Evento'),
+      2: t('events.type.service', 'Culto'),
+      3: t('events.type.meeting', 'Reunião'),
+      4: t('events.type.other', 'Outro'),
+    };
+    return map[tipo] ?? t('events.type.event', 'Evento');
   };
 
   // Exportação
   const handleExport = () => {
     const exportData = filtered.map(evento => ({
-      Título: evento.titulo || '',
-      Descrição: evento.descricao || '',
-      'Data Início': formatEventDate(evento.dataInicio),
-      'Data Fim': formatEventDate(evento.dataFim),
-      URL: evento.url || '',
+      [t('events.export.title', 'Título')]: evento.titulo || '',
+      [t('events.export.description', 'Descrição')]: evento.descricao || '',
+      [t('events.export.startDate', 'Data Início')]: formatEventDate(evento.dataInicio),
+      [t('events.export.endDate', 'Data Fim')]: formatEventDate(evento.dataFim),
+      [t('events.export.url', 'URL')]: evento.url || '',
     }));
 
     exportToCSV(exportData, 'eventos');
-    toast.success('Dados exportados com sucesso!');
+    toast.success(t('events.export.success', 'Dados exportados com sucesso!'));
   };
 
-  if (loading) return <LoadingPage text="Carregando eventos..." />;
+  if (loading) return <LoadingPage text={t('events.loading', 'Carregando eventos...')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   const canEdit = can(RESOURCES.EVENTOS, ACTIONS.EDIT);
@@ -146,13 +153,13 @@ export default function EventosList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Eventos</h1>
-          <p className="text-muted-foreground">Gerencie os eventos da igreja</p>
+          <h1 className="text-3xl font-bold">{t('events.title')}</h1>
+          <p className="text-muted-foreground">{t('events.subtitle')}</p>
         </div>
         {canEdit && (
           <Button asChild>
             <Link to="/eventos/novo">
-              <Plus className="h-4 w-4 mr-2" /> Novo Evento
+              <Plus className="h-4 w-4 mr-2" /> {t('events.new')}
             </Link>
           </Button>
         )}
@@ -160,8 +167,8 @@ export default function EventosList() {
 
       <AdvancedSearch
         searchFields={[
-          { key: 'titulo', label: 'Título', type: 'text', placeholder: 'Buscar por título...' },
-          { key: 'descricao', label: 'Descrição', type: 'text', placeholder: 'Buscar por descrição...' },
+          { key: 'titulo', label: t('events.fields.title', 'Título'), type: 'text', placeholder: t('events.search.titlePlaceholder', 'Buscar por título...') },
+          { key: 'descricao', label: t('events.fields.description', 'Descrição'), type: 'text', placeholder: t('events.search.descriptionPlaceholder', 'Buscar por descrição...') },
         ]}
         filterFields={[
           {
@@ -185,37 +192,37 @@ export default function EventosList() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Lista de Eventos ({total})</CardTitle>
+            <CardTitle>{t('events.listTitle')} ({total})</CardTitle>
             {filtered.length > 0 && (
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
-                Exportar CSV
+                {t('events.export.button', 'Exportar CSV')}
               </Button>
             )}
           </div>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhum evento encontrado.</div>
+              <div className="text-center py-8 text-muted-foreground">{t('events.emptyMessage')}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <SortableTableHeader field="titulo" onSort={handleSort} sortConfig={sortConfig}>
-                    Título
+                      {t('events.fields.title', 'Título')}
                   </SortableTableHeader>
-                  <TableHead>Tipo</TableHead>
+                    <TableHead>{t('events.fields.type', 'Tipo')}</TableHead>
                   <SortableTableHeader field="descricao" onSort={handleSort} sortConfig={sortConfig}>
-                    Descrição
+                      {t('events.fields.description', 'Descrição')}
                   </SortableTableHeader>
                   <SortableTableHeader field="dataInicio" onSort={handleSort} sortConfig={sortConfig}>
-                    Data Início
+                      {t('events.fields.startDate', 'Data Início')}
                   </SortableTableHeader>
                   <SortableTableHeader field="dataFim" onSort={handleSort} sortConfig={sortConfig}>
-                    Data Fim
+                      {t('events.fields.endDate', 'Data Fim')}
                   </SortableTableHeader>
-                  <TableHead>URL</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                    <TableHead>URL</TableHead>
+                    <TableHead className="text-right">{t('eventRegistrations.table.actions', 'Ações')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

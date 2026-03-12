@@ -15,16 +15,18 @@ import { eventosApi, eventosOcorrenciasApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
-function getStatusOcorrenciaLabel(status) {
+function getStatusOcorrenciaLabel(status, t) {
   const value = Number(status);
-  if (value === 1) return 'Confirmado';
-  if (value === 2) return 'Cancelado';
-  if (value === 3) return 'Realizado';
-  return 'Desconhecido';
+  if (value === 1) return t('events.occurrencesStatus.confirmed');
+  if (value === 2) return t('events.occurrencesStatus.canceled');
+  if (value === 3) return t('events.occurrencesStatus.done');
+  return t('events.occurrencesStatus.unknown');
 }
 
 export default function OcorrenciasList() {
+  const { t } = useTranslation();
   const { can } = useAuth();
   const [initialLoad, setInitialLoad] = useState(true);
   const [loadingOcorrencias, setLoadingOcorrencias] = useState(false);
@@ -52,7 +54,7 @@ export default function OcorrenciasList() {
       setEventos(eventosRes.data || []);
     } catch (err) {
       console.error(err);
-      setError('Erro ao carregar eventos');
+      setError(t('events.errorLoad', 'Erro ao carregar eventos'));
     }
   };
 
@@ -69,7 +71,7 @@ export default function OcorrenciasList() {
       setOcorrencias(res.data || []);
     } catch (err) {
       console.error(err);
-      setError('Erro ao carregar ocorrências');
+      setError(t('events.occurrencesErrorLoad', 'Erro ao carregar ocorrências'));
     } finally {
       setLoadingOcorrencias(false);
       setInitialLoad(false);
@@ -116,25 +118,25 @@ export default function OcorrenciasList() {
   const sorted = [...ocorrencias].sort((a, b) => new Date(a.dataHoraInicio) - new Date(b.dataHoraInicio));
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(sorted, 20);
 
-  if (initialLoad) return <LoadingPage text="Carregando ocorrências..." />;
+  if (initialLoad) return <LoadingPage text={t('events.occurrencesLoading', 'Carregando ocorrências...')} />;
   if (error) return <ErrorPage message={error} onRetry={loadOcorrencias} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Ocorrências de Eventos</h1>
-          <p className="text-muted-foreground">Gere e liste ocorrências (datas) dos eventos. Depois monte as escalas em Voluntariado → Escalas.</p>
+          <h1 className="text-3xl font-bold">{t('events.occurrencesTitle')}</h1>
+          <p className="text-muted-foreground">{t('events.occurrencesSubtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={loadOcorrencias}>
             <RefreshCcw className="h-4 w-4 mr-2" />
-            Atualizar
+            {t('events.occurrencesActions.refresh')}
           </Button>
           {canEdit && (
             <Button onClick={handleGerarOcorrencias}>
               <PlusCircle className="h-4 w-4 mr-2" />
-              Gerar Ocorrências
+              {t('events.occurrencesActions.generate')}
             </Button>
           )}
         </div>
@@ -142,18 +144,18 @@ export default function OcorrenciasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('events.occurrencesFiltersTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label>Evento</Label>
+              <Label>{t('events.occurrencesEventLabel')}</Label>
               <Select value={filtroEventoId} onValueChange={setFiltroEventoId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os eventos" />
+                  <SelectValue placeholder={t('events.occurrencesAllEvents', 'Todos os eventos')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os eventos</SelectItem>
+                  <SelectItem value="all">{t('events.occurrencesAllEvents', 'Todos os eventos')}</SelectItem>
                   {eventos.map((evento) => (
                     <SelectItem key={evento.id} value={String(evento.id)}>
                       {evento.titulo}
@@ -163,11 +165,11 @@ export default function OcorrenciasList() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Data início</Label>
+              <Label>{t('events.occurrencesStartDateLabel')}</Label>
               <Input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Data fim</Label>
+              <Label>{t('events.occurrencesEndDateLabel')}</Label>
               <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
             </div>
           </div>
@@ -176,22 +178,26 @@ export default function OcorrenciasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ocorrências ({total})</CardTitle>
+          <CardTitle>{t('events.occurrencesListTitle')} ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {loadingOcorrencias ? (
-            <div className="text-center py-8 text-muted-foreground">Carregando ocorrências...</div>
+            <div className="text-center py-8 text-muted-foreground">
+              {t('events.occurrencesLoading', 'Carregando ocorrências...')}
+            </div>
           ) : sorted.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhuma ocorrência encontrada para o período.</div>
+            <div className="text-center py-8 text-muted-foreground">
+              {t('events.occurrencesEmptyMessage')}
+            </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Evento</TableHead>
-                  <TableHead>Data/Hora</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Escalas</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('events.occurrencesTable.event')}</TableHead>
+                  <TableHead>{t('events.occurrencesTable.dateTime')}</TableHead>
+                  <TableHead>{t('events.occurrencesTable.status')}</TableHead>
+                  <TableHead>{t('events.occurrencesTable.scales')}</TableHead>
+                  <TableHead className="text-right">{t('events.occurrencesTable.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -207,16 +213,20 @@ export default function OcorrenciasList() {
                     <TableCell>{getStatusOcorrenciaLabel(item.status)}</TableCell>
                     <TableCell>
                       {item.possuiEscala ? (
-                        <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800">Há escala(s)</span>
+                        <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800">
+                          {t('events.occurrencesTable.hasScales')}
+                        </span>
                       ) : (
-                        <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">Nenhuma</span>
+                        <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">
+                          {t('events.occurrencesTable.noScales')}
+                        </span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="outline" size="sm" asChild>
                         <Link to={`/voluntariado/escalas/ocorrencia/${item.id}`}>
                           <Settings className="h-4 w-4 mr-2" />
-                          Montar escalas
+                          {t('events.occurrencesTable.buildScales')}
                         </Link>
                       </Button>
                     </TableCell>

@@ -16,6 +16,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { exportToCSV } from '@/utils/export';
 import { visitantesApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function VisitantesList() {
   const [visitantes, setVisitantes] = useState([]);
@@ -37,6 +38,7 @@ export default function VisitantesList() {
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const confirmDialog = useConfirmDialog();
+  const { t } = useTranslation();
 
   const loadVisitantes = useCallback(async () => {
     try {
@@ -242,15 +244,15 @@ export default function VisitantesList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Visitantes</h1>
+          <h1 className="text-3xl font-bold">{t('visitors.title')}</h1>
           <p className="text-muted-foreground">
-            Histórico de visitas
+            {t('visitors.subtitle')}
           </p>
         </div>
         <Button asChild>
           <Link to="/visitantes/novo">
             <Plus className="h-4 w-4 mr-2" />
-            Novo Visitante
+            {t('visitors.new')}
           </Link>
         </Button>
       </div>
@@ -286,7 +288,7 @@ export default function VisitantesList() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Lista de Visitas ({total})</CardTitle>
+            <CardTitle>{t('visitors.listTitle')} ({total})</CardTitle>
             {total > 0 && (
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
@@ -315,13 +317,13 @@ export default function VisitantesList() {
           {visitantes.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">
-                {total === 0 ? 'Nenhuma visita encontrada com os filtros aplicados.' : 'Nenhuma visita nesta página.'}
+                {total === 0 ? t('visitors.emptyMessage') : t('visitors.emptyPageMessage')}
               </p>
               {total === 0 && (
                 <Button asChild>
                   <Link to="/visitantes/novo">
                     <Plus className="h-4 w-4 mr-2" />
-                    Cadastrar Primeira Visita
+                    {t('visitors.emptyCta')}
                   </Link>
                 </Button>
               )}
@@ -475,7 +477,7 @@ export default function VisitantesList() {
         title="Excluir em lote"
         description={`Tem certeza que deseja excluir ${selectedIds.size} visita(s) selecionada(s)? Esta ação não pode ser desfeita.`}
         confirmText="Excluir"
-        cancelText="Cancelar"
+        cancelText={t('actions.cancel')}
         variant="destructive"
         loading={bulkDeleting}
       />

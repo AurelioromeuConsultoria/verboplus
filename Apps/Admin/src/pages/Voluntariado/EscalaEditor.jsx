@@ -6,14 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { LoadingPage } from '@/components/ui/loading';
-import { ErrorPage } from '@/components/ui/error-message';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components.ui/table';
+import { LoadingPage } from '@/components.ui/loading';
+import { ErrorPage } from '@/components.ui/error-message';
+import { ConfirmDialog } from '@/components.ui/confirm-dialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { cargosApi, equipesApi, escalasApi, eventosOcorrenciasApi, voluntariosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 function getEscalaStatusLabel(status) {
   const value = Number(status);
@@ -50,6 +51,7 @@ export default function EscalaEditor() {
   const [gerandoAuto, setGerandoAuto] = useState(false);
 
   const isAdmin = Number(usuario?.tipoUsuario) === 1 || Number(usuario?.tipoUsuario) === 3;
+  const { t } = useTranslation();
   const escalaRascunho = escala && Number(escala.status) === 1;
 
   const voluntariosFiltrados = useMemo(() => {
@@ -259,7 +261,10 @@ export default function EscalaEditor() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Escala {escala?.equipeNome ? `— ${escala.equipeNome}` : ''}</h1>
+            <h1 className="text-3xl font-bold">
+              {t('volunteer.schedules.editorTitle')}
+              {escala?.equipeNome ? ` — ${escala.equipeNome}` : ''}
+            </h1>
             <p className="text-muted-foreground">
               {ocorrencia.eventoTitulo} — {new Date(ocorrencia.dataHoraInicio).toLocaleString('pt-BR')}
             </p>

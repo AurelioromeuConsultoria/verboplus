@@ -8,6 +8,7 @@ import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { usuariosApi, perfisAcessoApi, pessoasApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 const TIPO_USUARIO_OPTIONS = [
   { value: 1, label: 'Administrador' },
@@ -17,6 +18,7 @@ const TIPO_USUARIO_OPTIONS = [
 
 export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = null }) {
   const isEditing = Boolean(id);
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     modoPessoa: pessoaIdInicial ? 'existente' : 'nova',
     pessoaId: pessoaIdInicial ? String(pessoaIdInicial) : '',
@@ -349,10 +351,10 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
 
             <div className="flex items-center space-x-4 pt-4">
               <Button type="submit" disabled={loading}>
-                <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : 'Salvar'}
+                <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : t('actions.save')}
               </Button>
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancelar
+                {t('actions.cancel')}
               </Button>
             </div>
           </form>

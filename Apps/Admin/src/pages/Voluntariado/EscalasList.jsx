@@ -12,6 +12,7 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { eventosApi, eventosOcorrenciasApi } from '@/lib/api';
+import { useTranslation } from 'react-i18next';
 
 function getStatusOcorrenciaLabel(status) {
   const value = Number(status);
@@ -39,6 +40,8 @@ export default function EscalasList() {
     d.setDate(d.getDate() + 30);
     return d.toISOString().slice(0, 10);
   });
+
+  const { t } = useTranslation();
 
   const loadBase = async () => {
     try {
@@ -88,8 +91,10 @@ export default function EscalasList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Escalas de Voluntariado</h1>
-          <p className="text-muted-foreground">Monte as escalas por ocorrência e por equipe. Para gerar ocorrências use Eventos → Ocorrências.</p>
+          <h1 className="text-3xl font-bold">{t('volunteer.schedules.title')}</h1>
+          <p className="text-muted-foreground">
+            {t('volunteer.schedules.subtitle')}. Para gerar ocorrências use Eventos → Ocorrências.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild>
@@ -138,7 +143,7 @@ export default function EscalasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ocorrências ({total})</CardTitle>
+          <CardTitle>{t('volunteer.schedules.listTitle')} ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {loadingOcorrencias ? (

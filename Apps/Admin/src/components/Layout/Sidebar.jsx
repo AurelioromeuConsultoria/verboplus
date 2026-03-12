@@ -37,28 +37,29 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
 const menuItems = [
   {
-    title: 'Dashboard',
+    titleKey: 'menu.dashboard',
     href: '/',
     icon: Home,
     permission: RESOURCES.DASHBOARD,
   },
   {
-    title: 'Usuários',
+    titleKey: 'menu.users',
     href: '/usuarios',
     icon: UserCog,
     permission: RESOURCES.USUARIOS,
   },
   {
-    title: 'Auditoria',
+    titleKey: 'menu.audit',
     href: '/auditoria',
     icon: Shield,
     permission: RESOURCES.USUARIOS,
   },
   {
-    title: 'Perfis de Acesso',
+    titleKey: 'menu.accessProfiles',
     href: '/perfis-acesso',
     icon: UserCog,
     permission: RESOURCES.PERFIS_ACESSO,
@@ -67,41 +68,41 @@ const menuItems = [
 
 const menuGroups = [
   {
-    title: 'Connect',
+    titleKey: 'menu.connect',
     icon: Network,
     items: [
       {
-        title: 'Pessoas',
+        titleKey: 'menu.people',
         href: '/pessoas',
         icon: Users,
         permission: RESOURCES.PESSOAS,
       },
       {
-        title: 'Aniversariantes',
+        titleKey: 'menu.birthdays',
         href: '/pessoas/aniversariantes',
         icon: CalendarDays,
         permission: RESOURCES.PESSOAS,
       },
       {
-        title: 'Perfis',
+        titleKey: 'menu.profiles',
         href: '/perfis',
         icon: User,
         permission: RESOURCES.PERFIS,
       },
       {
-        title: 'Visitantes',
+        titleKey: 'menu.visitors',
         href: '/visitantes',
         icon: Users,
         permission: RESOURCES.VISITANTES,
       },
       {
-        title: 'Configurações de Mensagens',
+        titleKey: 'menu.messageSettings',
         href: '/configuracoes-mensagens',
         icon: MessageSquare,
         permission: RESOURCES.CONFIG_MENSAGENS,
       },
       {
-        title: 'Mensagens Agendadas',
+        titleKey: 'menu.scheduledMessages',
         href: '/mensagens-agendadas',
         icon: CalendarDays,
         permission: RESOURCES.MENSAGENS_AGENDADAS,
@@ -109,47 +110,47 @@ const menuGroups = [
     ],
   },
   {
-    title: 'Voluntariado',
+    titleKey: 'menu.volunteering',
     icon: Handshake,
     items: [
       {
-        title: 'Equipes',
+        titleKey: 'menu.teams',
         href: '/equipes',
         icon: Group,
         permission: RESOURCES.EQUIPES,
       },
       {
-        title: 'Cargos',
+        titleKey: 'menu.roles',
         href: '/cargos',
         icon: Briefcase,
         permission: RESOURCES.CARGOS,
       },
       {
-        title: 'Voluntários',
+        titleKey: 'menu.volunteers',
         href: '/voluntarios',
         icon: Handshake,
         permission: RESOURCES.VOLUNTARIOS,
       },
       {
-        title: 'Escalas',
+        titleKey: 'menu.schedules',
         href: '/voluntariado/escalas',
         icon: CalendarDays,
         permission: RESOURCES.VOLUNTARIOS,
       },
       {
-        title: 'Modelos de Escala',
+        titleKey: 'menu.scheduleModels',
         href: '/voluntariado/modelos-escala',
         icon: ClipboardList,
         permission: RESOURCES.VOLUNTARIOS,
       },
       {
-        title: 'Indisponibilidades',
+        titleKey: 'menu.unavailabilities',
         href: '/voluntariado/indisponibilidades',
         icon: CalendarOff,
         permission: RESOURCES.VOLUNTARIOS,
       },
       {
-        title: 'Relatório Vínculos',
+        titleKey: 'menu.linksReport',
         href: '/voluntariado/relatorio-vinculos',
         icon: ArrowRightLeft,
         permission: RESOURCES.VOLUNTARIOS,
@@ -157,34 +158,34 @@ const menuGroups = [
     ],
   },
   {
-    title: 'Hub',
+    titleKey: 'menu.hub',
     icon: Home,
     items: [
       {
-        title: 'Casas',
+        titleKey: 'menu.houses',
         href: '/hub/casas',
         icon: Home,
       },
     ],
   },
   {
-    title: 'Eventos',
+    titleKey: 'menu.events',
     icon: Calendar,
     items: [
       {
-        title: 'Eventos',
+        titleKey: 'menu.events',
         href: '/eventos',
         icon: Calendar,
         permission: RESOURCES.EVENTOS,
       },
       {
-        title: 'Ocorrências',
+        titleKey: 'menu.occurrences',
         href: '/eventos/ocorrencias',
         icon: Calendar,
         permission: RESOURCES.EVENTOS,
       },
       {
-        title: 'Inscrições',
+        titleKey: 'menu.registrations',
         href: '/inscricoes-eventos',
         icon: ClipboardList,
         permission: RESOURCES.INSCRICOES_EVENTOS,
@@ -192,65 +193,65 @@ const menuGroups = [
     ],
   },
   {
-    title: 'Financeiro',
+    titleKey: 'menu.finance',
     icon: Briefcase,
     items: [
       {
-        title: 'Fornecedores',
+        titleKey: 'menu.suppliers',
         href: '/financeiro/fornecedores',
         icon: Contact,
         permission: RESOURCES.FORNECEDORES,
       },
       {
-        title: 'Categorias de Despesas',
+        titleKey: 'menu.expenseCategories',
         href: '/financeiro/categorias-despesas',
         icon: Tag,
         permission: RESOURCES.FINANCEIRO,
       },
       {
-        title: 'Contas Bancárias',
+        titleKey: 'menu.bankAccounts',
         href: '/financeiro/contas-bancarias',
         icon: Briefcase,
         permission: RESOURCES.FINANCEIRO,
       },
       {
-        title: 'Centros de Custos',
+        titleKey: 'menu.costCenters',
         href: '/financeiro/centros-custos',
         icon: BarChart3,
         permission: RESOURCES.FINANCEIRO,
       },
       {
-        title: 'Projetos',
+        titleKey: 'menu.projects',
         href: '/financeiro/projetos',
         icon: Calendar,
         permission: RESOURCES.FINANCEIRO,
       },
       {
-        title: 'Despesas',
+        titleKey: 'menu.expenses',
         href: '/financeiro/despesas',
         icon: Briefcase,
         permission: RESOURCES.FINANCEIRO,
       },
       {
-        title: 'Receitas',
+        titleKey: 'menu.revenues',
         href: '/financeiro/receitas',
         icon: BarChart3,
         permission: RESOURCES.FINANCEIRO,
       },
       {
-        title: 'Categorias de Receitas',
+        titleKey: 'menu.revenueCategories',
         href: '/financeiro/categorias-receitas',
         icon: Tag,
         permission: RESOURCES.FINANCEIRO,
       },
       {
-        title: 'Dashboard Financeiro',
+        titleKey: 'menu.financeDashboard',
         href: '/financeiro/dashboard',
         icon: BarChart3,
         permission: RESOURCES.FINANCEIRO,
       },
       {
-        title: 'Relatórios Financeiros',
+        titleKey: 'menu.financeReports',
         href: '/financeiro/relatorios',
         icon: BarChart3,
         permission: RESOURCES.FINANCEIRO,
@@ -258,41 +259,41 @@ const menuGroups = [
     ],
   },
   {
-    title: 'Portal',
+    titleKey: 'menu.portal',
     icon: Globe,
     items: [
       {
-        title: 'Categorias de Notícias',
+        titleKey: 'menu.newsCategories',
         href: '/categorias-noticias',
         icon: Tag,
         permission: RESOURCES.CATEGORIAS_NOTICIAS,
       },
       {
-        title: 'Notícias',
+        titleKey: 'menu.news',
         href: '/noticias',
         icon: Newspaper,
         permission: RESOURCES.NOTICIAS,
       },
       {
-        title: 'Enquetes',
+        titleKey: 'menu.polls',
         href: '/enquetes',
         icon: BarChart3,
         permission: RESOURCES.ENQUETES,
       },
       {
-        title: 'Contatos',
+        titleKey: 'menu.contacts',
         href: '/contatos',
         icon: Contact,
         permission: RESOURCES.CONTATOS,
       },
       {
-        title: 'Destaques do Site',
+        titleKey: 'menu.siteHighlights',
         href: '/destaques-site',
         icon: Star,
         permission: RESOURCES.DESTAQUES_SITE,
       },
       {
-        title: 'Configuração',
+        titleKey: 'menu.portalConfig',
         href: '/configuracao-portal',
         icon: Cog,
         permission: RESOURCES.PORTAL,
@@ -300,17 +301,17 @@ const menuGroups = [
     ],
   },
   {
-    title: 'Mídia',
+    titleKey: 'menu.media',
     icon: Images,
     items: [
       {
-        title: 'Categorias de Mídia',
+        titleKey: 'menu.mediaCategories',
         href: '/categorias-midias',
         icon: Folder,
         permission: RESOURCES.MIDIA,
       },
       {
-        title: 'Galerias de Fotos',
+        titleKey: 'menu.photoGalleries',
         href: '/galerias-fotos',
         icon: Images,
         permission: RESOURCES.GALERIAS_FOTOS,
@@ -318,11 +319,11 @@ const menuGroups = [
     ],
   },
   {
-    title: 'Kids',
+    titleKey: 'menu.kids',
     icon: Baby,
     items: [
       {
-        title: 'Check-ins',
+        titleKey: 'menu.kidsCheckins',
         href: '/kids/checkins',
         icon: LogIn,
         permission: RESOURCES.KIDS,
@@ -334,16 +335,8 @@ const menuGroups = [
 export function Sidebar() {
   const location = useLocation();
   const { can } = useAuth();
-  const [openGroups, setOpenGroups] = useState({
-    connect: false,
-    voluntariado: false,
-    eventos: false,
-    financeiro: false,
-    portal: false,
-    mídia: false,
-    kids: false,
-    hub: false,
-  });
+  const { t } = useTranslation();
+  const [openGroups, setOpenGroups] = useState({});
 
   const toggleGroup = (groupKey) => {
     setOpenGroups((prev) => ({
@@ -354,7 +347,7 @@ export function Sidebar() {
 
   const expandAllGroups = () => {
     const allGroups = menuGroups.reduce((acc, group) => {
-      const groupKey = group.title.toLowerCase().replace(/\s+/g, '');
+      const groupKey = group.titleKey.split('.').pop();
       acc[groupKey] = true;
       return acc;
     }, {});
@@ -363,7 +356,7 @@ export function Sidebar() {
 
   const collapseAllGroups = () => {
     const allGroups = menuGroups.reduce((acc, group) => {
-      const groupKey = group.title.toLowerCase().replace(/\s+/g, '');
+      const groupKey = group.titleKey.split('.').pop();
       acc[groupKey] = false;
       return acc;
     }, {});
@@ -371,7 +364,7 @@ export function Sidebar() {
   };
 
   const allExpanded = menuGroups.every(group => {
-    const groupKey = group.title.toLowerCase().replace(/\s+/g, '');
+    const groupKey = group.titleKey.split('.').pop();
     return openGroups[groupKey];
   });
 
@@ -398,7 +391,7 @@ export function Sidebar() {
         <div className="flex items-center space-x-2">
           <Church className="h-8 w-8 text-sidebar-primary" />
           <span className="text-lg font-semibold text-sidebar-foreground">
-            Sistema Igreja
+            {t('app.name')}
           </span>
         </div>
         <Button
@@ -406,7 +399,7 @@ export function Sidebar() {
           size="sm"
           onClick={toggleAllGroups}
           className="h-8 w-8 p-0 text-sidebar-foreground/60 hover:text-sidebar-foreground"
-          title={allExpanded ? 'Colapsar todos os menus' : 'Expandir todos os menus'}
+          title={allExpanded ? t('layout.collapseAll') : t('layout.expandAll')}
         >
           <ChevronsUpDown className="h-4 w-4" />
         </Button>
@@ -431,7 +424,7 @@ export function Sidebar() {
               )}
             >
               <Icon className="h-5 w-5" />
-              <span>{item.title}</span>
+              <span>{t(item.titleKey)}</span>
             </Link>
           );
         })}
@@ -440,7 +433,7 @@ export function Sidebar() {
         {menuGroups.map((group, groupIndex) => {
           const visibleItems = group.items.filter((item) => !item.permission || can(item.permission, 'view'));
           if (visibleItems.length === 0) return null;
-          const groupKey = group.title.toLowerCase().replace(/\s+/g, '');
+          const groupKey = group.titleKey.split('.').pop();
           const isOpen = openGroups[groupKey] ?? false;
           const isActiveGroup = isGroupActive(visibleItems);
           const GroupIcon = group.icon;
@@ -462,7 +455,7 @@ export function Sidebar() {
               >
                 <div className="flex items-center space-x-3">
                   <GroupIcon className="h-5 w-5" />
-                  <span>{group.title}</span>
+                  <span>{t(group.titleKey)}</span>
                 </div>
                 {isOpen ? (
                   <ChevronDown className="h-4 w-4" />
@@ -488,7 +481,7 @@ export function Sidebar() {
                       )}
                     >
                       <ItemIcon className="h-4 w-4" />
-                      <span>{item.title}</span>
+                      <span>{t(item.titleKey)}</span>
                     </Link>
                   );
                 })}
@@ -501,7 +494,7 @@ export function Sidebar() {
       {/* Footer */}
       <div className="p-4 border-t border-sidebar-border">
         <div className="text-xs text-sidebar-foreground/60">
-          Sistema de Gestão para Igrejas
+          {t('app.tagline')}
         </div>
         <a
           href="https://malachdigital.com.br/"
@@ -517,7 +510,7 @@ export function Sidebar() {
           >
             <path d="M3 20V4h4l5 5 5-5h4v16h-4V10l-5 5-5-5v10H3z" />
           </svg>
-          <span>Desenvolvido por Malach Digital</span>
+          <span>{t('app.developedBy')}</span>
         </a>
       </div>
     </div>

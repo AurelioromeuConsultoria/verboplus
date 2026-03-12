@@ -8,6 +8,7 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { eventosOcorrenciasApi, escalasApi, equipesApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
 function getEscalaStatusLabel(status) {
   const v = Number(status);
@@ -25,6 +26,7 @@ export default function EscalasPorOcorrencia() {
   const [ocorrencia, setOcorrencia] = useState(null);
   const [escalas, setEscalas] = useState([]);
   const [equipes, setEquipes] = useState([]);
+  const { t } = useTranslation();
 
   const canEdit = can(RESOURCES.VOLUNTARIOS, ACTIONS.EDIT);
 
@@ -68,7 +70,7 @@ export default function EscalasPorOcorrencia() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">Escalas por equipe</h1>
+          <h1 className="text-3xl font-bold">{t('volunteer.schedules.byTeamTitle')}</h1>
           <p className="text-muted-foreground">
             {ocorrencia.eventoTitulo} — {new Date(ocorrencia.dataHoraInicio).toLocaleString('pt-BR')}
           </p>

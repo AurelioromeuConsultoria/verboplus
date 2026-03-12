@@ -15,6 +15,7 @@ import { cargosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
 export default function CargosList() {
   const [items, setItems] = useState([]);
@@ -23,6 +24,7 @@ export default function CargosList() {
   const [busca, setBusca] = useState('');
   const confirmDialog = useConfirmDialog();
   const { can } = useAuth();
+  const { t } = useTranslation();
 
   const load = async () => {
     try {
@@ -82,13 +84,13 @@ export default function CargosList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Cargos</h1>
-          <p className="text-muted-foreground">Gerencie os cargos</p>
+          <h1 className="text-3xl font-bold">{t('volunteer.roles.title')}</h1>
+          <p className="text-muted-foreground">{t('volunteer.roles.subtitle')}</p>
         </div>
         {canEdit && (
           <Button asChild>
             <Link to="/cargos/novo">
-              <Plus className="h-4 w-4 mr-2" /> Novo Cargo
+              <Plus className="h-4 w-4 mr-2" /> {t('volunteer.roles.new')}
             </Link>
           </Button>
         )}
@@ -114,7 +116,7 @@ export default function CargosList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Cargos ({total})</CardTitle>
+          <CardTitle>{t('volunteer.roles.listTitle')} ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (

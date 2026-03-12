@@ -17,6 +17,7 @@ import { pessoasApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
 const PERFIS_OPTIONS = [
   { value: 'Visitante', label: 'Visitante' },
@@ -51,6 +52,7 @@ export default function PessoasList() {
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const { can } = useAuth();
+  const { t } = useTranslation();
 
   const loadPessoas = useCallback(async () => {
     try {
@@ -281,16 +283,16 @@ export default function PessoasList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Pessoas</h1>
+          <h1 className="text-3xl font-bold">{t('people.title')}</h1>
           <p className="text-muted-foreground">
-            Gerencie as pessoas cadastradas no sistema
+            {t('people.subtitle')}
           </p>
         </div>
         {canEdit && (
           <Button asChild>
             <Link to="/pessoas/novo">
               <Plus className="h-4 w-4 mr-2" />
-              Nova Pessoa
+              {t('people.new')}
             </Link>
           </Button>
         )}
@@ -345,7 +347,7 @@ export default function PessoasList() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Lista de Pessoas ({total})</CardTitle>
+            <CardTitle>{t('people.listTitle')} ({total})</CardTitle>
             {total > 0 && (
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
@@ -374,13 +376,13 @@ export default function PessoasList() {
           {pessoas.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">
-                {total === 0 ? 'Nenhuma pessoa encontrada com os filtros aplicados.' : 'Nenhuma pessoa nesta página.'}
+                {total === 0 ? t('people.emptyMessage') : t('people.emptyPageMessage')}
               </p>
               {total === 0 && canEdit && (
                 <Button asChild>
                   <Link to="/pessoas/novo">
                     <Plus className="h-4 w-4 mr-2" />
-                    Cadastrar Primeira Pessoa
+                    {t('people.emptyCta')}
                   </Link>
                 </Button>
               )}
@@ -550,7 +552,7 @@ export default function PessoasList() {
         title="Excluir Pessoa"
         description={`Tem certeza que deseja excluir "${pessoaToDelete?.nome}"? Esta ação não pode ser desfeita.`}
         confirmText="Excluir"
-        cancelText="Cancelar"
+        cancelText={t('actions.cancel')}
         variant="destructive"
         loading={deleting}
       />
@@ -562,7 +564,7 @@ export default function PessoasList() {
         title="Excluir em lote"
         description={`Tem certeza que deseja excluir ${selectedIds.size} pessoa(s) selecionada(s)? Esta ação não pode ser desfeita.`}
         confirmText="Excluir"
-        cancelText="Cancelar"
+        cancelText={t('actions.cancel')}
         variant="destructive"
         loading={bulkDeleting}
       />
