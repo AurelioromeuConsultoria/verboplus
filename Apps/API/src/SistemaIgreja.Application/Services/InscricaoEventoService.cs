@@ -1,3 +1,4 @@
+using System.Text.Json;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
@@ -55,33 +56,92 @@ public class InscricaoEventoService : IInscricaoEventoService
 
     public async Task<InscricaoEventoDto> CreateAsync(CriarInscricaoEventoDto dto)
     {
-        // Verificar se o evento existe
         var evento = await _eventoRepository.GetByIdAsync(dto.EventoId);
         if (evento == null) throw new ArgumentException("Evento não encontrado");
 
-        // Verificar se o evento ainda aceita inscrições
+        if (!evento.AceitaInscricoes)
+            throw new InvalidOperationException("Este evento não aceita inscrições");
+
         if (evento.DataInicio < DateTime.Now)
             throw new InvalidOperationException("Não é possível se inscrever em um evento que já iniciou");
 
-        // Verificar se já existe inscrição com o mesmo WhatsApp
         var existeInscricao = await _repository.ExisteInscricaoAsync(dto.EventoId, dto.WhatsApp);
         if (existeInscricao)
             throw new InvalidOperationException("Já existe uma inscrição para este WhatsApp neste evento");
 
+        ValidarCamposObrigatorios(evento.ConfiguracaoFormularioInscricao, dto);
+
+        var dadosInscricaoJson = SerializeDadosInscricao(dto.Campos);
+
         var entity = new InscricaoEvento
         {
             EventoId = dto.EventoId,
-            Nome = dto.Nome,
-            WhatsApp = dto.WhatsApp,
-            Email = dto.Email,
-            QuantidadeAcompanhantes = dto.QuantidadeAcompanhantes,
-            Observacoes = dto.Observacoes,
+            Nome = dto.Nome.Trim(),
+            WhatsApp = dto.WhatsApp.Trim(),
+            Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim(),
+            QuantidadeAcompanhantes = 0,
+            Observacoes = string.IsNullOrWhiteSpace(dto.Observacoes) ? null : dto.Observacoes.Trim(),
+            DadosInscricao = string.IsNullOrEmpty(dadosInscricaoJson) ? null : dadosInscricaoJson,
             Status = StatusInscricao.Pendente,
             DataInscricao = DateTime.Now
         };
 
         var created = await _repository.CreateAsync(entity);
         return MapToDto(created);
+    }
+
+    private static void ValidarCamposObrigatorios(string? configJson, CriarInscricaoEventoDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(configJson)) return;
+
+        List<EventoCampoFormularioDto>? config;
+        try
+        {
+            config = JsonSerializer.Deserialize<List<EventoCampoFormularioDto>>(configJson);
+        }
+        catch
+        {
+            return;
+        }
+
+        if (config == null) return;
+
+        foreach (var campo in config.Where(c => c.Obrigatorio))
+        {
+            var valor = ObterValorCampo(campo.Slug, dto);
+            if (string.IsNullOrWhiteSpace(valor))
+                throw new ArgumentException($"O campo \"{campo.Label}\" é obrigatório.");
+        }
+    }
+
+    private static string? ObterValorCampo(string slug, CriarInscricaoEventoDto dto)
+    {
+        var key = slug.Trim().ToLowerInvariant();
+        if (key == "nome") return dto.Nome;
+        if (key == "whatsapp") return dto.WhatsApp;
+        if (key == "email") return dto.Email;
+        if (key == "observacoes") return dto.Observacoes;
+
+        if (dto.Campos != null && dto.Campos.TryGetValue(slug, out var obj) && obj != null)
+        {
+            if (obj is JsonElement je)
+                return je.ValueKind == JsonValueKind.String ? je.GetString() : je.GetRawText();
+            return obj.ToString();
+        }
+        return null;
+    }
+
+    private static string? SerializeDadosInscricao(Dictionary<string, object?>? campos)
+    {
+        if (campos == null || campos.Count == 0) return null;
+        try
+        {
+            return JsonSerializer.Serialize(campos);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task<InscricaoEventoDto> UpdateAsync(int id, AtualizarInscricaoEventoDto dto)
@@ -179,6 +239,7 @@ public class InscricaoEventoService : IInscricaoEventoService
             StatusDescricao = GetStatusDescricao(i.Status),
             QuantidadeAcompanhantes = i.QuantidadeAcompanhantes,
             Observacoes = i.Observacoes,
+            DadosInscricao = i.DadosInscricao,
             ObservacoesInternas = i.ObservacoesInternas,
             DataInscricao = i.DataInscricao,
             DataConfirmacao = i.DataConfirmacao,

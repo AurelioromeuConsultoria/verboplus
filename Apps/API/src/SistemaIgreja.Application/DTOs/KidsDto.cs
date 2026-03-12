@@ -238,4 +238,14 @@ public class KidsNotificacaoDto
     public DateTime DataCriacao { get; set; }
 }
 
+// Registro de token FCM para push
+public class RegisterDeviceTokenRequest
+{
+    [Required(ErrorMessage = "Token é obrigatório")]
+    [MaxLength(500)]
+    public string Token { get; set; } = string.Empty;
+
+    [MaxLength(20)]
+    public string Platform { get; set; } = "Android"; // "Android" ou "iOS"
+}
 

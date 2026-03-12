@@ -30,6 +30,7 @@ public class KidsService : IKidsService
     private readonly IKidsNotificacaoRepository _notificacaoRepository;
     private readonly IPessoaPerfilRepository _perfilRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IKidsPushNotificationService? _pushService;
 
     public KidsService(
         IPessoaRepository pessoaRepository,
@@ -38,7 +39,8 @@ public class KidsService : IKidsService
         IKidsCheckinRepository checkinRepository,
         IKidsNotificacaoRepository notificacaoRepository,
         IPessoaPerfilRepository perfilRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IKidsPushNotificationService? pushService = null)
     {
         _pessoaRepository = pessoaRepository;
         _criancaDetalheRepository = criancaDetalheRepository;
@@ -47,6 +49,7 @@ public class KidsService : IKidsService
         _notificacaoRepository = notificacaoRepository;
         _perfilRepository = perfilRepository;
         _unitOfWork = unitOfWork;
+        _pushService = pushService;
     }
 
     public async Task<IEnumerable<CriancaDto>> GetCriancasAsync()
@@ -309,7 +312,7 @@ public class KidsService : IKidsService
 
     public async Task<CheckinResponse> CheckinAsync(CheckinRequest request)
     {
-        return await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        var (response, responsavelIds, msg, tipo) = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             var crianca = await _pessoaRepository.GetByIdAsync(request.CriancaPessoaId);
             if (crianca == null || crianca.TipoPessoa != TipoPessoa.Crianca || !crianca.Ativo)
@@ -363,18 +366,28 @@ public class KidsService : IKidsService
 
             await _unitOfWork.SaveChangesAsync();
 
-            return new CheckinResponse
+            var responsavelIds = notificacoes.Select(n => n.ResponsavelPessoaId).Distinct().ToList();
+            var msg = $"Check-in realizado para {crianca.Nome} às {DateTime.UtcNow:HH:mm}";
+            return (new CheckinResponse
             {
                 CheckinId = checkin.Id,
                 CodigoSessao = codigoSessao,
                 CheckinTime = checkin.CheckinTime,
                 Notificacoes = notificacoes
-            };
+            }, responsavelIds, msg, "CHECKIN");
         });
+
+        if (_pushService != null && responsavelIds.Count > 0)
+            await _pushService.SendToPessoasAsync(responsavelIds, "App Kids - Check-in", msg, new Dictionary<string, string> { ["tipo"] = tipo });
+
+        return response;
     }
 
     public async Task CheckoutAsync(CheckoutRequest request)
     {
+        List<int>? responsavelIdsForPush = null;
+        string? msgForPush = null;
+
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             var checkin = await _checkinRepository.GetByCodigoSessaoAsync(request.CodigoSessao);
@@ -405,17 +418,17 @@ public class KidsService : IKidsService
 
             var responsaveis = await _responsavelRepository.GetByCriancaIdAsync(request.CriancaPessoaId);
             var crianca = await _pessoaRepository.GetByIdAsync(request.CriancaPessoaId);
+            msgForPush = $"Check-out realizado para {crianca?.Nome ?? "criança"} às {DateTime.UtcNow:HH:mm}";
+            responsavelIdsForPush = responsaveis.Select(r => r.ResponsavelPessoaId).Distinct().ToList();
 
             foreach (var responsavel in responsaveis)
             {
-                var mensagem = $"Check-out realizado para {crianca?.Nome ?? "criança"} às {DateTime.UtcNow:HH:mm}";
-
                 var notificacao = new KidsNotificacao
                 {
                     CriancaPessoaId = request.CriancaPessoaId,
                     ResponsavelPessoaId = responsavel.ResponsavelPessoaId,
                     Tipo = "CHECKOUT",
-                    Mensagem = mensagem,
+                    Mensagem = msgForPush,
                     Status = "Pendente",
                     DataCriacao = DateTime.UtcNow
                 };
@@ -425,6 +438,9 @@ public class KidsService : IKidsService
 
             await _unitOfWork.SaveChangesAsync();
         });
+
+        if (_pushService != null && responsavelIdsForPush != null && responsavelIdsForPush.Count > 0 && msgForPush != null)
+            await _pushService.SendToPessoasAsync(responsavelIdsForPush, "App Kids - Check-out", msgForPush, new Dictionary<string, string> { ["tipo"] = "CHECKOUT" });
     }
 
     public async Task<IEnumerable<KidsCheckinDto>> GetHistoricoCheckinsAsync(int? criancaPessoaId = null)

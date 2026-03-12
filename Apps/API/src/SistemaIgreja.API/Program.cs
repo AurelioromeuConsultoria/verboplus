@@ -97,6 +97,7 @@ builder.Services.AddScoped<ICriancaDetalheRepository, CriancaDetalheRepository>(
 builder.Services.AddScoped<IResponsavelCriancaRepository, ResponsavelCriancaRepository>();
 builder.Services.AddScoped<IKidsCheckinRepository, KidsCheckinRepository>();
 builder.Services.AddScoped<IKidsNotificacaoRepository, KidsNotificacaoRepository>();
+builder.Services.AddScoped<IKidsDeviceTokenRepository, KidsDeviceTokenRepository>();
 
 // Services
 builder.Services.AddScoped<IPessoaService, PessoaService>();
@@ -145,6 +146,10 @@ builder.Services.AddScoped<IFinanceiroQueryService, FinanceiroQueryService>();
 builder.Services.AddScoped<IDashboardFinanceiroService, DashboardFinanceiroService>();
 builder.Services.AddScoped<IRelatorioFinanceiroService, RelatorioFinanceiroService>();
 builder.Services.AddScoped<IKidsService, KidsService>();
+builder.Services.AddScoped<IKidsPushNotificationService, KidsPushNotificationService>();
+
+builder.Services.Configure<FirebaseKidsPushOptions>(
+    builder.Configuration.GetSection(FirebaseKidsPushOptions.SectionName));
 
 builder.Services.Configure<EvolutionApiSettings>(
     builder.Configuration.GetSection("EvolutionApi"));
@@ -189,7 +194,12 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Aceitar camelCase do frontend (ex.: aceitaInscricoes) no binding para propriedades C# (AceitaInscricoes)
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

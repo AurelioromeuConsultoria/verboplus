@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
+using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Application.Services;
 
 namespace SistemaIgreja.API.Controllers;
@@ -11,10 +13,17 @@ namespace SistemaIgreja.API.Controllers;
 public class KidsController : ControllerBase
 {
     private readonly IKidsService _service;
+    private readonly IUsuarioRepository _usuarioRepository;
+    private readonly IKidsDeviceTokenRepository _deviceTokenRepository;
 
-    public KidsController(IKidsService service)
+    public KidsController(
+        IKidsService service,
+        IUsuarioRepository usuarioRepository,
+        IKidsDeviceTokenRepository deviceTokenRepository)
     {
         _service = service;
+        _usuarioRepository = usuarioRepository;
+        _deviceTokenRepository = deviceTokenRepository;
     }
 
     /// <summary>
@@ -270,6 +279,30 @@ public class KidsController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "Erro ao buscar histórico", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Registra o token FCM do dispositivo do usuário logado (para receber push de check-in/check-out e avisos).
+    /// </summary>
+    [HttpPost("me/device-token")]
+    public async Task<IActionResult> RegisterDeviceToken([FromBody] RegisterDeviceTokenRequest request)
+    {
+        try
+        {
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out var userId))
+                return Unauthorized();
+
+            var usuario = await _usuarioRepository.GetByIdAsync(userId);
+            if (usuario == null) return Unauthorized();
+
+            await _deviceTokenRepository.UpsertAsync(usuario.PessoaId, request.Token.Trim(), request.Platform ?? "Android");
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao registrar token", error = ex.Message });
         }
     }
 }

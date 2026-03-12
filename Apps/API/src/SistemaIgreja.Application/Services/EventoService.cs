@@ -55,6 +55,8 @@ public class EventoService : IEventoService
             Tipo = tipo,
             EhRecorrente = dto.EhRecorrente,
             Ativo = dto.Ativo,
+            AceitaInscricoes = dto.AceitaInscricoes,
+            ConfiguracaoFormularioInscricao = dto.ConfiguracaoFormularioInscricao,
             DataCriacao = DateTime.Now
         };
 
@@ -76,6 +78,8 @@ public class EventoService : IEventoService
         entity.Tipo = Enum.IsDefined(typeof(TipoEvento), dto.Tipo) ? (TipoEvento)dto.Tipo : entity.Tipo;
         entity.EhRecorrente = dto.EhRecorrente;
         entity.Ativo = dto.Ativo;
+        entity.AceitaInscricoes = dto.AceitaInscricoes;
+        entity.ConfiguracaoFormularioInscricao = dto.ConfiguracaoFormularioInscricao;
 
         var updated = await _repository.UpdateAsync(entity);
         return MapToDto(updated);
@@ -101,6 +105,8 @@ public class EventoService : IEventoService
             TipoDescricao = GetTipoDescricao(e.Tipo),
             EhRecorrente = e.EhRecorrente,
             Ativo = e.Ativo,
+            AceitaInscricoes = e.AceitaInscricoes,
+            ConfiguracaoFormularioInscricao = e.ConfiguracaoFormularioInscricao,
             DataCriacao = e.DataCriacao
         };
     }

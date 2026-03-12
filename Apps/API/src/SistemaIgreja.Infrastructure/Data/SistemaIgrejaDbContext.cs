@@ -56,6 +56,7 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<ResponsavelCrianca> ResponsaveisCriancas { get; set; }
     public DbSet<KidsCheckin> KidsCheckins { get; set; }
     public DbSet<KidsNotificacao> KidsNotificacoes { get; set; }
+    public DbSet<KidsDeviceToken> KidsDeviceTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -480,6 +481,8 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.Tipo).IsRequired().HasDefaultValue(TipoEvento.Evento);
             entity.Property(e => e.EhRecorrente).IsRequired().HasDefaultValue(false);
             entity.Property(e => e.Ativo).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.AceitaInscricoes).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.ConfiguracaoFormularioInscricao).HasMaxLength(4000);
             entity.Property(e => e.DataCriacao).IsRequired();
         });
 
@@ -716,6 +719,7 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.Status).IsRequired();
             entity.Property(e => e.QuantidadeAcompanhantes).IsRequired();
             entity.Property(e => e.Observacoes).HasMaxLength(500);
+            entity.Property(e => e.DadosInscricao).HasMaxLength(2000);
             entity.Property(e => e.ObservacoesInternas).HasMaxLength(500);
             entity.Property(e => e.DataInscricao).IsRequired();
 
@@ -888,6 +892,23 @@ public class SistemaIgrejaDbContext : DbContext
             // Índices
             entity.HasIndex(n => new { n.CriancaPessoaId, n.Status });
             entity.HasIndex(n => new { n.ResponsavelPessoaId, n.Status });
+        });
+
+        // Configuração da entidade KidsDeviceToken
+        modelBuilder.Entity<KidsDeviceToken>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PessoaId).IsRequired();
+            entity.Property(e => e.FcmToken).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Platform).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.UpdatedAt).IsRequired();
+
+            entity.HasOne(d => d.Pessoa)
+                  .WithMany(p => p.KidsDeviceTokens)
+                  .HasForeignKey(d => d.PessoaId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(d => new { d.PessoaId, d.FcmToken }).IsUnique();
         });
 
         // Dados iniciais para ConfiguracaoMensagem (datas fixas para evitar warnings de migração)

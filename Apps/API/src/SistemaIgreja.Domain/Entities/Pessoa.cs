@@ -45,6 +45,7 @@ public class Pessoa
     public virtual ICollection<KidsCheckin> CheckoutsRealizadosPor { get; set; } = new List<KidsCheckin>();
     public virtual ICollection<KidsNotificacao> NotificacoesComoCrianca { get; set; } = new List<KidsNotificacao>();
     public virtual ICollection<KidsNotificacao> NotificacoesComoResponsavel { get; set; } = new List<KidsNotificacao>();
+    public virtual ICollection<KidsDeviceToken> KidsDeviceTokens { get; set; } = new List<KidsDeviceToken>();
 }
 
 

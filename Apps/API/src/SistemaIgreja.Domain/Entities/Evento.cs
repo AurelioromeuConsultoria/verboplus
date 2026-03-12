@@ -34,6 +34,20 @@ public class Evento
     [Required]
     public bool Ativo { get; set; } = true;
 
+    /// <summary>
+    /// Se true, o evento exibe formulário de inscrição no portal e aceita novas inscrições.
+    /// </summary>
+    [Required]
+    public bool AceitaInscricoes { get; set; } = false;
+
+    /// <summary>
+    /// JSON com a configuração dos campos do formulário de inscrição.
+    /// Ex.: [{"slug":"nome","label":"Nome completo","tipo":"texto","obrigatorio":true},{"slug":"whatsApp",...}]
+    /// Colunas fixas: nome, whatsApp, email, observacoes. Outros campos ficam em DadosInscricao na inscrição.
+    /// </summary>
+    [MaxLength(4000)]
+    public string? ConfiguracaoFormularioInscricao { get; set; }
+
     public DateTime DataCriacao { get; set; } = DateTime.Now;
 
     // Relacionamento com inscrições

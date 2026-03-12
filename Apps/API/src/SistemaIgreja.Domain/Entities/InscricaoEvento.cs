@@ -32,6 +32,13 @@ public class InscricaoEvento
     [MaxLength(500)]
     public string? Observacoes { get; set; }
 
+    /// <summary>
+    /// JSON com valores dos campos dinâmicos do formulário (ex.: {"rg":"12.345.678-9","quantidadeAcompanhantes":2}).
+    /// Colunas fixas são apenas Nome, WhatsApp, Email, Observações.
+    /// </summary>
+    [MaxLength(2000)]
+    public string? DadosInscricao { get; set; }
+
     [MaxLength(500)]
     public string? ObservacoesInternas { get; set; }
 

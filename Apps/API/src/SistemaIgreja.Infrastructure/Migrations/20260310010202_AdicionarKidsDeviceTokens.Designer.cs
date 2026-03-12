@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SistemaIgreja.Infrastructure.Data;
@@ -11,9 +12,11 @@ using SistemaIgreja.Infrastructure.Data;
 namespace SistemaIgreja.Infrastructure.Migrations
 {
     [DbContext(typeof(SistemaIgrejaDbContext))]
-    partial class SistemaIgrejaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260310010202_AdicionarKidsDeviceTokens")]
+    partial class AdicionarKidsDeviceTokens
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -829,19 +832,10 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("AceitaInscricoes")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
                     b.Property<bool>("Ativo")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
-
-                    b.Property<string>("ConfiguracaoFormularioInscricao")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
 
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("timestamp without time zone");
@@ -1189,10 +1183,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("DadosInscricao")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
 
                     b.Property<DateTime?>("DataCancelamento")
                         .HasColumnType("timestamp without time zone");
