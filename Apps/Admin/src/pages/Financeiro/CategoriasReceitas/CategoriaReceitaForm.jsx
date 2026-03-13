@@ -10,11 +10,13 @@ import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { categoriasReceitasApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function CategoriaReceitaForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -38,7 +40,7 @@ export default function CategoriaReceitaForm() {
         ativo: c.ativo !== undefined ? c.ativo : true,
       });
     } catch (err) {
-      setError('Erro ao carregar categoria de receita');
+      setError(t('finance.revenueCategories.saveError'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -55,7 +57,7 @@ export default function CategoriaReceitaForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      toast.error('Nome é obrigatório');
+      toast.error(t('finance.projects.nameRequired'));
       return;
     }
 
@@ -68,10 +70,10 @@ export default function CategoriaReceitaForm() {
       };
       if (isEditing) await categoriasReceitasApi.update(id, payload);
       else await categoriasReceitasApi.create(payload);
-      toast.success(isEditing ? 'Categoria atualizada com sucesso!' : 'Categoria criada com sucesso!');
+      toast.success(isEditing ? t('finance.revenueCategories.saveSuccessEdit') : t('finance.revenueCategories.saveSuccessCreate'));
       navigate('/financeiro/categorias-receitas');
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Erro ao salvar categoria de receita';
+      const errorMessage = err.response?.data?.message || t('finance.revenueCategories.saveError');
       toast.error(errorMessage);
       console.error(err);
     } finally {
@@ -79,7 +81,7 @@ export default function CategoriaReceitaForm() {
     }
   };
 
-  if (loading && isEditing) return <LoadingPage text="Carregando categoria..." />;
+  if (loading && isEditing) return <LoadingPage text={t('finance.revenueCategories.loadingForm')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -87,29 +89,29 @@ export default function CategoriaReceitaForm() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" asChild>
           <Link to="/financeiro/categorias-receitas">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('actions.back')}
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Categoria de Receita' : 'Nova Categoria de Receita'}</h1>
-          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações da categoria' : 'Cadastre uma nova categoria de receita'}</p>
+          <h1 className="text-3xl font-bold">{isEditing ? t('finance.revenueCategories.editTitle') : t('finance.revenueCategories.newTitle')}</h1>
+          <p className="text-muted-foreground">{isEditing ? t('finance.revenueCategories.editSubtitle') : t('finance.revenueCategories.newSubtitle')}</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Dados da Categoria</CardTitle>
+            <CardTitle>{t('finance.revenueCategories.cardTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="nome">Nome *</Label>
-                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder="Nome da categoria" required />
+                <Label htmlFor="nome">{t('finance.common.name')} *</Label>
+                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder={t('finance.common.name')} required />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="descricao">Descrição</Label>
-                <Textarea id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder="Descrição da categoria" rows={3} />
+                <Label htmlFor="descricao">{t('finance.common.description')}</Label>
+                <Textarea id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder={t('finance.common.description')} rows={3} />
               </div>
               <div className="space-y-2 flex items-center space-x-3">
                 <input
@@ -120,7 +122,7 @@ export default function CategoriaReceitaForm() {
                   onChange={handleChange}
                   className="h-4 w-4"
                 />
-                <Label htmlFor="ativo" className="cursor-pointer">Categoria ativa</Label>
+                <Label htmlFor="ativo" className="cursor-pointer">{t('finance.revenueCategories.activeLabel')}</Label>
               </div>
             </div>
           </CardContent>
@@ -128,10 +130,10 @@ export default function CategoriaReceitaForm() {
 
         <div className="flex items-center space-x-4">
           <Button type="submit" disabled={loading}>
-            <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+            <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : (isEditing ? t('actions.update') : t('actions.create'))}
           </Button>
           <Button type="button" variant="outline" asChild>
-            <Link to="/financeiro/categorias-receitas">Cancelar</Link>
+            <Link to="/financeiro/categorias-receitas">{t('actions.cancel')}</Link>
           </Button>
         </div>
       </form>

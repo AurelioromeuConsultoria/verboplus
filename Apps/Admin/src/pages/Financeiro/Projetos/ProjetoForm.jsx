@@ -10,11 +10,13 @@ import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { projetosApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function ProjetoForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -40,7 +42,7 @@ export default function ProjetoForm() {
         ativo: p.ativo !== undefined ? p.ativo : true,
       });
     } catch (err) {
-      setError('Erro ao carregar projeto');
+      setError(t('finance.projects.saveError'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -57,7 +59,7 @@ export default function ProjetoForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      toast.error('Nome é obrigatório');
+      toast.error(t('finance.projects.nameRequired'));
       return;
     }
 
@@ -71,10 +73,10 @@ export default function ProjetoForm() {
       };
       if (isEditing) await projetosApi.update(id, payload);
       else await projetosApi.create(payload);
-      toast.success(isEditing ? 'Projeto atualizado com sucesso!' : 'Projeto criado com sucesso!');
+      toast.success(isEditing ? t('finance.projects.saveSuccessEdit') : t('finance.projects.saveSuccessCreate'));
       navigate('/financeiro/projetos');
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Erro ao salvar projeto';
+      const errorMessage = err.response?.data?.message || t('finance.projects.saveError');
       toast.error(errorMessage);
       console.error(err);
     } finally {
@@ -82,7 +84,7 @@ export default function ProjetoForm() {
     }
   };
 
-  if (loading && isEditing) return <LoadingPage text="Carregando projeto..." />;
+  if (loading && isEditing) return <LoadingPage text={t('finance.projects.loadingForm')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -90,33 +92,33 @@ export default function ProjetoForm() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" asChild>
           <Link to="/financeiro/projetos">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('actions.back')}
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Projeto' : 'Novo Projeto'}</h1>
-          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações do projeto' : 'Cadastre um novo projeto'}</p>
+          <h1 className="text-3xl font-bold">{isEditing ? t('finance.projects.editTitle') : t('finance.projects.newTitle')}</h1>
+          <p className="text-muted-foreground">{isEditing ? t('finance.projects.editSubtitle') : t('finance.projects.newSubtitle')}</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Dados do Projeto</CardTitle>
+            <CardTitle>{t('finance.projects.cardTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
-                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder="Nome do projeto" required />
+                <Label htmlFor="nome">{t('finance.common.name')} *</Label>
+                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder={t('finance.common.name')} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="orcamento">Orçamento</Label>
+                <Label htmlFor="orcamento">{t('finance.projects.fieldBudget')}</Label>
                 <Input id="orcamento" name="orcamento" type="number" step="0.01" value={formData.orcamento} onChange={handleChange} placeholder="0.00" />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="descricao">Descrição</Label>
-                <Textarea id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder="Descrição do projeto" rows={3} />
+                <Label htmlFor="descricao">{t('finance.common.description')}</Label>
+                <Textarea id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder={t('finance.common.description')} rows={3} />
               </div>
               <div className="space-y-2 flex items-center space-x-3">
                 <input
@@ -127,7 +129,7 @@ export default function ProjetoForm() {
                   onChange={handleChange}
                   className="h-4 w-4"
                 />
-                <Label htmlFor="ativo" className="cursor-pointer">Projeto ativo</Label>
+                <Label htmlFor="ativo" className="cursor-pointer">{t('finance.projects.activeLabel')}</Label>
               </div>
             </div>
           </CardContent>
@@ -135,10 +137,10 @@ export default function ProjetoForm() {
 
         <div className="flex items-center space-x-4">
           <Button type="submit" disabled={loading}>
-            <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+            <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : (isEditing ? t('actions.update') : t('actions.create'))}
           </Button>
           <Button type="button" variant="outline" asChild>
-            <Link to="/financeiro/projetos">Cancelar</Link>
+            <Link to="/financeiro/projetos">{t('actions.cancel')}</Link>
           </Button>
         </div>
       </form>

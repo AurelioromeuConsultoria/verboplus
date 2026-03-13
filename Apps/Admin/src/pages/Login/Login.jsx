@@ -8,10 +8,12 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function Login() {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     email: '',
     senha: '',
@@ -34,7 +36,7 @@ export default function Login() {
     e.preventDefault();
 
     if (!formData.email || !formData.senha) {
-      toast.error('Preencha todos os campos');
+      toast.error(t('login.fillAllFields'));
       return;
     }
 
@@ -43,10 +45,10 @@ export default function Login() {
     setLoading(false);
 
     if (result.success) {
-      toast.success('Login realizado com sucesso!');
+      toast.success(t('login.success'));
       navigate('/');
     } else {
-      const errorMessage = result.message || 'Email ou senha inválidos';
+      const errorMessage = result.message || t('login.invalidCredentials');
       toast.error(errorMessage);
       setFormData((prev) => ({ ...prev, senha: '' }));
     }
@@ -63,14 +65,14 @@ export default function Login() {
               </div>
             </div>
             <div>
-              <CardTitle className="text-2xl">Sistema Igreja</CardTitle>
-              <CardDescription>Faça login para acessar o sistema</CardDescription>
+              <CardTitle className="text-2xl">{t('login.title')}</CardTitle>
+              <CardDescription>{t('login.subtitle')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('login.email')}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -79,7 +81,7 @@ export default function Login() {
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
-                    placeholder="seu@email.com"
+                    placeholder={t('login.emailPlaceholder')}
                     className="pl-10"
                     required
                     autoComplete="email"
@@ -88,7 +90,7 @@ export default function Login() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="senha">Senha</Label>
+                <Label htmlFor="senha">{t('login.password')}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -97,7 +99,7 @@ export default function Login() {
                     type="password"
                     value={formData.senha}
                     onChange={handleChange}
-                    placeholder="••••••••"
+                    placeholder={t('login.passwordPlaceholder')}
                     className="pl-10"
                     required
                     autoComplete="current-password"
@@ -106,7 +108,7 @@ export default function Login() {
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Entrando...' : 'Entrar'}
+                {loading ? t('login.submitting') : t('login.submit')}
               </Button>
             </form>
           </CardContent>

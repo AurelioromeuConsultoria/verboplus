@@ -15,8 +15,10 @@ import { categoriasDespesasApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
 export default function CategoriasDespesasList() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,7 +33,7 @@ export default function CategoriasDespesasList() {
       const res = await categoriasDespesasApi.getAll();
       setItems(res.data || []);
     } catch (err) {
-      setError('Erro ao carregar categorias de despesas');
+      setError(t('finance.expenseCategories.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -45,18 +47,18 @@ export default function CategoriasDespesasList() {
   const handleDelete = async (id) => {
     const categoria = items.find((c) => c.id === id);
     confirmDialog.show({
-      title: 'Excluir Categoria de Despesa',
-      description: `Tem certeza que deseja excluir "${categoria?.nome || 'esta categoria'}"? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('finance.expenseCategories.deleteTitle'),
+      description: t('finance.expenseCategories.deleteDescription', { name: categoria?.nome || t('finance.expenseCategories.emptyMessage') }),
+      confirmText: t('finance.expenses.delete.confirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await categoriasDespesasApi.delete(id);
-          toast.success('Categoria de despesa excluída com sucesso');
+          toast.success(t('finance.expenseCategories.deleteSuccess'));
           await load();
         } catch (err) {
-          toast.error('Erro ao excluir categoria de despesa');
+          toast.error(t('finance.expenseCategories.deleteError'));
           console.error(err);
           throw err;
         }
@@ -71,7 +73,7 @@ export default function CategoriasDespesasList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text="Carregando categorias de despesas..." />;
+  if (loading) return <LoadingPage text={t('finance.expenseCategories.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   const canEdit = can(RESOURCES.FINANCEIRO, ACTIONS.EDIT);
@@ -81,13 +83,13 @@ export default function CategoriasDespesasList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Categorias de Despesas</h1>
-          <p className="text-muted-foreground">Gerencie as categorias de despesas</p>
+          <h1 className="text-3xl font-bold">{t('finance.expenseCategories.title')}</h1>
+          <p className="text-muted-foreground">{t('finance.expenseCategories.subtitle')}</p>
         </div>
         {canEdit && (
           <Button asChild>
             <Link to="/financeiro/categorias-despesas/novo">
-              <Plus className="h-4 w-4 mr-2" /> Nova Categoria
+              <Plus className="h-4 w-4 mr-2" /> {t('finance.expenseCategories.new')}
             </Link>
           </Button>
         )}
@@ -95,16 +97,16 @@ export default function CategoriasDespesasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('finance.common.filters')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por nome</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('finance.common.searchByName')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite o nome da categoria"
+                placeholder={t('finance.common.searchByName')}
               />
             </div>
           </div>
@@ -113,19 +115,19 @@ export default function CategoriasDespesasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Categorias ({total})</CardTitle>
+          <CardTitle>{t('finance.expenseCategories.listTitle')} ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhuma categoria encontrada.</div>
+            <div className="text-center py-8 text-muted-foreground">{t('finance.expenseCategories.emptyMessage')}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('finance.common.name')}</TableHead>
+                  <TableHead>{t('finance.common.description')}</TableHead>
+                  <TableHead>{t('finance.common.status')}</TableHead>
+                  <TableHead className="text-right">{t('finance.revenues.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -135,7 +137,7 @@ export default function CategoriasDespesasList() {
                     <TableCell>{c.descricao || '-'}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs ${c.ativo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {c.ativo ? 'Ativa' : 'Inativa'}
+                        {c.ativo ? t('finance.expenseCategories.statusActive') : t('finance.expenseCategories.statusInactive')}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">

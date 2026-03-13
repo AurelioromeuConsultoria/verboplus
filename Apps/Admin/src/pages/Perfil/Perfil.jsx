@@ -10,12 +10,7 @@ import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { toast } from 'sonner';
 import { User, Mail, Shield, Calendar, Clock, Lock, Palette, Sun, Moon } from 'lucide-react';
-
-const TIPO_USUARIO_LABELS = {
-  1: 'Administrador',
-  2: 'Portal',
-  3: 'Ambos',
-};
+import { useTranslation } from 'react-i18next';
 
 const TIPO_USUARIO_COLORS = {
   1: 'bg-blue-100 text-blue-800',
@@ -23,9 +18,12 @@ const TIPO_USUARIO_COLORS = {
   3: 'bg-purple-100 text-purple-800',
 };
 
+const TIPO_USUARIO_KEYS = { 1: 'userTypeAdmin', 2: 'userTypePortal', 3: 'userTypeBoth' };
+
 export default function Perfil() {
   const { usuario: usuarioContext, atualizarUsuario } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
   const [usuario, setUsuario] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,7 +42,7 @@ export default function Perfil() {
       setUsuario(res.data);
       atualizarUsuario(res.data);
     } catch (err) {
-      setError('Erro ao carregar dados do perfil');
+      setError(t('profile.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -59,17 +57,17 @@ export default function Perfil() {
     e.preventDefault();
 
     if (!senhaData.senhaAtual || !senhaData.novaSenha) {
-      toast.error('Preencha todos os campos');
+      toast.error(t('profile.fillAllFields'));
       return;
     }
 
     if (senhaData.novaSenha.length < 6) {
-      toast.error('A nova senha deve ter no mínimo 6 caracteres');
+      toast.error(t('profile.minPasswordLength'));
       return;
     }
 
     if (senhaData.novaSenha !== senhaData.confirmarSenha) {
-      toast.error('As senhas não coincidem');
+      toast.error(t('profile.passwordsDontMatch'));
       return;
     }
 
@@ -79,29 +77,29 @@ export default function Perfil() {
         senhaAtual: senhaData.senhaAtual,
         novaSenha: senhaData.novaSenha,
       });
-      toast.success('Senha alterada com sucesso!');
+      toast.success(t('profile.passwordChangeSuccess'));
       setSenhaData({
         senhaAtual: '',
         novaSenha: '',
         confirmarSenha: '',
       });
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Erro ao alterar senha';
+      const errorMessage = err.response?.data?.message || t('profile.passwordChangeError');
       toast.error(errorMessage);
     } finally {
       setAlterandoSenha(false);
     }
   };
 
-  if (loading) return <LoadingPage text="Carregando perfil..." />;
+  if (loading) return <LoadingPage text={t('profile.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
-  if (!usuario) return <div>Usuário não encontrado</div>;
+  if (!usuario) return <div>{t('profile.userNotFound')}</div>;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Meu Perfil</h1>
-        <p className="text-muted-foreground">Gerencie suas informações pessoais</p>
+        <h1 className="text-3xl font-bold">{t('profile.title')}</h1>
+        <p className="text-muted-foreground">{t('profile.subtitle')}</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -109,13 +107,13 @@ export default function Perfil() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Palette className="h-5 w-5" />
-              Preferências
+              {t('profile.preferences')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                Tema
+                {t('profile.theme')}
               </label>
               <div className="flex gap-2">
                 <Button
@@ -125,7 +123,7 @@ export default function Perfil() {
                   className="flex-1"
                 >
                   <Sun className="h-4 w-4 mr-2" />
-                  Claro
+                  {t('profile.light')}
                 </Button>
                 <Button
                   type="button"
@@ -134,11 +132,11 @@ export default function Perfil() {
                   className="flex-1"
                 >
                   <Moon className="h-4 w-4 mr-2" />
-                  Escuro
+                  {t('profile.dark')}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Você também pode alternar pelo ícone no topo da página
+                {t('profile.themeHint')}
               </p>
             </div>
           </CardContent>
@@ -148,39 +146,39 @@ export default function Perfil() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              Dados Pessoais
+              {t('profile.personalData')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <User className="h-4 w-4" />
-                Nome
+                {t('profile.name')}
               </label>
               <p className="text-base font-medium mt-1">{usuario.nome}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                Email
+                {t('profile.email')}
               </label>
               <p className="text-base mt-1">{usuario.email}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Shield className="h-4 w-4" />
-                Tipo de Usuário
+                {t('profile.userType')}
               </label>
               <div className="mt-1">
                 <span className={`px-3 py-1 rounded text-sm font-medium ${TIPO_USUARIO_COLORS[usuario.tipoUsuario] || 'bg-gray-100 text-gray-800'}`}>
-                  {TIPO_USUARIO_LABELS[usuario.tipoUsuario] || usuario.tipoUsuarioDescricao}
+                  {(TIPO_USUARIO_KEYS[usuario.tipoUsuario] && t('profile.' + TIPO_USUARIO_KEYS[usuario.tipoUsuario])) || usuario.tipoUsuarioDescricao}
                 </span>
               </div>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                Data de Criação
+                {t('profile.createdAt')}
               </label>
               <p className="text-base mt-1">
                 {usuario.dataCriacao ? new Date(usuario.dataCriacao).toLocaleString('pt-BR') : '-'}
@@ -190,7 +188,7 @@ export default function Perfil() {
               <div>
                 <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  Último Acesso
+                  {t('profile.lastAccess')}
                 </label>
                 <p className="text-base mt-1">
                   {new Date(usuario.ultimoAcesso).toLocaleString('pt-BR')}
@@ -204,50 +202,50 @@ export default function Perfil() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lock className="h-5 w-5" />
-              Alterar Senha
+              {t('profile.changePassword')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAlterarSenha} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="senhaAtual">Senha Atual *</Label>
+                <Label htmlFor="senhaAtual">{t('profile.currentPassword')}</Label>
                 <Input
                   id="senhaAtual"
                   name="senhaAtual"
                   type="password"
                   value={senhaData.senhaAtual}
                   onChange={(e) => setSenhaData((prev) => ({ ...prev, senhaAtual: e.target.value }))}
-                  placeholder="Digite sua senha atual"
+                  placeholder={t('profile.currentPasswordPlaceholder')}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="novaSenha">Nova Senha *</Label>
+                <Label htmlFor="novaSenha">{t('profile.newPassword')}</Label>
                 <Input
                   id="novaSenha"
                   name="novaSenha"
                   type="password"
                   value={senhaData.novaSenha}
                   onChange={(e) => setSenhaData((prev) => ({ ...prev, novaSenha: e.target.value }))}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder={t('profile.newPasswordPlaceholder')}
                   required
                   minLength={6}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmarSenha">Confirmar Nova Senha *</Label>
+                <Label htmlFor="confirmarSenha">{t('profile.confirmPassword')}</Label>
                 <Input
                   id="confirmarSenha"
                   name="confirmarSenha"
                   type="password"
                   value={senhaData.confirmarSenha}
                   onChange={(e) => setSenhaData((prev) => ({ ...prev, confirmarSenha: e.target.value }))}
-                  placeholder="Confirme a nova senha"
+                  placeholder={t('profile.confirmPasswordPlaceholder')}
                   required
                 />
               </div>
               <Button type="submit" disabled={alterandoSenha}>
-                {alterandoSenha ? 'Alterando...' : 'Alterar Senha'}
+                {alterandoSenha ? t('profile.changing') : t('profile.changePasswordButton')}
               </Button>
             </form>
           </CardContent>

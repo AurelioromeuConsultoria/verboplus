@@ -9,12 +9,14 @@ import { galeriasFotosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { UPLOADS_BASE_URL } from '@/lib/env';
+import { useTranslation } from 'react-i18next';
 
 const FORMATOS_PERMITIDOS = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 const TAMANHO_MAXIMO = 10 * 1024 * 1024; // 10MB
 
 export default function GaleriaFotos() {
   const { id } = useParams();
+  const { t } = useTranslation();
   const [galeria, setGaleria] = useState(null);
   const [fotos, setFotos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +39,7 @@ export default function GaleriaFotos() {
       if (!isRefresh) setLoading(true);
       setError(null);
       if (!id) {
-        setError('ID da galeria não informado');
+        setError(t('photoGalleries.invalidGalleryId'));
         return;
       }
       const res = await galeriasFotosApi.getById(id);
@@ -45,10 +47,10 @@ export default function GaleriaFotos() {
         setGaleria(res.data);
         await loadFotos(res.data);
       } else {
-        setError('Galeria não encontrada');
+        setError(t('photoGalleries.galleryNotFound'));
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || 'Erro ao carregar galeria';
+      const errorMessage = err.response?.data?.message || err.message || t('photoGalleries.saveError');
       setError(errorMessage);
       console.error('Erro ao carregar galeria:', err);
     } finally {
@@ -97,11 +99,11 @@ export default function GaleriaFotos() {
 
   const validateFile = (file) => {
     if (!FORMATOS_PERMITIDOS.includes(file.type)) {
-      toast.error(`Formato não suportado: ${file.name}. Use JPG, PNG, GIF ou WEBP.`);
+      toast.error(t('photoGalleries.formatNotSupported'));
       return false;
     }
     if (file.size > TAMANHO_MAXIMO) {
-      toast.error(`Arquivo muito grande: ${file.name}. Máximo: 10MB.`);
+      toast.error(t('photoGalleries.fileTooBig'));
       return false;
     }
     return true;
@@ -154,7 +156,7 @@ export default function GaleriaFotos() {
 
   const handleUpload = async () => {
     if (selectedFiles.length === 0) {
-      toast.error('Selecione pelo menos uma foto');
+      toast.error(t('photoGalleries.selectAtLeastOne'));
       return;
     }
 
@@ -166,13 +168,13 @@ export default function GaleriaFotos() {
       });
 
       await galeriasFotosApi.upload(id, formData);
-      toast.success(`${selectedFiles.length} foto(s) enviada(s) com sucesso!`);
+      toast.success(t('photoGalleries.uploadSuccess', { count: selectedFiles.length }));
       
       setSelectedFiles([]);
       setPreviewFiles([]);
-      await load(true); // refresh sem piscar a tela
+      await load(true);
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Erro ao fazer upload das fotos';
+      const errorMessage = err.response?.data?.message || t('photoGalleries.uploadError');
       toast.error(errorMessage);
       console.error(err);
     } finally {
@@ -183,10 +185,10 @@ export default function GaleriaFotos() {
   const handleDefinirDestaque = async (nomeArquivo) => {
     try {
       await galeriasFotosApi.definirDestaque(id, nomeArquivo);
-      toast.success('Imagem de destaque definida com sucesso!');
-      await load(true); // refresh sem piscar a tela
+      toast.success(t('photoGalleries.featuredSetSuccess'));
+      await load(true);
     } catch (err) {
-      toast.error('Erro ao definir imagem de destaque');
+      toast.error(t('photoGalleries.featuredSetError'));
       console.error(err);
     }
   };
@@ -214,10 +216,9 @@ export default function GaleriaFotos() {
     return `${UPLOADS_BASE_URL}/${galeria.caminhoDiretorio}/original/${nomeArquivo}`;
   };
 
-  // Só mostra tela de loading no carregamento inicial (evita piscar ao definir destaque ou após upload)
-  if (loading && !galeria) return <LoadingPage text="Carregando galeria..." />;
+  if (loading && !galeria) return <LoadingPage text={t('photoGalleries.loadingGallery')} />;
   if (error) return <ErrorPage message={error} onRetry={() => load(false)} />;
-  if (!galeria) return <div>Galeria não encontrada</div>;
+  if (!galeria) return <div>{t('photoGalleries.galleryNotFound')}</div>;
 
   // Calcular valores após garantir que galeria existe
   const imagemDestaqueUrl = getImagemUrl(galeria.imagemDestaque);
@@ -229,35 +230,35 @@ export default function GaleriaFotos() {
         <div className="flex items-center space-x-4">
           <Button variant="ghost" asChild>
             <Link to="/galerias-fotos">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+              <ArrowLeft className="h-4 w-4 mr-2" /> {t('photoGalleries.back')}
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">{galeria?.nome || 'Galeria'}</h1>
-            <p className="text-muted-foreground">{galeria?.descricao || 'Gerenciar fotos da galeria'}</p>
+            <h1 className="text-3xl font-bold">{galeria?.nome || t('photoGalleries.title')}</h1>
+            <p className="text-muted-foreground">{galeria?.descricao || t('photoGalleries.uploadTitle')}</p>
           </div>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Informações da Galeria</CardTitle>
+          <CardTitle>{t('photoGalleries.galleryInfo')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Data</label>
+              <label className="text-sm font-medium text-muted-foreground">{t('photoGalleries.date')}</label>
               <p className="text-base">{galeria?.data ? new Date(galeria.data).toLocaleDateString('pt-BR') : '-'}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Quantidade de Fotos</label>
+              <label className="text-sm font-medium text-muted-foreground">{t('photoGalleries.quantityPhotos')}</label>
               <p className="text-base">{galeria?.quantidadeFotos || 0}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Status</label>
+              <label className="text-sm font-medium text-muted-foreground">{t('photoGalleries.status')}</label>
               <p className="text-base">
                 <span className={`px-2 py-1 rounded text-xs font-medium ${galeria?.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                  {galeria?.ativo ? 'Ativo' : 'Inativo'}
+                  {galeria?.ativo ? t('photoGalleries.active') : t('photoGalleries.inactive')}
                 </span>
               </p>
             </div>
@@ -267,7 +268,7 @@ export default function GaleriaFotos() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Upload de Fotos</CardTitle>
+          <CardTitle>{t('photoGalleries.uploadTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div
@@ -280,9 +281,9 @@ export default function GaleriaFotos() {
             }`}
           >
             <ImageIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium mb-2">Arraste fotos aqui ou clique para selecionar</p>
+            <p className="text-lg font-medium mb-2">{t('photoGalleries.dragHint')}</p>
             <p className="text-sm text-muted-foreground mb-4">
-              Formatos: JPG, PNG, GIF, WEBP | Máximo: 10MB por arquivo
+              {t('photoGalleries.formatsHint')}
             </p>
             <input
               type="file"
@@ -297,16 +298,16 @@ export default function GaleriaFotos() {
               variant="outline"
               onClick={() => document.getElementById('file-upload').click()}
             >
-              <Upload className="h-4 w-4 mr-2" /> Selecionar Arquivos
+              <Upload className="h-4 w-4 mr-2" /> {t('photoGalleries.selectFiles')}
             </Button>
           </div>
 
           {previewFiles.length > 0 && (
             <div className="mt-6">
               <div className="flex items-center justify-between mb-4">
-                <p className="font-medium">Fotos selecionadas: {previewFiles.length}</p>
+                <p className="font-medium">{t('photoGalleries.selectedCount', { count: previewFiles.length })}</p>
                 <Button onClick={handleUpload} disabled={uploading}>
-                  {uploading ? 'Enviando...' : `Enviar ${previewFiles.length} Foto(s)`}
+                  {uploading ? t('photoGalleries.sending') : t('photoGalleries.sendPhotos', { count: previewFiles.length })}
                 </Button>
               </div>
               <div className="grid grid-cols-4 gap-4">
@@ -336,7 +337,7 @@ export default function GaleriaFotos() {
       {galeria?.quantidadeFotos > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Fotos da Galeria ({galeria.quantidadeFotos})</CardTitle>
+            <CardTitle>{t('photoGalleries.photosOfGallery', { count: galeria.quantidadeFotos })}</CardTitle>
           </CardHeader>
           <CardContent>
             {fotos.length > 0 ? (
@@ -376,7 +377,7 @@ export default function GaleriaFotos() {
                         
                         {isDestaque && (
                           <div className="absolute top-2 left-2 bg-primary text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1">
-                            <Star className="h-3 w-3 fill-current" /> Destaque
+                            <Star className="h-3 w-3 fill-current" /> {t('photoGalleries.featured')}
                           </div>
                         )}
                         
@@ -415,11 +416,11 @@ export default function GaleriaFotos() {
               <div className="text-center py-8">
                 <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600 mb-2">
-                  Nenhuma foto encontrada. Faça upload de fotos acima.
+                  {t('photoGalleries.noPhotosUpload')}
                 </p>
                 {imagemDestaqueUrl && (
                   <div className="mt-6">
-                    <p className="text-sm font-medium mb-2">Imagem de Destaque</p>
+                    <p className="text-sm font-medium mb-2">{t('photoGalleries.featuredImage')}</p>
                     <div className="relative inline-block">
                       <div className="relative w-48 h-48">
                         <img
@@ -436,11 +437,11 @@ export default function GaleriaFotos() {
                         <div className="error-fallback hidden absolute inset-0 w-full h-full bg-gray-100 rounded-lg border-4 border-red-300 items-center justify-center z-10">
                           <div className="text-center px-4 max-w-xs">
                             <ImageIcon className="h-12 w-12 text-red-400 mx-auto mb-2" />
-                            <p className="text-xs text-red-600 font-medium mb-2">⚠️ Imagem não encontrada</p>
+                            <p className="text-xs text-red-600 font-medium mb-2">⚠️ {t('photoGalleries.imageNotFound')}</p>
                           </div>
                         </div>
                         <div className="absolute top-2 right-2 bg-primary text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1">
-                          <Star className="h-3 w-3" /> Destaque
+                          <Star className="h-3 w-3" /> {t('photoGalleries.featured')}
                         </div>
                       </div>
                     </div>
@@ -456,12 +457,12 @@ export default function GaleriaFotos() {
         <Dialog open={!!viewingPhoto} onOpenChange={() => setViewingPhoto(null)}>
           <DialogContent className="max-w-4xl">
             <DialogHeader>
-              <DialogTitle>Visualizar Foto</DialogTitle>
+              <DialogTitle>{t('photoGalleries.viewPhoto')}</DialogTitle>
             </DialogHeader>
             <div className="relative">
               <img
                 src={getOriginalUrl(viewingPhoto)}
-                alt="Foto original"
+                alt={t('photoGalleries.viewPhoto')}
                 className="w-full h-auto rounded"
               />
               {viewingPhoto !== nomeArquivoDestaque && (
@@ -472,7 +473,7 @@ export default function GaleriaFotos() {
                     setViewingPhoto(null);
                   }}
                 >
-                  <Star className="h-4 w-4 mr-2" /> Definir como Destaque
+                  <Star className="h-4 w-4 mr-2" /> {t('photoGalleries.setAsFeatured')}
                 </Button>
               )}
             </div>

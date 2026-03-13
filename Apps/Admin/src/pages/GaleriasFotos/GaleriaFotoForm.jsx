@@ -11,11 +11,13 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { galeriasFotosApi, eventosApi, categoriasMidiasApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { useTranslation } from 'react-i18next';
 
 export default function GaleriaFotoForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
+  const { t } = useTranslation();
 
   const [eventos, setEventos] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -54,7 +56,7 @@ export default function GaleriaFotoForm() {
         });
       }
     } catch (err) {
-      setError('Erro ao carregar dados');
+      setError(t('photoGalleries.errorLoadData'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -74,7 +76,7 @@ export default function GaleriaFotoForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      toast.error('Nome é obrigatório');
+      toast.error(t('photoGalleries.nameRequired'));
       return;
     }
     try {
@@ -96,22 +98,21 @@ export default function GaleriaFotoForm() {
       }
       
       if (!isEditing && result.data?.id) {
-        toast.success('Galeria criada com sucesso');
-        // Redirecionar para upload após criar
+        toast.success(t('photoGalleries.createSuccess'));
         navigate(`/galerias-fotos/${result.data.id}/fotos`);
       } else {
-        toast.success('Galeria salva com sucesso');
+        toast.success(t('photoGalleries.saveSuccess'));
         navigate('/galerias-fotos');
       }
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao salvar galeria'));
+      toast.error(getApiErrorMessage(err, t('photoGalleries.saveError')));
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && isEditing && !formData.nome) return <LoadingPage text="Carregando galeria..." />;
+  if (loading && isEditing && !formData.nome) return <LoadingPage text={t('photoGalleries.loadingForm')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -119,51 +120,51 @@ export default function GaleriaFotoForm() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" asChild>
           <Link to="/galerias-fotos">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('photoGalleries.back')}
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Galeria' : 'Nova Galeria'}</h1>
-          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações da galeria' : 'Cadastre uma nova galeria de fotos'}</p>
+          <h1 className="text-3xl font-bold">{isEditing ? t('photoGalleries.editTitle') : t('photoGalleries.newTitle')}</h1>
+          <p className="text-muted-foreground">{isEditing ? t('photoGalleries.editSubtitle') : t('photoGalleries.newSubtitle')}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isEditing ? 'Editar Galeria' : 'Cadastrar Galeria'}</CardTitle>
+          <CardTitle>{isEditing ? t('photoGalleries.editTitle') : t('photoGalleries.cardTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
-                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder="Nome da galeria" required />
+                <Label htmlFor="nome">{t('photoGalleries.name')} *</Label>
+                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder={t('photoGalleries.name')} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="data">Data</Label>
+                <Label htmlFor="data">{t('photoGalleries.date')}</Label>
                 <Input id="data" name="data" type="date" value={formData.data} onChange={handleChange} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição</Label>
-              <Textarea id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder="Descrição da galeria" rows={3} />
+              <Label htmlFor="descricao">{t('photoGalleries.description')}</Label>
+              <Textarea id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder={t('photoGalleries.description')} rows={3} />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="eventoId">Evento</Label>
+                <Label htmlFor="eventoId">{t('photoGalleries.eventOptional')}</Label>
                 <select id="eventoId" name="eventoId" value={formData.eventoId} onChange={handleChange} className="w-full px-3 py-2 border rounded">
-                  <option value="">Nenhum</option>
+                  <option value="">{t('photoGalleries.none')}</option>
                   {eventos.map((e) => (
                     <option key={e.id} value={e.id}>{e.titulo}</option>
                   ))}
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="categoriaMidiaId">Categoria</Label>
+                <Label htmlFor="categoriaMidiaId">{t('photoGalleries.categoryOptional')}</Label>
                 <select id="categoriaMidiaId" name="categoriaMidiaId" value={formData.categoriaMidiaId} onChange={handleChange} className="w-full px-3 py-2 border rounded">
-                  <option value="">Nenhuma</option>
+                  <option value="">{t('photoGalleries.noneCategory')}</option>
                   {categorias.map((c) => (
                     <option key={c.id} value={c.id}>{c.nome}</option>
                   ))}
@@ -180,15 +181,15 @@ export default function GaleriaFotoForm() {
                 onChange={handleChange}
                 className="h-4 w-4"
               />
-              <Label htmlFor="ativo" className="cursor-pointer">Galeria ativa</Label>
+              <Label htmlFor="ativo" className="cursor-pointer">{t('photoGalleries.activeLabel')}</Label>
             </div>
 
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={loading}>
-                <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Salvar e Adicionar Fotos')}
+                <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : (isEditing ? t('actions.update') : t('photoGalleries.saveAndAddPhotos'))}
               </Button>
               <Button type="button" variant="outline" asChild>
-                <Link to="/galerias-fotos">Cancelar</Link>
+                <Link to="/galerias-fotos">{t('actions.cancel')}</Link>
               </Button>
             </div>
           </form>

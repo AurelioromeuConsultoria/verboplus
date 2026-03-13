@@ -10,8 +10,10 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function RelatoriosFinanceiros() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [tipoRelatorio, setTipoRelatorio] = useState('fluxo-caixa');
@@ -35,7 +37,7 @@ export default function RelatoriosFinanceiros() {
 
   const gerarRelatorio = async () => {
     if (!dataInicio || !dataFim) {
-      toast.error('Selecione as datas de início e fim');
+      toast.error(t('finance.reports.errorSelectDates'));
       return;
     }
 
@@ -62,11 +64,11 @@ export default function RelatoriosFinanceiros() {
       }
 
       setRelatorio(response.data);
-      toast.success('Relatório gerado com sucesso');
+      toast.success(t('finance.reports.success'));
     } catch (err) {
-      setError('Erro ao gerar relatório');
+      setError(t('finance.reports.errorLoad'));
       console.error(err);
-      toast.error('Erro ao gerar relatório');
+      toast.error(t('finance.reports.errorLoad'));
     } finally {
       setLoading(false);
     }
@@ -80,24 +82,24 @@ export default function RelatoriosFinanceiros() {
         return (
           <Card>
             <CardHeader>
-              <CardTitle>Fluxo de Caixa</CardTitle>
+              <CardTitle>{t('finance.reports.cashFlow.title')}</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Período: {formatDate(relatorio.dataInicio)} a {formatDate(relatorio.dataFim)}
+                {t('finance.reports.periodLabel', { start: formatDate(relatorio.dataInicio), end: formatDate(relatorio.dataFim) })}
               </p>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Receitas</p>
+                    <p className="text-sm text-muted-foreground">{t('finance.reports.cashFlow.summary.totalRevenues')}</p>
                     <p className="text-2xl font-bold text-green-600">{formatCurrency(relatorio.totalReceitas)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Despesas</p>
+                    <p className="text-sm text-muted-foreground">{t('finance.reports.cashFlow.summary.totalExpenses')}</p>
                     <p className="text-2xl font-bold text-red-600">{formatCurrency(relatorio.totalDespesas)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Saldo</p>
+                    <p className="text-sm text-muted-foreground">{t('finance.reports.cashFlow.summary.balance')}</p>
                     <p className={`text-2xl font-bold ${relatorio.saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatCurrency(relatorio.saldo)}
                     </p>
@@ -107,11 +109,11 @@ export default function RelatoriosFinanceiros() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead className="text-right">Receitas</TableHead>
-                        <TableHead className="text-right">Despesas</TableHead>
-                        <TableHead className="text-right">Saldo do Dia</TableHead>
-                        <TableHead className="text-right">Saldo Acumulado</TableHead>
+                        <TableHead>{t('finance.reports.cashFlow.table.date')}</TableHead>
+                        <TableHead className="text-right">{t('finance.reports.cashFlow.table.revenues')}</TableHead>
+                        <TableHead className="text-right">{t('finance.reports.cashFlow.table.expenses')}</TableHead>
+                        <TableHead className="text-right">{t('finance.reports.cashFlow.table.dayBalance')}</TableHead>
+                        <TableHead className="text-right">{t('finance.reports.cashFlow.table.accumulatedBalance')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -140,23 +142,23 @@ export default function RelatoriosFinanceiros() {
         return (
           <Card>
             <CardHeader>
-              <CardTitle>Relatório por Categoria</CardTitle>
+              <CardTitle>{t('finance.reports.byCategory.title')}</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Período: {formatDate(dataInicio)} a {formatDate(dataFim)}
+                {t('finance.reports.periodLabel', { start: formatDate(dataInicio), end: formatDate(dataFim) })}
               </p>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
                 {relatorio.receitas && relatorio.receitas.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold mb-3 text-green-600">Receitas por Categoria</h3>
+                    <h3 className="text-lg font-semibold mb-3 text-green-600">{t('finance.reports.byCategory.revenuesTitle')}</h3>
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Categoria</TableHead>
-                          <TableHead className="text-right">Valor</TableHead>
-                          <TableHead className="text-right">Quantidade</TableHead>
-                          <TableHead className="text-right">%</TableHead>
+                          <TableHead>{t('finance.reports.byCategory.table.category')}</TableHead>
+                          <TableHead className="text-right">{t('finance.reports.byCategory.table.value')}</TableHead>
+                          <TableHead className="text-right">{t('finance.reports.byCategory.table.quantity')}</TableHead>
+                          <TableHead className="text-right">{t('finance.reports.byCategory.table.percent')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -174,14 +176,14 @@ export default function RelatoriosFinanceiros() {
                 )}
                 {relatorio.despesas && relatorio.despesas.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold mb-3 text-red-600">Despesas por Categoria</h3>
+                    <h3 className="text-lg font-semibold mb-3 text-red-600">{t('finance.reports.byCategory.expensesTitle')}</h3>
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Categoria</TableHead>
-                          <TableHead className="text-right">Valor</TableHead>
-                          <TableHead className="text-right">Quantidade</TableHead>
-                          <TableHead className="text-right">%</TableHead>
+                          <TableHead>{t('finance.reports.byCategory.table.category')}</TableHead>
+                          <TableHead className="text-right">{t('finance.reports.byCategory.table.value')}</TableHead>
+                          <TableHead className="text-right">{t('finance.reports.byCategory.table.quantity')}</TableHead>
+                          <TableHead className="text-right">{t('finance.reports.byCategory.table.percent')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -206,22 +208,22 @@ export default function RelatoriosFinanceiros() {
         return (
           <Card>
             <CardHeader>
-              <CardTitle>Relatório por Centro de Custo</CardTitle>
+              <CardTitle>{t('finance.reports.byCostCenter.title')}</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Período: {formatDate(dataInicio)} a {formatDate(dataFim)}
+                {t('finance.reports.periodLabel', { start: formatDate(dataInicio), end: formatDate(dataFim) })}
               </p>
             </CardHeader>
             <CardContent>
               {relatorio.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">Nenhum dado encontrado</div>
+                <div className="text-center py-8 text-muted-foreground">{t('finance.reports.byCostCenter.empty')}</div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Centro de Custo</TableHead>
-                      <TableHead className="text-right">Receitas</TableHead>
-                      <TableHead className="text-right">Despesas</TableHead>
-                      <TableHead className="text-right">Saldo</TableHead>
+                      <TableHead>{t('finance.reports.byCostCenter.table.costCenter')}</TableHead>
+                      <TableHead className="text-right">{t('finance.reports.byCostCenter.table.revenues')}</TableHead>
+                      <TableHead className="text-right">{t('finance.reports.byCostCenter.table.expenses')}</TableHead>
+                      <TableHead className="text-right">{t('finance.reports.byCostCenter.table.balance')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -246,24 +248,24 @@ export default function RelatoriosFinanceiros() {
         return (
           <Card>
             <CardHeader>
-              <CardTitle>Relatório por Projeto</CardTitle>
+              <CardTitle>{t('finance.reports.byProject.title')}</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Período: {formatDate(dataInicio)} a {formatDate(dataFim)}
+                {t('finance.reports.periodLabel', { start: formatDate(dataInicio), end: formatDate(dataFim) })}
               </p>
             </CardHeader>
             <CardContent>
               {relatorio.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">Nenhum dado encontrado</div>
+                <div className="text-center py-8 text-muted-foreground">{t('finance.reports.byProject.empty')}</div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Projeto</TableHead>
-                      <TableHead className="text-right">Orçamento</TableHead>
-                      <TableHead className="text-right">Receitas</TableHead>
-                      <TableHead className="text-right">Despesas</TableHead>
-                      <TableHead className="text-right">Saldo</TableHead>
-                      <TableHead className="text-right">% Utilizado</TableHead>
+                      <TableHead>{t('finance.reports.byProject.table.project')}</TableHead>
+                      <TableHead className="text-right">{t('finance.reports.byProject.table.budget')}</TableHead>
+                      <TableHead className="text-right">{t('finance.reports.byProject.table.revenues')}</TableHead>
+                      <TableHead className="text-right">{t('finance.reports.byProject.table.expenses')}</TableHead>
+                      <TableHead className="text-right">{t('finance.reports.byProject.table.balance')}</TableHead>
+                      <TableHead className="text-right">{t('finance.reports.byProject.table.usedPercent')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -298,35 +300,35 @@ export default function RelatoriosFinanceiros() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Relatórios Financeiros</h1>
-        <p className="text-muted-foreground">Gere relatórios detalhados das finanças</p>
+        <h1 className="text-3xl font-bold">{t('finance.reports.title')}</h1>
+        <p className="text-muted-foreground">{t('finance.reports.subtitle')}</p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Parâmetros do Relatório
+            {t('finance.reports.paramsTitle')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <Label htmlFor="tipoRelatorio">Tipo de Relatório</Label>
+              <Label htmlFor="tipoRelatorio">{t('finance.reports.typeLabel')}</Label>
               <Select value={tipoRelatorio} onValueChange={setTipoRelatorio}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fluxo-caixa">Fluxo de Caixa</SelectItem>
-                  <SelectItem value="por-categoria">Por Categoria</SelectItem>
-                  <SelectItem value="por-centro-custo">Por Centro de Custo</SelectItem>
-                  <SelectItem value="por-projeto">Por Projeto</SelectItem>
+                  <SelectItem value="fluxo-caixa">{t('finance.reports.type.cashFlow')}</SelectItem>
+                  <SelectItem value="por-categoria">{t('finance.reports.type.byCategory')}</SelectItem>
+                  <SelectItem value="por-centro-custo">{t('finance.reports.type.byCostCenter')}</SelectItem>
+                  <SelectItem value="por-projeto">{t('finance.reports.type.byProject')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dataInicio">Data Início</Label>
+              <Label htmlFor="dataInicio">{t('finance.reports.startDate')}</Label>
               <Input
                 id="dataInicio"
                 type="date"
@@ -335,7 +337,7 @@ export default function RelatoriosFinanceiros() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dataFim">Data Fim</Label>
+              <Label htmlFor="dataFim">{t('finance.reports.endDate')}</Label>
               <Input
                 id="dataFim"
                 type="date"
@@ -346,14 +348,14 @@ export default function RelatoriosFinanceiros() {
             <div className="space-y-2 flex items-end">
               <Button onClick={gerarRelatorio} disabled={loading} className="w-full">
                 <Calendar className="h-4 w-4 mr-2" />
-                {loading ? 'Gerando...' : 'Gerar Relatório'}
+                {loading ? t('finance.reports.generating') : t('finance.reports.generateButton')}
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {loading && <LoadingPage text="Gerando relatório..." />}
+      {loading && <LoadingPage text={t('finance.reports.generatingMessage')} />}
       {error && <ErrorPage message={error} onRetry={gerarRelatorio} />}
       {relatorio && !loading && renderRelatorio()}
     </div>

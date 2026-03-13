@@ -10,11 +10,13 @@ import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { despesasApi, fornecedoresApi, categoriasDespesasApi, contasBancariasApi, centrosCustosApi, projetosApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function DespesaForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -79,7 +81,7 @@ export default function DespesaForm() {
         projetoId: d.projetoId ? String(d.projetoId) : '',
       });
     } catch (err) {
-      setError('Erro ao carregar despesa');
+      setError(t('finance.expenses.form.saveError'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -96,15 +98,15 @@ export default function DespesaForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.descricao.trim()) {
-      toast.error('Descrição é obrigatória');
+      toast.error(t('finance.expenses.form.validation.descriptionRequired'));
       return;
     }
     if (!formData.valor) {
-      toast.error('Valor é obrigatório');
+      toast.error(t('finance.expenses.form.validation.valueRequired'));
       return;
     }
     if (!formData.dataVencimento) {
-      toast.error('Data de vencimento é obrigatória');
+      toast.error(t('finance.expenses.form.validation.dueDateRequired'));
       return;
     }
 
@@ -125,10 +127,10 @@ export default function DespesaForm() {
       };
       if (isEditing) await despesasApi.update(id, payload);
       else await despesasApi.create(payload);
-      toast.success(isEditing ? 'Despesa atualizada com sucesso!' : 'Despesa criada com sucesso!');
+      toast.success(isEditing ? t('finance.expenses.form.saveSuccessEdit') : t('finance.expenses.form.saveSuccessCreate'));
       navigate('/financeiro/despesas');
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Erro ao salvar despesa';
+      const errorMessage = err.response?.data?.message || t('finance.expenses.form.saveError');
       toast.error(errorMessage);
       console.error(err);
     } finally {
@@ -136,7 +138,7 @@ export default function DespesaForm() {
     }
   };
 
-  if (loading && isEditing) return <LoadingPage text="Carregando despesa..." />;
+  if (loading && isEditing) return <LoadingPage text={t('finance.expenses.form.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -144,93 +146,93 @@ export default function DespesaForm() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" asChild>
           <Link to="/financeiro/despesas">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('actions.back')}
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Despesa' : 'Nova Despesa'}</h1>
-          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações da despesa' : 'Cadastre uma nova despesa'}</p>
+          <h1 className="text-3xl font-bold">{isEditing ? t('finance.expenses.form.editTitle') : t('finance.expenses.form.newTitle')}</h1>
+          <p className="text-muted-foreground">{isEditing ? t('finance.expenses.form.editSubtitle') : t('finance.expenses.form.newSubtitle')}</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Dados da Despesa</CardTitle>
+            <CardTitle>{t('finance.expenses.form.cardTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="descricao">Descrição *</Label>
-                <Input id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder="Descrição da despesa" required />
+                <Label htmlFor="descricao">{t('finance.expenses.form.fields.description')} *</Label>
+                <Input id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder={t('finance.expenses.form.fields.descriptionPlaceholder')} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="valor">Valor *</Label>
+                <Label htmlFor="valor">{t('finance.expenses.form.fields.value')} *</Label>
                 <Input id="valor" name="valor" type="number" step="0.01" value={formData.valor} onChange={handleChange} placeholder="0.00" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dataVencimento">Data de Vencimento *</Label>
+                <Label htmlFor="dataVencimento">{t('finance.expenses.form.fields.dueDate')} *</Label>
                 <Input id="dataVencimento" name="dataVencimento" type="date" value={formData.dataVencimento} onChange={handleChange} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
+                <Label htmlFor="status">{t('finance.expenses.form.fields.status')} *</Label>
                 <select id="status" name="status" value={formData.status} onChange={handleChange} className="w-full px-3 py-2 border rounded" required>
-                  <option value="Pendente">Pendente</option>
-                  <option value="Pago">Pago</option>
-                  <option value="Cancelado">Cancelado</option>
+                  <option value="Pendente">{t('finance.expenses.status.pending')}</option>
+                  <option value="Pago">{t('finance.expenses.status.paid')}</option>
+                  <option value="Cancelado">{t('finance.expenses.status.canceled')}</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="fornecedorId">Fornecedor</Label>
+                <Label htmlFor="fornecedorId">{t('finance.expenses.form.fields.supplier')}</Label>
                 <select id="fornecedorId" name="fornecedorId" value={formData.fornecedorId} onChange={handleChange} className="w-full px-3 py-2 border rounded">
-                  <option value="">Selecione</option>
+                  <option value="">{t('actions.select')}</option>
                   {fornecedores.map((f) => (
                     <option key={f.id} value={f.id}>{f.nome}</option>
                   ))}
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="categoriaDespesaId">Categoria de Despesa</Label>
+                <Label htmlFor="categoriaDespesaId">{t('finance.expenses.form.fields.category')}</Label>
                 <select id="categoriaDespesaId" name="categoriaDespesaId" value={formData.categoriaDespesaId} onChange={handleChange} className="w-full px-3 py-2 border rounded">
-                  <option value="">Selecione</option>
+                  <option value="">{t('actions.select')}</option>
                   {categorias.map((c) => (
                     <option key={c.id} value={c.id}>{c.nome}</option>
                   ))}
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="contaBancariaId">Conta Bancária</Label>
+                <Label htmlFor="contaBancariaId">{t('finance.expenses.form.fields.bankAccount')}</Label>
                 <select id="contaBancariaId" name="contaBancariaId" value={formData.contaBancariaId} onChange={handleChange} className="w-full px-3 py-2 border rounded">
-                  <option value="">Selecione</option>
+                  <option value="">{t('actions.select')}</option>
                   {contas.map((c) => (
                     <option key={c.id} value={c.id}>{c.nome}</option>
                   ))}
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="centroCustoId">Centro de Custo</Label>
+                <Label htmlFor="centroCustoId">{t('finance.expenses.form.fields.costCenter')}</Label>
                 <select id="centroCustoId" name="centroCustoId" value={formData.centroCustoId} onChange={handleChange} className="w-full px-3 py-2 border rounded">
-                  <option value="">Selecione</option>
+                  <option value="">{t('actions.select')}</option>
                   {centrosCustos.map((c) => (
                     <option key={c.id} value={c.id}>{c.nome}</option>
                   ))}
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="projetoId">Projeto</Label>
+                <Label htmlFor="projetoId">{t('finance.expenses.form.fields.project')}</Label>
                 <select id="projetoId" name="projetoId" value={formData.projetoId} onChange={handleChange} className="w-full px-3 py-2 border rounded">
-                  <option value="">Selecione</option>
+                  <option value="">{t('actions.select')}</option>
                   {projetos.map((p) => (
                     <option key={p.id} value={p.id}>{p.nome}</option>
                   ))}
                 </select>
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="observacoes">Observações</Label>
-                <Textarea id="observacoes" name="observacoes" value={formData.observacoes} onChange={handleChange} placeholder="Observações sobre a despesa" rows={3} />
+                <Label htmlFor="observacoes">{t('finance.expenses.form.fields.notes')}</Label>
+                <Textarea id="observacoes" name="observacoes" value={formData.observacoes} onChange={handleChange} placeholder={t('finance.expenses.form.fields.notesPlaceholder')} rows={3} />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="comprovanteUrl">URL do Comprovante</Label>
+                <Label htmlFor="comprovanteUrl">{t('finance.expenses.form.fields.receiptUrl')}</Label>
                 <Input id="comprovanteUrl" name="comprovanteUrl" value={formData.comprovanteUrl} onChange={handleChange} placeholder="https://..." />
               </div>
             </div>
@@ -239,10 +241,10 @@ export default function DespesaForm() {
 
         <div className="flex items-center space-x-4">
           <Button type="submit" disabled={loading}>
-            <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+            <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : (isEditing ? t('actions.update') : t('actions.create'))}
           </Button>
           <Button type="button" variant="outline" asChild>
-            <Link to="/financeiro/despesas">Cancelar</Link>
+            <Link to="/financeiro/despesas">{t('actions.cancel')}</Link>
           </Button>
         </div>
       </form>

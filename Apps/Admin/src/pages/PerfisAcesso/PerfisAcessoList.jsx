@@ -15,8 +15,10 @@ import { perfisAcessoApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
 export default function PerfisAcessoList() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,7 +33,7 @@ export default function PerfisAcessoList() {
       const res = await perfisAcessoApi.getAll();
       setItems(res.data || []);
     } catch (err) {
-      setError('Erro ao carregar perfis de acesso');
+      setError(t('accessProfiles.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -45,18 +47,18 @@ export default function PerfisAcessoList() {
   const handleDelete = async (id) => {
     const perfil = items.find((p) => p.id === id);
     confirmDialog.show({
-      title: 'Excluir Perfil',
-      description: `Tem certeza que deseja excluir "${perfil?.nome || 'este perfil'}"? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('accessProfiles.deleteTitle'),
+      description: t('accessProfiles.deleteDescription', { name: perfil?.nome || t('accessProfiles.emptyMessage') }),
+      confirmText: t('accessProfiles.permissionDelete'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await perfisAcessoApi.delete(id);
-          toast.success('Perfil excluído com sucesso');
+          toast.success(t('accessProfiles.deleteSuccess'));
           await load();
         } catch (err) {
-          toast.error('Erro ao excluir perfil');
+          toast.error(t('accessProfiles.deleteError'));
           console.error(err);
           throw err;
         }
@@ -71,7 +73,7 @@ export default function PerfisAcessoList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text="Carregando perfis de acesso..." />;
+  if (loading) return <LoadingPage text={t('accessProfiles.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   const canEdit = can(RESOURCES.PERFIS_ACESSO, ACTIONS.EDIT);
@@ -81,13 +83,13 @@ export default function PerfisAcessoList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Perfis de Acesso</h1>
-          <p className="text-muted-foreground">Gerencie permissões por seção</p>
+          <h1 className="text-3xl font-bold">{t('accessProfiles.title')}</h1>
+          <p className="text-muted-foreground">{t('accessProfiles.subtitle')}</p>
         </div>
         {canEdit && (
           <Button asChild>
             <Link to="/perfis-acesso/novo">
-              <Plus className="h-4 w-4 mr-2" /> Novo Perfil
+              <Plus className="h-4 w-4 mr-2" /> {t('accessProfiles.new')}
             </Link>
           </Button>
         )}
@@ -95,16 +97,16 @@ export default function PerfisAcessoList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('accessProfiles.filters')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por nome</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('accessProfiles.searchByName')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite o nome do perfil"
+                placeholder={t('accessProfiles.placeholderName')}
               />
             </div>
           </div>
@@ -113,19 +115,19 @@ export default function PerfisAcessoList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Perfis ({total})</CardTitle>
+          <CardTitle>{t('accessProfiles.listTitle')} ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhum perfil encontrado.</div>
+            <div className="text-center py-8 text-muted-foreground">{t('accessProfiles.emptyMessage')}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Permissões</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('accessProfiles.name')}</TableHead>
+                  <TableHead>{t('accessProfiles.description')}</TableHead>
+                  <TableHead>{t('accessProfiles.permissions')}</TableHead>
+                  <TableHead className="text-right">{t('accessProfiles.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

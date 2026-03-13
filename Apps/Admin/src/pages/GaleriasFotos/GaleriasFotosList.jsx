@@ -15,8 +15,10 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { galeriasFotosApi, eventosApi, categoriasMidiasApi } from '@/lib/api';
 import { UPLOADS_BASE_URL } from '@/lib/env';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function GaleriasFotosList() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [eventos, setEventos] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -41,7 +43,7 @@ export default function GaleriasFotosList() {
       setEventos(eventosRes.data || []);
       setCategorias(categoriasRes.data || []);
     } catch (err) {
-      setError('Erro ao carregar galerias de fotos');
+      setError(t('photoGalleries.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -55,18 +57,18 @@ export default function GaleriasFotosList() {
   const handleDelete = async (id) => {
     const galeria = items.find(g => g.id === id);
     confirmDialog.show({
-      title: '⚠️ Excluir Galeria',
-      description: `Esta ação irá deletar a galeria "${galeria?.nome || 'esta galeria'}" e TODAS as fotos associadas. Esta ação não pode ser desfeita. Tem certeza que deseja continuar?`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('photoGalleries.deleteTitle'),
+      description: t('photoGalleries.deleteDescription', { name: galeria?.nome || t('photoGalleries.emptyMessage') }),
+      confirmText: t('accessProfiles.permissionDelete'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await galeriasFotosApi.delete(id);
-          toast.success('Galeria excluída com sucesso');
+          toast.success(t('photoGalleries.deleteSuccess'));
           await load();
         } catch (err) {
-          toast.error('Erro ao excluir galeria');
+          toast.error(t('photoGalleries.deleteError'));
           console.error(err);
           throw err;
         }
@@ -91,45 +93,45 @@ export default function GaleriasFotosList() {
     return `${UPLOADS_BASE_URL}/${caminhoNormalizado}`;
   };
 
-  if (loading) return <LoadingPage text="Carregando galerias..." />;
+  if (loading) return <LoadingPage text={t('photoGalleries.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Galerias de Fotos</h1>
-          <p className="text-muted-foreground">Gerencie as galerias de fotos da igreja</p>
+          <h1 className="text-3xl font-bold">{t('photoGalleries.title')}</h1>
+          <p className="text-muted-foreground">{t('photoGalleries.subtitle')}</p>
         </div>
         <Button asChild>
           <Link to="/galerias-fotos/novo">
-            <Plus className="h-4 w-4 mr-2" /> Nova Galeria
+            <Plus className="h-4 w-4 mr-2" /> {t('photoGalleries.new')}
           </Link>
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('photoGalleries.filters')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('photoGalleries.search')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Nome ou descrição"
+                placeholder={t('photoGalleries.searchPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Evento</label>
+              <label className="text-sm font-medium">{t('photoGalleries.event')}</label>
               <Select value={eventoFilter || 'all'} onValueChange={(value) => setEventoFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os eventos" />
+                  <SelectValue placeholder={t('photoGalleries.allEvents')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os eventos</SelectItem>
+                  <SelectItem value="all">{t('photoGalleries.allEvents')}</SelectItem>
                   {eventos.map((e) => (
                     <SelectItem key={e.id} value={String(e.id)}>{e.titulo}</SelectItem>
                   ))}
@@ -137,13 +139,13 @@ export default function GaleriasFotosList() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Categoria</label>
+              <label className="text-sm font-medium">{t('photoGalleries.category')}</label>
               <Select value={categoriaFilter || 'all'} onValueChange={(value) => setCategoriaFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todas as categorias" />
+                  <SelectValue placeholder={t('photoGalleries.allCategories')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas as categorias</SelectItem>
+                  <SelectItem value="all">{t('photoGalleries.allCategories')}</SelectItem>
                   {categorias.map((c) => (
                     <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>
                   ))}
@@ -151,15 +153,15 @@ export default function GaleriasFotosList() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium">{t('photoGalleries.status')}</label>
               <Select value={statusFilter || 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os status" />
+                  <SelectValue placeholder={t('photoGalleries.allStatus')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="true">Ativo</SelectItem>
-                  <SelectItem value="false">Inativo</SelectItem>
+                  <SelectItem value="all">{t('photoGalleries.allStatus')}</SelectItem>
+                  <SelectItem value="true">{t('photoGalleries.active')}</SelectItem>
+                  <SelectItem value="false">{t('photoGalleries.inactive')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -170,7 +172,7 @@ export default function GaleriasFotosList() {
       {filtered.length === 0 ? (
         <Card>
           <CardContent className="py-8">
-            <div className="text-center text-muted-foreground">Nenhuma galeria encontrada.</div>
+            <div className="text-center text-muted-foreground">{t('photoGalleries.emptyMessage')}</div>
           </CardContent>
         </Card>
       ) : (
@@ -197,13 +199,13 @@ export default function GaleriasFotosList() {
                   </div>
                   {!galeria.ativo && (
                     <div className="absolute top-2 right-2">
-                      <Badge variant="destructive">Inativo</Badge>
+                      <Badge variant="destructive">{t('photoGalleries.inactive')}</Badge>
                     </div>
                   )}
                 </div>
                 <CardContent className="p-4">
                   <h3 className="font-semibold text-lg mb-2">{galeria.nome}</h3>
-                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{galeria.descricao || 'Sem descrição'}</p>
+                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{galeria.descricao || t('photoGalleries.noDescription')}</p>
                   
                   <div className="space-y-2 mb-4 text-sm">
                     <div className="flex items-center gap-2">
@@ -212,20 +214,20 @@ export default function GaleriasFotosList() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Image className="h-4 w-4 text-muted-foreground" />
-                      <span>{galeria.quantidadeFotos || 0} foto(s)</span>
+                      <span>{t('photoGalleries.photosCount', { count: galeria.quantidadeFotos || 0 })}</span>
                     </div>
                     {galeria.eventoTitulo && (
-                      <div className="text-muted-foreground">Evento: {galeria.eventoTitulo}</div>
+                      <div className="text-muted-foreground">{t('photoGalleries.eventLabel')}: {galeria.eventoTitulo}</div>
                     )}
                     {galeria.categoriaMidiaNome && (
-                      <div className="text-muted-foreground">Categoria: {galeria.categoriaMidiaNome}</div>
+                      <div className="text-muted-foreground">{t('photoGalleries.categoryLabel')}: {galeria.categoriaMidiaNome}</div>
                     )}
                   </div>
 
                   <div className="flex items-center space-x-2">
                     <Button variant="outline" size="sm" asChild className="flex-1">
                       <Link to={`/galerias-fotos/${galeria.id}/fotos`}>
-                        <Image className="h-4 w-4 mr-2" /> Ver Fotos
+                        <Image className="h-4 w-4 mr-2" /> {t('photoGalleries.viewPhotos')}
                       </Link>
                     </Button>
                     <Button variant="ghost" size="sm" asChild>

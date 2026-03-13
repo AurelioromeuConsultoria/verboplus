@@ -9,8 +9,10 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { pessoasApi } from '@/lib/api';
+import { useTranslation } from 'react-i18next';
 
 export default function Aniversariantes() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -26,7 +28,7 @@ export default function Aniversariantes() {
       const res = await pessoasApi.getAniversariantes(diasNum, 500, mesNum);
       setItems(res.data || []);
     } catch (err) {
-      setError('Erro ao carregar aniversariantes');
+      setError(t('birthdays.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -39,7 +41,7 @@ export default function Aniversariantes() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(items, 20);
 
-  if (loading) return <LoadingPage text="Carregando aniversariantes..." />;
+  if (loading) return <LoadingPage text={t('birthdays.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   const formatDate = (value) => {
@@ -52,57 +54,57 @@ export default function Aniversariantes() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Aniversariantes</h1>
-          <p className="text-muted-foreground">Próximos aniversários das pessoas cadastradas</p>
+          <h1 className="text-3xl font-bold">{t('birthdays.title')}</h1>
+          <p className="text-muted-foreground">{t('birthdays.subtitle')}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtro</CardTitle>
+          <CardTitle>{t('birthdays.filter')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4 md:items-end">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Dias</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('birthdays.days')}</label>
               <Input
                 value={dias}
                 onChange={(e) => setDias(e.target.value)}
-                placeholder="Ex: 30"
+                placeholder={t('birthdays.daysPlaceholder')}
                 inputMode="numeric"
                 disabled={!!mes}
               />
               {mes && (
                 <p className="text-xs text-muted-foreground">
-                  Com mês selecionado, o filtro de dias é ignorado.
+                  {t('birthdays.daysHint')}
                 </p>
               )}
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Mês do ano</label>
+              <label className="text-sm font-medium">{t('birthdays.month')}</label>
               <select
                 value={mes || ''}
                 onChange={(e) => setMes(e.target.value)}
                 className="w-full px-3 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               >
-                <option value="">Todos (próximos dias)</option>
-                <option value="1">Janeiro</option>
-                <option value="2">Fevereiro</option>
-                <option value="3">Março</option>
-                <option value="4">Abril</option>
-                <option value="5">Maio</option>
-                <option value="6">Junho</option>
-                <option value="7">Julho</option>
-                <option value="8">Agosto</option>
-                <option value="9">Setembro</option>
-                <option value="10">Outubro</option>
-                <option value="11">Novembro</option>
-                <option value="12">Dezembro</option>
+                <option value="">{t('birthdays.allMonths')}</option>
+                <option value="1">{t('birthdays.months.1')}</option>
+                <option value="2">{t('birthdays.months.2')}</option>
+                <option value="3">{t('birthdays.months.3')}</option>
+                <option value="4">{t('birthdays.months.4')}</option>
+                <option value="5">{t('birthdays.months.5')}</option>
+                <option value="6">{t('birthdays.months.6')}</option>
+                <option value="7">{t('birthdays.months.7')}</option>
+                <option value="8">{t('birthdays.months.8')}</option>
+                <option value="9">{t('birthdays.months.9')}</option>
+                <option value="10">{t('birthdays.months.10')}</option>
+                <option value="11">{t('birthdays.months.11')}</option>
+                <option value="12">{t('birthdays.months.12')}</option>
               </select>
             </div>
             <div className="flex md:justify-end">
               <Button onClick={load} className="w-full md:w-auto">
-                <CalendarDays className="h-4 w-4 mr-2" /> Atualizar
+                <CalendarDays className="h-4 w-4 mr-2" /> {t('birthdays.update')}
               </Button>
             </div>
           </div>
@@ -111,19 +113,19 @@ export default function Aniversariantes() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Aniversariantes ({total})</CardTitle>
+          <CardTitle>{t('birthdays.listTitle')} ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {items.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhum aniversariante encontrado.</div>
+            <div className="text-center py-8 text-muted-foreground">{t('birthdays.emptyMessage')}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Data de Nascimento</TableHead>
-                  <TableHead>Próximo Aniversário</TableHead>
-                  <TableHead>Dias</TableHead>
+                  <TableHead>{t('birthdays.table.name')}</TableHead>
+                  <TableHead>{t('birthdays.table.birthDate')}</TableHead>
+                  <TableHead>{t('birthdays.table.nextBirthday')}</TableHead>
+                  <TableHead>{t('birthdays.table.days')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

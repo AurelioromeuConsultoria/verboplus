@@ -15,8 +15,10 @@ import { projetosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
 export default function ProjetosList() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,7 +33,7 @@ export default function ProjetosList() {
       const res = await projetosApi.getAll();
       setItems(res.data || []);
     } catch (err) {
-      setError('Erro ao carregar projetos');
+      setError(t('finance.projects.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -45,18 +47,18 @@ export default function ProjetosList() {
   const handleDelete = async (id) => {
     const projeto = items.find((p) => p.id === id);
     confirmDialog.show({
-      title: 'Excluir Projeto',
-      description: `Tem certeza que deseja excluir "${projeto?.nome || 'este projeto'}"? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('finance.projects.deleteTitle'),
+      description: t('finance.projects.deleteDescription', { name: projeto?.nome || t('finance.projects.emptyMessage') }),
+      confirmText: t('finance.revenues.delete.confirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await projetosApi.delete(id);
-          toast.success('Projeto excluído com sucesso');
+          toast.success(t('finance.projects.deleteSuccess'));
           await load();
         } catch (err) {
-          toast.error('Erro ao excluir projeto');
+          toast.error(t('finance.projects.deleteError'));
           console.error(err);
           throw err;
         }
@@ -76,7 +78,7 @@ export default function ProjetosList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text="Carregando projetos..." />;
+  if (loading) return <LoadingPage text={t('finance.projects.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   const canEdit = can(RESOURCES.FINANCEIRO, ACTIONS.EDIT);
@@ -86,13 +88,13 @@ export default function ProjetosList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Projetos</h1>
-          <p className="text-muted-foreground">Gerencie os projetos</p>
+          <h1 className="text-3xl font-bold">{t('finance.projects.title')}</h1>
+          <p className="text-muted-foreground">{t('finance.projects.subtitle')}</p>
         </div>
         {canEdit && (
           <Button asChild>
             <Link to="/financeiro/projetos/novo">
-              <Plus className="h-4 w-4 mr-2" /> Novo Projeto
+              <Plus className="h-4 w-4 mr-2" /> {t('finance.projects.new')}
             </Link>
           </Button>
         )}
@@ -100,16 +102,16 @@ export default function ProjetosList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('finance.common.filters')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por nome</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('finance.common.searchByName')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite o nome do projeto"
+                placeholder={t('finance.common.searchByName')}
               />
             </div>
           </div>
@@ -118,20 +120,20 @@ export default function ProjetosList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Projetos ({total})</CardTitle>
+          <CardTitle>{t('finance.projects.listTitle')} ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhum projeto encontrado.</div>
+            <div className="text-center py-8 text-muted-foreground">{t('finance.projects.emptyMessage')}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Orçamento</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('finance.common.name')}</TableHead>
+                  <TableHead>{t('finance.common.description')}</TableHead>
+                  <TableHead>{t('finance.projects.tableBudget')}</TableHead>
+                  <TableHead>{t('finance.common.status')}</TableHead>
+                  <TableHead className="text-right">{t('finance.revenues.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -142,7 +144,7 @@ export default function ProjetosList() {
                     <TableCell>{formatCurrency(p.orcamento)}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs ${p.ativo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {p.ativo ? 'Ativo' : 'Inativo'}
+                        {p.ativo ? t('finance.revenueCategories.statusActive') : t('finance.revenueCategories.statusInactive')}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">

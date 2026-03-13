@@ -15,8 +15,10 @@ import { despesasApi, fornecedoresApi, categoriasDespesasApi, contasBancariasApi
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
 export default function DespesasList() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,7 +33,7 @@ export default function DespesasList() {
       const res = await despesasApi.getAll();
       setItems(res.data || []);
     } catch (err) {
-      setError('Erro ao carregar despesas');
+      setError(t('finance.expenses.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -45,18 +47,18 @@ export default function DespesasList() {
   const handleDelete = async (id) => {
     const despesa = items.find((d) => d.id === id);
     confirmDialog.show({
-      title: 'Excluir Despesa',
-      description: `Tem certeza que deseja excluir "${despesa?.descricao || 'esta despesa'}"? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('finance.expenses.delete.title'),
+      description: t('finance.expenses.delete.description', { name: despesa?.descricao || t('finance.expenses.emptyMessage') }),
+      confirmText: t('finance.expenses.delete.confirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await despesasApi.delete(id);
-          toast.success('Despesa excluída com sucesso');
+          toast.success(t('finance.expenses.delete.success'));
           await load();
         } catch (err) {
-          toast.error('Erro ao excluir despesa');
+          toast.error(t('finance.expenses.delete.error'));
           console.error(err);
           throw err;
         }
@@ -75,9 +77,9 @@ export default function DespesasList() {
 
   const getStatusLabel = (status) => {
     const statusMap = {
-      'Pendente': 'Pendente',
-      'Pago': 'Pago',
-      'Cancelado': 'Cancelado',
+      'Pendente': t('finance.expenses.status.pending'),
+      'Pago': t('finance.expenses.status.paid'),
+      'Cancelado': t('finance.expenses.status.canceled'),
     };
     return statusMap[status] || status;
   };
@@ -98,7 +100,7 @@ export default function DespesasList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text="Carregando despesas..." />;
+  if (loading) return <LoadingPage text={t('finance.expenses.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   const canEdit = can(RESOURCES.FINANCEIRO, ACTIONS.EDIT);
@@ -108,13 +110,13 @@ export default function DespesasList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Despesas</h1>
-          <p className="text-muted-foreground">Gerencie as despesas</p>
+          <h1 className="text-3xl font-bold">{t('finance.expenses.title')}</h1>
+          <p className="text-muted-foreground">{t('finance.expenses.subtitle')}</p>
         </div>
         {canEdit && (
           <Button asChild>
             <Link to="/financeiro/despesas/novo">
-              <Plus className="h-4 w-4 mr-2" /> Nova Despesa
+              <Plus className="h-4 w-4 mr-2" /> {t('finance.expenses.new')}
             </Link>
           </Button>
         )}
@@ -122,16 +124,16 @@ export default function DespesasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('finance.common.filters')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por descrição</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('finance.expenses.filters.searchLabel')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite a descrição da despesa"
+                placeholder={t('finance.expenses.filters.searchPlaceholder')}
               />
             </div>
           </div>
@@ -140,22 +142,22 @@ export default function DespesasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Despesas ({total})</CardTitle>
+          <CardTitle>{t('finance.expenses.listTitle')} ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhuma despesa encontrada.</div>
+            <div className="text-center py-8 text-muted-foreground">{t('finance.expenses.emptyMessage')}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Data Vencimento</TableHead>
-                  <TableHead>Fornecedor</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('finance.expenses.table.description')}</TableHead>
+                  <TableHead>{t('finance.expenses.table.value')}</TableHead>
+                  <TableHead>{t('finance.expenses.table.dueDate')}</TableHead>
+                  <TableHead>{t('finance.expenses.table.supplier')}</TableHead>
+                  <TableHead>{t('finance.expenses.table.category')}</TableHead>
+                  <TableHead>{t('finance.expenses.table.status')}</TableHead>
+                  <TableHead className="text-right">{t('finance.expenses.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

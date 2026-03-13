@@ -15,8 +15,10 @@ import { fornecedoresApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
 export default function FornecedoresList() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,7 +33,7 @@ export default function FornecedoresList() {
       const res = await fornecedoresApi.getAll();
       setItems(res.data || []);
     } catch (err) {
-      setError('Erro ao carregar fornecedores');
+      setError(t('suppliers.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -45,18 +47,18 @@ export default function FornecedoresList() {
   const handleDelete = async (id) => {
     const fornecedor = items.find((f) => f.id === id);
     confirmDialog.show({
-      title: 'Excluir Fornecedor',
-      description: `Tem certeza que deseja excluir "${fornecedor?.nome || 'este fornecedor'}"? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('suppliers.deleteTitle'),
+      description: t('suppliers.deleteDescription', { name: fornecedor?.nome || t('suppliers.emptyMessage') }),
+      confirmText: t('accessProfiles.permissionDelete'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await fornecedoresApi.delete(id);
-          toast.success('Fornecedor excluído com sucesso');
+          toast.success(t('suppliers.deleteSuccess'));
           await load();
         } catch (err) {
-          toast.error('Erro ao excluir fornecedor');
+          toast.error(t('suppliers.deleteError'));
           console.error(err);
           throw err;
         }
@@ -71,7 +73,7 @@ export default function FornecedoresList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text="Carregando fornecedores..." />;
+  if (loading) return <LoadingPage text={t('suppliers.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   const canEdit = can(RESOURCES.FORNECEDORES, ACTIONS.EDIT);
@@ -81,13 +83,13 @@ export default function FornecedoresList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Fornecedores</h1>
-          <p className="text-muted-foreground">Gerencie fornecedores e contatos responsáveis</p>
+          <h1 className="text-3xl font-bold">{t('suppliers.title')}</h1>
+          <p className="text-muted-foreground">{t('suppliers.subtitle')}</p>
         </div>
         {canEdit && (
           <Button asChild>
             <Link to="/financeiro/fornecedores/novo">
-              <Plus className="h-4 w-4 mr-2" /> Novo Fornecedor
+              <Plus className="h-4 w-4 mr-2" /> {t('suppliers.new')}
             </Link>
           </Button>
         )}
@@ -95,16 +97,16 @@ export default function FornecedoresList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('suppliers.filters')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por nome</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('suppliers.searchByName')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite o nome do fornecedor"
+                placeholder={t('suppliers.placeholderName')}
               />
             </div>
           </div>
@@ -113,20 +115,20 @@ export default function FornecedoresList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Fornecedores ({total})</CardTitle>
+          <CardTitle>{t('suppliers.listTitle')} ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhum fornecedor encontrado.</div>
+            <div className="text-center py-8 text-muted-foreground">{t('suppliers.emptyMessage')}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>CNPJ/CPF</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('suppliers.name')}</TableHead>
+                  <TableHead>{t('suppliers.cnpjCpf')}</TableHead>
+                  <TableHead>{t('suppliers.phone')}</TableHead>
+                  <TableHead>{t('suppliers.contact')}</TableHead>
+                  <TableHead className="text-right">{t('suppliers.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

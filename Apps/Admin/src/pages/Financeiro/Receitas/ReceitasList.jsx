@@ -15,8 +15,10 @@ import { receitasApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
 export default function ReceitasList() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,7 +33,7 @@ export default function ReceitasList() {
       const res = await receitasApi.getAll();
       setItems(res.data || []);
     } catch (err) {
-      setError('Erro ao carregar receitas');
+      setError(t('finance.revenues.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -45,18 +47,18 @@ export default function ReceitasList() {
   const handleDelete = async (id) => {
     const receita = items.find((r) => r.id === id);
     confirmDialog.show({
-      title: 'Excluir Receita',
-      description: `Tem certeza que deseja excluir "${receita?.descricao || 'esta receita'}"? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('finance.revenues.delete.title'),
+      description: t('finance.revenues.delete.description', { name: receita?.descricao || t('finance.revenues.emptyMessage') }),
+      confirmText: t('finance.revenues.delete.confirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await receitasApi.delete(id);
-          toast.success('Receita excluída com sucesso');
+          toast.success(t('finance.revenues.delete.success'));
           await load();
         } catch (err) {
-          toast.error('Erro ao excluir receita');
+          toast.error(t('finance.revenues.delete.error'));
           console.error(err);
           throw err;
         }
@@ -75,9 +77,9 @@ export default function ReceitasList() {
 
   const getStatusLabel = (status) => {
     const statusMap = {
-      'Pendente': 'Pendente',
-      'Recebido': 'Recebido',
-      'Cancelado': 'Cancelado',
+      'Pendente': t('finance.revenues.status.pending'),
+      'Recebido': t('finance.revenues.status.received'),
+      'Cancelado': t('finance.revenues.status.canceled'),
     };
     return statusMap[status] || status;
   };
@@ -98,7 +100,7 @@ export default function ReceitasList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text="Carregando receitas..." />;
+  if (loading) return <LoadingPage text={t('finance.revenues.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   const canEdit = can(RESOURCES.FINANCEIRO, ACTIONS.EDIT);
@@ -108,13 +110,13 @@ export default function ReceitasList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Receitas</h1>
-          <p className="text-muted-foreground">Gerencie as receitas</p>
+          <h1 className="text-3xl font-bold">{t('finance.revenues.title')}</h1>
+          <p className="text-muted-foreground">{t('finance.revenues.subtitle')}</p>
         </div>
         {canEdit && (
           <Button asChild>
             <Link to="/financeiro/receitas/novo">
-              <Plus className="h-4 w-4 mr-2" /> Nova Receita
+              <Plus className="h-4 w-4 mr-2" /> {t('finance.revenues.new')}
             </Link>
           </Button>
         )}
@@ -122,16 +124,16 @@ export default function ReceitasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('finance.common.filters')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por descrição</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('finance.revenues.filters.searchLabel')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite a descrição da receita"
+                placeholder={t('finance.revenues.filters.searchPlaceholder')}
               />
             </div>
           </div>
@@ -140,23 +142,23 @@ export default function ReceitasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Receitas ({total})</CardTitle>
+          <CardTitle>{t('finance.revenues.listTitle')} ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhuma receita encontrada.</div>
+            <div className="text-center py-8 text-muted-foreground">{t('finance.revenues.emptyMessage')}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Data Recebimento</TableHead>
-                  <TableHead>Conta Bancária</TableHead>
-                  <TableHead>Centro de Custo</TableHead>
-                  <TableHead>Projeto</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('finance.revenues.table.description')}</TableHead>
+                  <TableHead>{t('finance.revenues.table.value')}</TableHead>
+                  <TableHead>{t('finance.revenues.table.date')}</TableHead>
+                  <TableHead>{t('finance.revenues.table.bankAccount')}</TableHead>
+                  <TableHead>{t('finance.revenues.table.costCenter')}</TableHead>
+                  <TableHead>{t('finance.revenues.table.project')}</TableHead>
+                  <TableHead>{t('finance.revenues.table.status')}</TableHead>
+                  <TableHead className="text-right">{t('finance.revenues.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

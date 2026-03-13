@@ -22,8 +22,10 @@ import { kidsApi } from '../../lib/api';
 import Loading from '../../components/ui/loading';
 import ErrorMessage from '../../components/ui/error-message';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 const KidsCheckinsList = () => {
+  const { t } = useTranslation();
   const [checkins, setCheckins] = useState([]);
   const [criancas, setCriancas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,9 +65,9 @@ const KidsCheckinsList = () => {
       setCheckins(checkinsResponse.data);
       setCriancas(criancasResponse.data);
     } catch (err) {
-      setError('Erro ao carregar dados');
+      setError(t('kids.errorLoad'));
       console.error('Erro ao buscar dados:', err);
-      toast.error('Erro ao carregar check-ins');
+      toast.error(t('kids.toastError'));
     } finally {
       setLoading(false);
     }
@@ -177,12 +179,12 @@ const KidsCheckinsList = () => {
   const getStatusBadge = (status) => {
     const statusLower = status?.toLowerCase() || '';
     if (statusLower === 'checked_in' || statusLower === 'ativo') {
-      return <Badge className="bg-green-500 hover:bg-green-600">Ativo</Badge>;
+      return <Badge className="bg-green-500 hover:bg-green-600">{t('kids.active')}</Badge>;
     }
     if (statusLower === 'checked_out' || statusLower === 'finalizado') {
-      return <Badge className="bg-gray-500 hover:bg-gray-600">Finalizado</Badge>;
+      return <Badge className="bg-gray-500 hover:bg-gray-600">{t('kids.finished')}</Badge>;
     }
-    return <Badge variant="secondary">{status || 'Desconhecido'}</Badge>;
+    return <Badge variant="secondary">{status || t('kids.unknown')}</Badge>;
   };
 
   const getMetodoBadge = (metodo) => {
@@ -197,7 +199,7 @@ const KidsCheckinsList = () => {
   };
 
   if (loading) {
-    return <Loading />;
+    return <Loading text={t('kids.loading')} />;
   }
 
   if (error) {
@@ -208,9 +210,9 @@ const KidsCheckinsList = () => {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Check-ins Kids</h1>
+          <h1 className="text-3xl font-bold text-foreground">{t('kids.title')}</h1>
           <p className="text-muted-foreground mt-1">
-            Histórico de check-ins e check-outs das crianças
+            {t('kids.subtitle')}
           </p>
         </div>
       </div>
@@ -220,14 +222,14 @@ const KidsCheckinsList = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total de Check-ins
+              {t('kids.totalCheckins')}
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{stats.total}</div>
             <p className="text-xs text-muted-foreground">
-              Registros no sistema
+              {t('kids.recordsInSystem')}
             </p>
           </CardContent>
         </Card>
@@ -235,14 +237,14 @@ const KidsCheckinsList = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Check-ins Ativos
+              {t('kids.activeCheckins')}
             </CardTitle>
             <LogIn className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-500">{stats.ativos}</div>
             <p className="text-xs text-muted-foreground">
-              Crianças no local
+              {t('kids.childrenOnSite')}
             </p>
           </CardContent>
         </Card>
@@ -250,14 +252,14 @@ const KidsCheckinsList = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Check-outs Realizados
+              {t('kids.checkoutsDone')}
             </CardTitle>
             <LogOut className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-500">{stats.finalizados}</div>
             <p className="text-xs text-muted-foreground">
-              Sessões finalizadas
+              {t('kids.sessionsFinished')}
             </p>
           </CardContent>
         </Card>
@@ -265,14 +267,14 @@ const KidsCheckinsList = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Check-ins Hoje
+              {t('kids.checkinsToday')}
             </CardTitle>
             <Calendar className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-500">{stats.hoje}</div>
             <p className="text-xs text-muted-foreground">
-              Registros de hoje
+              {t('kids.todayRecords')}
             </p>
           </CardContent>
         </Card>
@@ -283,17 +285,17 @@ const KidsCheckinsList = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
-            Filtros
+            {t('kids.filters')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Buscar</label>
+              <label className="text-sm font-medium text-foreground">{t('kids.search')}</label>
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Nome da criança..."
+                  placeholder={t('kids.searchPlaceholder')}
                   value={filtros.busca}
                   onChange={(e) => handleFiltroChange('busca', e.target.value)}
                   className="pl-8"
@@ -302,16 +304,16 @@ const KidsCheckinsList = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Criança</label>
+              <label className="text-sm font-medium text-foreground">{t('kids.child')}</label>
               <Select
                 value={filtros.criancaPessoaId || 'all'}
                 onValueChange={(value) => handleFiltroChange('criancaPessoaId', value === 'all' ? '' : value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Todas as crianças" />
+                  <SelectValue placeholder={t('kids.allChildren')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas as crianças</SelectItem>
+                  <SelectItem value="all">{t('kids.allChildren')}</SelectItem>
                   {criancas.map((crianca) => (
                     <SelectItem key={crianca.pessoaId} value={crianca.pessoaId.toString()}>
                       {crianca.nome}
@@ -322,24 +324,24 @@ const KidsCheckinsList = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Status</label>
+              <label className="text-sm font-medium text-foreground">{t('kids.status')}</label>
               <Select
                 value={filtros.status}
                 onValueChange={(value) => handleFiltroChange('status', value === 'all' ? '' : value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os status" />
+                  <SelectValue placeholder={t('kids.allStatus')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="finalizado">Finalizado</SelectItem>
+                  <SelectItem value="all">{t('kids.allStatus')}</SelectItem>
+                  <SelectItem value="ativo">{t('kids.active')}</SelectItem>
+                  <SelectItem value="finalizado">{t('kids.finished')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Data Início</label>
+              <label className="text-sm font-medium text-foreground">{t('kids.dateStart')}</label>
               <Input
                 type="date"
                 value={filtros.dataInicio}
@@ -348,7 +350,7 @@ const KidsCheckinsList = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Data Fim</label>
+              <label className="text-sm font-medium text-foreground">{t('kids.dateEnd')}</label>
               <Input
                 type="date"
                 value={filtros.dataFim}
@@ -359,7 +361,7 @@ const KidsCheckinsList = () => {
 
           <div className="mt-4 flex justify-end">
             <Button variant="outline" onClick={limparFiltros}>
-              Limpar Filtros
+              {t('kids.clearFilters')}
             </Button>
           </div>
         </CardContent>
@@ -369,28 +371,28 @@ const KidsCheckinsList = () => {
       <Card>
         <CardHeader>
           <CardTitle>
-            Histórico de Check-ins ({checkinsFiltrados.length})
+            {t('kids.historyTitle')} ({checkinsFiltrados.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {checkinsFiltrados.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              Nenhum check-in encontrado com os filtros aplicados.
+              {t('kids.emptyMessage')}
             </div>
           ) : (
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Criança</TableHead>
-                    <TableHead>Check-in</TableHead>
-                    <TableHead>Check-out</TableHead>
-                    <TableHead>Duração</TableHead>
-                    <TableHead>Método</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Check-in por</TableHead>
-                    <TableHead>Check-out por</TableHead>
-                    <TableHead>Observações</TableHead>
+                    <TableHead>{t('kids.table.child')}</TableHead>
+                    <TableHead>{t('kids.table.checkin')}</TableHead>
+                    <TableHead>{t('kids.table.checkout')}</TableHead>
+                    <TableHead>{t('kids.table.duration')}</TableHead>
+                    <TableHead>{t('kids.table.method')}</TableHead>
+                    <TableHead>{t('kids.table.status')}</TableHead>
+                    <TableHead>{t('kids.table.checkinBy')}</TableHead>
+                    <TableHead>{t('kids.table.checkoutBy')}</TableHead>
+                    <TableHead>{t('kids.table.notes')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
