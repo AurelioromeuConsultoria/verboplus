@@ -139,7 +139,7 @@ public class CadastroMembroNotificationService : ICadastroMembroNotificationServ
 
     private static string BuildWhatsAppMessage(string nome)
     {
-        return $"Olá, {nome}!\n\nSeu cadastro foi efetudo com sucesso no sistema da Kingdom!\n\nObrigado!";
+        return $"Olá, {nome}!\n\nSeu cadastro foi efetuado com sucesso no sistema da Kingdom!\n\nObrigado!";
     }
 
     private static string BuildHtmlEmail(string nome)
