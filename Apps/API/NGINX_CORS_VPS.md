@@ -12,7 +12,7 @@ server {
     server_name api.kingdombr.com.br;
 
     location / {
-        proxy_pass http://localhost:5000;  # ou a porta da sua API
+        proxy_pass http://localhost:7000;  # ou a porta da sua API
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection keep-alive;

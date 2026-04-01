@@ -114,15 +114,27 @@ public class PessoaRepository : IPessoaRepository
     public async Task<Pessoa?> GetByWhatsAppAsync(string whatsApp)
     {
         var whatsAppNormalizado = NormalizarTelefone(whatsApp);
-        return await _context.Set<Pessoa>()
-            .FirstOrDefaultAsync(p => p.WhatsApp != null && NormalizarTelefone(p.WhatsApp) == whatsAppNormalizado);
+        if (string.IsNullOrWhiteSpace(whatsAppNormalizado))
+            return null;
+
+        var pessoas = await _context.Set<Pessoa>()
+            .Where(p => p.WhatsApp != null)
+            .ToListAsync();
+
+        return pessoas.FirstOrDefault(p => NormalizarTelefone(p.WhatsApp!) == whatsAppNormalizado);
     }
 
     public async Task<Pessoa?> GetByTelefoneAsync(string telefone)
     {
         var telefoneNormalizado = NormalizarTelefone(telefone);
-        return await _context.Set<Pessoa>()
-            .FirstOrDefaultAsync(p => p.Telefone != null && NormalizarTelefone(p.Telefone) == telefoneNormalizado);
+        if (string.IsNullOrWhiteSpace(telefoneNormalizado))
+            return null;
+
+        var pessoas = await _context.Set<Pessoa>()
+            .Where(p => p.Telefone != null)
+            .ToListAsync();
+
+        return pessoas.FirstOrDefault(p => NormalizarTelefone(p.Telefone!) == telefoneNormalizado);
     }
 
     private static string NormalizarTelefone(string telefone)
@@ -170,6 +182,5 @@ public class PessoaRepository : IPessoaRepository
         }
     }
 }
-
 
 

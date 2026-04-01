@@ -20,5 +20,6 @@ public class CadastroMembroDto
     [MaxLength(20)]
     public string WhatsApp { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "Data de nascimento é obrigatória")]
     public DateTime? DataNascimento { get; set; }
 }

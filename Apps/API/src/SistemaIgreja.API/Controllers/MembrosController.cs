@@ -26,9 +26,21 @@ public class MembrosController : ControllerBase
     [HttpPost("cadastro")]
     public async Task<ActionResult<CadastroMembroResultadoDto>> Cadastrar([FromBody] CadastroMembroDto dto)
     {
-        var resultado = await _service.CadastrarAsync(dto);
-        if (!resultado.Sucesso)
-            return BadRequest(resultado);
-        return Ok(resultado);
+        try
+        {
+            var resultado = await _service.CadastrarAsync(dto);
+            if (!resultado.Sucesso)
+                return BadRequest(resultado);
+
+            return Ok(resultado);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new CadastroMembroResultadoDto
+            {
+                Sucesso = false,
+                Mensagem = ex.Message
+            });
+        }
     }
 }

@@ -103,6 +103,7 @@ builder.Services.AddScoped<IKidsDeviceTokenRepository, KidsDeviceTokenRepository
 builder.Services.AddScoped<IPessoaService, PessoaService>();
 builder.Services.AddScoped<IPessoaPerfilService, PessoaPerfilService>();
 builder.Services.AddScoped<IMembroCadastroService, MembroCadastroService>();
+builder.Services.AddScoped<ICadastroMembroNotificationService, CadastroMembroNotificationService>();
 builder.Services.AddScoped<IVisitanteService, VisitanteService>();
 builder.Services.AddScoped<IConfiguracaoMensagemService, ConfiguracaoMensagemService>();
 builder.Services.AddScoped<IMensagemAgendadaService, MensagemAgendadaService>();
@@ -154,10 +155,14 @@ builder.Services.Configure<FirebaseKidsPushOptions>(
 builder.Services.Configure<EvolutionApiSettings>(
     builder.Configuration.GetSection("EvolutionApi"));
 
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection(EmailSettings.SectionName));
+
 builder.Services.Configure<MessageSchedulerSettings>(
     builder.Configuration.GetSection(MessageSchedulerSettings.SectionName));
 
 builder.Services.AddHttpClient<IEvolutionApiService, EvolutionApiService>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<NoticiaUrlExtractorService>();
@@ -273,16 +278,33 @@ var allowedCorsOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     "https://admin.kingdombr.com.br",
     "http://admin.kingdombr.com.br",
     "http://localhost:3000",
-    "http://localhost:5173",
+    "http://localhost:5174",
     "http://localhost:4173"
 };
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicyName, policy =>
-        policy.WithOrigins(allowedCorsOrigins.ToArray())
-        .AllowAnyHeader()
-        .AllowAnyMethod()
+        policy
+            .SetIsOriginAllowed(origin =>
+            {
+                if (string.IsNullOrWhiteSpace(origin))
+                    return false;
+
+                if (allowedCorsOrigins.Contains(origin))
+                    return true;
+
+                // Permitir qualquer porta em localhost/127.0.0.1 (ambiente de desenvolvimento)
+                if (origin.StartsWith("http://localhost:") || origin.StartsWith("https://localhost:"))
+                    return true;
+
+                if (origin.StartsWith("http://127.0.0.1:") || origin.StartsWith("https://127.0.0.1:"))
+                    return true;
+
+                return false;
+            })
+            .AllowAnyHeader()
+            .AllowAnyMethod()
     );
 });
 
@@ -292,7 +314,15 @@ var app = builder.Build();
 app.Use(async (context, next) =>
 {
     var origin = context.Request.Headers["Origin"].FirstOrDefault();
-    if (!string.IsNullOrEmpty(origin) && allowedCorsOrigins.Contains(origin))
+    var isAllowedOrigin =
+        !string.IsNullOrEmpty(origin) &&
+        (allowedCorsOrigins.Contains(origin) ||
+         origin.StartsWith("http://localhost:") ||
+         origin.StartsWith("https://localhost:") ||
+         origin.StartsWith("http://127.0.0.1:") ||
+         origin.StartsWith("https://127.0.0.1:"));
+
+    if (isAllowedOrigin)
     {
         context.Response.Headers.Append("Access-Control-Allow-Origin", origin);
         context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
