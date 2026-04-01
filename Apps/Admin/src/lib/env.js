@@ -5,7 +5,7 @@ function normalizeBaseUrl(url) {
 
 const PRODUCTION_UPLOADS = 'https://api.kingdombr.com.br';
 
-export const API_BASE_URL = normalizeBaseUrl(import.meta.env.VITE_API_URL || 'http://localhost:5000');
+export const API_BASE_URL = normalizeBaseUrl(import.meta.env.VITE_API_URL || 'http://localhost:7000');
 
 // Os endpoints do backend usam prefixo /api
 export const API_BASE_URL_WITH_API = `${API_BASE_URL}/api`;
@@ -24,4 +24,3 @@ export const PRODUCTION_API_BASE_URL_WITH_API = `${PRODUCTION_UPLOADS}/api`;
 if (import.meta.env.DEV && isApiLocal) {
   console.info('[Admin] API local: imagens e uploads de galeria usam produção (https://api.kingdombr.com.br)');
 }
-

@@ -125,7 +125,7 @@ Nesse caso, o frontend identificará qual é a foto de destaque comparando com o
 Após implementar, teste com:
 
 ```bash
-GET http://localhost:5000/api/galeriasFotos/1/fotos
+GET http://localhost:7000/api/galeriasFotos/1/fotos
 Authorization: Bearer {seu-token}
 ```
 
@@ -135,7 +135,6 @@ Authorization: Bearer {seu-token}
 2. Deve verificar se o diretório existe antes de tentar ler os arquivos
 3. Deve retornar `404` se a galeria não existir
 4. Pode ser útil ordenar os arquivos por nome ou data de criação
-
 
 
 

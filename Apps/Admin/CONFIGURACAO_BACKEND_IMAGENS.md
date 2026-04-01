@@ -72,7 +72,7 @@ app.UseCors("AllowFrontend");
 Após configurar, teste acessando diretamente no navegador:
 
 ```
-http://localhost:5000/uploads/fotos/b0f2ca3d-9528-4f0c-86e5-f569ed42da2a/thumbnail/e98cc523-daf7-4b5d-987c-1abfc21116ed.jpg
+http://localhost:7000/uploads/fotos/b0f2ca3d-9528-4f0c-86e5-f569ed42da2a/thumbnail/e98cc523-daf7-4b5d-987c-1abfc21116ed.jpg
 ```
 
 Se a imagem aparecer, a configuração está correta!
@@ -125,7 +125,7 @@ app.Run();
 
 2. **Se as imagens estão em `wwwroot/uploads`:**
    - Use apenas `app.UseStaticFiles()` (já serve tudo dentro de `wwwroot`)
-   - A URL será: `http://localhost:5000/uploads/fotos/...`
+   - A URL será: `http://localhost:7000/uploads/fotos/...`
 
 3. **Se as imagens estão fora de `wwwroot` (raiz do projeto):**
    - Use `PhysicalFileProvider` com `ContentRootPath`
@@ -171,7 +171,6 @@ Se as requisições a `https://api.kingdombr.com.br/uploads/fotos/.../thumbnail/
    "Uploads": { "Path": "D:\\caminho\\para\\uploads" }
    ```
    ou a variável de ambiente `UPLOADS_PATH`.
-
 
 
 
