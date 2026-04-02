@@ -17,6 +17,8 @@ public class EquipeRepository : IEquipeRepository
     public async Task<IEnumerable<Equipe>> GetAllAsync()
     {
         return await _context.Set<Equipe>()
+            .Include(e => e.LiderUsuario)
+                .ThenInclude(u => u!.Pessoa)
             .Include(e => e.Voluntarios)
             .OrderBy(e => e.Nome)
             .ToListAsync();
@@ -25,8 +27,16 @@ public class EquipeRepository : IEquipeRepository
     public async Task<Equipe?> GetByIdAsync(int id)
     {
         return await _context.Set<Equipe>()
+            .Include(e => e.LiderUsuario)
+                .ThenInclude(u => u!.Pessoa)
             .Include(e => e.Voluntarios)
             .FirstOrDefaultAsync(e => e.Id == id);
+    }
+
+    public async Task<bool> IsLiderUsuarioDaEquipeAsync(int usuarioId, int equipeId)
+    {
+        return await _context.Set<Equipe>()
+            .AnyAsync(e => e.Id == equipeId && e.LiderUsuarioId == usuarioId);
     }
 
     public async Task<Equipe> CreateAsync(Equipe equipe)

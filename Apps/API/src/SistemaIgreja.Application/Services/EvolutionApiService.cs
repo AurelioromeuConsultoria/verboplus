@@ -91,203 +91,120 @@ public class EvolutionApiService : IEvolutionApiService
             LinkPreview = false
         };
 
-        var endpoint = $"message/sendText/{_settings.InstanceName}";
-        _logger.LogInformation(
-            "Enviando mensagem via Evolution API - Endpoint: {Endpoint}, Número: {Numero}, Mensagem: {MensagemPreview}",
-            endpoint,
+        return await EnviarComRetryAsync(
+            $"message/sendText/{_settings.InstanceName}",
+            request,
             numeroFormatado,
-            mensagem.Length > 50 ? mensagem[..50] + "..." : mensagem);
+            mensagem,
+            cancellationToken);
+    }
 
-        for (int tentativa = 1; tentativa <= _settings.MaxRetries; tentativa++)
+    public async Task<EvolutionApiResponse> EnviarMensagemImagemAsync(
+        string numero,
+        string imageUrl,
+        string legenda,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(numero))
         {
-            HttpResponseMessage? response = null;
-            string? responseContent = null;
-
-            try
+            return new EvolutionApiResponse
             {
-                response = await _httpClient.PostAsJsonAsync(endpoint, request, cancellationToken);
-                responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
-
-                var requestUri = response.RequestMessage?.RequestUri?.ToString()
-                                ?? (_httpClient.BaseAddress is null ? endpoint : new Uri(_httpClient.BaseAddress, endpoint).ToString());
-
-                _logger.LogDebug(
-                    "Resposta Evolution API - Status: {StatusCode}, Tentativa: {Tentativa}/{MaxRetries}, Resposta: {Resposta}",
-                    response.StatusCode,
-                    tentativa,
-                    _settings.MaxRetries,
-                    responseContent);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    try
-                    {
-                        var jsonDoc = JsonDocument.Parse(responseContent);
-                        var messageId = jsonDoc.RootElement.TryGetProperty("key", out var keyElement)
-                            && keyElement.TryGetProperty("id", out var idElement)
-                            ? idElement.GetString()
-                            : null;
-
-                        _logger.LogInformation(
-                            "Mensagem enviada com sucesso - Número: {Numero}, MessageId: {MessageId}",
-                            numeroFormatado,
-                            messageId);
-
-                        return new EvolutionApiResponse
-                        {
-                            Sucesso = true,
-                            StatusCode = (int)response.StatusCode,
-                            MessageId = messageId,
-                            RespostaCompleta = responseContent
-                        };
-                    }
-                    catch (JsonException ex)
-                    {
-                        _logger.LogWarning(ex, "Não foi possível deserializar resposta, mas status é sucesso");
-                        return new EvolutionApiResponse
-                        {
-                            Sucesso = true,
-                            StatusCode = (int)response.StatusCode,
-                            RespostaCompleta = responseContent
-                        };
-                    }
-                }
-
-                var errorResponse = TratarErroResponse(responseContent, (int)response.StatusCode);
-
-                if ((int)response.StatusCode == 404)
-                {
-                    _logger.LogError(
-                        "Evolution API retornou 404. RequestUri: {RequestUri}. BaseUrl: {BaseUrl}. InstanceName: {InstanceName}. Response: {Response}",
-                        requestUri,
-                        _httpClient.BaseAddress?.ToString() ?? "(não definida)",
-                        string.IsNullOrWhiteSpace(_settings.InstanceName) ? "(não definida)" : _settings.InstanceName,
-                        Truncate(responseContent, 600));
-                }
-                else
-                {
-                    _logger.LogWarning(
-                        "Falha ao enviar mensagem na Evolution API. Status: {StatusCode}. RequestUri: {RequestUri}. Erro: {Erro}. Response: {Response}",
-                        response.StatusCode,
-                        requestUri,
-                        errorResponse.MensagemErro,
-                        Truncate(responseContent, 600));
-                }
-
-                if (!IsTransientFailure((HttpStatusCode)response.StatusCode))
-                {
-                    _logger.LogWarning(
-                        "Erro permanente (sem retry) ao enviar mensagem - Status: {StatusCode}, Erro: {Erro}",
-                        response.StatusCode,
-                        errorResponse.MensagemErro);
-                    return errorResponse;
-                }
-
-                if (tentativa < _settings.MaxRetries)
-                {
-                    var delay = ObterBackoffExponencial(tentativa);
-                    _logger.LogWarning(
-                        "Retry {Tentativa}/{MaxRetries} - Status: {StatusCode}, Erro: {Erro}. Nova tentativa em {Delay}s",
-                        tentativa,
-                        _settings.MaxRetries,
-                        response.StatusCode,
-                        errorResponse.MensagemErro,
-                        delay.TotalSeconds);
-                    await Task.Delay(delay, cancellationToken);
-                    continue;
-                }
-
-                _logger.LogError(
-                    "Falha definitiva ao enviar mensagem após {MaxRetries} tentativas - Status: {StatusCode}, Erro: {Erro}",
-                    _settings.MaxRetries,
-                    response.StatusCode,
-                    errorResponse.MensagemErro);
-                return errorResponse;
-            }
-            catch (TaskCanceledException)
-            {
-                if (tentativa < _settings.MaxRetries)
-                {
-                    var delay = ObterBackoffExponencial(tentativa);
-                    _logger.LogWarning(
-                        "Retry {Tentativa}/{MaxRetries} - Timeout na requisição. Nova tentativa em {Delay}s",
-                        tentativa,
-                        _settings.MaxRetries,
-                        delay.TotalSeconds);
-                    await Task.Delay(delay, cancellationToken);
-                    continue;
-                }
-
-                _logger.LogError(
-                    "Falha definitiva: timeout ao enviar mensagem após {MaxRetries} tentativas",
-                    _settings.MaxRetries);
-                return new EvolutionApiResponse
-                {
-                    Sucesso = false,
-                    MensagemErro = $"Timeout após {_settings.MaxRetries} tentativas",
-                    StatusCode = 408
-                };
-            }
-            catch (HttpRequestException ex)
-            {
-                if (tentativa < _settings.MaxRetries)
-                {
-                    var delay = ObterBackoffExponencial(tentativa);
-                    _logger.LogWarning(
-                        ex,
-                        "Retry {Tentativa}/{MaxRetries} - Erro de conexão. Nova tentativa em {Delay}s",
-                        tentativa,
-                        _settings.MaxRetries,
-                        delay.TotalSeconds);
-                    await Task.Delay(delay, cancellationToken);
-                    continue;
-                }
-
-                _logger.LogError(
-                    ex,
-                    "Falha definitiva: erro de conexão ao enviar mensagem após {MaxRetries} tentativas",
-                    _settings.MaxRetries);
-                return new EvolutionApiResponse
-                {
-                    Sucesso = false,
-                    MensagemErro = $"Erro de conexão: {ex.Message}",
-                    StatusCode = 0
-                };
-            }
-            catch (Exception ex)
-            {
-                if (tentativa < _settings.MaxRetries)
-                {
-                    var delay = ObterBackoffExponencial(tentativa);
-                    _logger.LogWarning(
-                        ex,
-                        "Retry {Tentativa}/{MaxRetries} - Erro inesperado. Nova tentativa em {Delay}s",
-                        tentativa,
-                        _settings.MaxRetries,
-                        delay.TotalSeconds);
-                    await Task.Delay(delay, cancellationToken);
-                    continue;
-                }
-
-                _logger.LogError(
-                    ex,
-                    "Falha definitiva: erro inesperado ao enviar mensagem após {MaxRetries} tentativas",
-                    _settings.MaxRetries);
-                return new EvolutionApiResponse
-                {
-                    Sucesso = false,
-                    MensagemErro = $"Erro inesperado: {ex.Message}",
-                    StatusCode = 500
-                };
-            }
+                Sucesso = false,
+                MensagemErro = "Número de telefone não pode ser vazio",
+                StatusCode = 400
+            };
         }
 
-        return new EvolutionApiResponse
+        if (string.IsNullOrWhiteSpace(imageUrl))
         {
-            Sucesso = false,
-            MensagemErro = "Falha ao enviar mensagem após todas as tentativas",
-            StatusCode = 500
+            return new EvolutionApiResponse
+            {
+                Sucesso = false,
+                MensagemErro = "URL da imagem não pode ser vazia",
+                StatusCode = 400
+            };
+        }
+
+        string numeroFormatado;
+        try
+        {
+            numeroFormatado = TelefoneUtils.FormatarParaEvolutionApi(numero, _settings.CodigoPaisPadrao);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao formatar número {Numero}", numero);
+            return new EvolutionApiResponse
+            {
+                Sucesso = false,
+                MensagemErro = $"Erro ao formatar número: {ex.Message}",
+                StatusCode = 400
+            };
+        }
+
+        var mediaContent = ResolverConteudoMedia(imageUrl);
+
+        _logger.LogDebug(
+            "Evolution sendMedia payload preparado. Source: {Source}. IsBase64: {IsBase64}. Prefix: {Prefix}",
+            imageUrl,
+            PareceBase64(mediaContent),
+            mediaContent.Length > 40 ? mediaContent[..40] : mediaContent);
+
+        var request = new EvolutionApiSendMediaRequest
+        {
+            Number = numeroFormatado,
+            Media = mediaContent,
+            FileName = ObterNomeArquivo(imageUrl, "feliz-aniversario.png"),
+            Mimetype = ObterMimeType(imageUrl),
+            Caption = legenda,
+            Mediatype = "image",
+            Delay = Math.Max(0, _settings.DelayMs)
         };
+
+        var endpoint = $"message/sendMedia/{_settings.InstanceName}";
+        var response = await EnviarComRetryAsync(
+            endpoint,
+            request,
+            numeroFormatado,
+            legenda,
+            cancellationToken);
+
+        if (response.Sucesso || response.StatusCode != 400)
+        {
+            return response;
+        }
+
+        _logger.LogWarning(
+            "Evolution sendMedia retornou 400 no payload v2. Tentando fallback compatível com v1 para o número {Numero}.",
+            numeroFormatado);
+
+        var fallbackRequest = new EvolutionApiSendMediaV1Request
+        {
+            Number = numeroFormatado,
+            Mediatype = "image",
+            FileName = request.FileName ?? "feliz-aniversario.png",
+            Mimetype = request.Mimetype,
+            Caption = legenda,
+            Media = request.Media,
+            MediaMessage = new EvolutionApiMediaMessageV1
+            {
+                MediaType = "image",
+                FileName = request.FileName ?? "feliz-aniversario.png",
+                Caption = legenda,
+                Media = request.Media
+            },
+            Options = new EvolutionApiMediaOptionsV1
+            {
+                Delay = Math.Max(0, _settings.DelayMs),
+                Presence = "composing"
+            }
+        };
+
+        return await EnviarComRetryAsync(
+            $"message/sendMedia/{_settings.InstanceName}",
+            fallbackRequest,
+            numeroFormatado,
+            legenda,
+            cancellationToken);
     }
 
     public async Task<bool> ValidarInstanciaAsync(CancellationToken cancellationToken = default)
@@ -361,6 +278,153 @@ public class EvolutionApiService : IEvolutionApiService
             _logger.LogError(ex, "Erro ao validar instância");
             return false;
         }
+    }
+
+    private async Task<EvolutionApiResponse> EnviarComRetryAsync(
+        string endpoint,
+        object request,
+        string numeroFormatado,
+        string previewMensagem,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation(
+            "Enviando mensagem via Evolution API - Endpoint: {Endpoint}, Número: {Numero}, Mensagem: {MensagemPreview}",
+            endpoint,
+            numeroFormatado,
+            previewMensagem.Length > 50 ? previewMensagem[..50] + "..." : previewMensagem);
+
+        for (int tentativa = 1; tentativa <= _settings.MaxRetries; tentativa++)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync(endpoint, request, cancellationToken);
+                var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                var requestUri = response.RequestMessage?.RequestUri?.ToString()
+                                ?? (_httpClient.BaseAddress is null ? endpoint : new Uri(_httpClient.BaseAddress, endpoint).ToString());
+
+                _logger.LogDebug(
+                    "Resposta Evolution API - Status: {StatusCode}, Tentativa: {Tentativa}/{MaxRetries}, Resposta: {Resposta}",
+                    response.StatusCode,
+                    tentativa,
+                    _settings.MaxRetries,
+                    responseContent);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    try
+                    {
+                        var jsonDoc = JsonDocument.Parse(responseContent);
+                        var messageId = jsonDoc.RootElement.TryGetProperty("key", out var keyElement)
+                            && keyElement.TryGetProperty("id", out var idElement)
+                            ? idElement.GetString()
+                            : null;
+
+                        return new EvolutionApiResponse
+                        {
+                            Sucesso = true,
+                            StatusCode = (int)response.StatusCode,
+                            MessageId = messageId,
+                            RespostaCompleta = responseContent
+                        };
+                    }
+                    catch (JsonException)
+                    {
+                        return new EvolutionApiResponse
+                        {
+                            Sucesso = true,
+                            StatusCode = (int)response.StatusCode,
+                            RespostaCompleta = responseContent
+                        };
+                    }
+                }
+
+                var errorResponse = TratarErroResponse(responseContent, (int)response.StatusCode);
+
+                if ((int)response.StatusCode == 404)
+                {
+                    _logger.LogError(
+                        "Evolution API retornou 404. RequestUri: {RequestUri}. BaseUrl: {BaseUrl}. InstanceName: {InstanceName}. Response: {Response}",
+                        requestUri,
+                        _httpClient.BaseAddress?.ToString() ?? "(não definida)",
+                        string.IsNullOrWhiteSpace(_settings.InstanceName) ? "(não definida)" : _settings.InstanceName,
+                        Truncate(responseContent, 600));
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Falha ao enviar mensagem na Evolution API. Status: {StatusCode}. RequestUri: {RequestUri}. Erro: {Erro}. Response: {Response}",
+                        response.StatusCode,
+                        requestUri,
+                        errorResponse.MensagemErro,
+                        Truncate(responseContent, 600));
+                }
+
+                if (!IsTransientFailure((HttpStatusCode)response.StatusCode))
+                {
+                    return errorResponse;
+                }
+
+                if (tentativa < _settings.MaxRetries)
+                {
+                    await Task.Delay(ObterBackoffExponencial(tentativa), cancellationToken);
+                    continue;
+                }
+
+                return errorResponse;
+            }
+            catch (TaskCanceledException)
+            {
+                if (tentativa < _settings.MaxRetries)
+                {
+                    await Task.Delay(ObterBackoffExponencial(tentativa), cancellationToken);
+                    continue;
+                }
+
+                return new EvolutionApiResponse
+                {
+                    Sucesso = false,
+                    MensagemErro = $"Timeout após {_settings.MaxRetries} tentativas",
+                    StatusCode = 408
+                };
+            }
+            catch (HttpRequestException ex)
+            {
+                if (tentativa < _settings.MaxRetries)
+                {
+                    await Task.Delay(ObterBackoffExponencial(tentativa), cancellationToken);
+                    continue;
+                }
+
+                return new EvolutionApiResponse
+                {
+                    Sucesso = false,
+                    MensagemErro = $"Erro de conexão: {ex.Message}",
+                    StatusCode = 0
+                };
+            }
+            catch (Exception ex)
+            {
+                if (tentativa < _settings.MaxRetries)
+                {
+                    await Task.Delay(ObterBackoffExponencial(tentativa), cancellationToken);
+                    continue;
+                }
+
+                return new EvolutionApiResponse
+                {
+                    Sucesso = false,
+                    MensagemErro = $"Erro inesperado: {ex.Message}",
+                    StatusCode = 500
+                };
+            }
+        }
+
+        return new EvolutionApiResponse
+        {
+            Sucesso = false,
+            MensagemErro = "Falha ao enviar mensagem após todas as tentativas",
+            StatusCode = 500
+        };
     }
 
     /// <summary>
@@ -523,5 +587,134 @@ public class EvolutionApiService : IEvolutionApiService
         {
             return null;
         }
+    }
+
+    private static string ObterNomeArquivo(string imageUrl, string fallback)
+    {
+        try
+        {
+            var uri = new Uri(imageUrl, UriKind.RelativeOrAbsolute);
+            var path = uri.IsAbsoluteUri ? uri.AbsolutePath : imageUrl;
+            var fileName = Path.GetFileName(path);
+            return string.IsNullOrWhiteSpace(fileName) ? fallback : fileName;
+        }
+        catch
+        {
+            return fallback;
+        }
+    }
+
+    private static string ObterMimeType(string imageUrl)
+    {
+        var extension = Path.GetExtension(imageUrl)?.ToLowerInvariant();
+        return extension switch
+        {
+            ".jpg" => "image/jpeg",
+            ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            _ => "image/png"
+        };
+    }
+
+    private static string ResolverConteudoMedia(string imageUrl)
+    {
+        if (EhUrlExternaOuDataUri(imageUrl))
+        {
+            return imageUrl;
+        }
+
+        var caminhoNormalizado = imageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var baseDirectory = AppContext.BaseDirectory;
+        var contentRoot = Directory.GetCurrentDirectory();
+        var projectRoot = Directory.GetParent(baseDirectory)?.Parent?.Parent?.Parent?.FullName;
+
+        var candidatos = new[]
+        {
+            Path.Combine(contentRoot, caminhoNormalizado),
+            Path.Combine(contentRoot, "wwwroot", caminhoNormalizado),
+            Path.Combine(contentRoot, "uploads", caminhoNormalizado.Replace($"uploads{Path.DirectorySeparatorChar}", string.Empty)),
+            Path.Combine(baseDirectory, caminhoNormalizado),
+            Path.Combine(baseDirectory, "wwwroot", caminhoNormalizado),
+            Path.Combine(baseDirectory, "uploads", caminhoNormalizado.Replace($"uploads{Path.DirectorySeparatorChar}", string.Empty)),
+            projectRoot is null ? string.Empty : Path.Combine(projectRoot, caminhoNormalizado),
+            projectRoot is null ? string.Empty : Path.Combine(projectRoot, "wwwroot", caminhoNormalizado),
+            projectRoot is null ? string.Empty : Path.Combine(projectRoot, "uploads", caminhoNormalizado.Replace($"uploads{Path.DirectorySeparatorChar}", string.Empty))
+        };
+
+        foreach (var candidato in candidatos)
+        {
+            if (string.IsNullOrWhiteSpace(candidato) || !File.Exists(candidato))
+                continue;
+
+            var bytes = File.ReadAllBytes(candidato);
+            return Convert.ToBase64String(bytes);
+        }
+
+        var fileName = Path.GetFileName(imageUrl);
+        if (!string.IsNullOrWhiteSpace(fileName))
+        {
+            var diretoriosBusca = new[]
+            {
+                contentRoot,
+                baseDirectory,
+                projectRoot
+            }
+            .Where(d => !string.IsNullOrWhiteSpace(d) && Directory.Exists(d))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var diretorio in diretoriosBusca)
+            {
+                try
+                {
+                    var encontrado = Directory
+                        .EnumerateFiles(diretorio!, fileName, SearchOption.AllDirectories)
+                        .FirstOrDefault();
+
+                    if (string.IsNullOrWhiteSpace(encontrado) || !File.Exists(encontrado))
+                        continue;
+
+                    var bytes = File.ReadAllBytes(encontrado);
+                    return Convert.ToBase64String(bytes);
+                }
+                catch
+                {
+                    // Ignora falhas de acesso em diretórios específicos e segue para o próximo.
+                }
+            }
+        }
+
+        throw new FileNotFoundException(
+            $"Nao foi possivel localizar o arquivo da midia para envio. Caminho informado: {imageUrl}");
+    }
+
+    private static bool EhUrlExternaOuDataUri(string valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+        {
+            return false;
+        }
+
+        if (!Uri.TryCreate(valor, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        return uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+               uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
+               uri.Scheme.Equals("data", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool PareceBase64(string valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor)) return false;
+        if (valor.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            valor.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return valor.Length > 100 && !valor.Contains('/');
     }
 }

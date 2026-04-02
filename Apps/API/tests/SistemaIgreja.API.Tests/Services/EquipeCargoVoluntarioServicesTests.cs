@@ -13,8 +13,9 @@ public class EquipeCargoVoluntarioServicesTests
     public async Task EquipeService_Create_MapsEnum()
     {
         var repo = new Mock<IEquipeRepository>();
+        var usuarioRepo = new Mock<IUsuarioRepository>();
         repo.Setup(r => r.CreateAsync(It.IsAny<Equipe>())).ReturnsAsync((Equipe e) => { e.Id = 1; return e; });
-        var service = new EquipeService(repo.Object);
+        var service = new EquipeService(repo.Object, usuarioRepo.Object);
 
         var dto = new CriarEquipeDto { Nome = "Recepcao", Area = 1 };
         var result = await service.CreateAsync(dto);

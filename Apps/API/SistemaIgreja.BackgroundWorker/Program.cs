@@ -55,6 +55,8 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddScoped<IEventoRepository, EventoRepository>();
         services.AddScoped<IEventoOcorrenciaRepository, EventoOcorrenciaRepository>();
         services.AddScoped<IEscalaRepository, EscalaRepository>();
+        services.AddScoped<IConfiguracaoCampanhaAniversarioRepository, ConfiguracaoCampanhaAniversarioRepository>();
+        services.AddScoped<IEnvioCampanhaAniversarioRepository, EnvioCampanhaAniversarioRepository>();
 
         services.AddScoped<IVisitanteService, VisitanteService>();
         services.AddScoped<IConfiguracaoMensagemService, ConfiguracaoMensagemService>();
@@ -64,18 +66,24 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddScoped<IVoluntarioService, VoluntarioService>();
         services.AddScoped<IEventoOcorrenciaService, EventoOcorrenciaService>();
         services.AddScoped<IEscalaService, EscalaService>();
+        services.AddScoped<ICampanhaAniversarioService, CampanhaAniversarioService>();
 
         services.Configure<MessageSchedulerSettings>(
             ctx.Configuration.GetSection(MessageSchedulerSettings.SectionName));
         services.Configure<EscalaSchedulerSettings>(
             ctx.Configuration.GetSection(EscalaSchedulerSettings.SectionName));
+        services.Configure<BirthdayCampaignSchedulerSettings>(
+            ctx.Configuration.GetSection(BirthdayCampaignSchedulerSettings.SectionName));
         services.Configure<EvolutionApiSettings>(
             ctx.Configuration.GetSection("EvolutionApi"));
+        services.Configure<PublicAppUrlSettings>(
+            ctx.Configuration.GetSection(PublicAppUrlSettings.SectionName));
 
         services.AddHttpClient<IEvolutionApiService, EvolutionApiService>();
 
         services.AddHostedService<MessageSchedulerService>();
         services.AddHostedService<EscalaSchedulerService>();
+        services.AddHostedService<BirthdayCampaignSchedulerService>();
     })
     .ConfigureLogging(log => log.AddConsole())
     .Build();

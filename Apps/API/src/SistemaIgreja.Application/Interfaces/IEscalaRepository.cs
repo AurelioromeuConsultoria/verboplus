@@ -8,6 +8,7 @@ public interface IEscalaRepository
     Task<Escala?> GetByEventoOcorrenciaIdAsync(int eventoOcorrenciaId);
     Task<Escala?> GetByEventoOcorrenciaAndEquipeAsync(int eventoOcorrenciaId, int equipeId);
     Task<IEnumerable<Escala>> GetAllByEventoOcorrenciaAsync(int eventoOcorrenciaId);
+    Task<IEnumerable<Escala>> GetByPessoaIdAsync(int pessoaId, bool somenteFuturas = false);
     Task<Escala> CreateAsync(Escala escala);
     Task<Escala> UpdateAsync(Escala escala);
     Task DeleteAsync(int id);
@@ -16,6 +17,7 @@ public interface IEscalaRepository
     Task<EscalaItem> AddItemAsync(EscalaItem item);
     Task<EscalaItem> UpdateItemAsync(EscalaItem item);
     Task DeleteItemAsync(int escalaItemId);
+    Task<IEnumerable<EscalaItem>> GetItensComOcorrenciaNoPeriodoAsync(DateTime dataInicio, DateTime dataFim, int? equipeId = null, int? eventoId = null);
 
     Task<EscalaItem?> GetConflitoPessoaNaEscalaAsync(int escalaId, int voluntarioId, int? ignorarEscalaItemId = null);
     Task<HashSet<int>> GetPessoaIdsJaEscaladasAsync(int escalaId);

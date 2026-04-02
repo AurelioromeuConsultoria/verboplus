@@ -69,6 +69,9 @@ builder.Services.AddScoped<ICategoriaReceitaRepository, CategoriaReceitaReposito
 builder.Services.AddScoped<IContaBancariaRepository, ContaBancariaRepository>();
 builder.Services.AddScoped<ICentroCustoRepository, CentroCustoRepository>();
 builder.Services.AddScoped<IProjetoRepository, ProjetoRepository>();
+builder.Services.AddScoped<ICategoriaPatrimonioRepository, CategoriaPatrimonioRepository>();
+builder.Services.AddScoped<IPatrimonioItemRepository, PatrimonioItemRepository>();
+builder.Services.AddScoped<IPatrimonioMovimentacaoRepository, PatrimonioMovimentacaoRepository>();
 builder.Services.AddScoped<IDespesaRepository, DespesaRepository>();
 builder.Services.AddScoped<IReceitaRepository, ReceitaRepository>();
 builder.Services.AddScoped<ICargoRepository, CargoRepository>();
@@ -79,18 +82,22 @@ builder.Services.AddScoped<IEventoOcorrenciaRepository, EventoOcorrenciaReposito
 builder.Services.AddScoped<IEscalaRepository, EscalaRepository>();
 builder.Services.AddScoped<IEscalaModeloRepository, EscalaModeloRepository>();
 builder.Services.AddScoped<IIndisponibilidadeVoluntarioRepository, IndisponibilidadeVoluntarioRepository>();
+builder.Services.AddScoped<ISolicitacaoTrocaEscalaRepository, SolicitacaoTrocaEscalaRepository>();
 builder.Services.AddScoped<IDestaqueSiteRepository, DestaqueSiteRepository>();
 builder.Services.AddScoped<ICategoriaNoticiaRepository, CategoriaNoticiaRepository>();
 builder.Services.AddScoped<INoticiaRepository, NoticiaRepository>();
 builder.Services.AddScoped<IContatoRepository, ContatoRepository>();
 builder.Services.AddScoped<IInscricaoEventoRepository, InscricaoEventoRepository>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<INotificacaoUsuarioRepository, NotificacaoUsuarioRepository>();
 builder.Services.AddScoped<IPerfilAcessoRepository, PerfilAcessoRepository>();
 builder.Services.AddScoped<ICategoriaMidiaRepository, CategoriaMidiaRepository>();
 builder.Services.AddScoped<IGaleriaFotoRepository, GaleriaFotoRepository>();
 builder.Services.AddScoped<IGaleriaFotoItemRepository, GaleriaFotoItemRepository>();
 builder.Services.AddScoped<IEnqueteRepository, EnqueteRepository>();
 builder.Services.AddScoped<IConfiguracaoPortalRepository, ConfiguracaoPortalRepository>();
+builder.Services.AddScoped<IConfiguracaoCampanhaAniversarioRepository, ConfiguracaoCampanhaAniversarioRepository>();
+builder.Services.AddScoped<IEnvioCampanhaAniversarioRepository, EnvioCampanhaAniversarioRepository>();
 
 // Kids
 builder.Services.AddScoped<ICriancaDetalheRepository, CriancaDetalheRepository>();
@@ -119,6 +126,9 @@ builder.Services.AddScoped<ICategoriaReceitaService, CategoriaReceitaService>();
 builder.Services.AddScoped<IContaBancariaService, ContaBancariaService>();
 builder.Services.AddScoped<ICentroCustoService, CentroCustoService>();
 builder.Services.AddScoped<IProjetoService, ProjetoService>();
+builder.Services.AddScoped<ICategoriaPatrimonioService, CategoriaPatrimonioService>();
+builder.Services.AddScoped<IPatrimonioItemService, PatrimonioItemService>();
+builder.Services.AddScoped<IPatrimonioMovimentacaoService, PatrimonioMovimentacaoService>();
 builder.Services.AddScoped<IDespesaService, DespesaService>();
 builder.Services.AddScoped<IReceitaService, ReceitaService>();
 builder.Services.AddScoped<ICargoService, CargoService>();
@@ -129,12 +139,14 @@ builder.Services.AddScoped<IEventoOcorrenciaService, EventoOcorrenciaService>();
 builder.Services.AddScoped<IEscalaService, EscalaService>();
 builder.Services.AddScoped<IEscalaModeloService, EscalaModeloService>();
 builder.Services.AddScoped<IIndisponibilidadeVoluntarioService, IndisponibilidadeVoluntarioService>();
+builder.Services.AddScoped<ISolicitacaoTrocaEscalaService, SolicitacaoTrocaEscalaService>();
 builder.Services.AddScoped<IDestaqueSiteService, DestaqueSiteService>();
 builder.Services.AddScoped<ICategoriaNoticiaService, CategoriaNoticiaService>();
 builder.Services.AddScoped<INoticiaService, NoticiaService>();
 builder.Services.AddScoped<IContatoService, ContatoService>();
 builder.Services.AddScoped<IInscricaoEventoService, InscricaoEventoService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddScoped<INotificacaoUsuarioService, NotificacaoUsuarioService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPerfilAcessoService, PerfilAcessoService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
@@ -142,6 +154,7 @@ builder.Services.AddScoped<ICategoriaMidiaService, CategoriaMidiaService>();
 builder.Services.AddScoped<IGaleriaFotoService, GaleriaFotoService>();
 builder.Services.AddScoped<IEnqueteService, EnqueteService>();
 builder.Services.AddScoped<IConfiguracaoPortalService, ConfiguracaoPortalService>();
+builder.Services.AddScoped<ICampanhaAniversarioService, CampanhaAniversarioService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IFinanceiroQueryService, FinanceiroQueryService>();
 builder.Services.AddScoped<IDashboardFinanceiroService, DashboardFinanceiroService>();
@@ -161,6 +174,15 @@ builder.Services.Configure<EmailSettings>(
 builder.Services.Configure<MessageSchedulerSettings>(
     builder.Configuration.GetSection(MessageSchedulerSettings.SectionName));
 
+builder.Services.Configure<BirthdayCampaignSchedulerSettings>(
+    builder.Configuration.GetSection(BirthdayCampaignSchedulerSettings.SectionName));
+
+builder.Services.Configure<EscalaSchedulerSettings>(
+    builder.Configuration.GetSection(EscalaSchedulerSettings.SectionName));
+
+builder.Services.Configure<PublicAppUrlSettings>(
+    builder.Configuration.GetSection(PublicAppUrlSettings.SectionName));
+
 builder.Services.AddHttpClient<IEvolutionApiService, EvolutionApiService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
@@ -168,7 +190,11 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<NoticiaUrlExtractorService>();
 
 if (builder.Configuration.GetValue<bool>("Scheduler:Enabled"))
+{
     builder.Services.AddHostedService<MessageSchedulerService>();
+    builder.Services.AddHostedService<BirthdayCampaignSchedulerService>();
+    builder.Services.AddHostedService<EscalaSchedulerService>();
+}
 
 // ==========================
 // JWT AUTH

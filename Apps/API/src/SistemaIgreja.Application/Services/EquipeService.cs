@@ -16,10 +16,12 @@ public interface IEquipeService
 public class EquipeService : IEquipeService
 {
     private readonly IEquipeRepository _repository;
+    private readonly IUsuarioRepository _usuarioRepository;
 
-    public EquipeService(IEquipeRepository repository)
+    public EquipeService(IEquipeRepository repository, IUsuarioRepository usuarioRepository)
     {
         _repository = repository;
+        _usuarioRepository = usuarioRepository;
     }
 
     public async Task<IEnumerable<EquipeDto>> GetAllAsync()
@@ -36,10 +38,13 @@ public class EquipeService : IEquipeService
 
     public async Task<EquipeDto> CreateAsync(CriarEquipeDto dto)
     {
+        await ValidarLiderAsync(dto.LiderUsuarioId);
+
         var equipe = new Equipe
         {
             Nome = dto.Nome,
             Area = (AreaEquipe)dto.Area,
+            LiderUsuarioId = dto.LiderUsuarioId,
             DataCriacao = DateTime.Now
         };
 
@@ -52,8 +57,11 @@ public class EquipeService : IEquipeService
         var equipe = await _repository.GetByIdAsync(id);
         if (equipe == null) throw new ArgumentException("Equipe não encontrada");
 
+        await ValidarLiderAsync(dto.LiderUsuarioId);
+
         equipe.Nome = dto.Nome;
         equipe.Area = (AreaEquipe)dto.Area;
+        equipe.LiderUsuarioId = dto.LiderUsuarioId;
 
         var updated = await _repository.UpdateAsync(equipe);
         return MapToDto(updated);
@@ -71,7 +79,23 @@ public class EquipeService : IEquipeService
             Id = e.Id,
             Nome = e.Nome,
             Area = (int)e.Area,
+            LiderUsuarioId = e.LiderUsuarioId,
+            LiderNome = e.LiderUsuario?.Pessoa?.Nome,
             DataCriacao = e.DataCriacao
         };
+    }
+
+    private async Task ValidarLiderAsync(int? liderUsuarioId)
+    {
+        if (!liderUsuarioId.HasValue)
+        {
+            return;
+        }
+
+        var usuario = await _usuarioRepository.GetByIdAsync(liderUsuarioId.Value);
+        if (usuario == null || !usuario.Ativo)
+        {
+            throw new ArgumentException("Líder da equipe inválido");
+        }
     }
 }

@@ -20,6 +20,9 @@ public class Equipe
     [Required]
     public AreaEquipe Area { get; set; }
 
+    public int? LiderUsuarioId { get; set; }
+    public virtual Usuario? LiderUsuario { get; set; }
+
     public DateTime DataCriacao { get; set; } = DateTime.Now;
 
     public virtual ICollection<Voluntario> Voluntarios { get; set; } = new List<Voluntario>();

@@ -19,6 +19,12 @@ public interface IEvolutionApiService
         string mensagem, 
         CancellationToken cancellationToken = default);
 
+    Task<EvolutionApiResponse> EnviarMensagemImagemAsync(
+        string numero,
+        string imageUrl,
+        string legenda,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Verifica se a instância está conectada e funcionando
     /// </summary>

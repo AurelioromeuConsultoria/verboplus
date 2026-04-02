@@ -29,8 +29,8 @@ public class Usuario
 
     public DateTime DataCriacao { get; set; } = DateTime.Now;
     public DateTime? UltimoAcesso { get; set; }
+    public virtual ICollection<NotificacaoUsuario> Notificacoes { get; set; } = new List<NotificacaoUsuario>();
 }
-
 
 
 

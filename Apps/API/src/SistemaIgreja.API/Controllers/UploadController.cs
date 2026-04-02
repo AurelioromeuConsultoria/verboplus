@@ -229,6 +229,8 @@ public class UploadController : ControllerBase
                 await file.CopyToAsync(stream);
             }
 
+            await TentarSincronizarImagemParaProducaoAsync(folder, filePath, fileName);
+
             // Retornar o caminho relativo que será usado para servir o arquivo
             var relativePath = $"/uploads/{folder}/{fileName}";
             
@@ -242,6 +244,42 @@ public class UploadController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "Erro ao fazer upload do arquivo", error = ex.Message });
+        }
+    }
+
+    private async Task TentarSincronizarImagemParaProducaoAsync(string folder, string filePath, string fileName)
+    {
+        if (!string.Equals(folder, "images", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var syncBaseUrl = _configuration["ProductionUploadSync:BaseUrl"]?.Trim();
+        var syncApiKey = _configuration["ProductionUploadSync:ApiKey"]?.Trim();
+        if (string.IsNullOrEmpty(syncBaseUrl) || string.IsNullOrEmpty(syncApiKey))
+            return;
+
+        try
+        {
+            var bytes = await System.IO.File.ReadAllBytesAsync(filePath);
+            var syncClient = _httpClientFactory.CreateClient();
+            syncClient.Timeout = TimeSpan.FromSeconds(30);
+
+            using var content = new MultipartFormDataContent();
+            content.Add(new ByteArrayContent(bytes), "file", fileName);
+            content.Add(new StringContent(fileName), "fileName");
+
+            var syncRequest = new HttpRequestMessage(HttpMethod.Post, $"{syncBaseUrl.TrimEnd('/')}/api/admin/upload/sync-image");
+            syncRequest.Headers.Add("X-Sync-Api-Key", syncApiKey);
+            syncRequest.Content = content;
+
+            using var syncResponse = await syncClient.SendAsync(syncRequest);
+            if (!syncResponse.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"Sync produção retornou {(int)syncResponse.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Falha ao sincronizar imagem enviada para a API de produção.");
         }
     }
 }

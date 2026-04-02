@@ -10,16 +10,22 @@ public interface IEscalaService
     Task<EscalaDto?> GetByEventoOcorrenciaAsync(int eventoOcorrenciaId);
     Task<EscalaDto?> GetByEventoOcorrenciaAndEquipeAsync(int eventoOcorrenciaId, int equipeId);
     Task<IEnumerable<EscalaDto>> GetAllByEventoOcorrenciaAsync(int eventoOcorrenciaId);
+    Task<IEnumerable<EscalaDto>> GetMinhasEscalasAsync(int pessoaId, bool somenteFuturas = true);
     Task<IEnumerable<SugestaoEscalaVoluntarioDto>> GetSugestoesAsync(int escalaId, int equipeId);
-    Task<EscalaDto> CreateAsync(CriarEscalaDto dto, int usuarioId);
-    Task<EscalaDto> UpdateAsync(int id, AtualizarEscalaDto dto);
-    Task DeleteAsync(int id);
+    Task<EscalaDto> CreateAsync(CriarEscalaDto dto, int usuarioId, bool isAdmin);
+    Task<EscalaDto> UpdateAsync(int id, AtualizarEscalaDto dto, int usuarioId, bool isAdmin);
+    Task DeleteAsync(int id, int usuarioId, bool isAdmin);
 
     Task<EscalaItemDto> AddItemAsync(int escalaId, CriarEscalaItemDto dto, int usuarioId, bool isAdmin);
     Task<EscalaItemDto> UpdateItemAsync(int escalaId, int escalaItemId, AtualizarEscalaItemDto dto, int usuarioId, bool isAdmin);
-    Task DeleteItemAsync(int escalaId, int escalaItemId);
-    Task<EscalaDto> PublicarAsync(int escalaId);
-    Task<EscalaDto> GerarAutomaticoAsync(int eventoOcorrenciaId, int equipeId, int usuarioId);
+    Task DeleteItemAsync(int escalaId, int escalaItemId, int usuarioId, bool isAdmin);
+    Task<EscalaDto> PublicarAsync(int escalaId, int usuarioId, bool isAdmin);
+    Task<EscalaDto> GerarAutomaticoAsync(int eventoOcorrenciaId, int equipeId, int usuarioId, bool isAdmin);
+    Task<EscalaItemDto> ConfirmarItemAsync(int escalaId, int escalaItemId, int usuarioId, bool isAdmin, int? usuarioPessoaId);
+    Task<EscalaItemDto> RecusarItemAsync(int escalaId, int escalaItemId, string? motivoRecusa, int usuarioId, bool isAdmin, int? usuarioPessoaId);
+    Task<EscalaItemDto> RegistrarPresencaAsync(int escalaId, int escalaItemId, bool compareceu, string? observacaoOperacional, int usuarioId, bool isAdmin);
+    Task<IEnumerable<HistoricoVoluntarioDto>> GetHistoricoVoluntariosAsync(int usuarioId, bool isAdmin, int? equipeId = null, int? eventoId = null, DateTime? dataInicio = null, DateTime? dataFim = null);
+    Task<int> EnviarLembretesPendentesAsync(DateTime? referencia = null);
 }
 
 public class EscalaService : IEscalaService
@@ -29,19 +35,28 @@ public class EscalaService : IEscalaService
     private readonly IVoluntarioRepository _voluntarioRepository;
     private readonly IEscalaModeloRepository _escalaModeloRepository;
     private readonly IIndisponibilidadeVoluntarioRepository _indisponibilidadeRepository;
+    private readonly IEquipeRepository _equipeRepository;
+    private readonly IUsuarioRepository _usuarioRepository;
+    private readonly INotificacaoUsuarioService _notificacaoUsuarioService;
 
     public EscalaService(
         IEscalaRepository repository,
         IEventoOcorrenciaRepository eventoOcorrenciaRepository,
         IVoluntarioRepository voluntarioRepository,
         IEscalaModeloRepository escalaModeloRepository,
-        IIndisponibilidadeVoluntarioRepository indisponibilidadeRepository)
+        IIndisponibilidadeVoluntarioRepository indisponibilidadeRepository,
+        IEquipeRepository equipeRepository,
+        IUsuarioRepository usuarioRepository,
+        INotificacaoUsuarioService notificacaoUsuarioService)
     {
         _repository = repository;
         _eventoOcorrenciaRepository = eventoOcorrenciaRepository;
         _voluntarioRepository = voluntarioRepository;
         _escalaModeloRepository = escalaModeloRepository;
         _indisponibilidadeRepository = indisponibilidadeRepository;
+        _equipeRepository = equipeRepository;
+        _usuarioRepository = usuarioRepository;
+        _notificacaoUsuarioService = notificacaoUsuarioService;
     }
 
     public async Task<EscalaDto?> GetByIdAsync(int id)
@@ -66,6 +81,21 @@ public class EscalaService : IEscalaService
     {
         var escalas = await _repository.GetAllByEventoOcorrenciaAsync(eventoOcorrenciaId);
         return escalas.Select(MapToDto);
+    }
+
+    public async Task<IEnumerable<EscalaDto>> GetMinhasEscalasAsync(int pessoaId, bool somenteFuturas = true)
+    {
+        var escalas = await _repository.GetByPessoaIdAsync(pessoaId, somenteFuturas);
+        return escalas.Select(e =>
+        {
+            var dto = MapToDto(e);
+            dto.Itens = dto.Itens
+                .Where(i => i.VoluntarioPessoaId == pessoaId)
+                .OrderBy(i => i.Ordem)
+                .ThenBy(i => i.Id)
+                .ToList();
+            return dto;
+        });
     }
 
     public async Task<IEnumerable<SugestaoEscalaVoluntarioDto>> GetSugestoesAsync(int escalaId, int equipeId)
@@ -104,8 +134,10 @@ public class EscalaService : IEscalaService
         return sugestoes;
     }
 
-    public async Task<EscalaDto> CreateAsync(CriarEscalaDto dto, int usuarioId)
+    public async Task<EscalaDto> CreateAsync(CriarEscalaDto dto, int usuarioId, bool isAdmin)
     {
+        await ValidarPermissaoGestaoEquipeAsync(dto.EquipeId, usuarioId, isAdmin);
+
         var ocorrencia = await _eventoOcorrenciaRepository.GetByIdAsync(dto.EventoOcorrenciaId);
         if (ocorrencia == null) throw new ArgumentException("Ocorrência não encontrada");
 
@@ -127,21 +159,30 @@ public class EscalaService : IEscalaService
         return MapToDto(createdFull!);
     }
 
-    public async Task<EscalaDto> UpdateAsync(int id, AtualizarEscalaDto dto)
+    public async Task<EscalaDto> UpdateAsync(int id, AtualizarEscalaDto dto, int usuarioId, bool isAdmin)
     {
         var escala = await _repository.GetByIdAsync(id);
         if (escala == null) throw new ArgumentException("Escala não encontrada");
+        await ValidarPermissaoGestaoEquipeAsync(escala.EquipeId, usuarioId, isAdmin);
 
         escala.Status = dto.Status;
         escala.Observacoes = dto.Observacoes;
 
         var updated = await _repository.UpdateAsync(escala);
         var updatedFull = await _repository.GetByIdAsync(updated.Id);
+        if (updatedFull != null)
+        {
+            await NotificarPublicacaoEscalaAsync(updatedFull, usuarioId);
+        }
         return MapToDto(updatedFull!);
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task DeleteAsync(int id, int usuarioId, bool isAdmin)
     {
+        var escala = await _repository.GetByIdAsync(id);
+        if (escala == null) return;
+
+        await ValidarPermissaoGestaoEquipeAsync(escala.EquipeId, usuarioId, isAdmin);
         await _repository.DeleteAsync(id);
     }
 
@@ -149,6 +190,7 @@ public class EscalaService : IEscalaService
     {
         var escala = await _repository.GetByIdAsync(escalaId);
         if (escala == null) throw new ArgumentException("Escala não encontrada");
+        await ValidarPermissaoGestaoEquipeAsync(escala.EquipeId, usuarioId, isAdmin);
         if (escala.Status == StatusEscala.Fechada) throw new ArgumentException("Escala fechada não pode ser alterada");
         if (dto.EquipeId != escala.EquipeId) throw new ArgumentException("O item deve ser da mesma equipe da escala");
 
@@ -157,17 +199,23 @@ public class EscalaService : IEscalaService
 
         await ValidarConflitoPessoaAsync(escalaId, dto.VoluntarioId, dto.ForcarConflito, dto.MotivoExcecao, usuarioId, isAdmin, null);
 
+        var proximaOrdem = escala.Itens.Any()
+            ? escala.Itens.Max(i => i.Ordem) + 1
+            : 0;
+
         var item = new EscalaItem
         {
             EscalaId = escalaId,
             EquipeId = escala.EquipeId,
             CargoId = dto.CargoId,
             VoluntarioId = dto.VoluntarioId,
-            Ordem = dto.Ordem,
+            Ordem = proximaOrdem,
             ConflitoAprovado = dto.ForcarConflito,
             MotivoExcecao = dto.ForcarConflito ? dto.MotivoExcecao?.Trim() : null,
             AprovadoPorUsuarioId = dto.ForcarConflito ? usuarioId : null,
             AprovadoEm = dto.ForcarConflito ? DateTime.Now : null,
+            Status = escala.Status == StatusEscala.Publicada ? StatusEscalaItem.Pendente : StatusEscalaItem.Pendente,
+            DataConvite = escala.Status == StatusEscala.Publicada ? DateTime.Now : null,
             DataCriacao = DateTime.Now
         };
 
@@ -180,6 +228,7 @@ public class EscalaService : IEscalaService
     {
         var escala = await _repository.GetByIdAsync(escalaId);
         if (escala == null) throw new ArgumentException("Escala não encontrada");
+        await ValidarPermissaoGestaoEquipeAsync(escala.EquipeId, usuarioId, isAdmin);
         if (escala.Status == StatusEscala.Fechada) throw new ArgumentException("Escala fechada não pode ser alterada");
 
         var item = await _repository.GetItemByIdAsync(escalaItemId);
@@ -205,10 +254,11 @@ public class EscalaService : IEscalaService
         return MapItemToDto(updatedFull!);
     }
 
-    public async Task DeleteItemAsync(int escalaId, int escalaItemId)
+    public async Task DeleteItemAsync(int escalaId, int escalaItemId, int usuarioId, bool isAdmin)
     {
         var escala = await _repository.GetByIdAsync(escalaId);
         if (escala == null) throw new ArgumentException("Escala não encontrada");
+        await ValidarPermissaoGestaoEquipeAsync(escala.EquipeId, usuarioId, isAdmin);
         if (escala.Status == StatusEscala.Fechada) throw new ArgumentException("Escala fechada não pode ser alterada");
 
         var item = await _repository.GetItemByIdAsync(escalaItemId);
@@ -217,10 +267,11 @@ public class EscalaService : IEscalaService
         await _repository.DeleteItemAsync(escalaItemId);
     }
 
-    public async Task<EscalaDto> PublicarAsync(int escalaId)
+    public async Task<EscalaDto> PublicarAsync(int escalaId, int usuarioId, bool isAdmin)
     {
         var escala = await _repository.GetByIdAsync(escalaId);
         if (escala == null) throw new ArgumentException("Escala não encontrada");
+        await ValidarPermissaoGestaoEquipeAsync(escala.EquipeId, usuarioId, isAdmin);
 
         if (!escala.Itens.Any())
         {
@@ -230,13 +281,30 @@ public class EscalaService : IEscalaService
         escala.Status = StatusEscala.Publicada;
         escala.DataPublicacao = DateTime.Now;
 
+        foreach (var item in escala.Itens)
+        {
+            if (item.Status == StatusEscalaItem.Confirmado || item.Status == StatusEscalaItem.Serviu)
+            {
+                continue;
+            }
+
+            item.Status = StatusEscalaItem.Pendente;
+            item.DataConvite ??= DateTime.Now;
+            item.DataConfirmacao = null;
+            item.DataRecusa = null;
+            item.MotivoRecusa = null;
+            item.RespondidoPorUsuarioId = null;
+        }
+
         var updated = await _repository.UpdateAsync(escala);
         var updatedFull = await _repository.GetByIdAsync(updated.Id);
         return MapToDto(updatedFull!);
     }
 
-    public async Task<EscalaDto> GerarAutomaticoAsync(int eventoOcorrenciaId, int equipeId, int usuarioId)
+    public async Task<EscalaDto> GerarAutomaticoAsync(int eventoOcorrenciaId, int equipeId, int usuarioId, bool isAdmin)
     {
+        await ValidarPermissaoGestaoEquipeAsync(equipeId, usuarioId, isAdmin);
+
         var ocorrencia = await _eventoOcorrenciaRepository.GetByIdAsync(eventoOcorrenciaId);
         if (ocorrencia == null) throw new ArgumentException("Ocorrência não encontrada.");
         var eventoId = ocorrencia.EventoId;
@@ -304,6 +372,8 @@ public class EscalaService : IEscalaService
                     VoluntarioId = vol.Id,
                     Ordem = ordemGlobal++,
                     ConflitoAprovado = false,
+                    Status = escala.Status == StatusEscala.Publicada ? StatusEscalaItem.Pendente : StatusEscalaItem.Pendente,
+                    DataConvite = escala.Status == StatusEscala.Publicada ? DateTime.Now : null,
                     DataCriacao = DateTime.Now
                 };
                 await _repository.AddItemAsync(escalaItem);
@@ -313,6 +383,199 @@ public class EscalaService : IEscalaService
 
         var updatedFull = await _repository.GetByIdAsync(escala.Id);
         return MapToDto(updatedFull!);
+    }
+
+    public async Task<EscalaItemDto> ConfirmarItemAsync(int escalaId, int escalaItemId, int usuarioId, bool isAdmin, int? usuarioPessoaId)
+    {
+        var item = await ObterItemComPermissaoAsync(escalaId, escalaItemId, usuarioId, isAdmin, usuarioPessoaId);
+
+        item.Status = StatusEscalaItem.Confirmado;
+        item.DataConfirmacao = DateTime.Now;
+        item.DataRecusa = null;
+        item.MotivoRecusa = null;
+        item.RespondidoPorUsuarioId = usuarioId > 0 ? usuarioId : null;
+        item.DataConvite ??= DateTime.Now;
+
+        var updated = await _repository.UpdateItemAsync(item);
+        var updatedFull = await _repository.GetItemByIdAsync(updated.Id);
+        if (updatedFull != null)
+        {
+            await NotificarRespostaEscalaAsync(updatedFull, false, usuarioId);
+        }
+        return MapItemToDto(updatedFull!);
+    }
+
+    public async Task<EscalaItemDto> RecusarItemAsync(int escalaId, int escalaItemId, string? motivoRecusa, int usuarioId, bool isAdmin, int? usuarioPessoaId)
+    {
+        var item = await ObterItemComPermissaoAsync(escalaId, escalaItemId, usuarioId, isAdmin, usuarioPessoaId);
+
+        item.Status = StatusEscalaItem.Recusado;
+        item.DataRecusa = DateTime.Now;
+        item.DataConfirmacao = null;
+        item.MotivoRecusa = motivoRecusa?.Trim();
+        item.RespondidoPorUsuarioId = usuarioId > 0 ? usuarioId : null;
+        item.DataConvite ??= DateTime.Now;
+
+        var updated = await _repository.UpdateItemAsync(item);
+        var updatedFull = await _repository.GetItemByIdAsync(updated.Id);
+        if (updatedFull != null)
+        {
+            await NotificarRespostaEscalaAsync(updatedFull, false, usuarioId);
+        }
+        return MapItemToDto(updatedFull!);
+    }
+
+    public async Task<EscalaItemDto> RegistrarPresencaAsync(int escalaId, int escalaItemId, bool compareceu, string? observacaoOperacional, int usuarioId, bool isAdmin)
+    {
+        var item = await _repository.GetItemByIdAsync(escalaItemId);
+        if (item == null || item.EscalaId != escalaId)
+        {
+            throw new ArgumentException("Item da escala não encontrado");
+        }
+
+        await ValidarPermissaoGestaoEquipeAsync(item.EquipeId, usuarioId, isAdmin);
+
+        item.Status = compareceu ? StatusEscalaItem.Serviu : StatusEscalaItem.Faltou;
+        item.ObservacaoOperacional = observacaoOperacional?.Trim();
+        item.RespondidoPorUsuarioId = usuarioId > 0 ? usuarioId : null;
+        item.DataConfirmacao ??= compareceu ? DateTime.Now : item.DataConfirmacao;
+        item.DataRecusa = compareceu ? null : item.DataRecusa;
+        item.MotivoRecusa = compareceu ? null : item.MotivoRecusa;
+
+        var updated = await _repository.UpdateItemAsync(item);
+        var updatedFull = await _repository.GetItemByIdAsync(updated.Id);
+        return MapItemToDto(updatedFull!);
+    }
+
+    public async Task<IEnumerable<HistoricoVoluntarioDto>> GetHistoricoVoluntariosAsync(int usuarioId, bool isAdmin, int? equipeId = null, int? eventoId = null, DateTime? dataInicio = null, DateTime? dataFim = null)
+    {
+        var inicio = dataInicio ?? DateTime.Today.AddMonths(-6);
+        var fim = dataFim ?? DateTime.Today.AddMonths(1);
+        var itens = (await _repository.GetItensComOcorrenciaNoPeriodoAsync(inicio, fim, equipeId, eventoId)).ToList();
+
+        if (!isAdmin)
+        {
+            var equipesGeridas = (await _equipeRepository.GetAllAsync())
+                .Where(e => e.LiderUsuarioId == usuarioId)
+                .Select(e => e.Id)
+                .ToHashSet();
+
+            itens = itens.Where(i => equipesGeridas.Contains(i.EquipeId)).ToList();
+        }
+
+        var inicioMesAtual = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        var fimMesAtual = inicioMesAtual.AddMonths(1).AddTicks(-1);
+
+        return itens
+            .Where(i => i.Voluntario?.Pessoa != null)
+            .GroupBy(i => i.Voluntario.PessoaId)
+            .Select(g => new HistoricoVoluntarioDto
+            {
+                PessoaId = g.Key,
+                VoluntarioNome = g.Select(x => x.Voluntario.Pessoa.Nome).FirstOrDefault() ?? string.Empty,
+                Equipes = g.Select(x => x.Equipe?.Nome ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().OrderBy(x => x).ToList(),
+                TotalEscalas = g.Count(),
+                Confirmados = g.Count(x => x.Status == StatusEscalaItem.Confirmado),
+                Recusados = g.Count(x => x.Status == StatusEscalaItem.Recusado),
+                Substituidos = g.Count(x => x.Status == StatusEscalaItem.Substituido),
+                Presencas = g.Count(x => x.Status == StatusEscalaItem.Serviu),
+                Faltas = g.Count(x => x.Status == StatusEscalaItem.Faltou),
+                Pendentes = g.Count(x => x.Status == StatusEscalaItem.Pendente),
+                CargaMesAtual = g.Count(x => x.Escala?.EventoOcorrencia?.DataHoraInicio >= inicioMesAtual && x.Escala?.EventoOcorrencia?.DataHoraInicio <= fimMesAtual),
+                UltimaEscalaEm = g
+                    .Where(x => x.Escala?.EventoOcorrencia?.DataHoraInicio <= DateTime.Now)
+                    .Select(x => (DateTime?)x.Escala!.EventoOcorrencia!.DataHoraInicio)
+                    .DefaultIfEmpty()
+                    .Max(),
+                ProximaEscalaEm = g
+                    .Where(x => x.Escala?.EventoOcorrencia?.DataHoraInicio >= DateTime.Now)
+                    .Select(x => (DateTime?)x.Escala!.EventoOcorrencia!.DataHoraInicio)
+                    .DefaultIfEmpty()
+                    .Min(),
+            })
+            .OrderByDescending(x => x.Faltas)
+            .ThenByDescending(x => x.Pendentes)
+            .ThenBy(x => x.VoluntarioNome)
+            .ToList();
+    }
+
+    public async Task<int> EnviarLembretesPendentesAsync(DateTime? referencia = null)
+    {
+        var agora = referencia ?? DateTime.Now;
+        var notificacoes = new List<CriarNotificacaoUsuarioDto>();
+        var atualizados = new List<EscalaItem>();
+
+        var janela24Inicio = agora.AddHours(23);
+        var janela24Fim = agora.AddHours(25);
+        var janela7Inicio = agora.AddDays(6).AddHours(20);
+        var janela7Fim = agora.AddDays(7).AddHours(4);
+
+        var itens = (await _repository.GetItensComOcorrenciaNoPeriodoAsync(agora, janela7Fim)).ToList();
+
+        foreach (var item in itens)
+        {
+            if (item.Status is StatusEscalaItem.Recusado or StatusEscalaItem.Substituido or StatusEscalaItem.Faltou)
+            {
+                continue;
+            }
+
+            var pessoaId = item.Voluntario?.PessoaId;
+            if (!pessoaId.HasValue || pessoaId.Value <= 0)
+            {
+                continue;
+            }
+
+            var usuario = await _usuarioRepository.GetByPessoaIdAsync(pessoaId.Value);
+            if (usuario == null)
+            {
+                continue;
+            }
+
+            var dataEvento = item.Escala?.EventoOcorrencia?.DataHoraInicio;
+            if (!dataEvento.HasValue)
+            {
+                continue;
+            }
+
+            var lembreteTitulo = string.Empty;
+            var lembreteMensagem = string.Empty;
+
+            if (!item.DataLembrete24HorasEnviado.HasValue && dataEvento.Value >= janela24Inicio && dataEvento.Value <= janela24Fim)
+            {
+                item.DataLembrete24HorasEnviado = agora;
+                lembreteTitulo = "Lembrete: escala em 24 horas";
+                lembreteMensagem = $"Sua escala para {item.Escala?.EventoOcorrencia?.Evento?.Titulo ?? "o evento"} acontece em breve, no dia {dataEvento.Value:dd/MM/yyyy HH:mm}.";
+            }
+            else if (!item.DataLembrete7DiasEnviado.HasValue && dataEvento.Value >= janela7Inicio && dataEvento.Value <= janela7Fim)
+            {
+                item.DataLembrete7DiasEnviado = agora;
+                lembreteTitulo = "Lembrete: escala nesta semana";
+                lembreteMensagem = $"Sua escala para {item.Escala?.EventoOcorrencia?.Evento?.Titulo ?? "o evento"} está chegando: {dataEvento.Value:dd/MM/yyyy HH:mm}.";
+            }
+
+            if (string.IsNullOrWhiteSpace(lembreteTitulo))
+            {
+                continue;
+            }
+
+            atualizados.Add(item);
+            notificacoes.Add(new CriarNotificacaoUsuarioDto
+            {
+                UsuarioId = usuario.Id,
+                Tipo = TipoNotificacaoUsuario.Escala,
+                Titulo = lembreteTitulo,
+                Mensagem = lembreteMensagem,
+                Link = "/minhas-escalas"
+            });
+        }
+
+        foreach (var item in atualizados)
+        {
+            await _repository.UpdateItemAsync(item);
+        }
+
+        await _notificacaoUsuarioService.CriarParaUsuariosAsync(notificacoes);
+        return notificacoes.Count;
     }
 
     private async Task ValidarConflitoPessoaAsync(
@@ -348,6 +611,91 @@ public class EscalaService : IEscalaService
         {
             throw new ArgumentException("Usuário aprovador inválido.");
         }
+    }
+
+    private async Task ValidarPermissaoGestaoEquipeAsync(int equipeId, int usuarioId, bool isAdmin)
+    {
+        if (isAdmin)
+        {
+            return;
+        }
+
+        var ehLider = await _equipeRepository.IsLiderUsuarioDaEquipeAsync(usuarioId, equipeId);
+        if (!ehLider)
+        {
+            throw new UnauthorizedAccessException("Você não tem permissão para gerenciar escalas desta equipe.");
+        }
+    }
+
+    private async Task<EscalaItem> ObterItemComPermissaoAsync(
+        int escalaId,
+        int escalaItemId,
+        int usuarioId,
+        bool isAdmin,
+        int? usuarioPessoaId)
+    {
+        var item = await _repository.GetItemByIdAsync(escalaItemId);
+        if (item == null || item.EscalaId != escalaId)
+        {
+            throw new ArgumentException("Item da escala não encontrado");
+        }
+
+        var podeGerenciarEquipe = isAdmin || await _equipeRepository.IsLiderUsuarioDaEquipeAsync(usuarioId, item.EquipeId);
+        var ehProprioVoluntario = usuarioPessoaId.HasValue && item.Voluntario?.PessoaId == usuarioPessoaId.Value;
+
+        if (!podeGerenciarEquipe && !ehProprioVoluntario)
+        {
+            throw new UnauthorizedAccessException("Você não tem permissão para responder esta escala.");
+        }
+
+        return item;
+    }
+
+    private async Task NotificarPublicacaoEscalaAsync(Escala escala, int usuarioId)
+    {
+        var notificacoes = new List<CriarNotificacaoUsuarioDto>();
+        var dataEvento = escala.EventoOcorrencia?.DataHoraInicio.ToString("dd/MM/yyyy HH:mm") ?? "data a confirmar";
+
+        foreach (var item in escala.Itens)
+        {
+            var pessoaId = item.Voluntario?.PessoaId;
+            if (!pessoaId.HasValue || pessoaId.Value <= 0) continue;
+
+            var usuario = await _usuarioRepository.GetByPessoaIdAsync(pessoaId.Value);
+            if (usuario == null || usuario.Id == usuarioId) continue;
+
+            notificacoes.Add(new CriarNotificacaoUsuarioDto
+            {
+                UsuarioId = usuario.Id,
+                Tipo = TipoNotificacaoUsuario.Escala,
+                Titulo = "Nova escala publicada",
+                Mensagem = $"Voce foi escalado para {escala.Equipe?.Nome ?? "uma equipe"} em {escala.EventoOcorrencia?.Evento?.Titulo ?? "um evento"} no dia {dataEvento}.",
+                Link = $"/minhas-escalas"
+            });
+        }
+
+        await _notificacaoUsuarioService.CriarParaUsuariosAsync(notificacoes);
+    }
+
+    private async Task NotificarRespostaEscalaAsync(EscalaItem item, bool confirmado, int usuarioId)
+    {
+        var liderUsuarioId = item.Equipe?.LiderUsuarioId;
+        if (!liderUsuarioId.HasValue || liderUsuarioId.Value == usuarioId) return;
+
+        var dataEvento = item.Escala?.EventoOcorrencia?.DataHoraInicio.ToString("dd/MM/yyyy HH:mm") ?? "data a confirmar";
+        var acao = confirmado ? "confirmou" : "recusou";
+        var complemento = confirmado
+            ? $"confirmou a escala de {item.Equipe?.Nome ?? "equipe"}."
+            : $"recusou a escala de {item.Equipe?.Nome ?? "equipe"}" + (string.IsNullOrWhiteSpace(item.MotivoRecusa) ? "." : $". Motivo: {item.MotivoRecusa}");
+
+        await _notificacaoUsuarioService.CriarAsync(new CriarNotificacaoUsuarioDto
+        {
+            UsuarioId = liderUsuarioId.Value,
+            Tipo = TipoNotificacaoUsuario.Escala,
+            Titulo = confirmado ? "Escala confirmada" : "Escala recusada",
+            Mensagem = $"{item.Voluntario?.Pessoa?.Nome ?? "Um voluntario"} {acao} para {item.Escala?.EventoOcorrencia?.Evento?.Titulo ?? "o evento"} em {dataEvento} e {complemento}",
+            Link = $"/voluntariado/escalas/ocorrencia/{item.Escala?.EventoOcorrenciaId}/equipe/{item.EquipeId}"
+        });
     }
 
     private static EscalaDto MapToDto(Escala e)
@@ -393,6 +741,16 @@ public class EscalaService : IEscalaService
             AprovadoPorUsuarioId = i.AprovadoPorUsuarioId,
             AprovadoPorUsuarioNome = i.AprovadoPorUsuario?.Pessoa?.Nome,
             AprovadoEm = i.AprovadoEm,
+            Status = i.Status,
+            DataConvite = i.DataConvite,
+            DataConfirmacao = i.DataConfirmacao,
+            DataRecusa = i.DataRecusa,
+            DataLembrete7DiasEnviado = i.DataLembrete7DiasEnviado,
+            DataLembrete24HorasEnviado = i.DataLembrete24HorasEnviado,
+            MotivoRecusa = i.MotivoRecusa,
+            RespondidoPorUsuarioId = i.RespondidoPorUsuarioId,
+            RespondidoPorUsuarioNome = i.RespondidoPorUsuario?.Pessoa?.Nome,
+            ObservacaoOperacional = i.ObservacaoOperacional,
             DataCriacao = i.DataCriacao
         };
     }

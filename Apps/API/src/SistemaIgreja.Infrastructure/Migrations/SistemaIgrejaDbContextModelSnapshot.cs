@@ -170,6 +170,143 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.ToTable("CategoriasNoticias");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaPatrimonio", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nome")
+                        .IsUnique();
+
+                    b.ToTable("CategoriasPatrimonio");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Ativo = true,
+                            DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descricao = "Moveis em geral",
+                            Nome = "Moveis"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Ativo = true,
+                            DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descricao = "Cadeiras, mesas e similares",
+                            Nome = "Cadeiras e mesas"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Ativo = true,
+                            DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descricao = "Instrumentos e acessorios musicais",
+                            Nome = "Instrumentos musicais"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Ativo = true,
+                            DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descricao = "Caixas, mesas, microfones e audio",
+                            Nome = "Equipamentos de audio"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Ativo = true,
+                            DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descricao = "Projetores, TVs, cameras e video",
+                            Nome = "Equipamentos de video"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Ativo = true,
+                            DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descricao = "Refletores, spots e iluminacao",
+                            Nome = "Iluminacao"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Ativo = true,
+                            DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descricao = "Notebooks, computadores e perifericos",
+                            Nome = "Informatica"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Ativo = true,
+                            DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descricao = "Geladeiras, micro-ondas e afins",
+                            Nome = "Eletrodomesticos"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Ativo = true,
+                            DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descricao = "Carros, vans e motos",
+                            Nome = "Veiculos"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Ativo = true,
+                            DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descricao = "Brinquedos, mobiliario e itens infantis",
+                            Nome = "Material infantil"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Ativo = true,
+                            DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descricao = "Aspiradores, enceradeiras e afins",
+                            Nome = "Equipamentos de limpeza"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Ativo = true,
+                            DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descricao = "Itens de apoio e uso geral",
+                            Nome = "Utensilios gerais"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Ativo = true,
+                            DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descricao = "Bens de escritorio e administracao",
+                            Nome = "Patrimonio administrativo"
+                        });
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaReceita", b =>
                 {
                     b.Property<int>("Id")
@@ -224,6 +361,37 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("CentrosCustos");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.ConfiguracaoCampanhaAniversario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("DataAtualizacao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<TimeSpan>("HorarioEnvio")
+                        .HasColumnType("interval");
+
+                    b.Property<string>("ImagemUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("MensagemTemplate")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ConfiguracoesCampanhaAniversario");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.ConfiguracaoMensagem", b =>
@@ -630,6 +798,62 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.ToTable("EnqueteVotos");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.EnvioCampanhaAniversario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AnoReferencia")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("DataAniversario")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DataEnvioSucesso")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DataUltimaTentativa")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ImagemUrlUtilizada")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("LogErro")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("MensagemUtilizada")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<int>("PessoaId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Tentativas")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WhatsAppUtilizado")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PessoaId", "AnoReferencia")
+                        .IsUnique();
+
+                    b.ToTable("EnviosCampanhaAniversario");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Equipe", b =>
                 {
                     b.Property<int>("Id")
@@ -644,12 +868,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<int?>("LiderUsuarioId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LiderUsuarioId");
 
                     b.ToTable("Equipes");
                 });
@@ -716,7 +945,22 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<bool>("ConflitoAprovado")
                         .HasColumnType("boolean");
 
+                    b.Property<DateTime?>("DataConfirmacao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DataConvite")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DataLembrete24HorasEnviado")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DataLembrete7DiasEnviado")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DataRecusa")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("EquipeId")
@@ -729,8 +973,24 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("MotivoRecusa")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ObservacaoOperacional")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<int>("Ordem")
                         .HasColumnType("integer");
+
+                    b.Property<int?>("RespondidoPorUsuarioId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
 
                     b.Property<int>("VoluntarioId")
                         .HasColumnType("integer");
@@ -742,6 +1002,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasIndex("CargoId");
 
                     b.HasIndex("EquipeId");
+
+                    b.HasIndex("RespondidoPorUsuarioId");
 
                     b.HasIndex("VoluntarioId");
 
@@ -1464,6 +1726,250 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.ToTable("Noticias");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.NotificacaoUsuario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DataLeitura")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Link")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Mensagem")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("Tipo")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "DataLeitura", "DataCriacao");
+
+                    b.ToTable("NotificacoesUsuarios");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.PatrimonioItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Campus")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("CategoriaPatrimonioId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CentroCustoId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("DataAquisicao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DataProximaManutencao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DataUltimaAvaliacao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DataUltimaManutencao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int?>("DespesaId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DocumentoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("EstadoConservacao")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int?>("FornecedorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FotoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("GarantiaAte")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Localizacao")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Marca")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("MinisterioArea")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Modelo")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("NumeroNotaFiscal")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NumeroSerie")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Observacoes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("PossuiGarantia")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("ProjetoId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Quantidade")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ResponsavelPessoaId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("TipoAquisicao")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<decimal?>("ValorAquisicao")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoriaPatrimonioId");
+
+                    b.HasIndex("CentroCustoId");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.HasIndex("DespesaId");
+
+                    b.HasIndex("FornecedorId");
+
+                    b.HasIndex("ProjetoId");
+
+                    b.HasIndex("ResponsavelPessoaId");
+
+                    b.ToTable("PatrimonioItens");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.PatrimonioMovimentacao", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("DataMovimentacao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Destino")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Observacoes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Origem")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<int>("PatrimonioItemId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ResponsavelDestino")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("ResponsavelOrigem")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("TipoMovimentacao")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int?>("UsuarioId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UsuarioNome")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatrimonioItemId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("PatrimonioMovimentacoes");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.PerfilAcesso", b =>
                 {
                     b.Property<int>("Id")
@@ -1968,6 +2474,56 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.ToTable("ResponsaveisCriancas");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.SolicitacaoTrocaEscala", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("DataResposta")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("DataSolicitacao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("EscalaItemId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Motivo")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ObservacaoResposta")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int?>("RespondidoPorUsuarioId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("VoluntarioSolicitanteId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("VoluntarioSubstitutoId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RespondidoPorUsuarioId");
+
+                    b.HasIndex("VoluntarioSolicitanteId");
+
+                    b.HasIndex("VoluntarioSubstitutoId");
+
+                    b.HasIndex("EscalaItemId", "Status");
+
+                    b.ToTable("SolicitacoesTrocasEscalas");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Usuario", b =>
                 {
                     b.Property<int>("Id")
@@ -2172,6 +2728,27 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Usuario");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.EnvioCampanhaAniversario", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Pessoa", "Pessoa")
+                        .WithMany()
+                        .HasForeignKey("PessoaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Pessoa");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Equipe", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Usuario", "LiderUsuario")
+                        .WithMany()
+                        .HasForeignKey("LiderUsuarioId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("LiderUsuario");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Escala", b =>
                 {
                     b.HasOne("SistemaIgreja.Domain.Entities.Usuario", "CriadoPorUsuario")
@@ -2222,6 +2799,11 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Usuario", "RespondidoPorUsuario")
+                        .WithMany()
+                        .HasForeignKey("RespondidoPorUsuarioId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("SistemaIgreja.Domain.Entities.Voluntario", "Voluntario")
                         .WithMany()
                         .HasForeignKey("VoluntarioId")
@@ -2235,6 +2817,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Equipe");
 
                     b.Navigation("Escala");
+
+                    b.Navigation("RespondidoPorUsuario");
 
                     b.Navigation("Voluntario");
                 });
@@ -2466,6 +3050,81 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("CategoriaNoticia");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.NotificacaoUsuario", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Usuario", "Usuario")
+                        .WithMany("Notificacoes")
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.PatrimonioItem", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.CategoriaPatrimonio", "CategoriaPatrimonio")
+                        .WithMany("Itens")
+                        .HasForeignKey("CategoriaPatrimonioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SistemaIgreja.Domain.Entities.CentroCusto", "CentroCusto")
+                        .WithMany()
+                        .HasForeignKey("CentroCustoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SistemaIgreja.Domain.Entities.Despesa", "Despesa")
+                        .WithMany()
+                        .HasForeignKey("DespesaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SistemaIgreja.Domain.Entities.Fornecedor", "Fornecedor")
+                        .WithMany()
+                        .HasForeignKey("FornecedorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SistemaIgreja.Domain.Entities.Projeto", "Projeto")
+                        .WithMany()
+                        .HasForeignKey("ProjetoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SistemaIgreja.Domain.Entities.Pessoa", "ResponsavelPessoa")
+                        .WithMany()
+                        .HasForeignKey("ResponsavelPessoaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CategoriaPatrimonio");
+
+                    b.Navigation("CentroCusto");
+
+                    b.Navigation("Despesa");
+
+                    b.Navigation("Fornecedor");
+
+                    b.Navigation("Projeto");
+
+                    b.Navigation("ResponsavelPessoa");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.PatrimonioMovimentacao", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.PatrimonioItem", "PatrimonioItem")
+                        .WithMany("Movimentacoes")
+                        .HasForeignKey("PatrimonioItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SistemaIgreja.Domain.Entities.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("PatrimonioItem");
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.PerfilAcessoPermissao", b =>
                 {
                     b.HasOne("SistemaIgreja.Domain.Entities.PerfilAcesso", "PerfilAcesso")
@@ -2545,6 +3204,39 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Responsavel");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.SolicitacaoTrocaEscala", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.EscalaItem", "EscalaItem")
+                        .WithMany()
+                        .HasForeignKey("EscalaItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SistemaIgreja.Domain.Entities.Usuario", "RespondidoPorUsuario")
+                        .WithMany()
+                        .HasForeignKey("RespondidoPorUsuarioId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SistemaIgreja.Domain.Entities.Voluntario", "VoluntarioSolicitante")
+                        .WithMany()
+                        .HasForeignKey("VoluntarioSolicitanteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SistemaIgreja.Domain.Entities.Voluntario", "VoluntarioSubstituto")
+                        .WithMany()
+                        .HasForeignKey("VoluntarioSubstitutoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("EscalaItem");
+
+                    b.Navigation("RespondidoPorUsuario");
+
+                    b.Navigation("VoluntarioSolicitante");
+
+                    b.Navigation("VoluntarioSubstituto");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Usuario", b =>
                 {
                     b.HasOne("SistemaIgreja.Domain.Entities.PerfilAcesso", "PerfilAcesso")
@@ -2619,6 +3311,11 @@ namespace SistemaIgreja.Infrastructure.Migrations
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaNoticia", b =>
                 {
                     b.Navigation("Noticias");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaPatrimonio", b =>
+                {
+                    b.Navigation("Itens");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaReceita", b =>
@@ -2696,6 +3393,11 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Itens");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.PatrimonioItem", b =>
+                {
+                    b.Navigation("Movimentacoes");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.PerfilAcesso", b =>
                 {
                     b.Navigation("Permissoes");
@@ -2737,6 +3439,11 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Despesas");
 
                     b.Navigation("Receitas");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Usuario", b =>
+                {
+                    b.Navigation("Notificacoes");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Visitante", b =>

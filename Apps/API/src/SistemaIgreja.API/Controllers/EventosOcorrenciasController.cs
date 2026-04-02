@@ -34,6 +34,17 @@ public class EventosOcorrenciasController : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("periodo/cobertura-voluntariado")]
+    public async Task<ActionResult<IEnumerable<CoberturaVoluntariadoOcorrenciaDto>>> GetCoberturaVoluntariado(
+        [FromQuery] DateTime dataInicio,
+        [FromQuery] DateTime dataFim,
+        [FromQuery] int? eventoId = null,
+        [FromQuery] string? nivelRisco = null)
+    {
+        var items = await _service.GetCoberturaVoluntariadoAsync(dataInicio, dataFim, eventoId, nivelRisco);
+        return Ok(items);
+    }
+
     [HttpGet("{id}")]
     public async Task<ActionResult<EventoOcorrenciaDto>> GetById(int id)
     {

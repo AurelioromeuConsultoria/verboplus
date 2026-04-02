@@ -11,4 +11,5 @@ public class EscalaSchedulerSettings
     // Janela de geração relativa à data atual.
     public int DiasJanelaInicio { get; set; } = 0;
     public int DiasJanelaFim { get; set; } = 60;
+    public bool EnviarLembretesAutomaticos { get; set; } = true;
 }

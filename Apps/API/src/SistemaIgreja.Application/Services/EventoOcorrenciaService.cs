@@ -8,6 +8,7 @@ public interface IEventoOcorrenciaService
 {
     Task<IEnumerable<EventoOcorrenciaDto>> GetByEventoAsync(int eventoId);
     Task<IEnumerable<EventoOcorrenciaDto>> GetByPeriodoAsync(DateTime dataInicio, DateTime dataFim, int? eventoId = null);
+    Task<IEnumerable<CoberturaVoluntariadoOcorrenciaDto>> GetCoberturaVoluntariadoAsync(DateTime dataInicio, DateTime dataFim, int? eventoId = null, string? nivelRisco = null);
     Task<EventoOcorrenciaDto?> GetByIdAsync(int id);
     Task<EventoOcorrenciaDto> CreateAsync(CriarEventoOcorrenciaDto dto);
     Task<EventoOcorrenciaDto> UpdateAsync(int id, AtualizarEventoOcorrenciaDto dto);
@@ -41,6 +42,31 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
     {
         var items = await _repository.GetByPeriodoAsync(dataInicio, dataFim, eventoId);
         return items.Select(MapToDto);
+    }
+
+    public async Task<IEnumerable<CoberturaVoluntariadoOcorrenciaDto>> GetCoberturaVoluntariadoAsync(DateTime dataInicio, DateTime dataFim, int? eventoId = null, string? nivelRisco = null)
+    {
+        var items = (await _repository.GetByPeriodoAsync(dataInicio, dataFim, eventoId)).ToList();
+        var result = new List<CoberturaVoluntariadoOcorrenciaDto>();
+
+        foreach (var ocorrencia in items)
+        {
+            var escalas = (await _escalaRepository.GetAllByEventoOcorrenciaAsync(ocorrencia.Id)).ToList();
+            var dto = MapToCoberturaDto(ocorrencia, escalas);
+            result.Add(dto);
+        }
+
+        if (!string.IsNullOrWhiteSpace(nivelRisco) && !string.Equals(nivelRisco, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            result = result
+                .Where(x => string.Equals(x.NivelRisco, nivelRisco, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        return result
+            .OrderBy(x => x.OrdemRisco)
+            .ThenBy(x => x.DataHoraInicio)
+            .ToList();
     }
 
     public async Task<EventoOcorrenciaDto?> GetByIdAsync(int id)
@@ -225,5 +251,70 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
             PossuiEscala = o.Escalas?.Any() == true,
             EscalaId = o.Escalas?.FirstOrDefault()?.Id
         };
+    }
+
+    private static CoberturaVoluntariadoOcorrenciaDto MapToCoberturaDto(EventoOcorrencia ocorrencia, IEnumerable<Escala> escalas)
+    {
+        var cobertura = new CoberturaVoluntariadoOcorrenciaDto
+        {
+            OcorrenciaId = ocorrencia.Id,
+            EventoId = ocorrencia.EventoId,
+            EventoTitulo = ocorrencia.Evento?.Titulo ?? string.Empty,
+            DataHoraInicio = ocorrencia.DataHoraInicio,
+            StatusOcorrencia = ocorrencia.Status,
+        };
+
+        foreach (var escala in escalas)
+        {
+            var equipe = new CoberturaVoluntariadoEquipeDto
+            {
+                EquipeId = escala.EquipeId,
+                EquipeNome = escala.Equipe?.Nome ?? string.Empty,
+                StatusEscala = escala.Status,
+                TotalVagas = escala.Itens?.Count ?? 0,
+                Confirmados = escala.Itens?.Count(i => i.Status == StatusEscalaItem.Confirmado) ?? 0,
+                Pendentes = escala.Itens?.Count(i => i.Status == StatusEscalaItem.Pendente) ?? 0,
+                Recusados = escala.Itens?.Count(i => i.Status == StatusEscalaItem.Recusado) ?? 0,
+                Substituidos = escala.Itens?.Count(i => i.Status == StatusEscalaItem.Substituido) ?? 0,
+                Faltas = escala.Itens?.Count(i => i.Status == StatusEscalaItem.Faltou) ?? 0,
+            };
+
+            cobertura.Equipes.Add(equipe);
+            cobertura.TotalEscalas++;
+            cobertura.TotalVagas += equipe.TotalVagas;
+            cobertura.Confirmados += equipe.Confirmados;
+            cobertura.Pendentes += equipe.Pendentes;
+            cobertura.Recusados += equipe.Recusados;
+            cobertura.Substituidos += equipe.Substituidos;
+            cobertura.Faltas += equipe.Faltas;
+            if (escala.Status == StatusEscala.Rascunho) cobertura.Rascunhos++;
+        }
+
+        if (cobertura.TotalEscalas == 0 || cobertura.TotalVagas == 0)
+        {
+            cobertura.NivelRisco = "none";
+            cobertura.RotuloRisco = "Sem escala";
+            cobertura.OrdemRisco = 0;
+        }
+        else if (cobertura.Recusados > 0 || cobertura.Faltas > 0)
+        {
+            cobertura.NivelRisco = "high";
+            cobertura.RotuloRisco = "Risco alto";
+            cobertura.OrdemRisco = 1;
+        }
+        else if (cobertura.Pendentes > 0 || cobertura.Rascunhos > 0)
+        {
+            cobertura.NivelRisco = "attention";
+            cobertura.RotuloRisco = "Atenção";
+            cobertura.OrdemRisco = 2;
+        }
+        else
+        {
+            cobertura.NivelRisco = "ok";
+            cobertura.RotuloRisco = "Coberta";
+            cobertura.OrdemRisco = 3;
+        }
+
+        return cobertura;
     }
 }

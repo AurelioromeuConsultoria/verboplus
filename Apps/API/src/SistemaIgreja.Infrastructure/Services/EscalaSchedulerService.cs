@@ -41,6 +41,10 @@ public class EscalaSchedulerService : BackgroundService
                 if (_settings.Enabled)
                 {
                     await GerarOcorrenciasRecorrentesAsync(stoppingToken);
+                    if (_settings.EnviarLembretesAutomaticos)
+                    {
+                        await ProcessarLembretesEscalasAsync(stoppingToken);
+                    }
                 }
                 else
                 {
@@ -131,5 +135,17 @@ public class EscalaSchedulerService : BackgroundService
             "EscalaScheduler concluído. Eventos processados: {EventosCount}, ocorrências geradas: {OcorrenciasGeradas}",
             eventosRecorrentesAtivos.Count,
             totalGeradas);
+    }
+
+    private async Task ProcessarLembretesEscalasAsync(CancellationToken stoppingToken)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var escalaService = scope.ServiceProvider.GetRequiredService<IEscalaService>();
+        var total = await escalaService.EnviarLembretesPendentesAsync(DateTime.Now);
+
+        if (!stoppingToken.IsCancellationRequested && total > 0)
+        {
+            _logger.LogInformation("EscalaScheduler enviou {Total} lembrete(s) de escala.", total);
+        }
     }
 }
