@@ -12,6 +12,7 @@
     "connect": "Connect",
     "people": "Personas",
     "birthdays": "Cumpleaños",
+    "birthdayCampaign": "Campaña de Cumpleaños",
     "profiles": "Perfiles",
     "visitors": "Visitantes",
     "messageSettings": "Configuración de mensajes",
@@ -21,9 +22,12 @@
     "roles": "Cargos",
     "volunteers": "Voluntarios",
     "schedules": "Escalas",
+    "coveragePanel": "Panel de cobertura",
     "scheduleModels": "Modelos de escala",
     "unavailabilities": "Indisponibilidades",
     "linksReport": "Informe de vínculos",
+    "swapRequests": "Solicitudes de cambio",
+    "volunteerHistory": "Historial operativo",
     "hub": "Hub",
     "houses": "Casas",
     "events": "Eventos",
@@ -60,6 +64,7 @@
   "header": {
     "dashboard": "Dashboard",
     "people": "Personas",
+    "aniversarios-campanha": "Campaña de Cumpleaños",
     "visitors": "Visitantes",
     "profiles": "Perfiles",
     "messageSettings": "Configuración de mensajes",
@@ -812,4 +817,3 @@
     "esES": "Español"
   }
 }
-

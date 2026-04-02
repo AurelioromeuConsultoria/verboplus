@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Eye, Edit, Trash2, Phone, Mail, Download, UserPlus } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, Phone, Mail, Download, UserPlus, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -288,14 +288,20 @@ export default function PessoasList() {
             {t('people.subtitle')}
           </p>
         </div>
-        {canEdit && (
-          <Button asChild>
-            <Link to="/pessoas/novo">
-              <Plus className="h-4 w-4 mr-2" />
-              {t('people.new')}
-            </Link>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={loadPessoas}>
+            <RefreshCcw className="h-4 w-4 mr-2" />
+            Atualizar
           </Button>
-        )}
+          {canEdit && (
+            <Button asChild>
+              <Link to="/pessoas/novo">
+                <Plus className="h-4 w-4 mr-2" />
+                {t('people.new')}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <AdvancedSearch
@@ -571,6 +577,5 @@ export default function PessoasList() {
     </div>
   );
 }
-
 
 

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
-import { equipesApi, voluntariosApi, pessoasApi, cargosApi } from '@/lib/api';
+import { equipesApi, voluntariosApi, pessoasApi, cargosApi, usuariosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { useTranslation } from 'react-i18next';
@@ -21,9 +21,11 @@ export default function EquipeForm() {
   const [formData, setFormData] = useState({
     nome: '',
     area: '1',
+    liderUsuarioId: '',
   });
   const [voluntarios, setVoluntarios] = useState([]);
   const [pessoas, setPessoas] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
   const [cargos, setCargos] = useState([]);
   const [vinculoPessoaId, setVinculoPessoaId] = useState('');
   const [vinculoCargoId, setVinculoCargoId] = useState('');
@@ -36,20 +38,32 @@ export default function EquipeForm() {
       setLoading(true);
       setError(null);
       if (isEditing) {
-        const [resEquipe, resPessoas, resCargos, resVol] = await Promise.all([
+        const [resEquipe, resPessoas, resCargos, resVol, resUsuarios] = await Promise.all([
           equipesApi.getById(id),
           pessoasApi.getAll(),
           cargosApi.getAll(),
           voluntariosApi.getByEquipe(id),
+          usuariosApi.getAll(),
         ]);
         const e = resEquipe.data;
-        setFormData({ nome: e.nome || '', area: String(e.area || '1') });
+        setFormData({
+          nome: e.nome || '',
+          area: String(e.area || '1'),
+          liderUsuarioId: e.liderUsuarioId ? String(e.liderUsuarioId) : '',
+        });
         setPessoas(resPessoas.data || []);
         setCargos(resCargos.data || []);
         setVoluntarios(resVol.data || []);
+        setUsuarios(resUsuarios.data || []);
       } else {
-        setPessoas([]);
-        setCargos([]);
+        const [resPessoas, resCargos, resUsuarios] = await Promise.all([
+          pessoasApi.getAll(),
+          cargosApi.getAll(),
+          usuariosApi.getAll(),
+        ]);
+        setPessoas(resPessoas.data || []);
+        setCargos(resCargos.data || []);
+        setUsuarios(resUsuarios.data || []);
       }
     } catch (err) {
       setError('Erro ao carregar equipe');
@@ -114,7 +128,11 @@ export default function EquipeForm() {
     }
     try {
       setLoading(true);
-      const payload = { nome: formData.nome.trim(), area: Number(formData.area) };
+      const payload = {
+        nome: formData.nome.trim(),
+        area: Number(formData.area),
+        liderUsuarioId: formData.liderUsuarioId ? Number(formData.liderUsuarioId) : null,
+      };
       if (isEditing) await equipesApi.update(id, payload);
       else await equipesApi.create(payload);
       toast.success(isEditing ? 'Equipe atualizada com sucesso' : 'Equipe criada com sucesso');
@@ -162,6 +180,24 @@ export default function EquipeForm() {
                   <option value="1">Verde</option>
                   <option value="2">Vermelha</option>
                   <option value="3">Laranja</option>
+                </select>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="liderUsuarioId">Líder da equipe</Label>
+                <select
+                  id="liderUsuarioId"
+                  name="liderUsuarioId"
+                  value={formData.liderUsuarioId}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border rounded"
+                >
+                  <option value="">Sem líder definido</option>
+                  {usuarios.map((usuario) => (
+                    <option key={usuario.id} value={usuario.id}>
+                      {usuario.nome}{usuario.emailLogin ? ` — ${usuario.emailLogin}` : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -253,5 +289,4 @@ export default function EquipeForm() {
     </div>
   );
 }
-
 

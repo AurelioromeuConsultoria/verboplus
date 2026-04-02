@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, RefreshCcw, Settings } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CheckCircle2, Clock3, RefreshCcw, Settings, XCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -22,12 +23,20 @@ function getStatusOcorrenciaLabel(status) {
   return 'Desconhecido';
 }
 
+function getRiskClassName(nivelRisco) {
+  if (nivelRisco === 'high') return 'bg-red-100 text-red-800 hover:bg-red-100';
+  if (nivelRisco === 'attention') return 'bg-amber-100 text-amber-800 hover:bg-amber-100';
+  if (nivelRisco === 'none') return 'bg-gray-100 text-gray-800 hover:bg-gray-100';
+  return 'bg-green-100 text-green-800 hover:bg-green-100';
+}
+
 export default function EscalasList() {
   const [initialLoad, setInitialLoad] = useState(true);
   const [loadingOcorrencias, setLoadingOcorrencias] = useState(false);
   const [error, setError] = useState(null);
   const [eventos, setEventos] = useState([]);
   const [ocorrencias, setOcorrencias] = useState([]);
+  const [coverageByOcorrencia, setCoverageByOcorrencia] = useState({});
 
   const [filtroEventoId, setFiltroEventoId] = useState('all');
   const [dataInicio, setDataInicio] = useState(() => {
@@ -63,7 +72,25 @@ export default function EscalasList() {
         `${dataFim}T23:59:59`,
         eventoId
       );
-      setOcorrencias(res.data || []);
+      const ocorrenciasData = res.data || [];
+      setOcorrencias(ocorrenciasData);
+
+      if (ocorrenciasData.length === 0) {
+        setCoverageByOcorrencia({});
+        return;
+      }
+
+      const coberturaRes = await eventosOcorrenciasApi.getCoberturaVoluntariado({
+        dataInicio: `${dataInicio}T00:00:00`,
+        dataFim: `${dataFim}T23:59:59`,
+        eventoId,
+      });
+      const cobertura = coberturaRes.data || [];
+      setCoverageByOcorrencia(
+        Object.fromEntries(
+          cobertura.map((item) => [item.ocorrenciaId, item])
+        )
+      );
     } catch (err) {
       console.error(err);
       setError('Erro ao carregar ocorrências para escala');
@@ -157,38 +184,74 @@ export default function EscalasList() {
                   <TableHead>Evento</TableHead>
                   <TableHead>Data/Hora</TableHead>
                   <TableHead>Status da ocorrência</TableHead>
-                  <TableHead>Escala</TableHead>
+                  <TableHead>Cobertura</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.eventoTitulo}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                        {new Date(item.dataHoraInicio).toLocaleString('pt-BR')}
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusOcorrenciaLabel(item.status)}</TableCell>
-                    <TableCell>
-                      {item.possuiEscala ? (
-                        <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800">Criada</span>
-                      ) : (
-                        <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">Não criada</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/voluntariado/escalas/ocorrencia/${item.id}`}>
-                          <Settings className="h-4 w-4 mr-2" />
-                          {item.possuiEscala ? 'Editar Escala' : 'Montar Escala'}
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {paginatedItems.map((item) => {
+                  const coverage = coverageByOcorrencia[item.id] || {
+                    rotuloRisco: 'Sem escala',
+                    nivelRisco: 'none',
+                    confirmados: 0,
+                    pendentes: 0,
+                    recusados: 0,
+                    substituidos: 0,
+                  };
+
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.eventoTitulo}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                          {new Date(item.dataHoraInicio).toLocaleString('pt-BR')}
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusOcorrenciaLabel(item.status)}</TableCell>
+                      <TableCell>
+                        <div className="space-y-2">
+                          <Badge className={getRiskClassName(coverage.nivelRisco)}>
+                            {coverage.rotuloRisco}
+                          </Badge>
+                          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                              {coverage.confirmados}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <Clock3 className="h-3.5 w-3.5 text-amber-600" />
+                              {coverage.pendentes}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <XCircle className="h-3.5 w-3.5 text-red-600" />
+                              {coverage.recusados}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <AlertTriangle className="h-3.5 w-3.5 text-slate-600" />
+                              {coverage.substituidos}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link
+                            to={`/voluntariado/escalas/ocorrencia/${item.id}`}
+                            state={{
+                              breadcrumbLabels: {
+                                [`/voluntariado/escalas/ocorrencia/${item.id}`]: item.eventoTitulo,
+                              },
+                            }}
+                          >
+                            <Settings className="h-4 w-4 mr-2" />
+                            {item.possuiEscala ? 'Editar Escala' : 'Montar Escala'}
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

@@ -44,6 +44,8 @@ export const eventosOcorrenciasApi = {
   getByEvento: (eventoId) => api.get(`/EventosOcorrencias/evento/${eventoId}`),
   getByPeriodo: (dataInicio, dataFim, eventoId) =>
     api.get('/EventosOcorrencias/periodo', { params: { dataInicio, dataFim, eventoId } }),
+  getCoberturaVoluntariado: (params) =>
+    api.get('/EventosOcorrencias/periodo/cobertura-voluntariado', { params }),
   getById: (id) => api.get(`/EventosOcorrencias/${id}`),
   create: (data) => api.post('/EventosOcorrencias', data),
   update: (id, data) => api.put(`/EventosOcorrencias/${id}`),
@@ -64,4 +66,3 @@ export const inscricoesEventosApi = {
   cancelar: (id) => api.put(`/InscricoesEventos/${id}/cancelar`),
   delete: (id) => api.delete(`/InscricoesEventos/${id}`),
 };
-

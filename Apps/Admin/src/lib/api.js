@@ -14,7 +14,7 @@ export * from '../api/kids';
 export * from '../api/uploads';
 export * from '../api/search';
 export * from '../api/auditoria';
+export * from '../api/notificacoes';
 export * from '../api/financeiro/cadastros';
 export * from '../api/financeiro/lancamentos';
 export * from '../api/financeiro/relatorios';
-

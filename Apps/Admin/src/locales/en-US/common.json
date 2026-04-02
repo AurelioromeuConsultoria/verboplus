@@ -12,6 +12,7 @@
     "connect": "Connect",
     "people": "People",
     "birthdays": "Birthdays",
+    "birthdayCampaign": "Birthday Campaign",
     "profiles": "Profiles",
     "visitors": "Visitors",
     "messageSettings": "Message Settings",
@@ -21,9 +22,12 @@
     "roles": "Roles",
     "volunteers": "Volunteers",
     "schedules": "Schedules",
+    "coveragePanel": "Coverage Panel",
     "scheduleModels": "Schedule Templates",
     "unavailabilities": "Unavailabilities",
     "linksReport": "Links Report",
+    "swapRequests": "Swap Requests",
+    "volunteerHistory": "Volunteer History",
     "hub": "Hub",
     "houses": "Houses",
     "events": "Events",
@@ -60,6 +64,7 @@
   "header": {
     "dashboard": "Dashboard",
     "people": "People",
+    "aniversarios-campanha": "Birthday Campaign",
     "visitors": "Visitors",
     "profiles": "Profiles",
     "messageSettings": "Message Settings",
@@ -822,4 +827,3 @@
     "esES": "Spanish"
   }
 }
-

@@ -15,6 +15,7 @@ const PessoasList = lazy(() => import('./pages/Pessoas/PessoasList'));
 const PessoaForm = lazy(() => import('./pages/Pessoas/PessoaForm'));
 const PessoaDetails = lazy(() => import('./pages/Pessoas/PessoaDetails'));
 const Aniversariantes = lazy(() => import('./pages/Pessoas/Aniversariantes'));
+const CampanhaAniversario = lazy(() => import('./pages/Pessoas/CampanhaAniversario'));
 const PerfisList = lazy(() => import('./pages/Perfis/PerfisList'));
 const ConfiguracoesList = lazy(() => import('./pages/ConfiguracoesMensagens/ConfiguracoesList'));
 const ConfiguracaoForm = lazy(() => import('./pages/ConfiguracoesMensagens/ConfiguracaoForm'));
@@ -26,11 +27,16 @@ const CargoForm = lazy(() => import('./pages/Cargos/CargoForm'));
 const VoluntariosList = lazy(() => import('./pages/Voluntarios/VoluntariosList'));
 const VoluntarioForm = lazy(() => import('./pages/Voluntarios/VoluntarioForm'));
 const EscalasList = lazy(() => import('./pages/Voluntariado/EscalasList'));
+const PainelCoberturaVoluntariado = lazy(() => import('./pages/Voluntariado/PainelCoberturaVoluntariado'));
 const EscalasPorOcorrencia = lazy(() => import('./pages/Voluntariado/EscalasPorOcorrencia'));
 const EscalaEditor = lazy(() => import('./pages/Voluntariado/EscalaEditor'));
 const ModelosEscalaList = lazy(() => import('./pages/Voluntariado/ModelosEscalaList'));
 const ModeloEscalaForm = lazy(() => import('./pages/Voluntariado/ModeloEscalaForm'));
 const IndisponibilidadesList = lazy(() => import('./pages/Voluntariado/IndisponibilidadesList'));
+const MinhasEscalas = lazy(() => import('./pages/Voluntariado/MinhasEscalas'));
+const SolicitacoesTrocaList = lazy(() => import('./pages/Voluntariado/SolicitacoesTrocaList'));
+const HistoricoVoluntarios = lazy(() => import('./pages/Voluntariado/HistoricoVoluntarios'));
+const NotificacoesList = lazy(() => import('./pages/Notificacoes/NotificacoesList'));
 const OcorrenciasList = lazy(() => import('./pages/Eventos/OcorrenciasList'));
 const RelatorioVinculosVoluntariado = lazy(() => import('./pages/Voluntariado/RelatorioVinculosVoluntariado'));
 const EventosList = lazy(() => import('./pages/Eventos/EventosList'));
@@ -71,6 +77,12 @@ const CentrosCustosList = lazy(() => import('./pages/Financeiro/CentrosCustos/Ce
 const CentroCustoForm = lazy(() => import('./pages/Financeiro/CentrosCustos/CentroCustoForm'));
 const ProjetosList = lazy(() => import('./pages/Financeiro/Projetos/ProjetosList'));
 const ProjetoForm = lazy(() => import('./pages/Financeiro/Projetos/ProjetoForm'));
+const PatrimoniosList = lazy(() => import('./pages/Financeiro/Patrimonio/PatrimoniosList'));
+const PatrimonioForm = lazy(() => import('./pages/Financeiro/Patrimonio/PatrimonioForm'));
+const PatrimonioDetails = lazy(() => import('./pages/Financeiro/Patrimonio/PatrimonioDetails'));
+const PatrimonioRelatorio = lazy(() => import('./pages/Financeiro/Patrimonio/PatrimonioRelatorio'));
+const CategoriasPatrimonioList = lazy(() => import('./pages/Financeiro/Patrimonio/CategoriasPatrimonioList'));
+const CategoriaPatrimonioForm = lazy(() => import('./pages/Financeiro/Patrimonio/CategoriaPatrimonioForm'));
 const DespesasList = lazy(() => import('./pages/Financeiro/Despesas/DespesasList'));
 const DespesaForm = lazy(() => import('./pages/Financeiro/Despesas/DespesaForm'));
 const ReceitasList = lazy(() => import('./pages/Financeiro/Receitas/ReceitasList'));
@@ -118,6 +130,11 @@ function App() {
           <Route path="pessoas/aniversariantes" element={
             <RequirePermission resource={RESOURCES.PESSOAS}>
               <Aniversariantes />
+            </RequirePermission>
+          } />
+          <Route path="pessoas/aniversariantes/campanha" element={
+            <RequirePermission resource={RESOURCES.PESSOAS} action={ACTIONS.EDIT}>
+              <CampanhaAniversario />
             </RequirePermission>
           } />
           <Route path="pessoas/novo" element={
@@ -244,6 +261,11 @@ function App() {
               <EscalasList />
             </RequirePermission>
           } />
+          <Route path="voluntariado/painel-cobertura" element={
+            <RequirePermission resource={RESOURCES.VOLUNTARIOS}>
+              <PainelCoberturaVoluntariado />
+            </RequirePermission>
+          } />
           <Route path="voluntariado/escalas/ocorrencia/:ocorrenciaId" element={
             <RequirePermission resource={RESOURCES.VOLUNTARIOS}>
               <EscalasPorOcorrencia />
@@ -272,6 +294,18 @@ function App() {
           <Route path="voluntariado/indisponibilidades" element={
             <RequirePermission resource={RESOURCES.VOLUNTARIOS} action={ACTIONS.EDIT}>
               <IndisponibilidadesList />
+            </RequirePermission>
+          } />
+          <Route path="minhas-escalas" element={<MinhasEscalas />} />
+          <Route path="notificacoes" element={<NotificacoesList />} />
+          <Route path="voluntariado/solicitacoes-troca" element={
+            <RequirePermission resource={RESOURCES.VOLUNTARIOS}>
+              <SolicitacoesTrocaList />
+            </RequirePermission>
+          } />
+          <Route path="voluntariado/historico" element={
+            <RequirePermission resource={RESOURCES.VOLUNTARIOS}>
+              <HistoricoVoluntarios />
             </RequirePermission>
           } />
           <Route path="voluntariado/relatorio-vinculos" element={
@@ -589,6 +623,48 @@ function App() {
           <Route path="financeiro/projetos/:id/editar" element={
             <RequirePermission resource={RESOURCES.FINANCEIRO} action={ACTIONS.EDIT}>
               <ProjetoForm />
+            </RequirePermission>
+          } />
+
+          {/* Rotas de Financeiro - Patrimônio */}
+          <Route path="financeiro/patrimonio" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO}>
+              <PatrimoniosList />
+            </RequirePermission>
+          } />
+          <Route path="financeiro/patrimonio/relatorio-geral" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO}>
+              <PatrimonioRelatorio />
+            </RequirePermission>
+          } />
+          <Route path="financeiro/patrimonio/novo" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO} action={ACTIONS.EDIT}>
+              <PatrimonioForm />
+            </RequirePermission>
+          } />
+          <Route path="financeiro/patrimonio/:id" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO}>
+              <PatrimonioDetails />
+            </RequirePermission>
+          } />
+          <Route path="financeiro/patrimonio/:id/editar" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO} action={ACTIONS.EDIT}>
+              <PatrimonioForm />
+            </RequirePermission>
+          } />
+          <Route path="financeiro/patrimonio/categorias" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO}>
+              <CategoriasPatrimonioList />
+            </RequirePermission>
+          } />
+          <Route path="financeiro/patrimonio/categorias/nova" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO} action={ACTIONS.EDIT}>
+              <CategoriaPatrimonioForm />
+            </RequirePermission>
+          } />
+          <Route path="financeiro/patrimonio/categorias/:id/editar" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO} action={ACTIONS.EDIT}>
+              <CategoriaPatrimonioForm />
             </RequirePermission>
           } />
 

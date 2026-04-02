@@ -1,4 +1,4 @@
-import { Bell, User, LogOut, Settings, Sun, Moon, Globe } from 'lucide-react';
+import { Bell, User, LogOut, Settings, Sun, Moon, Globe, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -21,11 +21,14 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from 'react-i18next';
+import { useEffect, useState } from 'react';
+import { notificacoesApi } from '@/lib/api';
 
 // Mapeamento de rotas para chaves de i18n
 const routeLabelKeys = {
   '': 'header.dashboard',
   'pessoas': 'header.people',
+  'aniversarios-campanha': 'header.aniversarios-campanha',
   'visitantes': 'header.visitors',
   'perfis': 'header.profiles',
   'configuracoes-mensagens': 'header.messageSettings',
@@ -35,6 +38,9 @@ const routeLabelKeys = {
   'voluntarios': 'header.volunteers',
   'eventos': 'header.events',
   'inscricoes-eventos': 'header.eventRegistrations',
+  'patrimonio': 'header.patrimony',
+  'categorias': 'header.patrimonyCategories',
+  'relatorio-geral': 'header.patrimonyReport',
   'destaques-site': 'header.siteHighlights',
   'categorias-noticias': 'header.newsCategories',
   'noticias': 'header.news',
@@ -47,9 +53,10 @@ const routeLabelKeys = {
   'editar': 'header.edit',
 };
 
-function generateBreadcrumbs(pathname, t) {
+function generateBreadcrumbs(pathname, t, locationState) {
   const paths = pathname.split('/').filter(Boolean);
   const breadcrumbs = [{ label: t('header.dashboard'), path: '/' }];
+  const breadcrumbLabels = locationState?.breadcrumbLabels || {};
 
   if (paths.length === 0) {
     return breadcrumbs;
@@ -59,15 +66,18 @@ function generateBreadcrumbs(pathname, t) {
   paths.forEach((segment, index) => {
     currentPath += `/${segment}`;
     const isLast = index === paths.length - 1;
-    
-    // Se for um ID numérico, tentar manter o label anterior
-    if (/^\d+$/.test(segment)) {
-      const prevLabelKey = routeLabelKeys[paths[index - 1]];
-      const prevLabel = prevLabelKey ? t(prevLabelKey) : segment;
+
+    const customLabel = breadcrumbLabels[currentPath];
+    if (customLabel) {
       breadcrumbs.push({
-        label: prevLabel,
+        label: customLabel,
         path: isLast ? null : currentPath,
       });
+      return;
+    }
+
+    if (/^\d+$/.test(segment)) {
+      return;
     } else {
       const key = routeLabelKeys[segment];
       const label = key ? t(key) : segment.charAt(0).toUpperCase() + segment.slice(1);
@@ -87,7 +97,9 @@ export function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation();
-  const breadcrumbs = generateBreadcrumbs(location.pathname, t);
+  const breadcrumbs = generateBreadcrumbs(location.pathname, t, location.state);
+  const [notificacoes, setNotificacoes] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleChangeLanguage = (lng) => {
     i18n.changeLanguage(lng);
@@ -101,6 +113,55 @@ export function Header() {
   const truncateText = (text, maxLength = 20) => {
     if (!text) return '';
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  };
+
+  const loadNotificacoes = async () => {
+    if (!usuario) return;
+
+    try {
+      const [itemsRes, countRes] = await Promise.all([
+        notificacoesApi.getMinhas({ limit: 5 }),
+        notificacoesApi.getUnreadCount(),
+      ]);
+
+      setNotificacoes(itemsRes.data || []);
+      setUnreadCount(countRes.data?.count || 0);
+    } catch (error) {
+      console.error('Erro ao carregar notificações', error);
+    }
+  };
+
+  useEffect(() => {
+    loadNotificacoes();
+  }, [usuario, location.pathname]);
+
+  const handleNotificationClick = async (notificacao) => {
+    try {
+      if (!notificacao.dataLeitura) {
+        await notificacoesApi.marcarComoLida(notificacao.id);
+      }
+    } catch (error) {
+      console.error('Erro ao marcar notificação como lida', error);
+    } finally {
+      setNotificacoes((current) =>
+        current.map((item) => (item.id === notificacao.id ? { ...item, dataLeitura: item.dataLeitura || new Date().toISOString() } : item))
+      );
+      setUnreadCount((current) => (notificacao.dataLeitura ? current : Math.max(0, current - 1)));
+
+      if (notificacao.link) {
+        navigate(notificacao.link);
+      }
+    }
+  };
+
+  const handleMarkAllNotifications = async () => {
+    try {
+      await notificacoesApi.marcarTodasComoLidas();
+      setNotificacoes((current) => current.map((item) => ({ ...item, dataLeitura: item.dataLeitura || new Date().toISOString() })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Erro ao marcar notificações como lidas', error);
+    }
   };
 
   return (
@@ -165,9 +226,60 @@ export function Header() {
           </TooltipContent>
         </Tooltip>
         
-        <Button variant="ghost" size="icon">
-          <Bell className="h-5 w-5" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-96">
+            <DropdownMenuLabel className="flex items-center justify-between gap-2">
+              <span>Notificações</span>
+              {unreadCount > 0 && (
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={handleMarkAllNotifications}>
+                  <CheckCheck className="h-3.5 w-3.5 mr-1" />
+                  Ler todas
+                </Button>
+              )}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {notificacoes.length === 0 ? (
+              <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                Nenhuma notificação por enquanto.
+              </div>
+            ) : (
+              notificacoes.map((item) => (
+                <DropdownMenuItem
+                  key={item.id}
+                  className="items-start py-3"
+                  onClick={() => handleNotificationClick(item)}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{item.titulo}</span>
+                      {!item.dataLeitura && <span className="h-2 w-2 rounded-full bg-red-500" />}
+                    </div>
+                    <p className="max-w-[300px] text-xs text-muted-foreground whitespace-normal">
+                      {item.mensagem}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {new Date(item.dataCriacao).toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                </DropdownMenuItem>
+              ))
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate('/notificacoes')}>
+              Ver todas
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         
         {usuario && (
           <DropdownMenu>
@@ -205,4 +317,3 @@ export function Header() {
     </header>
   );
 }
-

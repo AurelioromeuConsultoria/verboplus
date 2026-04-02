@@ -10,8 +10,10 @@ import {
   Briefcase,
   Handshake,
   CalendarDays,
+  Gift,
   CalendarOff,
   ArrowRightLeft,
+  ClipboardCheck,
   Star,
   Tag,
   Newspaper,
@@ -24,13 +26,13 @@ import {
   UserCog,
   Images,
   Folder,
-  User,
   ChevronsUpDown,
   BarChart3,
   Baby,
   LogIn,
   Cog,
-  Shield
+  Shield,
+  Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -45,6 +47,11 @@ const menuItems = [
     href: '/',
     icon: Home,
     permission: RESOURCES.DASHBOARD,
+  },
+  {
+    titleKey: 'menu.mySchedules',
+    href: '/minhas-escalas',
+    icon: ClipboardCheck,
   },
   {
     titleKey: 'menu.users',
@@ -84,10 +91,10 @@ const menuGroups = [
         permission: RESOURCES.PESSOAS,
       },
       {
-        titleKey: 'menu.profiles',
-        href: '/perfis',
-        icon: User,
-        permission: RESOURCES.PERFIS,
+        titleKey: 'menu.birthdayCampaign',
+        href: '/pessoas/aniversariantes/campanha',
+        icon: Gift,
+        permission: RESOURCES.PESSOAS,
       },
       {
         titleKey: 'menu.visitors',
@@ -138,6 +145,12 @@ const menuGroups = [
         permission: RESOURCES.VOLUNTARIOS,
       },
       {
+        titleKey: 'menu.coveragePanel',
+        href: '/voluntariado/painel-cobertura',
+        icon: ClipboardCheck,
+        permission: RESOURCES.VOLUNTARIOS,
+      },
+      {
         titleKey: 'menu.scheduleModels',
         href: '/voluntariado/modelos-escala',
         icon: ClipboardList,
@@ -153,6 +166,18 @@ const menuGroups = [
         titleKey: 'menu.linksReport',
         href: '/voluntariado/relatorio-vinculos',
         icon: ArrowRightLeft,
+        permission: RESOURCES.VOLUNTARIOS,
+      },
+      {
+        titleKey: 'menu.swapRequests',
+        href: '/voluntariado/solicitacoes-troca',
+        icon: ClipboardCheck,
+        permission: RESOURCES.VOLUNTARIOS,
+      },
+      {
+        titleKey: 'menu.volunteerHistory',
+        href: '/voluntariado/historico',
+        icon: ClipboardCheck,
         permission: RESOURCES.VOLUNTARIOS,
       },
     ],
@@ -224,6 +249,24 @@ const menuGroups = [
         titleKey: 'menu.projects',
         href: '/financeiro/projetos',
         icon: Calendar,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        titleKey: 'menu.patrimony',
+        href: '/financeiro/patrimonio',
+        icon: Package,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        titleKey: 'menu.patrimonyCategories',
+        href: '/financeiro/patrimonio/categorias',
+        icon: Tag,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        titleKey: 'menu.patrimonyReport',
+        href: '/financeiro/patrimonio/relatorio-geral',
+        icon: BarChart3,
         permission: RESOURCES.FINANCEIRO,
       },
       {

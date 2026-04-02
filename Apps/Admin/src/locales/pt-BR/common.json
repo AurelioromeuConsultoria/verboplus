@@ -6,12 +6,14 @@
   },
   "menu": {
     "dashboard": "Dashboard",
+    "mySchedules": "Minhas Escalas",
     "users": "Usuários",
     "audit": "Auditoria",
     "accessProfiles": "Perfis de Acesso",
     "connect": "Connect",
     "people": "Pessoas",
     "birthdays": "Aniversariantes",
+    "birthdayCampaign": "Campanha de Aniversário",
     "profiles": "Perfis",
     "visitors": "Visitantes",
     "messageSettings": "Configurações de Mensagens",
@@ -21,9 +23,12 @@
     "roles": "Cargos",
     "volunteers": "Voluntários",
     "schedules": "Escalas",
+    "coveragePanel": "Painel de Cobertura",
     "scheduleModels": "Modelos de Escala",
     "unavailabilities": "Indisponibilidades",
     "linksReport": "Relatório Vínculos",
+    "swapRequests": "Solicitações de Troca",
+    "volunteerHistory": "Histórico Operacional",
     "hub": "Hub",
     "houses": "Casas",
     "events": "Eventos",
@@ -35,6 +40,9 @@
     "bankAccounts": "Contas Bancárias",
     "costCenters": "Centros de Custos",
     "projects": "Projetos",
+    "patrimony": "Patrimônio",
+    "patrimonyCategories": "Categorias de Patrimônio",
+    "patrimonyReport": "Relatório de Patrimônio",
     "expenses": "Despesas",
     "revenues": "Receitas",
     "revenueCategories": "Categorias de Receitas",
@@ -60,6 +68,7 @@
   "header": {
     "dashboard": "Dashboard",
     "people": "Pessoas",
+    "aniversarios-campanha": "Campanha de Aniversário",
     "visitors": "Visitantes",
     "profiles": "Perfis",
     "messageSettings": "Configurações de Mensagens",
@@ -69,6 +78,9 @@
     "volunteers": "Voluntários",
     "events": "Eventos",
     "eventRegistrations": "Inscrições em Eventos",
+    "patrimony": "Patrimônio",
+    "patrimonyCategories": "Categorias de Patrimônio",
+    "patrimonyReport": "Relatório de Patrimônio",
     "siteHighlights": "Destaques do Site",
     "newsCategories": "Categorias de Notícias",
     "news": "Notícias",
@@ -961,6 +973,224 @@
       "saveSuccessCreate": "Projeto criado com sucesso!",
       "saveError": "Erro ao salvar projeto",
       "loadingForm": "Carregando projeto..."
+    },
+    "patrimonyCategories": {
+      "title": "Categorias de Patrimônio",
+      "subtitle": "Gerencie as categorias do patrimônio",
+      "new": "Nova Categoria",
+      "listTitle": "Lista de Categorias",
+      "loading": "Carregando categorias de patrimônio...",
+      "errorLoad": "Erro ao carregar categorias de patrimônio",
+      "emptyMessage": "Nenhuma categoria de patrimônio encontrada.",
+      "deleteTitle": "Excluir Categoria de Patrimônio",
+      "deleteDescription": "Tem certeza que deseja excluir \"{{name}}\"? Esta ação não pode ser desfeita.",
+      "deleteSuccess": "Categoria de patrimônio excluída com sucesso",
+      "deleteError": "Erro ao excluir categoria de patrimônio",
+      "editTitle": "Editar Categoria de Patrimônio",
+      "newTitle": "Nova Categoria de Patrimônio",
+      "editSubtitle": "Atualize as informações da categoria",
+      "newSubtitle": "Cadastre uma nova categoria de patrimônio",
+      "cardTitle": "Dados da Categoria",
+      "activeLabel": "Categoria ativa",
+      "statusActive": "Ativa",
+      "statusInactive": "Inativa",
+      "nameRequired": "Nome é obrigatório",
+      "saveSuccessEdit": "Categoria de patrimônio atualizada com sucesso!",
+      "saveSuccessCreate": "Categoria de patrimônio criada com sucesso!",
+      "saveError": "Erro ao salvar categoria de patrimônio",
+      "loadingForm": "Carregando categoria..."
+    },
+    "patrimony": {
+      "title": "Patrimônio",
+      "subtitle": "Gerencie os bens da igreja",
+      "report": "Ver relatório",
+      "new": "Novo Bem",
+      "listTitle": "Lista de Bens",
+      "loading": "Carregando patrimônio...",
+      "loadingForm": "Carregando bem patrimonial...",
+      "errorLoad": "Erro ao carregar patrimônio",
+      "emptyMessage": "Nenhum bem patrimonial encontrado.",
+      "deleteTitle": "Excluir Bem Patrimonial",
+      "deleteDescription": "Tem certeza que deseja excluir \"{{name}}\"? Esta ação não pode ser desfeita.",
+      "deleteSuccess": "Bem patrimonial excluído com sucesso",
+      "deleteError": "Erro ao excluir bem patrimonial",
+      "editTitle": "Editar Bem Patrimonial",
+      "newTitle": "Novo Bem Patrimonial",
+      "editSubtitle": "Atualize as informações do bem",
+      "newSubtitle": "Cadastre um novo bem patrimonial",
+      "detailsSubtitle": "Detalhes completos do bem patrimonial",
+      "loadingDetails": "Carregando detalhes do bem patrimonial...",
+      "notFound": "Bem patrimonial não encontrado",
+      "saveSuccessEdit": "Bem patrimonial atualizado com sucesso!",
+      "saveSuccessCreate": "Bem patrimonial criado com sucesso!",
+      "saveError": "Erro ao salvar bem patrimonial",
+      "summary": {
+        "totalItems": "Total de Bens",
+        "activeItems": "Bens Ativos",
+        "inMaintenance": "Em Manutenção",
+        "totalValue": "Valor Total"
+      },
+      "filters": {
+        "searchLabel": "Buscar por nome, código ou série",
+        "searchPlaceholder": "Digite o nome, código ou série",
+        "allCategories": "Todas as categorias",
+        "allStatus": "Todos os status"
+      },
+      "sections": {
+        "identification": "Identificação",
+        "location": "Localização e Responsabilidade",
+        "acquisition": "Aquisição e Vínculos",
+        "state": "Estado e Controle",
+        "notes": "Observações e Anexos"
+      },
+      "fields": {
+        "code": "Código patrimonial",
+        "name": "Nome do bem",
+        "category": "Categoria",
+        "quantity": "Quantidade",
+        "serialNumber": "Número de série",
+        "brand": "Marca",
+        "model": "Modelo",
+        "campus": "Campus/Unidade",
+        "location": "Localização",
+        "ministry": "Ministério/Área",
+        "responsible": "Responsável",
+        "acquisitionType": "Tipo de aquisição",
+        "acquisitionDate": "Data de aquisição",
+        "acquisitionValue": "Valor de aquisição",
+        "supplier": "Fornecedor",
+        "invoiceNumber": "Número da nota fiscal",
+        "expense": "Despesa vinculada",
+        "costCenter": "Centro de custo",
+        "project": "Projeto",
+        "status": "Status",
+        "conservationState": "Estado de conservação",
+        "lastEvaluation": "Data da última avaliação",
+        "hasWarranty": "Possui garantia",
+        "warrantyUntil": "Garantia até",
+        "lastMaintenance": "Última manutenção",
+        "nextMaintenance": "Próxima manutenção",
+        "photoUrl": "URL da foto",
+        "documentUrl": "URL do documento",
+        "notes": "Observações",
+        "active": "Bem ativo"
+      },
+      "table": {
+        "code": "Código",
+        "name": "Nome",
+        "category": "Categoria",
+        "location": "Local",
+        "responsible": "Responsável",
+        "status": "Status",
+        "value": "Valor"
+      },
+      "validation": {
+        "codeRequired": "Código é obrigatório",
+        "nameRequired": "Nome é obrigatório",
+        "categoryRequired": "Categoria é obrigatória"
+      },
+      "status": {
+        "inUse": "Em uso",
+        "inMaintenance": "Em manutenção",
+        "loaned": "Emprestado",
+        "idle": "Ocioso",
+        "disposed": "Baixado"
+      },
+      "acquisitionType": {
+        "purchased": "Comprado",
+        "donated": "Doado",
+        "manufactured": "Fabricado",
+        "assigned": "Cedido"
+      },
+      "conservationState": {
+        "new": "Novo",
+        "good": "Bom",
+        "fair": "Regular",
+        "poor": "Ruim",
+        "unusable": "Inutilizável"
+      }
+    },
+    "patrimonyReport": {
+      "title": "Relatório de Patrimônio",
+      "subtitle": "Visão consolidada dos bens por categoria, local e status",
+      "loading": "Carregando relatório patrimonial...",
+      "loadingCharts": "Carregando gráficos...",
+      "errorLoad": "Erro ao carregar relatório patrimonial",
+      "export": "Exportar CSV",
+      "backToList": "Voltar para Patrimônio",
+      "empty": "Nenhum item encontrado para os filtros informados.",
+      "noAlerts": "Nenhum alerta encontrado no período analisado.",
+      "notInformed": "Não informado",
+      "filters": {
+        "campusPlaceholder": "Filtrar por campus",
+        "locationPlaceholder": "Filtrar por localização"
+      },
+      "summary": {
+        "totalItems": "Itens filtrados",
+        "activeItems": "Bens ativos",
+        "totalValue": "Valor total",
+        "totalLocations": "Locais mapeados"
+      },
+      "sections": {
+        "byCategory": "Consolidado por categoria",
+        "byLocation": "Consolidado por local",
+        "byStatus": "Consolidado por status",
+        "warrantyAlerts": "Garantias a vencer em 30 dias",
+        "maintenanceAlerts": "Manutenções próximas ou vencidas",
+        "filteredItems": "Itens filtrados"
+      },
+      "charts": {
+        "byCategory": "Valor por categoria",
+        "byStatus": "Distribuição por status",
+        "byLocation": "Quantidade por local"
+      },
+      "units": {
+        "items": "itens"
+      },
+      "table": {
+        "category": "Categoria",
+        "campus": "Campus",
+        "location": "Localização",
+        "status": "Status",
+        "quantity": "Quantidade",
+        "value": "Valor"
+      }
+    },
+    "patrimonyMovements": {
+      "title": "Movimentações",
+      "new": "Nova Movimentação",
+      "newTitle": "Registrar Movimentação",
+      "emptyMessage": "Nenhuma movimentação registrada para este bem.",
+      "typeHint": "Alguns tipos atualizam automaticamente o status e a localização do bem.",
+      "saveSuccessCreate": "Movimentação registrada com sucesso!",
+      "saveError": "Erro ao registrar movimentação",
+      "filters": {
+        "allTypes": "Todos os tipos",
+        "startDate": "Data inicial",
+        "endDate": "Data final"
+      },
+      "validation": {
+        "typeRequired": "Tipo de movimentação é obrigatório"
+      },
+      "fields": {
+        "type": "Tipo de movimentação",
+        "date": "Data da movimentação",
+        "origin": "Origem",
+        "destination": "Destino",
+        "originResponsible": "Responsável de origem",
+        "destinationResponsible": "Responsável de destino",
+        "notes": "Observações"
+      },
+      "types": {
+        "initialRegistration": "Cadastro inicial",
+        "locationTransfer": "Transferência de local",
+        "responsibleChange": "Troca de responsável",
+        "maintenanceSend": "Envio para manutenção",
+        "maintenanceReturn": "Retorno de manutenção",
+        "loan": "Empréstimo",
+        "return": "Devolução",
+        "disposal": "Baixa"
+      }
     }
   },
   "language": {
@@ -970,4 +1200,3 @@
     "esES": "Espanhol"
   }
 }
-

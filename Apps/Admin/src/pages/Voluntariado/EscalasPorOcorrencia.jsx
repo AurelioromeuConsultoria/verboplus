@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, PlusCircle, Settings } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, Clock3, PlusCircle, Settings, XCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingPage } from '@/components/ui/loading';
@@ -18,6 +19,43 @@ function getEscalaStatusLabel(status) {
   return '—';
 }
 
+function getItemStatusCounts(itens = []) {
+  return itens.reduce((acc, item) => {
+    const status = Number(item.status);
+    if (status === 1) acc.pendentes += 1;
+    if (status === 2) acc.confirmados += 1;
+    if (status === 3) acc.recusados += 1;
+    if (status === 4) acc.substituidos += 1;
+    if (status === 6) acc.faltas += 1;
+    return acc;
+  }, {
+    pendentes: 0,
+    confirmados: 0,
+    recusados: 0,
+    substituidos: 0,
+    faltas: 0,
+  });
+}
+
+function getCoverageRisk(escala) {
+  const counts = getItemStatusCounts(escala?.itens);
+  const total = escala?.itens?.length || 0;
+
+  if (!escala || total === 0) {
+    return { label: 'Sem cobertura', className: 'bg-red-100 text-red-800 hover:bg-red-100' };
+  }
+
+  if (counts.recusados > 0 || counts.faltas > 0) {
+    return { label: 'Risco alto', className: 'bg-red-100 text-red-800 hover:bg-red-100' };
+  }
+
+  if (counts.pendentes > 0 || Number(escala.status) === 1) {
+    return { label: 'Atenção', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100' };
+  }
+
+  return { label: 'Coberta', className: 'bg-green-100 text-green-800 hover:bg-green-100' };
+}
+
 export default function EscalasPorOcorrencia() {
   const { ocorrenciaId } = useParams();
   const { can } = useAuth();
@@ -26,6 +64,7 @@ export default function EscalasPorOcorrencia() {
   const [ocorrencia, setOcorrencia] = useState(null);
   const [escalas, setEscalas] = useState([]);
   const [equipes, setEquipes] = useState([]);
+  const [insightsByEquipe, setInsightsByEquipe] = useState({});
   const { t } = useTranslation();
 
   const canEdit = can(RESOURCES.VOLUNTARIOS, ACTIONS.EDIT);
@@ -39,9 +78,51 @@ export default function EscalasPorOcorrencia() {
         escalasApi.getAllByOcorrencia(ocorrenciaId),
         equipesApi.getAll(),
       ]);
+      const escalasData = escRes.data || [];
       setOcorrencia(ocRes.data);
-      setEscalas(escRes.data || []);
+      setEscalas(escalasData);
       setEquipes(eqRes.data || []);
+
+      const escalasComEquipe = escalasData.filter((escala) => escala?.id && escala?.equipeId);
+      if (escalasComEquipe.length === 0) {
+        setInsightsByEquipe({});
+        return;
+      }
+
+      const insightsEntries = await Promise.all(
+        escalasComEquipe.map(async (escala) => {
+          const sugestoesRes = await escalasApi.getSugestoes(escala.id, escala.equipeId);
+          const sugestoes = sugestoesRes.data || [];
+          const sugestoesByVoluntarioId = new Map(sugestoes.map((item) => [item.voluntarioId, item]));
+
+          const maisAcionados = (escala.itens || [])
+            .map((item) => {
+              const sugestao = sugestoesByVoluntarioId.get(item.voluntarioId);
+              return {
+                id: item.id,
+                nome: item.voluntarioNome,
+                cargoNome: item.cargoNome,
+                cargaRecente: sugestao?.cargaRecente || 0,
+              };
+            })
+            .sort((a, b) => b.cargaRecente - a.cargaRecente || a.nome.localeCompare(b.nome))
+            .slice(0, 3);
+
+          const atencaoPessoas = (escala.itens || [])
+            .filter((item) => [1, 3, 6].includes(Number(item.status)))
+            .map((item) => ({
+              id: item.id,
+              nome: item.voluntarioNome,
+              cargoNome: item.cargoNome,
+              status: Number(item.status),
+              motivoRecusa: item.motivoRecusa,
+            }));
+
+          return [escala.equipeId, { maisAcionados, atencaoPessoas }];
+        })
+      );
+
+      setInsightsByEquipe(Object.fromEntries(insightsEntries));
     } catch (err) {
       console.error(err);
       setError('Erro ao carregar dados');
@@ -54,12 +135,33 @@ export default function EscalasPorOcorrencia() {
     load();
   }, [ocorrenciaId]);
 
+  const equipesComEscala = new Set(escalas?.map((e) => e.equipeId) || []);
+  const equipesSemEscala = (equipes || []).filter((eq) => !equipesComEscala.has(eq.id));
+  const resumo = useMemo(() => {
+    const base = {
+      equipesTotal: equipes.length,
+      equipesComEscala: escalas.length,
+      equipesSemEscala: equipesSemEscala.length,
+      vagas: 0,
+      confirmados: 0,
+      pendentes: 0,
+      recusados: 0,
+    };
+
+    for (const escala of escalas) {
+      const counts = getItemStatusCounts(escala.itens);
+      base.vagas += escala.itens?.length || 0;
+      base.confirmados += counts.confirmados;
+      base.pendentes += counts.pendentes;
+      base.recusados += counts.recusados;
+    }
+
+    return base;
+  }, [equipes.length, equipesSemEscala.length, escalas]);
+
   if (loading) return <LoadingPage text="Carregando..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
   if (!ocorrencia) return <ErrorPage message="Ocorrência não encontrada" onRetry={load} />;
-
-  const equipesComEscala = new Set(escalas?.map((e) => e.equipeId) || []);
-  const equipesSemEscala = (equipes || []).filter((eq) => !equipesComEscala.has(eq.id));
 
   return (
     <div className="space-y-6">
@@ -77,6 +179,33 @@ export default function EscalasPorOcorrencia() {
         </div>
       </div>
 
+      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+        <Card>
+          <CardHeader><CardTitle>Equipes</CardTitle></CardHeader>
+          <CardContent className="text-2xl font-bold">{resumo.equipesTotal}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Com escala</CardTitle></CardHeader>
+          <CardContent className="text-2xl font-bold">{resumo.equipesComEscala}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Sem escala</CardTitle></CardHeader>
+          <CardContent className="text-2xl font-bold text-red-600">{resumo.equipesSemEscala}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Vagas</CardTitle></CardHeader>
+          <CardContent className="text-2xl font-bold">{resumo.vagas}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Pendentes</CardTitle></CardHeader>
+          <CardContent className="text-2xl font-bold text-amber-600">{resumo.pendentes}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Recusas</CardTitle></CardHeader>
+          <CardContent className="text-2xl font-bold text-red-600">{resumo.recusados}</CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Equipes</CardTitle>
@@ -89,20 +218,128 @@ export default function EscalasPorOcorrencia() {
             <>
               <h3 className="font-medium">Escalas criadas</h3>
               <ul className="space-y-2">
-                {escalas.map((esc) => (
-                  <li key={esc.id} className="flex items-center justify-between rounded-lg border p-3">
-                    <span className="font-medium">{esc.equipeNome || `Equipe ${esc.equipeId}`}</span>
-                    <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">{getEscalaStatusLabel(esc.status)}</span>
-                    {canEdit && (
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/voluntariado/escalas/ocorrencia/${ocorrenciaId}/equipe/${esc.equipeId}`}>
-                          <Settings className="h-4 w-4 mr-2" />
-                          Editar escala
-                        </Link>
-                      </Button>
-                    )}
-                  </li>
-                ))}
+                {escalas.map((esc) => {
+                  const counts = getItemStatusCounts(esc.itens);
+                  const risk = getCoverageRisk(esc);
+
+                  return (
+                    <li key={esc.id} className="rounded-lg border p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="space-y-1">
+                          <div className="font-medium">{esc.equipeNome || `Equipe ${esc.equipeId}`}</div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline">{getEscalaStatusLabel(esc.status)}</Badge>
+                            <Badge className={risk.className}>{risk.label}</Badge>
+                          </div>
+                        </div>
+                        {canEdit && (
+                          <Button variant="outline" size="sm" asChild>
+                            <Link
+                              to={`/voluntariado/escalas/ocorrencia/${ocorrenciaId}/equipe/${esc.equipeId}`}
+                              state={{
+                                breadcrumbLabels: {
+                                  [`/voluntariado/escalas/ocorrencia/${ocorrenciaId}`]: ocorrencia.eventoTitulo,
+                                  [`/voluntariado/escalas/ocorrencia/${ocorrenciaId}/equipe/${esc.equipeId}`]: esc.equipeNome || `Equipe ${esc.equipeId}`,
+                                },
+                              }}
+                            >
+                              <Settings className="h-4 w-4 mr-2" />
+                              Editar escala
+                            </Link>
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-5">
+                        <div className="rounded-md bg-muted/40 p-3">
+                          <div className="text-xs text-muted-foreground">Vagas</div>
+                          <div className="text-lg font-semibold">{esc.itens?.length || 0}</div>
+                        </div>
+                        <div className="rounded-md bg-green-50 p-3">
+                          <div className="flex items-center gap-2 text-xs text-green-700">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Confirmados
+                          </div>
+                          <div className="text-lg font-semibold text-green-700">{counts.confirmados}</div>
+                        </div>
+                        <div className="rounded-md bg-amber-50 p-3">
+                          <div className="flex items-center gap-2 text-xs text-amber-700">
+                            <Clock3 className="h-3.5 w-3.5" />
+                            Pendentes
+                          </div>
+                          <div className="text-lg font-semibold text-amber-700">{counts.pendentes}</div>
+                        </div>
+                        <div className="rounded-md bg-red-50 p-3">
+                          <div className="flex items-center gap-2 text-xs text-red-700">
+                            <XCircle className="h-3.5 w-3.5" />
+                            Recusas
+                          </div>
+                          <div className="text-lg font-semibold text-red-700">{counts.recusados}</div>
+                        </div>
+                        <div className="rounded-md bg-slate-50 p-3">
+                          <div className="flex items-center gap-2 text-xs text-slate-700">
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            Substituições
+                          </div>
+                          <div className="text-lg font-semibold text-slate-700">{counts.substituidos}</div>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 lg:grid-cols-2">
+                        <div className="rounded-md border bg-background p-3">
+                          <div className="text-sm font-medium mb-2">Mais acionados recentemente</div>
+                          {insightsByEquipe[esc.equipeId]?.maisAcionados?.length ? (
+                            <div className="space-y-2">
+                              {insightsByEquipe[esc.equipeId].maisAcionados.map((item) => (
+                                <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
+                                  <div>
+                                    <div className="font-medium">{item.nome}</div>
+                                    <div className="text-muted-foreground">{item.cargoNome || 'Sem cargo'}</div>
+                                  </div>
+                                  <Badge variant="outline">{item.cargaRecente} escalas</Badge>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground">Sem dados de carga recente.</div>
+                          )}
+                        </div>
+
+                        <div className="rounded-md border bg-background p-3">
+                          <div className="text-sm font-medium mb-2">Pessoas com atenção</div>
+                          {insightsByEquipe[esc.equipeId]?.atencaoPessoas?.length ? (
+                            <div className="space-y-2">
+                              {insightsByEquipe[esc.equipeId].atencaoPessoas.map((item) => (
+                                <div key={item.id} className="rounded-md bg-muted/40 p-2 text-sm">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                      <div className="font-medium">{item.nome}</div>
+                                      <div className="text-muted-foreground">{item.cargoNome || 'Sem cargo'}</div>
+                                    </div>
+                                    <Badge
+                                      className={
+                                        item.status === 3 || item.status === 6
+                                          ? 'bg-red-100 text-red-800 hover:bg-red-100'
+                                          : 'bg-amber-100 text-amber-800 hover:bg-amber-100'
+                                      }
+                                    >
+                                      {item.status === 3 ? 'Recusou' : item.status === 6 ? 'Faltou' : 'Pendente'}
+                                    </Badge>
+                                  </div>
+                                  {item.motivoRecusa && (
+                                    <div className="mt-1 text-xs text-red-700">Motivo: {item.motivoRecusa}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground">Nenhuma pendência crítica nesta equipe.</div>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </>
           )}

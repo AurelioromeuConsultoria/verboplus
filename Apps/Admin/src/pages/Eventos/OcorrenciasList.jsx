@@ -210,7 +210,7 @@ export default function OcorrenciasList() {
                         {new Date(item.dataHoraInicio).toLocaleString('pt-BR')}
                       </div>
                     </TableCell>
-                    <TableCell>{getStatusOcorrenciaLabel(item.status)}</TableCell>
+                    <TableCell>{getStatusOcorrenciaLabel(item.status, t)}</TableCell>
                     <TableCell>
                       {item.possuiEscala ? (
                         <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800">

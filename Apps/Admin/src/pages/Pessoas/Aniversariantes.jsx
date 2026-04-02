@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, Search } from 'lucide-react';
+import { CalendarDays, Gift, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { pessoasApi } from '@/lib/api';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 
 export default function Aniversariantes() {
   const { t } = useTranslation();
@@ -57,6 +58,12 @@ export default function Aniversariantes() {
           <h1 className="text-3xl font-bold">{t('birthdays.title')}</h1>
           <p className="text-muted-foreground">{t('birthdays.subtitle')}</p>
         </div>
+        <Button asChild variant="outline">
+          <Link to="/pessoas/aniversariantes/campanha">
+            <Gift className="h-4 w-4 mr-2" />
+            Campanha no WhatsApp
+          </Link>
+        </Button>
       </div>
 
       <Card>

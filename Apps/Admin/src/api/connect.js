@@ -7,6 +7,10 @@ export const pessoasApi = {
   get360: (id) => api.get(`/pessoas/${id}/360`),
   getAniversariantes: (dias = 30, limite = 50, mes = null) =>
     api.get('/pessoas/aniversariantes', { params: { dias, limite, mes } }),
+  getCampanhaAniversario: (params) => api.get('/pessoas/aniversarios-campanha', { params }),
+  updateCampanhaAniversario: (data) => api.put('/pessoas/aniversarios-campanha', data),
+  sendCampanhaAniversarioTeste: (data) => api.post('/pessoas/aniversarios-campanha/teste', data),
+  resendCampanhaAniversarioHistorico: (envioId) => api.post(`/pessoas/aniversarios-campanha/historico/${envioId}/reenviar`),
   create: (data) => api.post('/pessoas', data),
   update: (id, data) => api.put(`/pessoas/${id}`, data),
   delete: (id) => api.delete(`/pessoas/${id}`),
@@ -47,4 +51,3 @@ export const mensagensAgendadasApi = {
   getById: (id) => api.get(`/mensagensAgendadas/${id}`),
   cancelar: (id) => api.patch(`/mensagensAgendadas/${id}/cancelar`),
 };
-

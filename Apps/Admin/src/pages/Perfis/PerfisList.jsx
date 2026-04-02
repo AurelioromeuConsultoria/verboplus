@@ -15,6 +15,26 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { pessoasPerfisApi } from '@/lib/api';
 import { toast } from 'sonner';
 
+const perfilLabels = {
+  1: 'Visitante',
+  2: 'Membro',
+  3: 'Voluntário',
+  4: 'Líder',
+  5: 'Kids',
+  6: 'Admin',
+  Visitante: 'Visitante',
+  Membro: 'Membro',
+  Voluntario: 'Voluntário',
+  Lider: 'Líder',
+  Kids: 'Kids',
+  Admin: 'Admin',
+};
+
+function getPerfilLabel(value) {
+  if (value == null || value === '') return 'Não informado';
+  return perfilLabels[value] || String(value);
+}
+
 export default function PerfisList() {
   const [perfis, setPerfis] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -91,15 +111,15 @@ export default function PerfisList() {
   // Obter lista única de perfis para filtro
   const perfisUnicos = [...new Set(
     perfis
-      .map(p => p.perfil)
-      .filter(perfil => perfil != null && typeof perfil === 'string')
+      .map(p => getPerfilLabel(p.perfil))
+      .filter(perfil => typeof perfil === 'string')
       .map(perfil => perfil.trim())
       .filter(perfil => perfil !== '')
   )];
 
   // Filtrar perfis
   const perfisFiltrados = perfis.filter((perfil) => {
-    const matchPerfil = !filtroPerfil || perfil.perfil === filtroPerfil;
+    const matchPerfil = !filtroPerfil || getPerfilLabel(perfil.perfil) === filtroPerfil;
     
     const isAtivo = !perfil.dataFim;
     const matchStatus = !filtroStatus || 
@@ -207,11 +227,11 @@ export default function PerfisList() {
                           to={`/pessoas/${perfil.pessoaId}`}
                           className="text-primary hover:underline"
                         >
-                          {perfil.pessoa?.nome || `Pessoa #${perfil.pessoaId}`}
+                          {perfil.nomePessoa || `Pessoa #${perfil.pessoaId}`}
                         </Link>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{perfil.perfil}</Badge>
+                        <Badge variant="secondary">{getPerfilLabel(perfil.perfil)}</Badge>
                       </TableCell>
                       <TableCell>
                         {new Date(perfil.dataInicio).toLocaleDateString('pt-BR')}
@@ -280,7 +300,5 @@ export default function PerfisList() {
     </div>
   );
 }
-
-
 
 

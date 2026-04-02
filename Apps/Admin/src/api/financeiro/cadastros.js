@@ -40,6 +40,27 @@ export const projetosApi = {
   delete: (id) => api.delete(`/projetos/${id}`),
 };
 
+export const categoriasPatrimonioApi = {
+  getAll: () => api.get('/categoriaspatrimonio'),
+  getById: (id) => api.get(`/categoriaspatrimonio/${id}`),
+  create: (data) => api.post('/categoriaspatrimonio', data),
+  update: (id, data) => api.put(`/categoriaspatrimonio/${id}`, data),
+  delete: (id) => api.delete(`/categoriaspatrimonio/${id}`),
+};
+
+export const patrimonioApi = {
+  getAll: () => api.get('/patrimonio'),
+  getById: (id) => api.get(`/patrimonio/${id}`),
+  create: (data) => api.post('/patrimonio', data),
+  update: (id, data) => api.put(`/patrimonio/${id}`, data),
+  delete: (id) => api.delete(`/patrimonio/${id}`),
+};
+
+export const patrimonioMovimentacoesApi = {
+  getByPatrimonioId: (patrimonioItemId) => api.get(`/patrimonio/${patrimonioItemId}/movimentacoes`),
+  create: (patrimonioItemId, data) => api.post(`/patrimonio/${patrimonioItemId}/movimentacoes`, data),
+};
+
 export const categoriasReceitasApi = {
   getAll: () => api.get('/categoriasreceitas'),
   getById: (id) => api.get(`/categoriasreceitas/${id}`),
@@ -47,4 +68,3 @@ export const categoriasReceitasApi = {
   update: (id, data) => api.put(`/categoriasreceitas/${id}`, data),
   delete: (id) => api.delete(`/categoriasreceitas/${id}`),
 };
-

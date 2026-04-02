@@ -28,6 +28,8 @@ export const voluntariosApi = {
 
 export const escalasApi = {
   getById: (id) => api.get(`/Escalas/${id}`),
+  getMinhas: (params) => api.get('/Escalas/minhas', { params }),
+  getHistoricoVoluntarios: (params) => api.get('/Escalas/historico-voluntarios', { params }),
   getByOcorrencia: (eventoOcorrenciaId) => api.get(`/Escalas/ocorrencia/${eventoOcorrenciaId}`),
   getAllByOcorrencia: (eventoOcorrenciaId) => api.get(`/Escalas/ocorrencia/${eventoOcorrenciaId}/escalas`),
   getByOcorrenciaAndEquipe: (eventoOcorrenciaId, equipeId) =>
@@ -39,9 +41,22 @@ export const escalasApi = {
   addItem: (escalaId, data) => api.post(`/Escalas/${escalaId}/itens`, data),
   updateItem: (escalaId, escalaItemId, data) => api.put(`/Escalas/${escalaId}/itens/${escalaItemId}`, data),
   deleteItem: (escalaId, escalaItemId) => api.delete(`/Escalas/${escalaId}/itens/${escalaItemId}`),
+  confirmarItem: (escalaId, escalaItemId) => api.post(`/Escalas/${escalaId}/itens/${escalaItemId}/confirmar`),
+  recusarItem: (escalaId, escalaItemId, data) => api.post(`/Escalas/${escalaId}/itens/${escalaItemId}/recusar`, data),
+  registrarPresenca: (escalaId, escalaItemId, data) => api.post(`/Escalas/${escalaId}/itens/${escalaItemId}/presenca`, data),
   publicar: (escalaId) => api.post(`/Escalas/${escalaId}/publicar`),
+  processarLembretes: () => api.post('/Escalas/lembretes/processar'),
   gerarAutomatico: (eventoOcorrenciaId, equipeId) =>
     api.post(`/Escalas/ocorrencia/${eventoOcorrenciaId}/equipe/${equipeId}/gerar-automatico`),
+};
+
+export const solicitacoesTrocasEscalasApi = {
+  getAll: (params) => api.get('/SolicitacoesTrocasEscalas', { params }),
+  getByEscala: (escalaId) => api.get(`/SolicitacoesTrocasEscalas/escala/${escalaId}`),
+  getMinhas: () => api.get('/SolicitacoesTrocasEscalas/minhas'),
+  create: (escalaId, escalaItemId, data) => api.post(`/SolicitacoesTrocasEscalas/escala/${escalaId}/item/${escalaItemId}`, data),
+  aprovar: (id, data) => api.post(`/SolicitacoesTrocasEscalas/${id}/aprovar`, data),
+  rejeitar: (id, data) => api.post(`/SolicitacoesTrocasEscalas/${id}/rejeitar`, data),
 };
 
 export const escalasModelosApi = {
@@ -62,4 +77,3 @@ export const indisponibilidadesVoluntariosApi = {
   create: (data) => api.post('/IndisponibilidadesVoluntarios', data),
   delete: (id) => api.delete(`/IndisponibilidadesVoluntarios/${id}`),
 };
-
