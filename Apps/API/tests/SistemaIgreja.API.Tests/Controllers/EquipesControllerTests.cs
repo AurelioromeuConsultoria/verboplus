@@ -1,9 +1,12 @@
+using System.Security.Claims;
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using SistemaIgreja.API.Controllers;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Domain.Entities;
 
 namespace SistemaIgreja.API.Tests.Controllers;
 
@@ -36,6 +39,7 @@ public class EquipesControllerTests
     [Fact]
     public async Task Create_ReturnsCreated()
     {
+        SetUser((int)TipoUsuario.Admin);
         var dto = new CriarEquipeDto { Nome = "Equipe", Area = 1 };
         var created = new EquipeDto { Id = 1, Nome = dto.Nome, Area = dto.Area, DataCriacao = DateTime.UtcNow };
         _serviceMock.Setup(s => s.CreateAsync(dto)).ReturnsAsync(created);
@@ -44,8 +48,18 @@ public class EquipesControllerTests
     }
 
     [Fact]
+    public async Task Create_ReturnsForbidden_WhenUserIsNotAdmin()
+    {
+        SetUser((int)TipoUsuario.Portal);
+        var result = await _controller.Create(new CriarEquipeDto());
+        result.Result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(403);
+    }
+
+    [Fact]
     public async Task Update_ReturnsNotFound_OnArgumentException()
     {
+        SetUser((int)TipoUsuario.Admin);
         var dto = new AtualizarEquipeDto { Nome = "X", Area = 2 };
         _serviceMock.Setup(s => s.UpdateAsync(9, dto)).ThrowsAsync(new ArgumentException());
         var result = await _controller.Update(9, dto);
@@ -55,8 +69,35 @@ public class EquipesControllerTests
     [Fact]
     public async Task Delete_ReturnsNoContent()
     {
+        SetUser((int)TipoUsuario.Admin);
         _serviceMock.Setup(s => s.DeleteAsync(3)).Returns(Task.CompletedTask);
         var result = await _controller.Delete(3);
         result.Should().BeOfType<NoContentResult>();
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsForbidden_WhenUserIsNotAdmin()
+    {
+        SetUser((int)TipoUsuario.Portal);
+        var result = await _controller.Delete(3);
+        result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(403);
+    }
+
+    private void SetUser(int tipoUsuarioId)
+    {
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, "10"),
+            new("TipoUsuarioId", tipoUsuarioId.ToString())
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(identity)
+            }
+        };
     }
 }

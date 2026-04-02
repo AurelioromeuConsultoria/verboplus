@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.DTOs.Pessoas;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Domain.Entities;
+using System.Security.Claims;
 
 namespace SistemaIgreja.API.Controllers;
 
@@ -85,6 +87,11 @@ public class PessoasController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<PessoaDto>> Create(CriarPessoaDto dto)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem criar pessoas.");
+        }
+
         try
         {
             var pessoa = await _service.CreateAsync(dto);
@@ -106,6 +113,11 @@ public class PessoasController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<PessoaDto>> Update(int id, AtualizarPessoaDto dto)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem atualizar pessoas.");
+        }
+
         try
         {
             var pessoa = await _service.UpdateAsync(id, dto);
@@ -127,6 +139,11 @@ public class PessoasController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem excluir pessoas.");
+        }
+
         try
         {
             await _service.DeleteAsync(id);
@@ -137,6 +154,12 @@ public class PessoasController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
-}
 
+    private bool IsAdminUser()
+    {
+        var tipoUsuarioId = User.FindFirstValue("TipoUsuarioId");
+        return tipoUsuarioId == ((int)TipoUsuario.Admin).ToString() ||
+               tipoUsuarioId == ((int)TipoUsuario.Ambos).ToString();
+    }
+}
 

@@ -2,6 +2,7 @@ using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.DTOs.Pessoas;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace SistemaIgreja.Application.Services;
 
@@ -25,19 +26,22 @@ public class PessoaService : IPessoaService
     private readonly IVisitanteService _visitanteService;
     private readonly IVoluntarioService _voluntarioService;
     private readonly IUsuarioService _usuarioService;
+    private readonly ILogger<PessoaService> _logger;
 
     public PessoaService(
         IPessoaRepository repository,
         IPessoaPerfilRepository perfilRepository,
         IVisitanteService visitanteService,
         IVoluntarioService voluntarioService,
-        IUsuarioService usuarioService)
+        IUsuarioService usuarioService,
+        ILogger<PessoaService> logger)
     {
         _repository = repository;
         _perfilRepository = perfilRepository;
         _visitanteService = visitanteService;
         _voluntarioService = voluntarioService;
         _usuarioService = usuarioService;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<PessoaDto>> GetAllAsync()
@@ -164,6 +168,11 @@ public class PessoaService : IPessoaService
         };
 
         var created = await _repository.CreateAsync(pessoa);
+        _logger.LogInformation(
+            "Pessoa criada. PessoaId={PessoaId} TipoPessoa={TipoPessoa} Ativo={Ativo}",
+            created.Id,
+            created.TipoPessoa,
+            created.Ativo);
         var perfis = await _perfilRepository.GetPerfisPorPessoaAsync(created.Id);
         return MapToDto(created, perfis);
     }
@@ -189,6 +198,11 @@ public class PessoaService : IPessoaService
         pessoa.Ativo = dto.Ativo;
 
         var updated = await _repository.UpdateAsync(pessoa);
+        _logger.LogInformation(
+            "Pessoa atualizada. PessoaId={PessoaId} TipoPessoa={TipoPessoa} Ativo={Ativo}",
+            updated.Id,
+            updated.TipoPessoa,
+            updated.Ativo);
         var perfis = await _perfilRepository.GetPerfisPorPessoaAsync(updated.Id);
         return MapToDto(updated, perfis);
     }
@@ -196,6 +210,7 @@ public class PessoaService : IPessoaService
     public async Task DeleteAsync(int id)
     {
         await _repository.DeleteAsync(id);
+        _logger.LogInformation("Pessoa removida. PessoaId={PessoaId}", id);
     }
 
     public async Task<IEnumerable<AniversarianteDto>> GetProximosAniversariantesAsync(int dias, int limite)
@@ -333,5 +348,4 @@ public class PessoaService : IPessoaService
         return proximo;
     }
 }
-
 

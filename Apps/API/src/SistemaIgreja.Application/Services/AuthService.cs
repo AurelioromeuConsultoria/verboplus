@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
@@ -22,12 +23,14 @@ public class AuthService : IAuthService
 {
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly IConfiguration _configuration;
+    private readonly ILogger<AuthService> _logger;
     private readonly Dictionary<string, string> _refreshTokens = new(); // Em produção, usar Redis ou banco
 
-    public AuthService(IUsuarioRepository usuarioRepository, IConfiguration configuration)
+    public AuthService(IUsuarioRepository usuarioRepository, IConfiguration configuration, ILogger<AuthService> logger)
     {
         _usuarioRepository = usuarioRepository;
         _configuration = configuration;
+        _logger = logger;
     }
 
     public async Task<LoginResponseDto> LoginAsync(LoginDto dto)
@@ -35,11 +38,13 @@ public class AuthService : IAuthService
         var usuario = await _usuarioRepository.GetByEmailAsync(dto.Email);
         if (usuario == null || !BCrypt.Net.BCrypt.Verify(dto.Senha, usuario.SenhaHash))
         {
+            _logger.LogWarning("Falha de login. Email={Email}", dto.Email);
             throw new UnauthorizedAccessException("Email ou senha inválidos");
         }
 
         if (!usuario.Ativo)
         {
+            _logger.LogWarning("Tentativa de login com usuário inativo. UsuarioId={UsuarioId} Email={EmailLogin}", usuario.Id, usuario.EmailLogin);
             throw new UnauthorizedAccessException("Usuário inativo");
         }
 
@@ -52,6 +57,12 @@ public class AuthService : IAuthService
 
         // Armazenar refresh token (em produção, usar banco ou Redis)
         _refreshTokens[refreshToken] = usuario.Id.ToString();
+
+        _logger.LogInformation(
+            "Login realizado com sucesso. UsuarioId={UsuarioId} PessoaId={PessoaId} TipoUsuario={TipoUsuario}",
+            usuario.Id,
+            usuario.PessoaId,
+            usuario.TipoUsuario);
 
         return new LoginResponseDto
         {
@@ -66,6 +77,7 @@ public class AuthService : IAuthService
     {
         if (!_refreshTokens.TryGetValue(refreshToken, out var usuarioIdStr))
         {
+            _logger.LogWarning("Refresh token inválido.");
             throw new UnauthorizedAccessException("Refresh token inválido");
         }
 
@@ -75,6 +87,7 @@ public class AuthService : IAuthService
         if (usuario == null || !usuario.Ativo)
         {
             _refreshTokens.Remove(refreshToken);
+            _logger.LogWarning("Refresh token rejeitado por usuário ausente ou inativo. UsuarioId={UsuarioId}", usuarioId);
             throw new UnauthorizedAccessException("Usuário não encontrado ou inativo");
         }
 
@@ -84,6 +97,8 @@ public class AuthService : IAuthService
         // Remover token antigo e adicionar novo
         _refreshTokens.Remove(refreshToken);
         _refreshTokens[newRefreshToken] = usuarioId.ToString();
+
+        _logger.LogInformation("Refresh token renovado com sucesso. UsuarioId={UsuarioId}", usuario.Id);
 
         return new LoginResponseDto
         {
@@ -109,11 +124,13 @@ public class AuthService : IAuthService
 
         if (!BCrypt.Net.BCrypt.Verify(dto.SenhaAtual, usuario.SenhaHash))
         {
+            _logger.LogWarning("Falha ao alterar senha por senha atual inválida. UsuarioId={UsuarioId}", usuarioId);
             throw new UnauthorizedAccessException("Senha atual incorreta");
         }
 
         usuario.SenhaHash = BCrypt.Net.BCrypt.HashPassword(dto.NovaSenha);
         await _usuarioRepository.UpdateAsync(usuario);
+        _logger.LogInformation("Senha alterada com sucesso. UsuarioId={UsuarioId}", usuarioId);
     }
 
     private string GenerateJwtToken(Usuario usuario)

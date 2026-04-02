@@ -25,32 +25,53 @@ public class EscalasController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<EscalaDto>> GetById(int id)
     {
-        var item = await _service.GetByIdAsync(id);
-        if (item == null) return NotFound();
-        return Ok(item);
+        try
+        {
+            var item = await _service.GetByIdAsync(id, GetUsuarioId(), IsAdminUser());
+            if (item == null) return NotFound();
+            return Ok(item);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, ex.Message);
+        }
     }
 
     [HttpGet("ocorrencia/{eventoOcorrenciaId}")]
     public async Task<ActionResult<EscalaDto>> GetByEventoOcorrencia(int eventoOcorrenciaId)
     {
-        var item = await _service.GetByEventoOcorrenciaAsync(eventoOcorrenciaId);
-        if (item == null) return NotFound();
-        return Ok(item);
+        try
+        {
+            var item = await _service.GetByEventoOcorrenciaAsync(eventoOcorrenciaId, GetUsuarioId(), IsAdminUser());
+            if (item == null) return NotFound();
+            return Ok(item);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, ex.Message);
+        }
     }
 
     [HttpGet("ocorrencia/{eventoOcorrenciaId}/escalas")]
     public async Task<ActionResult<IEnumerable<EscalaDto>>> GetAllByEventoOcorrencia(int eventoOcorrenciaId)
     {
-        var items = await _service.GetAllByEventoOcorrenciaAsync(eventoOcorrenciaId);
+        var items = await _service.GetAllByEventoOcorrenciaAsync(eventoOcorrenciaId, GetUsuarioId(), IsAdminUser());
         return Ok(items);
     }
 
     [HttpGet("ocorrencia/{eventoOcorrenciaId}/equipe/{equipeId}")]
     public async Task<ActionResult<EscalaDto>> GetByEventoOcorrenciaAndEquipe(int eventoOcorrenciaId, int equipeId)
     {
-        var item = await _service.GetByEventoOcorrenciaAndEquipeAsync(eventoOcorrenciaId, equipeId);
-        if (item == null) return NotFound();
-        return Ok(item);
+        try
+        {
+            var item = await _service.GetByEventoOcorrenciaAndEquipeAsync(eventoOcorrenciaId, equipeId, GetUsuarioId(), IsAdminUser());
+            if (item == null) return NotFound();
+            return Ok(item);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, ex.Message);
+        }
     }
 
     [HttpGet("minhas")]
@@ -83,8 +104,12 @@ public class EscalasController : ControllerBase
     {
         try
         {
-            var itens = await _service.GetSugestoesAsync(escalaId, equipeId);
+            var itens = await _service.GetSugestoesAsync(escalaId, equipeId, GetUsuarioId(), IsAdminUser());
             return Ok(itens);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, ex.Message);
         }
         catch (ArgumentException ex) when (ex.Message.Contains("não encontrada"))
         {

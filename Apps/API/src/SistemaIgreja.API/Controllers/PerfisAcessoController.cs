@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Domain.Entities;
+using System.Security.Claims;
 
 namespace SistemaIgreja.API.Controllers;
 
@@ -20,6 +22,11 @@ public class PerfisAcessoController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<PerfilAcessoDto>>> GetAll()
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem listar perfis de acesso.");
+        }
+
         var items = await _service.GetAllAsync();
         return Ok(items);
     }
@@ -27,6 +34,11 @@ public class PerfisAcessoController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<PerfilAcessoDto>> GetById(int id)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem visualizar perfis de acesso.");
+        }
+
         var item = await _service.GetByIdAsync(id);
         if (item == null) return NotFound();
         return Ok(item);
@@ -35,6 +47,11 @@ public class PerfisAcessoController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<PerfilAcessoDto>> Create(CriarPerfilAcessoDto dto)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem criar perfis de acesso.");
+        }
+
         try
         {
             var created = await _service.CreateAsync(dto);
@@ -49,6 +66,11 @@ public class PerfisAcessoController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<PerfilAcessoDto>> Update(int id, AtualizarPerfilAcessoDto dto)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem atualizar perfis de acesso.");
+        }
+
         try
         {
             var updated = await _service.UpdateAsync(id, dto);
@@ -67,7 +89,19 @@ public class PerfisAcessoController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem excluir perfis de acesso.");
+        }
+
         await _service.DeleteAsync(id);
         return NoContent();
+    }
+
+    private bool IsAdminUser()
+    {
+        var tipoUsuarioId = User.FindFirstValue("TipoUsuarioId");
+        return tipoUsuarioId == ((int)TipoUsuario.Admin).ToString() ||
+               tipoUsuarioId == ((int)TipoUsuario.Ambos).ToString();
     }
 }

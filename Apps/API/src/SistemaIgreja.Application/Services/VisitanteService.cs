@@ -2,6 +2,7 @@ using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.DTOs.Visitantes;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace SistemaIgreja.Application.Services;
 
@@ -24,19 +25,22 @@ public class VisitanteService : IVisitanteService
     private readonly IPessoaRepository _pessoaRepository;
     private readonly IPessoaPerfilRepository _pessoaPerfilRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<VisitanteService> _logger;
 
     public VisitanteService(
         IVisitanteRepository visitanteRepository,
         IMensagemAgendadaService mensagemService,
         IPessoaRepository pessoaRepository,
         IPessoaPerfilRepository pessoaPerfilRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ILogger<VisitanteService> logger)
     {
         _visitanteRepository = visitanteRepository;
         _mensagemService = mensagemService;
         _pessoaRepository = pessoaRepository;
         _pessoaPerfilRepository = pessoaPerfilRepository;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<VisitanteDto>> GetAllAsync()
@@ -110,6 +114,10 @@ public class VisitanteService : IVisitanteService
             throw new ArgumentException("Email inválido");
 
         var visitanteId = 0;
+        var pessoaCriada = false;
+        var pessoaAtualizada = false;
+        var perfilVisitanteCriado = false;
+        var pessoaId = 0;
 
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
@@ -131,6 +139,7 @@ public class VisitanteService : IVisitanteService
                     DataCriacao = DateTime.UtcNow
                 };
                 pessoa = await _pessoaRepository.CreateWithoutSaveAsync(pessoa);
+                pessoaCriada = true;
             }
             else
             {
@@ -165,8 +174,11 @@ public class VisitanteService : IVisitanteService
                 if (atualizado)
                 {
                     await _pessoaRepository.UpdateWithoutSaveAsync(pessoa);
+                    pessoaAtualizada = true;
                 }
             }
+
+            pessoaId = pessoa.Id;
 
             // 3. Garantir perfil Visitante
             var perfilAtivo = await _pessoaPerfilRepository.GetPerfilAtivoAsync(pessoa.Id, PerfilPessoa.Visitante);
@@ -180,6 +192,7 @@ public class VisitanteService : IVisitanteService
                     DataFim = null
                 };
                 await _pessoaPerfilRepository.CreateWithoutSaveAsync(novoPerfil);
+                perfilVisitanteCriado = true;
             }
 
             // 4. Criar registro de Visitante (histórico de visita)
@@ -207,12 +220,21 @@ public class VisitanteService : IVisitanteService
         try
         {
             await _mensagemService.AgendarMensagensParaVisitanteAsync(visitanteId);
+            _logger.LogInformation(
+                "Visitante criado e mensagens agendadas. VisitanteId={VisitanteId} PessoaId={PessoaId} PessoaCriada={PessoaCriada} PessoaAtualizada={PessoaAtualizada} PerfilVisitanteCriado={PerfilVisitanteCriado}",
+                visitanteId,
+                pessoaId,
+                pessoaCriada,
+                pessoaAtualizada,
+                perfilVisitanteCriado);
         }
         catch (Exception ex)
         {
-            // Log do erro mas não falha a criação do visitante
-            // Em produção, usar ILogger
-            Console.WriteLine($"Erro ao agendar mensagens: {ex.Message}");
+            _logger.LogError(
+                ex,
+                "Visitante criado, mas houve falha ao agendar mensagens. VisitanteId={VisitanteId} PessoaId={PessoaId}",
+                visitanteId,
+                pessoaId);
         }
 
         // 6. Retornar resposta consolidada
@@ -352,12 +374,18 @@ public class VisitanteService : IVisitanteService
         visitante.Observacoes = dto.Observacoes;
 
         var visitanteAtualizado = await _visitanteRepository.UpdateAsync(visitante);
+        _logger.LogInformation(
+            "Visitante atualizado. VisitanteId={VisitanteId} PessoaId={PessoaId} DataVisita={DataVisita}",
+            visitanteAtualizado.Id,
+            visitanteAtualizado.PessoaId,
+            visitanteAtualizado.DataVisita);
         return MapToDto(visitanteAtualizado);
     }
 
     public async Task DeleteAsync(int id)
     {
         await _visitanteRepository.DeleteAsync(id);
+        _logger.LogInformation("Visitante removido. VisitanteId={VisitanteId}", id);
     }
 
     private static VisitanteDto MapToDto(Visitante visitante)

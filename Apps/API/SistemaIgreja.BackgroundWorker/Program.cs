@@ -67,6 +67,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddScoped<IEventoOcorrenciaService, EventoOcorrenciaService>();
         services.AddScoped<IEscalaService, EscalaService>();
         services.AddScoped<ICampanhaAniversarioService, CampanhaAniversarioService>();
+        services.AddSingleton<ISchedulerExecutionMonitor, SchedulerExecutionMonitor>();
 
         services.Configure<MessageSchedulerSettings>(
             ctx.Configuration.GetSection(MessageSchedulerSettings.SectionName));

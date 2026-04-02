@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
@@ -12,11 +13,12 @@ public class MensagemAgendadaServiceTests
     private readonly Mock<IMensagemAgendadaRepository> _repoMock = new();
     private readonly Mock<IVisitanteRepository> _visitRepoMock = new();
     private readonly Mock<IConfiguracaoMensagemRepository> _cfgRepoMock = new();
+    private readonly Mock<ILogger<MensagemAgendadaService>> _loggerMock = new();
     private readonly MensagemAgendadaService _service;
 
     public MensagemAgendadaServiceTests()
     {
-        _service = new MensagemAgendadaService(_repoMock.Object, _visitRepoMock.Object, _cfgRepoMock.Object);
+        _service = new MensagemAgendadaService(_repoMock.Object, _visitRepoMock.Object, _cfgRepoMock.Object, _loggerMock.Object);
     }
 
     [Fact]

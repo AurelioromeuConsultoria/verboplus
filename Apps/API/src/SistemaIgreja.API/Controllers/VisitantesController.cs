@@ -1,12 +1,16 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.DTOs.Visitantes;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Domain.Entities;
+using System.Security.Claims;
 
 namespace SistemaIgreja.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class VisitantesController : ControllerBase
 {
     private readonly IVisitanteService _visitanteService;
@@ -24,6 +28,11 @@ public class VisitantesController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<VisitanteDto>>> GetAll()
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem listar visitantes.");
+        }
+
         var visitantes = await _visitanteService.GetAllAsync();
         return Ok(visitantes);
     }
@@ -34,6 +43,11 @@ public class VisitantesController : ControllerBase
     [HttpGet("paged")]
     public async Task<ActionResult<PagedResultDto<VisitanteDto>>> GetPaged([FromQuery] VisitantePagedQueryDto query)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem listar visitantes.");
+        }
+
         var result = await _visitanteService.GetPagedAsync(query);
         return Ok(result);
     }
@@ -44,6 +58,11 @@ public class VisitantesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<VisitanteDto>> GetById(int id)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem visualizar visitantes.");
+        }
+
         var visitante = await _visitanteService.GetByIdAsync(id);
         if (visitante == null)
             return NotFound();
@@ -57,6 +76,11 @@ public class VisitantesController : ControllerBase
     [HttpGet("pessoa/{pessoaId}")]
     public async Task<ActionResult<IEnumerable<VisitanteDto>>> GetByPessoa(int pessoaId)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem listar visitantes por pessoa.");
+        }
+
         var visitantes = await _visitanteService.GetVisitantesPorPessoaAsync(pessoaId);
         return Ok(visitantes);
     }
@@ -67,6 +91,11 @@ public class VisitantesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<VisitanteResponse>> Create(CreateVisitanteRequest request)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem criar visitantes.");
+        }
+
         try
         {
             var visitante = await _visitanteService.CreateVisitanteAsync(request);
@@ -88,6 +117,11 @@ public class VisitantesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<VisitanteDto>> Update(int id, AtualizarVisitanteDto dto)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem atualizar visitantes.");
+        }
+
         try
         {
             var visitante = await _visitanteService.UpdateAsync(id, dto);
@@ -109,6 +143,11 @@ public class VisitantesController : ControllerBase
     [HttpPost("{id}/regerar-mensagens")]
     public async Task<ActionResult<RegerarMensagensResultDto>> RegerarMensagens(int id)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem regerar mensagens de visitantes.");
+        }
+
         try
         {
             var result = await _mensagemService.RegerarMensagensParaVisitanteAsync(id);
@@ -130,6 +169,11 @@ public class VisitantesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem excluir visitantes.");
+        }
+
         try
         {
             await _visitanteService.DeleteAsync(id);
@@ -139,5 +183,12 @@ public class VisitantesController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    private bool IsAdminUser()
+    {
+        var tipoUsuarioId = User.FindFirstValue("TipoUsuarioId");
+        return tipoUsuarioId == ((int)TipoUsuario.Admin).ToString() ||
+               tipoUsuarioId == ((int)TipoUsuario.Ambos).ToString();
     }
 }

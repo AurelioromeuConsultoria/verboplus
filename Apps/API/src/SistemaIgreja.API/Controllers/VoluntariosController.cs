@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Domain.Entities;
+using System.Security.Claims;
 
 namespace SistemaIgreja.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class VoluntariosController : ControllerBase
 {
     private readonly IVoluntarioService _service;
@@ -17,7 +20,6 @@ public class VoluntariosController : ControllerBase
     }
 
     [HttpGet]
-    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<VoluntarioDto>>> GetAll()
     {
         var items = await _service.GetAllAsync();
@@ -49,6 +51,11 @@ public class VoluntariosController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<VoluntarioDto>> Create(CriarVoluntarioDto dto)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem criar voluntários.");
+        }
+
         try
         {
             var created = await _service.CreateAsync(dto);
@@ -63,6 +70,11 @@ public class VoluntariosController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<VoluntarioDto>> Update(int id, AtualizarVoluntarioDto dto)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem atualizar voluntários.");
+        }
+
         try
         {
             var updated = await _service.UpdateAsync(id, dto);
@@ -81,7 +93,19 @@ public class VoluntariosController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem excluir voluntários.");
+        }
+
         await _service.DeleteAsync(id);
         return NoContent();
+    }
+
+    private bool IsAdminUser()
+    {
+        var tipoUsuarioId = User.FindFirstValue("TipoUsuarioId");
+        return tipoUsuarioId == ((int)TipoUsuario.Admin).ToString() ||
+               tipoUsuarioId == ((int)TipoUsuario.Ambos).ToString();
     }
 }

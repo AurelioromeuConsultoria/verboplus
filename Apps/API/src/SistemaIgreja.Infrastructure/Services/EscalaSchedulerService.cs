@@ -10,18 +10,22 @@ namespace SistemaIgreja.Infrastructure.Services;
 
 public class EscalaSchedulerService : BackgroundService
 {
+    private const string SchedulerName = "escala_scheduler";
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<EscalaSchedulerService> _logger;
     private readonly EscalaSchedulerSettings _settings;
+    private readonly ISchedulerExecutionMonitor _executionMonitor;
 
     public EscalaSchedulerService(
         IServiceProvider serviceProvider,
         ILogger<EscalaSchedulerService> logger,
-        IOptions<EscalaSchedulerSettings> settings)
+        IOptions<EscalaSchedulerSettings> settings,
+        ISchedulerExecutionMonitor executionMonitor)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
         _settings = settings.Value;
+        _executionMonitor = executionMonitor;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -36,6 +40,7 @@ public class EscalaSchedulerService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            var startedAtUtc = DateTime.UtcNow;
             try
             {
                 if (_settings.Enabled)
@@ -50,10 +55,22 @@ public class EscalaSchedulerService : BackgroundService
                 {
                     _logger.LogDebug("EscalaSchedulerService desativado por configuração.");
                 }
+
+                _executionMonitor.RecordSuccess(
+                    SchedulerName,
+                    startedAtUtc,
+                    DateTime.UtcNow,
+                    $"Enabled: {_settings.Enabled}; lembretes automáticos: {_settings.EnviarLembretesAutomaticos}");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro no processamento do EscalaSchedulerService");
+                _executionMonitor.RecordFailure(
+                    SchedulerName,
+                    startedAtUtc,
+                    DateTime.UtcNow,
+                    ex.Message,
+                    $"Enabled: {_settings.Enabled}; lembretes automáticos: {_settings.EnviarLembretesAutomaticos}");
             }
 
             var delay = ObterDelayComJitter();

@@ -1,11 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Domain.Entities;
+using System.Security.Claims;
 
 namespace SistemaIgreja.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class EquipesController : ControllerBase
 {
     private readonly IEquipeService _service;
@@ -33,6 +37,11 @@ public class EquipesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<EquipeDto>> Create(CriarEquipeDto dto)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem criar equipes.");
+        }
+
         try
         {
             var created = await _service.CreateAsync(dto);
@@ -47,6 +56,11 @@ public class EquipesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<EquipeDto>> Update(int id, AtualizarEquipeDto dto)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem atualizar equipes.");
+        }
+
         try
         {
             var updated = await _service.UpdateAsync(id, dto);
@@ -65,7 +79,19 @@ public class EquipesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem excluir equipes.");
+        }
+
         await _service.DeleteAsync(id);
         return NoContent();
+    }
+
+    private bool IsAdminUser()
+    {
+        var tipoUsuarioId = User.FindFirstValue("TipoUsuarioId");
+        return tipoUsuarioId == ((int)TipoUsuario.Admin).ToString() ||
+               tipoUsuarioId == ((int)TipoUsuario.Ambos).ToString();
     }
 }

@@ -1,17 +1,18 @@
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace SistemaIgreja.Application.Services;
 
 public interface IEscalaService
 {
-    Task<EscalaDto?> GetByIdAsync(int id);
-    Task<EscalaDto?> GetByEventoOcorrenciaAsync(int eventoOcorrenciaId);
-    Task<EscalaDto?> GetByEventoOcorrenciaAndEquipeAsync(int eventoOcorrenciaId, int equipeId);
-    Task<IEnumerable<EscalaDto>> GetAllByEventoOcorrenciaAsync(int eventoOcorrenciaId);
+    Task<EscalaDto?> GetByIdAsync(int id, int usuarioId, bool isAdmin);
+    Task<EscalaDto?> GetByEventoOcorrenciaAsync(int eventoOcorrenciaId, int usuarioId, bool isAdmin);
+    Task<EscalaDto?> GetByEventoOcorrenciaAndEquipeAsync(int eventoOcorrenciaId, int equipeId, int usuarioId, bool isAdmin);
+    Task<IEnumerable<EscalaDto>> GetAllByEventoOcorrenciaAsync(int eventoOcorrenciaId, int usuarioId, bool isAdmin);
     Task<IEnumerable<EscalaDto>> GetMinhasEscalasAsync(int pessoaId, bool somenteFuturas = true);
-    Task<IEnumerable<SugestaoEscalaVoluntarioDto>> GetSugestoesAsync(int escalaId, int equipeId);
+    Task<IEnumerable<SugestaoEscalaVoluntarioDto>> GetSugestoesAsync(int escalaId, int equipeId, int usuarioId, bool isAdmin);
     Task<EscalaDto> CreateAsync(CriarEscalaDto dto, int usuarioId, bool isAdmin);
     Task<EscalaDto> UpdateAsync(int id, AtualizarEscalaDto dto, int usuarioId, bool isAdmin);
     Task DeleteAsync(int id, int usuarioId, bool isAdmin);
@@ -38,6 +39,7 @@ public class EscalaService : IEscalaService
     private readonly IEquipeRepository _equipeRepository;
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly INotificacaoUsuarioService _notificacaoUsuarioService;
+    private readonly ILogger<EscalaService> _logger;
 
     public EscalaService(
         IEscalaRepository repository,
@@ -47,7 +49,8 @@ public class EscalaService : IEscalaService
         IIndisponibilidadeVoluntarioRepository indisponibilidadeRepository,
         IEquipeRepository equipeRepository,
         IUsuarioRepository usuarioRepository,
-        INotificacaoUsuarioService notificacaoUsuarioService)
+        INotificacaoUsuarioService notificacaoUsuarioService,
+        ILogger<EscalaService> logger)
     {
         _repository = repository;
         _eventoOcorrenciaRepository = eventoOcorrenciaRepository;
@@ -57,30 +60,48 @@ public class EscalaService : IEscalaService
         _equipeRepository = equipeRepository;
         _usuarioRepository = usuarioRepository;
         _notificacaoUsuarioService = notificacaoUsuarioService;
+        _logger = logger;
     }
 
-    public async Task<EscalaDto?> GetByIdAsync(int id)
+    public async Task<EscalaDto?> GetByIdAsync(int id, int usuarioId, bool isAdmin)
     {
         var escala = await _repository.GetByIdAsync(id);
+        if (escala == null) return null;
+        await ValidarPermissaoGestaoEquipeAsync(escala.EquipeId, usuarioId, isAdmin);
         return escala != null ? MapToDto(escala) : null;
     }
 
-    public async Task<EscalaDto?> GetByEventoOcorrenciaAsync(int eventoOcorrenciaId)
+    public async Task<EscalaDto?> GetByEventoOcorrenciaAsync(int eventoOcorrenciaId, int usuarioId, bool isAdmin)
     {
         var escala = await _repository.GetByEventoOcorrenciaIdAsync(eventoOcorrenciaId);
+        if (escala == null) return null;
+        await ValidarPermissaoGestaoEquipeAsync(escala.EquipeId, usuarioId, isAdmin);
         return escala != null ? MapToDto(escala) : null;
     }
 
-    public async Task<EscalaDto?> GetByEventoOcorrenciaAndEquipeAsync(int eventoOcorrenciaId, int equipeId)
+    public async Task<EscalaDto?> GetByEventoOcorrenciaAndEquipeAsync(int eventoOcorrenciaId, int equipeId, int usuarioId, bool isAdmin)
     {
+        await ValidarPermissaoGestaoEquipeAsync(equipeId, usuarioId, isAdmin);
         var escala = await _repository.GetByEventoOcorrenciaAndEquipeAsync(eventoOcorrenciaId, equipeId);
         return escala != null ? MapToDto(escala) : null;
     }
 
-    public async Task<IEnumerable<EscalaDto>> GetAllByEventoOcorrenciaAsync(int eventoOcorrenciaId)
+    public async Task<IEnumerable<EscalaDto>> GetAllByEventoOcorrenciaAsync(int eventoOcorrenciaId, int usuarioId, bool isAdmin)
     {
         var escalas = await _repository.GetAllByEventoOcorrenciaAsync(eventoOcorrenciaId);
-        return escalas.Select(MapToDto);
+        if (isAdmin)
+        {
+            return escalas.Select(MapToDto);
+        }
+
+        var equipesGeridas = (await _equipeRepository.GetAllAsync())
+            .Where(e => e.LiderUsuarioId == usuarioId)
+            .Select(e => e.Id)
+            .ToHashSet();
+
+        return escalas
+            .Where(e => equipesGeridas.Contains(e.EquipeId))
+            .Select(MapToDto);
     }
 
     public async Task<IEnumerable<EscalaDto>> GetMinhasEscalasAsync(int pessoaId, bool somenteFuturas = true)
@@ -98,10 +119,12 @@ public class EscalaService : IEscalaService
         });
     }
 
-    public async Task<IEnumerable<SugestaoEscalaVoluntarioDto>> GetSugestoesAsync(int escalaId, int equipeId)
+    public async Task<IEnumerable<SugestaoEscalaVoluntarioDto>> GetSugestoesAsync(int escalaId, int equipeId, int usuarioId, bool isAdmin)
     {
         var escala = await _repository.GetByIdAsync(escalaId);
         if (escala == null) throw new ArgumentException("Escala não encontrada");
+        if (escala.EquipeId != equipeId) throw new ArgumentException("Equipe inválida para esta escala");
+        await ValidarPermissaoGestaoEquipeAsync(equipeId, usuarioId, isAdmin);
 
         var voluntarios = (await _voluntarioRepository.GetByEquipeAsync(equipeId)).ToList();
         var pessoaIdsJaEscaladas = await _repository.GetPessoaIdsJaEscaladasAsync(escalaId);
@@ -155,6 +178,12 @@ public class EscalaService : IEscalaService
         };
 
         var created = await _repository.CreateAsync(escala);
+        _logger.LogInformation(
+            "Escala criada. EscalaId={EscalaId} EventoOcorrenciaId={EventoOcorrenciaId} EquipeId={EquipeId} UsuarioId={UsuarioId}",
+            created.Id,
+            created.EventoOcorrenciaId,
+            created.EquipeId,
+            usuarioId);
         var createdFull = await _repository.GetByIdAsync(created.Id);
         return MapToDto(createdFull!);
     }
@@ -169,6 +198,12 @@ public class EscalaService : IEscalaService
         escala.Observacoes = dto.Observacoes;
 
         var updated = await _repository.UpdateAsync(escala);
+        _logger.LogInformation(
+            "Escala atualizada. EscalaId={EscalaId} EquipeId={EquipeId} Status={Status} UsuarioId={UsuarioId}",
+            updated.Id,
+            updated.EquipeId,
+            updated.Status,
+            usuarioId);
         var updatedFull = await _repository.GetByIdAsync(updated.Id);
         if (updatedFull != null)
         {
@@ -184,6 +219,11 @@ public class EscalaService : IEscalaService
 
         await ValidarPermissaoGestaoEquipeAsync(escala.EquipeId, usuarioId, isAdmin);
         await _repository.DeleteAsync(id);
+        _logger.LogInformation(
+            "Escala removida. EscalaId={EscalaId} EquipeId={EquipeId} UsuarioId={UsuarioId}",
+            id,
+            escala.EquipeId,
+            usuarioId);
     }
 
     public async Task<EscalaItemDto> AddItemAsync(int escalaId, CriarEscalaItemDto dto, int usuarioId, bool isAdmin)
@@ -220,6 +260,15 @@ public class EscalaService : IEscalaService
         };
 
         var created = await _repository.AddItemAsync(item);
+        _logger.LogInformation(
+            "Item de escala criado. EscalaId={EscalaId} EscalaItemId={EscalaItemId} EquipeId={EquipeId} VoluntarioId={VoluntarioId} CargoId={CargoId} UsuarioId={UsuarioId} ConflitoAprovado={ConflitoAprovado}",
+            escalaId,
+            created.Id,
+            escala.EquipeId,
+            created.VoluntarioId,
+            created.CargoId,
+            usuarioId,
+            created.ConflitoAprovado);
         var createdFull = await _repository.GetItemByIdAsync(created.Id);
         return MapItemToDto(createdFull!);
     }
@@ -250,6 +299,15 @@ public class EscalaService : IEscalaService
         item.AprovadoEm = dto.ForcarConflito ? DateTime.Now : null;
 
         var updated = await _repository.UpdateItemAsync(item);
+        _logger.LogInformation(
+            "Item de escala atualizado. EscalaId={EscalaId} EscalaItemId={EscalaItemId} EquipeId={EquipeId} VoluntarioId={VoluntarioId} CargoId={CargoId} UsuarioId={UsuarioId} ConflitoAprovado={ConflitoAprovado}",
+            escalaId,
+            updated.Id,
+            escala.EquipeId,
+            updated.VoluntarioId,
+            updated.CargoId,
+            usuarioId,
+            updated.ConflitoAprovado);
         var updatedFull = await _repository.GetItemByIdAsync(updated.Id);
         return MapItemToDto(updatedFull!);
     }
@@ -265,6 +323,12 @@ public class EscalaService : IEscalaService
         if (item == null || item.EscalaId != escalaId) throw new ArgumentException("Item da escala não encontrado");
 
         await _repository.DeleteItemAsync(escalaItemId);
+        _logger.LogInformation(
+            "Item de escala removido. EscalaId={EscalaId} EscalaItemId={EscalaItemId} EquipeId={EquipeId} UsuarioId={UsuarioId}",
+            escalaId,
+            escalaItemId,
+            escala.EquipeId,
+            usuarioId);
     }
 
     public async Task<EscalaDto> PublicarAsync(int escalaId, int usuarioId, bool isAdmin)
@@ -297,6 +361,12 @@ public class EscalaService : IEscalaService
         }
 
         var updated = await _repository.UpdateAsync(escala);
+        _logger.LogInformation(
+            "Escala publicada. EscalaId={EscalaId} EquipeId={EquipeId} Itens={Itens} UsuarioId={UsuarioId}",
+            updated.Id,
+            updated.EquipeId,
+            updated.Itens.Count,
+            usuarioId);
         var updatedFull = await _repository.GetByIdAsync(updated.Id);
         return MapToDto(updatedFull!);
     }
@@ -326,6 +396,12 @@ public class EscalaService : IEscalaService
                 DataCriacao = DateTime.Now
             };
             escala = await _repository.CreateAsync(escala);
+            _logger.LogInformation(
+                "Escala rascunho criada para geração automática. EscalaId={EscalaId} EventoOcorrenciaId={EventoOcorrenciaId} EquipeId={EquipeId} UsuarioId={UsuarioId}",
+                escala.Id,
+                escala.EventoOcorrenciaId,
+                escala.EquipeId,
+                usuarioId);
         }
         else if (escala.Status != StatusEscala.Rascunho)
             throw new ArgumentException("Só é possível gerar automaticamente em escala em rascunho.");
@@ -382,6 +458,13 @@ public class EscalaService : IEscalaService
         }
 
         var updatedFull = await _repository.GetByIdAsync(escala.Id);
+        _logger.LogInformation(
+            "Escala gerada automaticamente. EscalaId={EscalaId} EventoOcorrenciaId={EventoOcorrenciaId} EquipeId={EquipeId} ItensGerados={ItensGerados} UsuarioId={UsuarioId}",
+            escala.Id,
+            eventoOcorrenciaId,
+            equipeId,
+            updatedFull?.Itens.Count ?? 0,
+            usuarioId);
         return MapToDto(updatedFull!);
     }
 
@@ -398,9 +481,16 @@ public class EscalaService : IEscalaService
 
         var updated = await _repository.UpdateItemAsync(item);
         var updatedFull = await _repository.GetItemByIdAsync(updated.Id);
+        _logger.LogInformation(
+            "Escala confirmada. EscalaId={EscalaId} EscalaItemId={EscalaItemId} EquipeId={EquipeId} VoluntarioId={VoluntarioId} UsuarioId={UsuarioId}",
+            escalaId,
+            updated.Id,
+            updated.EquipeId,
+            updated.VoluntarioId,
+            usuarioId);
         if (updatedFull != null)
         {
-            await NotificarRespostaEscalaAsync(updatedFull, false, usuarioId);
+            await NotificarRespostaEscalaAsync(updatedFull, true, usuarioId);
         }
         return MapItemToDto(updatedFull!);
     }
@@ -418,6 +508,14 @@ public class EscalaService : IEscalaService
 
         var updated = await _repository.UpdateItemAsync(item);
         var updatedFull = await _repository.GetItemByIdAsync(updated.Id);
+        _logger.LogInformation(
+            "Escala recusada. EscalaId={EscalaId} EscalaItemId={EscalaItemId} EquipeId={EquipeId} VoluntarioId={VoluntarioId} UsuarioId={UsuarioId} MotivoInformado={MotivoInformado}",
+            escalaId,
+            updated.Id,
+            updated.EquipeId,
+            updated.VoluntarioId,
+            usuarioId,
+            !string.IsNullOrWhiteSpace(updated.MotivoRecusa));
         if (updatedFull != null)
         {
             await NotificarRespostaEscalaAsync(updatedFull, false, usuarioId);
@@ -443,6 +541,14 @@ public class EscalaService : IEscalaService
         item.MotivoRecusa = compareceu ? null : item.MotivoRecusa;
 
         var updated = await _repository.UpdateItemAsync(item);
+        _logger.LogInformation(
+            "Presença registrada em escala. EscalaId={EscalaId} EscalaItemId={EscalaItemId} EquipeId={EquipeId} VoluntarioId={VoluntarioId} Compareceu={Compareceu} UsuarioId={UsuarioId}",
+            escalaId,
+            updated.Id,
+            updated.EquipeId,
+            updated.VoluntarioId,
+            compareceu,
+            usuarioId);
         var updatedFull = await _repository.GetItemByIdAsync(updated.Id);
         return MapItemToDto(updatedFull!);
     }
@@ -575,6 +681,10 @@ public class EscalaService : IEscalaService
         }
 
         await _notificacaoUsuarioService.CriarParaUsuariosAsync(notificacoes);
+        _logger.LogInformation(
+            "Lembretes de escala processados. Referencia={Referencia} Quantidade={Quantidade}",
+            agora,
+            notificacoes.Count);
         return notificacoes.Count;
     }
 
@@ -623,6 +733,10 @@ public class EscalaService : IEscalaService
         var ehLider = await _equipeRepository.IsLiderUsuarioDaEquipeAsync(usuarioId, equipeId);
         if (!ehLider)
         {
+            _logger.LogWarning(
+                "Acesso negado para gestão de escala. EquipeId={EquipeId} UsuarioId={UsuarioId}",
+                equipeId,
+                usuarioId);
             throw new UnauthorizedAccessException("Você não tem permissão para gerenciar escalas desta equipe.");
         }
     }
@@ -645,6 +759,13 @@ public class EscalaService : IEscalaService
 
         if (!podeGerenciarEquipe && !ehProprioVoluntario)
         {
+            _logger.LogWarning(
+                "Resposta de escala negada por permissão. EscalaId={EscalaId} EscalaItemId={EscalaItemId} EquipeId={EquipeId} UsuarioId={UsuarioId} UsuarioPessoaId={UsuarioPessoaId}",
+                escalaId,
+                escalaItemId,
+                item.EquipeId,
+                usuarioId,
+                usuarioPessoaId);
             throw new UnauthorizedAccessException("Você não tem permissão para responder esta escala.");
         }
 

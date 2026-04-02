@@ -1,6 +1,7 @@
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace SistemaIgreja.Application.Services;
 
@@ -18,11 +19,13 @@ public class PessoaPerfilService : IPessoaPerfilService
 {
     private readonly IPessoaPerfilRepository _repository;
     private readonly IPessoaRepository _pessoaRepository;
+    private readonly ILogger<PessoaPerfilService> _logger;
 
-    public PessoaPerfilService(IPessoaPerfilRepository repository, IPessoaRepository pessoaRepository)
+    public PessoaPerfilService(IPessoaPerfilRepository repository, IPessoaRepository pessoaRepository, ILogger<PessoaPerfilService> logger)
     {
         _repository = repository;
         _pessoaRepository = pessoaRepository;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<PessoaPerfilDto>> GetAllAsync()
@@ -64,6 +67,11 @@ public class PessoaPerfilService : IPessoaPerfilService
         };
 
         var created = await _repository.CreateAsync(perfil);
+        _logger.LogInformation(
+            "Perfil de pessoa criado. PessoaPerfilId={PessoaPerfilId} PessoaId={PessoaId} Perfil={Perfil}",
+            created.Id,
+            created.PessoaId,
+            created.Perfil);
         return MapToDto(created, pessoa);
     }
 
@@ -79,6 +87,12 @@ public class PessoaPerfilService : IPessoaPerfilService
         perfil.DataFim = dto.DataFim;
 
         var updated = await _repository.UpdateAsync(perfil);
+        _logger.LogInformation(
+            "Perfil de pessoa atualizado. PessoaPerfilId={PessoaPerfilId} PessoaId={PessoaId} Perfil={Perfil} Ativo={Ativo}",
+            updated.Id,
+            updated.PessoaId,
+            updated.Perfil,
+            updated.DataFim == null);
         // Recarregar com relacionamento
         var updatedCompleto = await _repository.GetByIdAsync(updated.Id);
         return MapToDto(updatedCompleto ?? updated, pessoa);
@@ -87,6 +101,7 @@ public class PessoaPerfilService : IPessoaPerfilService
     public async Task DeleteAsync(int id)
     {
         await _repository.DeleteAsync(id);
+        _logger.LogInformation("Perfil de pessoa removido. PessoaPerfilId={PessoaPerfilId}", id);
     }
 
     private static PessoaPerfilDto MapToDto(PessoaPerfil perfil, Pessoa? pessoa)
@@ -118,6 +133,5 @@ public class PessoaPerfilService : IPessoaPerfilService
         };
     }
 }
-
 
 

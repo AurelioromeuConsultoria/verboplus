@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Domain.Entities;
+using System.Security.Claims;
 
 namespace SistemaIgreja.API.Controllers;
 
@@ -56,6 +58,11 @@ public class PessoasPerfisController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<PessoaPerfilDto>> Create(CriarPessoaPerfilDto dto)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem criar perfis de pessoa.");
+        }
+
         try
         {
             var perfil = await _service.CreateAsync(dto);
@@ -81,6 +88,11 @@ public class PessoasPerfisController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<PessoaPerfilDto>> Update(int id, AtualizarPessoaPerfilDto dto)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem atualizar perfis de pessoa.");
+        }
+
         try
         {
             var perfil = await _service.UpdateAsync(id, dto);
@@ -102,6 +114,11 @@ public class PessoasPerfisController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem excluir perfis de pessoa.");
+        }
+
         try
         {
             await _service.DeleteAsync(id);
@@ -112,7 +129,13 @@ public class PessoasPerfisController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
-}
 
+    private bool IsAdminUser()
+    {
+        var tipoUsuarioId = User.FindFirstValue("TipoUsuarioId");
+        return tipoUsuarioId == ((int)TipoUsuario.Admin).ToString() ||
+               tipoUsuarioId == ((int)TipoUsuario.Ambos).ToString();
+    }
+}
 
 

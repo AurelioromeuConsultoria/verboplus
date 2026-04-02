@@ -1,6 +1,7 @@
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace SistemaIgreja.Application.Services;
 
@@ -22,6 +23,7 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
     private readonly IVoluntarioRepository _voluntarioRepository;
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly INotificacaoUsuarioService _notificacaoUsuarioService;
+    private readonly ILogger<SolicitacaoTrocaEscalaService> _logger;
 
     public SolicitacaoTrocaEscalaService(
         ISolicitacaoTrocaEscalaRepository repository,
@@ -29,7 +31,8 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
         IEquipeRepository equipeRepository,
         IVoluntarioRepository voluntarioRepository,
         IUsuarioRepository usuarioRepository,
-        INotificacaoUsuarioService notificacaoUsuarioService)
+        INotificacaoUsuarioService notificacaoUsuarioService,
+        ILogger<SolicitacaoTrocaEscalaService> logger)
     {
         _repository = repository;
         _escalaRepository = escalaRepository;
@@ -37,6 +40,7 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
         _voluntarioRepository = voluntarioRepository;
         _usuarioRepository = usuarioRepository;
         _notificacaoUsuarioService = notificacaoUsuarioService;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<SolicitacaoTrocaEscalaDto>> GetGerenciaveisAsync(int usuarioId, bool isAdmin, int? equipeId, StatusSolicitacaoTrocaEscala? status)
@@ -71,6 +75,13 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
         var ehProprioVoluntario = usuarioPessoaId.HasValue && item.Voluntario?.PessoaId == usuarioPessoaId.Value;
         if (!podeGerenciarEquipe && !ehProprioVoluntario)
         {
+            _logger.LogWarning(
+                "Solicitação de troca negada por permissão. EscalaId={EscalaId} EscalaItemId={EscalaItemId} EquipeId={EquipeId} UsuarioId={UsuarioId} UsuarioPessoaId={UsuarioPessoaId}",
+                escalaId,
+                escalaItemId,
+                item.EquipeId,
+                usuarioId,
+                usuarioPessoaId);
             throw new UnauthorizedAccessException("Você não pode solicitar troca para esta escala.");
         }
 
@@ -95,6 +106,14 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
         };
 
         var created = await _repository.CreateAsync(solicitacao);
+        _logger.LogInformation(
+            "Solicitação de troca criada. SolicitacaoId={SolicitacaoId} EscalaId={EscalaId} EscalaItemId={EscalaItemId} EquipeId={EquipeId} VoluntarioSolicitanteId={VoluntarioSolicitanteId} UsuarioId={UsuarioId}",
+            created.Id,
+            escalaId,
+            escalaItemId,
+            item.EquipeId,
+            created.VoluntarioSolicitanteId,
+            usuarioId);
         var full = await _repository.GetByIdAsync(created.Id);
         if (full != null)
         {
@@ -153,6 +172,15 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
 
         var updated = await _repository.UpdateAsync(solicitacao);
         var full = await _repository.GetByIdAsync(updated.Id);
+        _logger.LogInformation(
+            "Solicitação de troca aprovada. SolicitacaoId={SolicitacaoId} EscalaId={EscalaId} EscalaItemId={EscalaItemId} EquipeId={EquipeId} VoluntarioSolicitanteId={VoluntarioSolicitanteId} VoluntarioSubstitutoId={VoluntarioSubstitutoId} UsuarioId={UsuarioId}",
+            updated.Id,
+            item.EscalaId,
+            item.Id,
+            item.EquipeId,
+            updated.VoluntarioSolicitanteId,
+            updated.VoluntarioSubstitutoId,
+            usuarioId);
         if (full != null)
         {
             await NotificarSolicitacaoAprovadaAsync(full, substituto, usuarioId);
@@ -178,6 +206,14 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
 
         var updated = await _repository.UpdateAsync(solicitacao);
         var full = await _repository.GetByIdAsync(updated.Id);
+        _logger.LogInformation(
+            "Solicitação de troca rejeitada. SolicitacaoId={SolicitacaoId} EscalaId={EscalaId} EscalaItemId={EscalaItemId} EquipeId={EquipeId} VoluntarioSolicitanteId={VoluntarioSolicitanteId} UsuarioId={UsuarioId}",
+            updated.Id,
+            item.EscalaId,
+            item.Id,
+            item.EquipeId,
+            updated.VoluntarioSolicitanteId,
+            usuarioId);
         if (full != null)
         {
             await NotificarSolicitacaoRejeitadaAsync(full, usuarioId);

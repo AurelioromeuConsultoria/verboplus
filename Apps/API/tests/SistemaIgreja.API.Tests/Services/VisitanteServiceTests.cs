@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
@@ -14,11 +15,12 @@ public class VisitanteServiceTests
     private readonly Mock<IPessoaRepository> _pessoaRepoMock = new();
     private readonly Mock<IPessoaPerfilRepository> _pessoaPerfilRepoMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
+    private readonly Mock<ILogger<VisitanteService>> _loggerMock = new();
     private readonly VisitanteService _service;
 
     public VisitanteServiceTests()
     {
-        _service = new VisitanteService(_repoMock.Object, _msgServiceMock.Object, _pessoaRepoMock.Object, _pessoaPerfilRepoMock.Object, _unitOfWorkMock.Object);
+        _service = new VisitanteService(_repoMock.Object, _msgServiceMock.Object, _pessoaRepoMock.Object, _pessoaPerfilRepoMock.Object, _unitOfWorkMock.Object, _loggerMock.Object);
         
         // Setup UnitOfWork: ExecuteInTransactionAsync deve executar o delegate passado
         _unitOfWorkMock.Setup(u => u.ExecuteInTransactionAsync(It.IsAny<Func<Task>>()))

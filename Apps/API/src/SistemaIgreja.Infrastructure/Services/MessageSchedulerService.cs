@@ -10,18 +10,22 @@ namespace SistemaIgreja.Infrastructure.Services;
 
 public class MessageSchedulerService : BackgroundService
 {
+    private const string SchedulerName = "message_scheduler";
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MessageSchedulerService> _logger;
     private readonly MessageSchedulerSettings _settings;
+    private readonly ISchedulerExecutionMonitor _executionMonitor;
 
     public MessageSchedulerService(
         IServiceProvider serviceProvider,
         ILogger<MessageSchedulerService> logger,
-        IOptions<MessageSchedulerSettings> settings)
+        IOptions<MessageSchedulerSettings> settings,
+        ISchedulerExecutionMonitor executionMonitor)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
         _settings = settings.Value;
+        _executionMonitor = executionMonitor;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -36,13 +40,25 @@ public class MessageSchedulerService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            var startedAtUtc = DateTime.UtcNow;
             try
             {
                 await ProcessarMensagensAgendadas();
+                _executionMonitor.RecordSuccess(
+                    SchedulerName,
+                    startedAtUtc,
+                    DateTime.UtcNow,
+                    $"Intervalo base: {_settings.BaseIntervalMinutes} min; batch: {_settings.BatchSizeReserva}");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao processar mensagens agendadas");
+                _executionMonitor.RecordFailure(
+                    SchedulerName,
+                    startedAtUtc,
+                    DateTime.UtcNow,
+                    ex.Message,
+                    $"Intervalo base: {_settings.BaseIntervalMinutes} min; batch: {_settings.BatchSizeReserva}");
             }
 
             var delay = ObterDelayComJitter();

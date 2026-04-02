@@ -2,6 +2,7 @@ using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.DTOs.MensagensAgendadas;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace SistemaIgreja.Application.Services;
 
@@ -27,15 +28,18 @@ public class MensagemAgendadaService : IMensagemAgendadaService
     private readonly IMensagemAgendadaRepository _mensagemRepository;
     private readonly IVisitanteRepository _visitanteRepository;
     private readonly IConfiguracaoMensagemRepository _configuracaoRepository;
+    private readonly ILogger<MensagemAgendadaService> _logger;
 
     public MensagemAgendadaService(
         IMensagemAgendadaRepository mensagemRepository,
         IVisitanteRepository visitanteRepository,
-        IConfiguracaoMensagemRepository configuracaoRepository)
+        IConfiguracaoMensagemRepository configuracaoRepository,
+        ILogger<MensagemAgendadaService> logger)
     {
         _mensagemRepository = mensagemRepository;
         _visitanteRepository = visitanteRepository;
         _configuracaoRepository = configuracaoRepository;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<MensagemAgendadaDto>> GetAllAsync()
@@ -100,6 +104,10 @@ public class MensagemAgendadaService : IMensagemAgendadaService
     public async Task<IEnumerable<MensagemAgendadaDto>> ReservarProntasParaEnvioAsync(int limit)
     {
         var mensagens = await _mensagemRepository.ReservarProntasParaEnvioAsync(limit);
+        _logger.LogInformation(
+            "Mensagens reservadas para envio. Quantidade={Quantidade} Limite={Limite}",
+            mensagens.Count(),
+            limit);
         return mensagens.Select(MapToDto);
     }
 
@@ -116,6 +124,7 @@ public class MensagemAgendadaService : IMensagemAgendadaService
             throw new ArgumentException("Visitante não encontrado");
 
         var configuracoes = await _configuracaoRepository.GetAtivasAsync();
+        var totalCriadas = 0;
 
         foreach (var configuracao in configuracoes)
         {
@@ -136,7 +145,13 @@ public class MensagemAgendadaService : IMensagemAgendadaService
             };
 
             await _mensagemRepository.CreateAsync(mensagemAgendada);
+            totalCriadas++;
         }
+
+        _logger.LogInformation(
+            "Mensagens agendadas para visitante. VisitanteId={VisitanteId} Quantidade={Quantidade}",
+            visitanteId,
+            totalCriadas);
     }
 
     public async Task<RegerarMensagensResultDto> RegerarMensagensParaVisitanteAsync(int visitanteId)
@@ -174,6 +189,12 @@ public class MensagemAgendadaService : IMensagemAgendadaService
             criadas++;
         }
 
+        _logger.LogInformation(
+            "Mensagens regeneradas para visitante. VisitanteId={VisitanteId} Canceladas={Canceladas} Criadas={Criadas}",
+            visitanteId,
+            canceladas,
+            criadas);
+
         return new RegerarMensagensResultDto
         {
             MensagensCanceladas = canceladas,
@@ -191,6 +212,10 @@ public class MensagemAgendadaService : IMensagemAgendadaService
         mensagem.DataProcessamento = DateTime.Now;
 
         await _mensagemRepository.UpdateAsync(mensagem);
+        _logger.LogInformation(
+            "Mensagem marcada como pronta para envio. MensagemId={MensagemId} VisitanteId={VisitanteId}",
+            mensagem.Id,
+            mensagem.VisitanteId);
     }
 
     public async Task MarcarComoEnviadaAsync(int mensagemId)
@@ -203,6 +228,10 @@ public class MensagemAgendadaService : IMensagemAgendadaService
         mensagem.DataProcessamento = DateTime.Now;
 
         await _mensagemRepository.UpdateAsync(mensagem);
+        _logger.LogInformation(
+            "Mensagem marcada como enviada. MensagemId={MensagemId} VisitanteId={VisitanteId}",
+            mensagem.Id,
+            mensagem.VisitanteId);
     }
 
     public async Task MarcarComoErroAsync(int mensagemId, string erro)
@@ -216,6 +245,10 @@ public class MensagemAgendadaService : IMensagemAgendadaService
         mensagem.DataProcessamento = DateTime.Now;
 
         await _mensagemRepository.UpdateAsync(mensagem);
+        _logger.LogWarning(
+            "Mensagem marcada como erro. MensagemId={MensagemId} VisitanteId={VisitanteId}",
+            mensagem.Id,
+            mensagem.VisitanteId);
     }
 
     private static MensagemAgendadaDto MapToDto(MensagemAgendada mensagem)
@@ -243,4 +276,3 @@ public class MensagemAgendadaService : IMensagemAgendadaService
         };
     }
 }
-

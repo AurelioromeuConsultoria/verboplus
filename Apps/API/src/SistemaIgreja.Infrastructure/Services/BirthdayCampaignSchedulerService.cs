@@ -9,18 +9,22 @@ namespace SistemaIgreja.Infrastructure.Services;
 
 public class BirthdayCampaignSchedulerService : BackgroundService
 {
+    private const string SchedulerName = "birthday_campaign_scheduler";
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<BirthdayCampaignSchedulerService> _logger;
     private readonly BirthdayCampaignSchedulerSettings _settings;
+    private readonly ISchedulerExecutionMonitor _executionMonitor;
 
     public BirthdayCampaignSchedulerService(
         IServiceProvider serviceProvider,
         ILogger<BirthdayCampaignSchedulerService> logger,
-        IOptions<BirthdayCampaignSchedulerSettings> settings)
+        IOptions<BirthdayCampaignSchedulerSettings> settings,
+        ISchedulerExecutionMonitor executionMonitor)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
         _settings = settings.Value;
+        _executionMonitor = executionMonitor;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -33,6 +37,7 @@ public class BirthdayCampaignSchedulerService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            var startedAtUtc = DateTime.UtcNow;
             try
             {
                 using var scope = _serviceProvider.CreateScope();
@@ -48,10 +53,22 @@ public class BirthdayCampaignSchedulerService : BackgroundService
                         resultado.TotalIgnorados,
                         resultado.TotalFalhas);
                 }
+
+                _executionMonitor.RecordSuccess(
+                    SchedulerName,
+                    startedAtUtc,
+                    DateTime.UtcNow,
+                    $"Max por execução: {_settings.MaxPessoasPorExecucao}; timezone: {_settings.TimeZoneId}");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao processar campanha de aniversário.");
+                _executionMonitor.RecordFailure(
+                    SchedulerName,
+                    startedAtUtc,
+                    DateTime.UtcNow,
+                    ex.Message,
+                    $"Max por execução: {_settings.MaxPessoasPorExecucao}; timezone: {_settings.TimeZoneId}");
             }
 
             await Task.Delay(ObterDelayComJitter(), stoppingToken);

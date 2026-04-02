@@ -1,6 +1,7 @@
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace SistemaIgreja.Application.Services;
 
@@ -19,12 +20,14 @@ public class UsuarioService : IUsuarioService
     private readonly IUsuarioRepository _repository;
     private readonly IPessoaRepository _pessoaRepository;
     private readonly IPerfilAcessoRepository _perfilAcessoRepository;
+    private readonly ILogger<UsuarioService> _logger;
 
-    public UsuarioService(IUsuarioRepository repository, IPessoaRepository pessoaRepository, IPerfilAcessoRepository perfilAcessoRepository)
+    public UsuarioService(IUsuarioRepository repository, IPessoaRepository pessoaRepository, IPerfilAcessoRepository perfilAcessoRepository, ILogger<UsuarioService> logger)
     {
         _repository = repository;
         _pessoaRepository = pessoaRepository;
         _perfilAcessoRepository = perfilAcessoRepository;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<UsuarioDto>> GetAllAsync()
@@ -113,6 +116,12 @@ public class UsuarioService : IUsuarioService
         };
 
         var created = await _repository.CreateAsync(entity);
+        _logger.LogInformation(
+            "Usuário criado. UsuarioId={UsuarioId} PessoaId={PessoaId} PerfilAcessoId={PerfilAcessoId} TipoUsuario={TipoUsuario}",
+            created.Id,
+            created.PessoaId,
+            created.PerfilAcessoId,
+            created.TipoUsuario);
         return MapToDto(created);
     }
 
@@ -156,12 +165,20 @@ public class UsuarioService : IUsuarioService
         entity.PerfilAcessoId = dto.PerfilAcessoId;
 
         var updated = await _repository.UpdateAsync(entity);
+        _logger.LogInformation(
+            "Usuário atualizado. UsuarioId={UsuarioId} PessoaId={PessoaId} PerfilAcessoId={PerfilAcessoId} TipoUsuario={TipoUsuario} Ativo={Ativo}",
+            updated.Id,
+            updated.PessoaId,
+            updated.PerfilAcessoId,
+            updated.TipoUsuario,
+            updated.Ativo);
         return MapToDto(updated);
     }
 
     public async Task DeleteAsync(int id)
     {
         await _repository.DeleteAsync(id);
+        _logger.LogInformation("Usuário removido. UsuarioId={UsuarioId}", id);
     }
 
     private static string GetTipoUsuarioDescricao(TipoUsuario tipo)
@@ -202,7 +219,6 @@ public class UsuarioService : IUsuarioService
         };
     }
 }
-
 
 
 

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Domain.Entities;
+using System.Security.Claims;
 
 namespace SistemaIgreja.API.Controllers;
 
@@ -23,6 +25,11 @@ public class UsuariosController : ControllerBase
     [Authorize] // Requer autenticação
     public async Task<ActionResult<IEnumerable<UsuarioDto>>> GetAll()
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem listar usuários.");
+        }
+
         var items = await _service.GetAllAsync();
         return Ok(items);
     }
@@ -31,6 +38,11 @@ public class UsuariosController : ControllerBase
     [Authorize] // Requer autenticação
     public async Task<ActionResult<UsuarioDto>> GetById(int id)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem visualizar usuários.");
+        }
+
         var item = await _service.GetByIdAsync(id);
         if (item == null) return NotFound();
         return Ok(item);
@@ -54,6 +66,11 @@ public class UsuariosController : ControllerBase
                 {
                     return Unauthorized("É necessário estar autenticado para criar novos usuários.");
                 }
+
+                if (!IsAdminUser())
+                {
+                    return StatusCode(403, "Apenas administradores podem criar novos usuários.");
+                }
             }
 
             var created = await _service.CreateAsync(dto);
@@ -69,6 +86,11 @@ public class UsuariosController : ControllerBase
     [Authorize] // Requer autenticação
     public async Task<ActionResult<UsuarioDto>> Update(int id, AtualizarUsuarioDto dto)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem atualizar usuários.");
+        }
+
         try
         {
             var updated = await _service.UpdateAsync(id, dto);
@@ -88,6 +110,11 @@ public class UsuariosController : ControllerBase
     [Authorize] // Requer autenticação
     public async Task<IActionResult> Delete(int id)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem excluir usuários.");
+        }
+
         try
         {
             await _service.DeleteAsync(id);
@@ -98,5 +125,11 @@ public class UsuariosController : ControllerBase
             return BadRequest(ex.Message);
         }
     }
-}
 
+    private bool IsAdminUser()
+    {
+        var tipoUsuarioId = User.FindFirstValue("TipoUsuarioId");
+        return tipoUsuarioId == ((int)TipoUsuario.Admin).ToString() ||
+               tipoUsuarioId == ((int)TipoUsuario.Ambos).ToString();
+    }
+}

@@ -19,8 +19,8 @@ public class UsuarioRepository : IUsuarioRepository
         return await _context.Set<Usuario>()
             .Include(u => u.Pessoa)
             .Include(u => u.PerfilAcesso)
-                .ThenInclude(p => p.Permissoes)
-            .OrderBy(u => u.Pessoa.Nome)
+                .ThenInclude(p => p!.Permissoes)
+            .OrderBy(u => u.Pessoa != null ? u.Pessoa.Nome : string.Empty)
             .ToListAsync();
     }
 
@@ -29,7 +29,7 @@ public class UsuarioRepository : IUsuarioRepository
         return await _context.Set<Usuario>()
             .Include(u => u.Pessoa)
             .Include(u => u.PerfilAcesso)
-                .ThenInclude(p => p.Permissoes)
+                .ThenInclude(p => p!.Permissoes)
             .FirstOrDefaultAsync(u => u.Id == id);
     }
 
@@ -38,7 +38,7 @@ public class UsuarioRepository : IUsuarioRepository
         return await _context.Set<Usuario>()
             .Include(u => u.Pessoa)
             .Include(u => u.PerfilAcesso)
-                .ThenInclude(p => p.Permissoes)
+                .ThenInclude(p => p!.Permissoes)
             .FirstOrDefaultAsync(u => u.EmailLogin.ToLower() == email.ToLower());
     }
 
@@ -47,7 +47,7 @@ public class UsuarioRepository : IUsuarioRepository
         return await _context.Set<Usuario>()
             .Include(u => u.Pessoa)
             .Include(u => u.PerfilAcesso)
-                .ThenInclude(p => p.Permissoes)
+                .ThenInclude(p => p!.Permissoes)
             .FirstOrDefaultAsync(u => u.PessoaId == pessoaId);
     }
 

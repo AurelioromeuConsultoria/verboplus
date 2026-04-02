@@ -72,6 +72,10 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
         };
 
         var atualizada = await _configuracaoRepository.UpdateAsync(configuracao);
+        _logger.LogInformation(
+            "Configuração da campanha de aniversário atualizada. Ativo={Ativo} HorarioEnvio={HorarioEnvio}",
+            atualizada.Ativo,
+            atualizada.HorarioEnvio);
         var historico = await _envioRepository.GetHistoricoAsync(null, null, 50);
         var metricas = await ObterMetricasAsync();
         return MapToDto(atualizada, historico, new CampanhaAniversarioHistoricoFiltroDto(), metricas);
@@ -95,6 +99,15 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
             ResolverImagemUrl(configuracao.ImagemUrl!),
             RenderizarMensagem(configuracao.MensagemTemplate, nome),
             cancellationToken);
+
+        if (response.Sucesso)
+        {
+            _logger.LogInformation("Teste da campanha de aniversário enviado com sucesso. WhatsApp={WhatsApp}", dto.WhatsApp);
+        }
+        else
+        {
+            _logger.LogWarning("Falha no teste da campanha de aniversário. WhatsApp={WhatsApp}", dto.WhatsApp);
+        }
 
         return new CampanhaAniversarioEnvioTesteResultadoDto
         {
@@ -138,6 +151,7 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
         envio.MensagemUtilizada = mensagem;
         envio.LogErro = null;
         await _envioRepository.UpdateAsync(envio);
+        _logger.LogInformation("Reenvio da campanha de aniversário iniciado. EnvioId={EnvioId} PessoaId={PessoaId} Tentativas={Tentativas}", envio.Id, envio.PessoaId, envio.Tentativas);
 
         var response = await _evolutionApiService.EnviarMensagemImagemAsync(
             envio.Pessoa.WhatsApp,
@@ -150,6 +164,7 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
             envio.Status = StatusEnvioCampanhaAniversario.Erro;
             envio.LogErro = response.MensagemErro ?? "Falha ao reenviar mensagem de aniversário.";
             await _envioRepository.UpdateAsync(envio);
+            _logger.LogWarning("Reenvio da campanha de aniversário falhou. EnvioId={EnvioId} PessoaId={PessoaId}", envio.Id, envio.PessoaId);
 
             return new CampanhaAniversarioReenvioResultadoDto
             {
@@ -165,6 +180,7 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
         envio.DataEnvioSucesso = DateTime.Now;
         envio.LogErro = null;
         await _envioRepository.UpdateAsync(envio);
+        _logger.LogInformation("Reenvio da campanha de aniversário concluído com sucesso. EnvioId={EnvioId} PessoaId={PessoaId}", envio.Id, envio.PessoaId);
 
         return new CampanhaAniversarioReenvioResultadoDto
         {
@@ -182,6 +198,7 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
 
         if (!configuracao.Ativo)
         {
+            _logger.LogInformation("Processamento da campanha de aniversário ignorado porque a campanha está inativa.");
             return resultado;
         }
 
@@ -194,6 +211,10 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
         var agoraLocal = GetAgoraLocal();
         if (agoraLocal.TimeOfDay < configuracao.HorarioEnvio)
         {
+            _logger.LogInformation(
+                "Processamento da campanha de aniversário adiado pelo horário configurado. Agora={Agora} HorarioEnvio={HorarioEnvio}",
+                agoraLocal.TimeOfDay,
+                configuracao.HorarioEnvio);
             return resultado;
         }
 
@@ -225,6 +246,13 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
             }
         }
 
+        _logger.LogInformation(
+            "Processamento da campanha de aniversário concluído. Elegiveis={Elegiveis} Enviados={Enviados} Falhas={Falhas} Ignorados={Ignorados}",
+            resultado.TotalElegiveis,
+            resultado.TotalEnviados,
+            resultado.TotalFalhas,
+            resultado.TotalIgnorados);
+
         return resultado;
     }
 
@@ -239,11 +267,13 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
 
         if (envio?.Status == StatusEnvioCampanhaAniversario.Enviado)
         {
+            _logger.LogDebug("Envio de aniversário ignorado porque já foi enviado. PessoaId={PessoaId} AnoReferencia={AnoReferencia}", pessoa.Id, anoReferencia);
             return StatusProcessamentoCampanha.Ignorado;
         }
 
         if (envio?.Tentativas >= _schedulerSettings.MaxTentativasPorPessoa)
         {
+            _logger.LogWarning("Envio de aniversário ignorado por limite de tentativas. PessoaId={PessoaId} AnoReferencia={AnoReferencia} Tentativas={Tentativas}", pessoa.Id, anoReferencia, envio.Tentativas);
             return StatusProcessamentoCampanha.Ignorado;
         }
 
@@ -296,6 +326,7 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
                 envio.Status = StatusEnvioCampanhaAniversario.Erro;
                 envio.LogErro = response.MensagemErro ?? "Falha ao enviar mensagem de aniversário.";
                 await _envioRepository.UpdateAsync(envio);
+                _logger.LogWarning("Falha ao enviar campanha de aniversário. PessoaId={PessoaId} EnvioId={EnvioId} Tentativas={Tentativas}", pessoa.Id, envio.Id, envio.Tentativas);
                 return StatusProcessamentoCampanha.Falhou;
             }
 
@@ -303,6 +334,7 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
             envio.DataEnvioSucesso = DateTime.Now;
             envio.LogErro = null;
             await _envioRepository.UpdateAsync(envio);
+            _logger.LogInformation("Campanha de aniversário enviada com sucesso. PessoaId={PessoaId} EnvioId={EnvioId} Tentativas={Tentativas}", pessoa.Id, envio.Id, envio.Tentativas);
             return StatusProcessamentoCampanha.Enviado;
         }
         catch (Exception ex)

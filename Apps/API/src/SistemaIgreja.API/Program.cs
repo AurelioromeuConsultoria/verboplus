@@ -1,8 +1,11 @@
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SistemaIgreja.API.Swagger;
@@ -49,6 +52,25 @@ builder.Services.AddDbContext<SistemaIgrejaDbContext>((sp, options) =>
             break;
     }
 });
+
+builder.Services
+    .AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>(
+        name: "database",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["ready"])
+    .AddCheck<EvolutionApiConfigurationHealthCheck>(
+        name: "evolution_api_configuration",
+        failureStatus: HealthStatus.Degraded,
+        tags: ["ready", "config"])
+    .AddCheck<MessageSchedulerConfigurationHealthCheck>(
+        name: "message_scheduler_configuration",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["ready", "config"])
+    .AddCheck<EscalaSchedulerConfigurationHealthCheck>(
+        name: "escala_scheduler_configuration",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["ready", "config"]);
 
 // ==========================
 // DEPENDENCY INJECTION
@@ -150,6 +172,7 @@ builder.Services.AddScoped<INotificacaoUsuarioService, NotificacaoUsuarioService
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPerfilAcessoService, PerfilAcessoService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddSingleton<ISchedulerExecutionMonitor, SchedulerExecutionMonitor>();
 builder.Services.AddScoped<ICategoriaMidiaService, CategoriaMidiaService>();
 builder.Services.AddScoped<IGaleriaFotoService, GaleriaFotoService>();
 builder.Services.AddScoped<IEnqueteService, EnqueteService>();
@@ -428,6 +451,33 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<SistemaIgreja.API.Permissions.PermissionMiddleware>();
+
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+
+        var payload = new
+        {
+            status = report.Status.ToString(),
+            totalDuration = report.TotalDuration.TotalMilliseconds,
+            checks = report.Entries.ToDictionary(
+                entry => entry.Key,
+                entry => new
+                {
+                    status = entry.Value.Status.ToString(),
+                    duration = entry.Value.Duration.TotalMilliseconds,
+                    description = entry.Value.Description,
+                    error = entry.Value.Exception?.Message,
+                    tags = entry.Value.Tags
+                })
+        };
+
+        await context.Response.WriteAsync(JsonSerializer.Serialize(payload));
+    }
+});
+
 app.MapControllers();
 
 app.Run();
