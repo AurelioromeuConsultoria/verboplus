@@ -14,11 +14,12 @@ public class MensagemAgendadaServiceTests
     private readonly Mock<IVisitanteRepository> _visitRepoMock = new();
     private readonly Mock<IConfiguracaoMensagemRepository> _cfgRepoMock = new();
     private readonly Mock<ILogger<MensagemAgendadaService>> _loggerMock = new();
+    private readonly Mock<IAuditLogService> _auditLogServiceMock = new();
     private readonly MensagemAgendadaService _service;
 
     public MensagemAgendadaServiceTests()
     {
-        _service = new MensagemAgendadaService(_repoMock.Object, _visitRepoMock.Object, _cfgRepoMock.Object, _loggerMock.Object);
+        _service = new MensagemAgendadaService(_repoMock.Object, _visitRepoMock.Object, _cfgRepoMock.Object, _loggerMock.Object, _auditLogServiceMock.Object);
     }
 
     [Fact]

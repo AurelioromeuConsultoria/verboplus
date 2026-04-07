@@ -24,13 +24,15 @@ public class AuthService : IAuthService
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthService> _logger;
+    private readonly IAuditLogService _auditLogService;
     private readonly Dictionary<string, string> _refreshTokens = new(); // Em produção, usar Redis ou banco
 
-    public AuthService(IUsuarioRepository usuarioRepository, IConfiguration configuration, ILogger<AuthService> logger)
+    public AuthService(IUsuarioRepository usuarioRepository, IConfiguration configuration, ILogger<AuthService> logger, IAuditLogService auditLogService)
     {
         _usuarioRepository = usuarioRepository;
         _configuration = configuration;
         _logger = logger;
+        _auditLogService = auditLogService;
     }
 
     public async Task<LoginResponseDto> LoginAsync(LoginDto dto)
@@ -63,6 +65,11 @@ public class AuthService : IAuthService
             usuario.Id,
             usuario.PessoaId,
             usuario.TipoUsuario);
+        await _auditLogService.RecordAsync(
+            "Auth",
+            usuario.Id.ToString(),
+            "Login",
+            new { usuario.Id, usuario.PessoaId, usuario.TipoUsuario });
 
         return new LoginResponseDto
         {
@@ -99,6 +106,11 @@ public class AuthService : IAuthService
         _refreshTokens[newRefreshToken] = usuarioId.ToString();
 
         _logger.LogInformation("Refresh token renovado com sucesso. UsuarioId={UsuarioId}", usuario.Id);
+        await _auditLogService.RecordAsync(
+            "Auth",
+            usuario.Id.ToString(),
+            "RefreshToken",
+            new { usuario.Id });
 
         return new LoginResponseDto
         {
@@ -131,6 +143,11 @@ public class AuthService : IAuthService
         usuario.SenhaHash = BCrypt.Net.BCrypt.HashPassword(dto.NovaSenha);
         await _usuarioRepository.UpdateAsync(usuario);
         _logger.LogInformation("Senha alterada com sucesso. UsuarioId={UsuarioId}", usuarioId);
+        await _auditLogService.RecordAsync(
+            "Usuario",
+            usuarioId.ToString(),
+            "AlterarSenha",
+            new { UsuarioId = usuarioId });
     }
 
     private string GenerateJwtToken(Usuario usuario)

@@ -60,6 +60,60 @@ public class MessageSchedulerConfigurationHealthCheck : IHealthCheck
     }
 }
 
+public class EmailConfigurationHealthCheck : IHealthCheck
+{
+    private readonly EmailSettings _settings;
+
+    public EmailConfigurationHealthCheck(IOptions<EmailSettings> settings)
+    {
+        _settings = settings.Value;
+    }
+
+    public Task<HealthCheckResult> CheckHealthAsync(
+        HealthCheckContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var missing = new List<string>();
+
+        if (!_settings.Enabled) missing.Add(nameof(_settings.Enabled));
+        if (string.IsNullOrWhiteSpace(_settings.Host)) missing.Add(nameof(_settings.Host));
+        if (string.IsNullOrWhiteSpace(_settings.FromAddress)) missing.Add(nameof(_settings.FromAddress));
+        if (!string.IsNullOrWhiteSpace(_settings.Username) && string.IsNullOrWhiteSpace(_settings.Password))
+            missing.Add(nameof(_settings.Password));
+
+        if (missing.Count == 0)
+        {
+            return Task.FromResult(HealthCheckResult.Healthy("Email configuration OK."));
+        }
+
+        return Task.FromResult(HealthCheckResult.Degraded(
+            $"Email configuration incomplete. Missing: {string.Join(", ", missing)}."));
+    }
+}
+
+public class PushConfigurationHealthCheck : IHealthCheck
+{
+    private readonly FirebaseKidsPushOptions _settings;
+
+    public PushConfigurationHealthCheck(IOptions<FirebaseKidsPushOptions> settings)
+    {
+        _settings = settings.Value;
+    }
+
+    public Task<HealthCheckResult> CheckHealthAsync(
+        HealthCheckContext context,
+        CancellationToken cancellationToken = default)
+    {
+        if (!string.IsNullOrWhiteSpace(_settings.CredentialsPath))
+        {
+            return Task.FromResult(HealthCheckResult.Healthy("Push configuration OK."));
+        }
+
+        return Task.FromResult(HealthCheckResult.Degraded(
+            "Push configuration incomplete. Missing: CredentialsPath."));
+    }
+}
+
 public class EscalaSchedulerConfigurationHealthCheck : IHealthCheck
 {
     private readonly EscalaSchedulerSettings _settings;

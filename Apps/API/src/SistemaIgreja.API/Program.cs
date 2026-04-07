@@ -63,6 +63,14 @@ builder.Services
         name: "evolution_api_configuration",
         failureStatus: HealthStatus.Degraded,
         tags: ["ready", "config"])
+    .AddCheck<EmailConfigurationHealthCheck>(
+        name: "email_configuration",
+        failureStatus: HealthStatus.Degraded,
+        tags: ["ready", "config"])
+    .AddCheck<PushConfigurationHealthCheck>(
+        name: "push_configuration",
+        failureStatus: HealthStatus.Degraded,
+        tags: ["ready", "config"])
     .AddCheck<MessageSchedulerConfigurationHealthCheck>(
         name: "message_scheduler_configuration",
         failureStatus: HealthStatus.Unhealthy,
@@ -83,6 +91,11 @@ builder.Services.AddScoped<IVisitanteRepository, VisitanteRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IConfiguracaoMensagemRepository, ConfiguracaoMensagemRepository>();
 builder.Services.AddScoped<IMensagemAgendadaRepository, MensagemAgendadaRepository>();
+builder.Services.AddScoped<IComunicacaoTemplateRepository, ComunicacaoTemplateRepository>();
+builder.Services.AddScoped<IComunicacaoCampanhaRepository, ComunicacaoCampanhaRepository>();
+builder.Services.AddScoped<IComunicacaoEntregaRepository, ComunicacaoEntregaRepository>();
+builder.Services.AddScoped<IComunicacaoPreferenciaRepository, ComunicacaoPreferenciaRepository>();
+builder.Services.AddScoped<IComunicacaoSegmentoRepository, ComunicacaoSegmentoRepository>();
 builder.Services.AddScoped<IEquipeRepository, EquipeRepository>();
 builder.Services.AddScoped<IHubCasaRepository, HubCasaRepository>();
 builder.Services.AddScoped<IFornecedorRepository, FornecedorRepository>();
@@ -127,6 +140,8 @@ builder.Services.AddScoped<IResponsavelCriancaRepository, ResponsavelCriancaRepo
 builder.Services.AddScoped<IKidsCheckinRepository, KidsCheckinRepository>();
 builder.Services.AddScoped<IKidsNotificacaoRepository, KidsNotificacaoRepository>();
 builder.Services.AddScoped<IKidsDeviceTokenRepository, KidsDeviceTokenRepository>();
+builder.Services.AddScoped<IKidsOcorrenciaRepository, KidsOcorrenciaRepository>();
+builder.Services.AddScoped<IKidsEstruturaRepository, KidsEstruturaRepository>();
 
 // Services
 builder.Services.AddScoped<IPessoaService, PessoaService>();
@@ -136,6 +151,18 @@ builder.Services.AddScoped<ICadastroMembroNotificationService, CadastroMembroNot
 builder.Services.AddScoped<IVisitanteService, VisitanteService>();
 builder.Services.AddScoped<IConfiguracaoMensagemService, ConfiguracaoMensagemService>();
 builder.Services.AddScoped<IMensagemAgendadaService, MensagemAgendadaService>();
+builder.Services.AddScoped<IComunicacaoTemplateService, ComunicacaoTemplateService>();
+builder.Services.AddScoped<IComunicacaoCampanhaService, ComunicacaoCampanhaService>();
+builder.Services.AddScoped<IComunicacaoEntregaService, ComunicacaoEntregaService>();
+builder.Services.AddScoped<IComunicacaoPreferenciaService, ComunicacaoPreferenciaService>();
+builder.Services.AddScoped<IComunicacaoSegmentoService, ComunicacaoSegmentoService>();
+builder.Services.AddScoped<IComunicacaoAudienceResolver, ComunicacaoAudienceResolver>();
+builder.Services.AddScoped<IComunicacaoProcessamentoService, ComunicacaoProcessamentoService>();
+builder.Services.AddScoped<IComunicacaoAutomacaoService, ComunicacaoAutomacaoService>();
+builder.Services.AddScoped<IComunicacaoCanalProvider, ComunicacaoWhatsAppCanalProvider>();
+builder.Services.AddScoped<IComunicacaoCanalProvider, ComunicacaoEmailCanalProvider>();
+builder.Services.AddScoped<IComunicacaoCanalProvider, ComunicacaoNotificacaoInternaCanalProvider>();
+builder.Services.AddScoped<IComunicacaoCanalProvider, ComunicacaoPushCanalProvider>();
 builder.Services.AddScoped<ISearchService, SearchService>();
 builder.Services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
 builder.Services.AddScoped<AuditSaveChangesInterceptor>();
@@ -183,6 +210,13 @@ builder.Services.AddScoped<IFinanceiroQueryService, FinanceiroQueryService>();
 builder.Services.AddScoped<IDashboardFinanceiroService, DashboardFinanceiroService>();
 builder.Services.AddScoped<IRelatorioFinanceiroService, RelatorioFinanceiroService>();
 builder.Services.AddScoped<IKidsService, KidsService>();
+builder.Services.AddScoped<IKidsAuthorizationService, KidsAuthorizationService>();
+builder.Services.AddScoped<IKidsNotificacaoService, KidsNotificacaoService>();
+builder.Services.AddScoped<IKidsRetiradaService, KidsRetiradaService>();
+builder.Services.AddScoped<IKidsPainelService, KidsPainelService>();
+builder.Services.AddScoped<IKidsOcorrenciaService, KidsOcorrenciaService>();
+builder.Services.AddScoped<IKidsEstruturaService, KidsEstruturaService>();
+builder.Services.AddScoped<IKidsIndicadoresService, KidsIndicadoresService>();
 builder.Services.AddScoped<IKidsPushNotificationService, KidsPushNotificationService>();
 
 builder.Services.Configure<FirebaseKidsPushOptions>(

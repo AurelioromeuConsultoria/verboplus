@@ -41,6 +41,35 @@ public class KidsCheckinRepository : IKidsCheckinRepository
             .FirstOrDefaultAsync(c => c.CodigoSessao == codigoSessao);
     }
 
+    public async Task<KidsCheckin?> GetByTokenRetiradaAsync(string tokenRetirada)
+    {
+        return await _context.Set<KidsCheckin>()
+            .Include(c => c.Crianca)
+            .Include(c => c.CheckinBy)
+            .Include(c => c.CheckoutBy)
+            .FirstOrDefaultAsync(c => c.TokenRetirada == tokenRetirada);
+    }
+
+    public async Task<KidsCheckin?> GetByPinRetiradaAsync(string pinRetirada)
+    {
+        return await _context.Set<KidsCheckin>()
+            .Include(c => c.Crianca)
+            .Include(c => c.CheckinBy)
+            .Include(c => c.CheckoutBy)
+            .FirstOrDefaultAsync(c => c.PinRetirada == pinRetirada);
+    }
+
+    public async Task<IEnumerable<KidsCheckin>> GetByPeriodoAsync(DateTime dataInicioUtc, DateTime dataFimUtc)
+    {
+        return await _context.Set<KidsCheckin>()
+            .Include(c => c.Crianca)
+            .Include(c => c.CheckinBy)
+            .Include(c => c.CheckoutBy)
+            .Where(c => c.CheckinTime >= dataInicioUtc && c.CheckinTime <= dataFimUtc)
+            .OrderByDescending(c => c.CheckinTime)
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<KidsCheckin>> GetHistoricoPorCriancaAsync(int criancaPessoaId, int? limit = null)
     {
         var query = _context.Set<KidsCheckin>()
@@ -94,5 +123,3 @@ public class KidsCheckinRepository : IKidsCheckinRepository
         return Task.CompletedTask;
     }
 }
-
-

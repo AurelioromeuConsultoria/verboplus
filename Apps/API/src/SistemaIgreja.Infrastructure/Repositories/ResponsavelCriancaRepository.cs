@@ -30,6 +30,39 @@ public class ResponsavelCriancaRepository : IResponsavelCriancaRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<int>> GetResponsavelIdsAtivosAsync()
+    {
+        return await _context.Set<ResponsavelCrianca>()
+            .Where(r => r.Ativo)
+            .Select(r => r.ResponsavelPessoaId)
+            .Distinct()
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<int>> GetResponsavelIdsAtivosByCriancaIdsAsync(IEnumerable<int> criancaPessoaIds)
+    {
+        var ids = criancaPessoaIds.Where(id => id > 0).Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return Array.Empty<int>();
+        }
+
+        return await _context.Set<ResponsavelCrianca>()
+            .Where(r => r.Ativo && ids.Contains(r.CriancaPessoaId))
+            .Select(r => r.ResponsavelPessoaId)
+            .Distinct()
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<int>> GetCriancaIdsAtivosByResponsavelIdAsync(int responsavelPessoaId)
+    {
+        return await _context.Set<ResponsavelCrianca>()
+            .Where(r => r.ResponsavelPessoaId == responsavelPessoaId && r.Ativo)
+            .Select(r => r.CriancaPessoaId)
+            .Distinct()
+            .ToListAsync();
+    }
+
     public async Task<ResponsavelCrianca?> GetByIdAsync(int id)
     {
         return await _context.Set<ResponsavelCrianca>()
@@ -43,6 +76,14 @@ public class ResponsavelCriancaRepository : IResponsavelCriancaRepository
         return await _context.Set<ResponsavelCrianca>()
             .FirstOrDefaultAsync(r => r.CriancaPessoaId == criancaPessoaId && 
                                       r.ResponsavelPessoaId == responsavelPessoaId);
+    }
+
+    public async Task<bool> ExisteVinculoAtivoAsync(int criancaPessoaId, int responsavelPessoaId)
+    {
+        return await _context.Set<ResponsavelCrianca>()
+            .AnyAsync(r => r.CriancaPessoaId == criancaPessoaId &&
+                           r.ResponsavelPessoaId == responsavelPessoaId &&
+                           r.Ativo);
     }
 
     public async Task<ResponsavelCrianca> CreateAsync(ResponsavelCrianca responsavel)
@@ -84,5 +125,3 @@ public class ResponsavelCriancaRepository : IResponsavelCriancaRepository
         return responsavel?.PodeRetirar ?? false;
     }
 }
-
-

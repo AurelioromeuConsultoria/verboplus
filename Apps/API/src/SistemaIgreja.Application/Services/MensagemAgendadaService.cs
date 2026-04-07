@@ -29,17 +29,20 @@ public class MensagemAgendadaService : IMensagemAgendadaService
     private readonly IVisitanteRepository _visitanteRepository;
     private readonly IConfiguracaoMensagemRepository _configuracaoRepository;
     private readonly ILogger<MensagemAgendadaService> _logger;
+    private readonly IAuditLogService _auditLogService;
 
     public MensagemAgendadaService(
         IMensagemAgendadaRepository mensagemRepository,
         IVisitanteRepository visitanteRepository,
         IConfiguracaoMensagemRepository configuracaoRepository,
-        ILogger<MensagemAgendadaService> logger)
+        ILogger<MensagemAgendadaService> logger,
+        IAuditLogService auditLogService)
     {
         _mensagemRepository = mensagemRepository;
         _visitanteRepository = visitanteRepository;
         _configuracaoRepository = configuracaoRepository;
         _logger = logger;
+        _auditLogService = auditLogService;
     }
 
     public async Task<IEnumerable<MensagemAgendadaDto>> GetAllAsync()
@@ -194,6 +197,11 @@ public class MensagemAgendadaService : IMensagemAgendadaService
             visitanteId,
             canceladas,
             criadas);
+        await _auditLogService.RecordAsync(
+            "MensagemAgendada",
+            visitanteId.ToString(),
+            "Regerar",
+            new { VisitanteId = visitanteId, Canceladas = canceladas, Criadas = criadas });
 
         return new RegerarMensagensResultDto
         {
@@ -216,6 +224,11 @@ public class MensagemAgendadaService : IMensagemAgendadaService
             "Mensagem marcada como pronta para envio. MensagemId={MensagemId} VisitanteId={VisitanteId}",
             mensagem.Id,
             mensagem.VisitanteId);
+        await _auditLogService.RecordAsync(
+            "MensagemAgendada",
+            mensagem.Id.ToString(),
+            "ProntaParaEnvio",
+            new { mensagem.VisitanteId });
     }
 
     public async Task MarcarComoEnviadaAsync(int mensagemId)
@@ -232,6 +245,11 @@ public class MensagemAgendadaService : IMensagemAgendadaService
             "Mensagem marcada como enviada. MensagemId={MensagemId} VisitanteId={VisitanteId}",
             mensagem.Id,
             mensagem.VisitanteId);
+        await _auditLogService.RecordAsync(
+            "MensagemAgendada",
+            mensagem.Id.ToString(),
+            "Enviada",
+            new { mensagem.VisitanteId });
     }
 
     public async Task MarcarComoErroAsync(int mensagemId, string erro)
@@ -249,6 +267,11 @@ public class MensagemAgendadaService : IMensagemAgendadaService
             "Mensagem marcada como erro. MensagemId={MensagemId} VisitanteId={VisitanteId}",
             mensagem.Id,
             mensagem.VisitanteId);
+        await _auditLogService.RecordAsync(
+            "MensagemAgendada",
+            mensagem.Id.ToString(),
+            "ErroEnvio",
+            new { mensagem.VisitanteId });
     }
 
     private static MensagemAgendadaDto MapToDto(MensagemAgendada mensagem)

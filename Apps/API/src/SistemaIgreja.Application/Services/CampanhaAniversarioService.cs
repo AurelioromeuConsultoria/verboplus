@@ -24,7 +24,9 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
     private readonly IEvolutionApiService _evolutionApiService;
     private readonly BirthdayCampaignSchedulerSettings _schedulerSettings;
     private readonly PublicAppUrlSettings _publicAppUrlSettings;
+    private readonly IComunicacaoAutomacaoService _comunicacaoAutomacaoService;
     private readonly ILogger<CampanhaAniversarioService> _logger;
+    private readonly IAuditLogService _auditLogService;
 
     public CampanhaAniversarioService(
         IConfiguracaoCampanhaAniversarioRepository configuracaoRepository,
@@ -33,7 +35,9 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
         IEvolutionApiService evolutionApiService,
         IOptions<BirthdayCampaignSchedulerSettings> schedulerSettings,
         IOptions<PublicAppUrlSettings> publicAppUrlSettings,
-        ILogger<CampanhaAniversarioService> logger)
+        IComunicacaoAutomacaoService comunicacaoAutomacaoService,
+        ILogger<CampanhaAniversarioService> logger,
+        IAuditLogService auditLogService)
     {
         _configuracaoRepository = configuracaoRepository;
         _envioRepository = envioRepository;
@@ -41,7 +45,9 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
         _evolutionApiService = evolutionApiService;
         _schedulerSettings = schedulerSettings.Value;
         _publicAppUrlSettings = publicAppUrlSettings.Value;
+        _comunicacaoAutomacaoService = comunicacaoAutomacaoService;
         _logger = logger;
+        _auditLogService = auditLogService;
     }
 
     public async Task<CampanhaAniversarioConfiguracaoDto> GetAsync(CampanhaAniversarioHistoricoFiltroDto? filtros = null)
@@ -76,6 +82,11 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
             "Configuração da campanha de aniversário atualizada. Ativo={Ativo} HorarioEnvio={HorarioEnvio}",
             atualizada.Ativo,
             atualizada.HorarioEnvio);
+        await _auditLogService.RecordAsync(
+            "CampanhaAniversario",
+            atualizada.Id.ToString(),
+            "AtualizarConfiguracao",
+            new { atualizada.Ativo, atualizada.HorarioEnvio });
         var historico = await _envioRepository.GetHistoricoAsync(null, null, 50);
         var metricas = await ObterMetricasAsync();
         return MapToDto(atualizada, historico, new CampanhaAniversarioHistoricoFiltroDto(), metricas);
@@ -103,10 +114,12 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
         if (response.Sucesso)
         {
             _logger.LogInformation("Teste da campanha de aniversário enviado com sucesso. WhatsApp={WhatsApp}", dto.WhatsApp);
+            await _auditLogService.RecordAsync("CampanhaAniversario", "teste", "EnviarTeste", new { Sucesso = true });
         }
         else
         {
             _logger.LogWarning("Falha no teste da campanha de aniversário. WhatsApp={WhatsApp}", dto.WhatsApp);
+            await _auditLogService.RecordAsync("CampanhaAniversario", "teste", "EnviarTeste", new { Sucesso = false });
         }
 
         return new CampanhaAniversarioEnvioTesteResultadoDto
@@ -152,6 +165,11 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
         envio.LogErro = null;
         await _envioRepository.UpdateAsync(envio);
         _logger.LogInformation("Reenvio da campanha de aniversário iniciado. EnvioId={EnvioId} PessoaId={PessoaId} Tentativas={Tentativas}", envio.Id, envio.PessoaId, envio.Tentativas);
+        await _auditLogService.RecordAsync(
+            "CampanhaAniversarioEnvio",
+            envio.Id.ToString(),
+            "Reenviar",
+            new { envio.PessoaId, envio.Tentativas });
 
         var response = await _evolutionApiService.EnviarMensagemImagemAsync(
             envio.Pessoa.WhatsApp,
@@ -193,67 +211,7 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
 
     public async Task<CampanhaAniversarioProcessamentoResultadoDto> ProcessarAniversariantesDoDiaAsync(CancellationToken cancellationToken = default)
     {
-        var configuracao = await _configuracaoRepository.GetAsync();
-        var resultado = new CampanhaAniversarioProcessamentoResultadoDto();
-
-        if (!configuracao.Ativo)
-        {
-            _logger.LogInformation("Processamento da campanha de aniversário ignorado porque a campanha está inativa.");
-            return resultado;
-        }
-
-        if (string.IsNullOrWhiteSpace(configuracao.ImagemUrl) || string.IsNullOrWhiteSpace(configuracao.MensagemTemplate))
-        {
-            _logger.LogWarning("Campanha de aniversário ativa, mas sem imagem ou mensagem configurada.");
-            return resultado;
-        }
-
-        var agoraLocal = GetAgoraLocal();
-        if (agoraLocal.TimeOfDay < configuracao.HorarioEnvio)
-        {
-            _logger.LogInformation(
-                "Processamento da campanha de aniversário adiado pelo horário configurado. Agora={Agora} HorarioEnvio={HorarioEnvio}",
-                agoraLocal.TimeOfDay,
-                configuracao.HorarioEnvio);
-            return resultado;
-        }
-
-        var pessoas = await _pessoaRepository.GetAllAsync();
-        var aniversariantes = pessoas
-            .Where(p => p.Ativo && p.DataNascimento.HasValue && !string.IsNullOrWhiteSpace(p.WhatsApp))
-            .Where(p => EhAniversarioHoje(p.DataNascimento!.Value.Date, agoraLocal.Date))
-            .OrderBy(p => p.Nome)
-            .Take(_schedulerSettings.MaxPessoasPorExecucao)
-            .ToList();
-
-        resultado.TotalElegiveis = aniversariantes.Count;
-
-        foreach (var pessoa in aniversariantes)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var status = await ProcessarPessoaAsync(pessoa, configuracao, agoraLocal, cancellationToken);
-            if (status == StatusProcessamentoCampanha.Enviado)
-            {
-                resultado.TotalEnviados++;
-            }
-            else if (status == StatusProcessamentoCampanha.Falhou)
-            {
-                resultado.TotalFalhas++;
-            }
-            else
-            {
-                resultado.TotalIgnorados++;
-            }
-        }
-
-        _logger.LogInformation(
-            "Processamento da campanha de aniversário concluído. Elegiveis={Elegiveis} Enviados={Enviados} Falhas={Falhas} Ignorados={Ignorados}",
-            resultado.TotalElegiveis,
-            resultado.TotalEnviados,
-            resultado.TotalFalhas,
-            resultado.TotalIgnorados);
-
-        return resultado;
+        return await _comunicacaoAutomacaoService.ExecutarAniversariosDoDiaAsync(cancellationToken);
     }
 
     private async Task<StatusProcessamentoCampanha> ProcessarPessoaAsync(

@@ -46,7 +46,10 @@ public class Pessoa
     public virtual ICollection<KidsNotificacao> NotificacoesComoCrianca { get; set; } = new List<KidsNotificacao>();
     public virtual ICollection<KidsNotificacao> NotificacoesComoResponsavel { get; set; } = new List<KidsNotificacao>();
     public virtual ICollection<KidsDeviceToken> KidsDeviceTokens { get; set; } = new List<KidsDeviceToken>();
+    public virtual ICollection<KidsOcorrencia> KidsOcorrenciasComoCrianca { get; set; } = new List<KidsOcorrencia>();
+    public virtual ICollection<KidsOcorrencia> KidsOcorrenciasRegistradas { get; set; } = new List<KidsOcorrencia>();
+    public virtual ICollection<KidsOcorrencia> KidsOcorrenciasContatoResponsavel { get; set; } = new List<KidsOcorrencia>();
+    public virtual ICollection<KidsOcorrencia> KidsOcorrenciasEncerradas { get; set; } = new List<KidsOcorrencia>();
 }
-
 
 

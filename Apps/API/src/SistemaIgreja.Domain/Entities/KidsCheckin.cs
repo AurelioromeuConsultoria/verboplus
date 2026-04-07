@@ -29,12 +29,35 @@ public class KidsCheckin
     [MaxLength(50)]
     public string CodigoSessao { get; set; } = string.Empty;
 
+    [MaxLength(80)]
+    public string? TokenRetirada { get; set; }
+
+    [MaxLength(10)]
+    public string? PinRetirada { get; set; }
+
+    public DateTime? TokenRetiradaExpiraEm { get; set; }
+
     [Required]
     [MaxLength(20)]
     public string Status { get; set; } = "CheckedIn"; // "CheckedIn", "CheckedOut"
 
+    public int? RetiradaConfirmadaPorPessoaId { get; set; }
+
+    [MaxLength(20)]
+    public string? RetiradaMetodo { get; set; }
+
+    public bool RetiradaEmModoExcecao { get; set; }
+
+    [MaxLength(500)]
+    public string? RetiradaMotivoExcecao { get; set; }
+
+    [MaxLength(200)]
+    public string? RetiradaPessoaNome { get; set; }
+
+    [MaxLength(50)]
+    public string? RetiradaPessoaDocumento { get; set; }
+
     [MaxLength(500)]
     public string? Observacoes { get; set; }
 }
-
 

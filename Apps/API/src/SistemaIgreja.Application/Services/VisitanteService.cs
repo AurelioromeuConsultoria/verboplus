@@ -21,7 +21,7 @@ public interface IVisitanteService
 public class VisitanteService : IVisitanteService
 {
     private readonly IVisitanteRepository _visitanteRepository;
-    private readonly IMensagemAgendadaService _mensagemService;
+    private readonly IComunicacaoAutomacaoService _comunicacaoAutomacaoService;
     private readonly IPessoaRepository _pessoaRepository;
     private readonly IPessoaPerfilRepository _pessoaPerfilRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -29,14 +29,14 @@ public class VisitanteService : IVisitanteService
 
     public VisitanteService(
         IVisitanteRepository visitanteRepository,
-        IMensagemAgendadaService mensagemService,
+        IComunicacaoAutomacaoService comunicacaoAutomacaoService,
         IPessoaRepository pessoaRepository,
         IPessoaPerfilRepository pessoaPerfilRepository,
         IUnitOfWork unitOfWork,
         ILogger<VisitanteService> logger)
     {
         _visitanteRepository = visitanteRepository;
-        _mensagemService = mensagemService;
+        _comunicacaoAutomacaoService = comunicacaoAutomacaoService;
         _pessoaRepository = pessoaRepository;
         _pessoaPerfilRepository = pessoaPerfilRepository;
         _unitOfWork = unitOfWork;
@@ -216,12 +216,12 @@ public class VisitanteService : IVisitanteService
             throw new InvalidOperationException("Falha ao criar visitante (ID não gerado)");
         }
 
-        // 5. Agendar mensagens automaticamente (fora da transação)
+        // 5. Gerar comunicação automatica centralizada (fora da transação)
         try
         {
-            await _mensagemService.AgendarMensagensParaVisitanteAsync(visitanteId);
+            await _comunicacaoAutomacaoService.ExecutarNovoVisitanteAsync(visitanteId);
             _logger.LogInformation(
-                "Visitante criado e mensagens agendadas. VisitanteId={VisitanteId} PessoaId={PessoaId} PessoaCriada={PessoaCriada} PessoaAtualizada={PessoaAtualizada} PerfilVisitanteCriado={PerfilVisitanteCriado}",
+                "Visitante criado e automacao central de comunicacao executada. VisitanteId={VisitanteId} PessoaId={PessoaId} PessoaCriada={PessoaCriada} PessoaAtualizada={PessoaAtualizada} PerfilVisitanteCriado={PerfilVisitanteCriado}",
                 visitanteId,
                 pessoaId,
                 pessoaCriada,
@@ -232,7 +232,7 @@ public class VisitanteService : IVisitanteService
         {
             _logger.LogError(
                 ex,
-                "Visitante criado, mas houve falha ao agendar mensagens. VisitanteId={VisitanteId} PessoaId={PessoaId}",
+                "Visitante criado, mas houve falha ao executar automacao de comunicacao. VisitanteId={VisitanteId} PessoaId={PessoaId}",
                 visitanteId,
                 pessoaId);
         }

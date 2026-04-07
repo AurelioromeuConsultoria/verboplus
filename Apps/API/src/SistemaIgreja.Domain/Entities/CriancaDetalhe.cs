@@ -20,8 +20,10 @@ public class CriancaDetalhe
     [MaxLength(50)]
     public string? SalaId { get; set; }
 
+    [MaxLength(50)]
+    public string? TurmaId { get; set; }
+
     [Required]
     public DateTime DataCadastro { get; set; } = DateTime.UtcNow;
 }
-
 

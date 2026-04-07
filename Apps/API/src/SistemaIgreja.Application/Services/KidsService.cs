@@ -1,6 +1,7 @@
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace SistemaIgreja.Application.Services;
 
@@ -8,6 +9,9 @@ public interface IKidsService
 {
     Task<IEnumerable<CriancaDto>> GetCriancasAsync();
     Task<CriancaDto?> GetCriancaByIdAsync(int criancaPessoaId);
+    Task<IEnumerable<MinhaCriancaResumoDto>> GetMinhasCriancasAsync();
+    Task<MinhaCriancaDetalheDto?> GetMinhaCriancaByIdAsync(int criancaPessoaId);
+    Task<IEnumerable<MeuCheckinResumoDto>> GetMeusCheckinsAsync();
     Task<CriancaDto> CreateCriancaAsync(CreateCriancaRequest request);
     Task<CriancaDto> UpdateCriancaAsync(int criancaPessoaId, UpdateCriancaRequest request);
     Task DeleteCriancaAsync(int criancaPessoaId);
@@ -25,35 +29,54 @@ public class KidsService : IKidsService
 {
     private readonly IPessoaRepository _pessoaRepository;
     private readonly ICriancaDetalheRepository _criancaDetalheRepository;
+    private readonly IKidsEstruturaRepository _kidsEstruturaRepository;
     private readonly IResponsavelCriancaRepository _responsavelRepository;
     private readonly IKidsCheckinRepository _checkinRepository;
     private readonly IKidsNotificacaoRepository _notificacaoRepository;
     private readonly IPessoaPerfilRepository _perfilRepository;
+    private readonly IUsuarioRepository _usuarioRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUserContext _currentUserContext;
+    private readonly IKidsAuthorizationService _authorizationService;
+    private readonly IComunicacaoAutomacaoService _comunicacaoAutomacaoService;
     private readonly IKidsPushNotificationService? _pushService;
+    private readonly ILogger<KidsService> _logger;
 
     public KidsService(
         IPessoaRepository pessoaRepository,
         ICriancaDetalheRepository criancaDetalheRepository,
+        IKidsEstruturaRepository kidsEstruturaRepository,
         IResponsavelCriancaRepository responsavelRepository,
         IKidsCheckinRepository checkinRepository,
         IKidsNotificacaoRepository notificacaoRepository,
         IPessoaPerfilRepository perfilRepository,
         IUnitOfWork unitOfWork,
+        IUsuarioRepository usuarioRepository,
+        ICurrentUserContext currentUserContext,
+        IKidsAuthorizationService authorizationService,
+        IComunicacaoAutomacaoService comunicacaoAutomacaoService,
+        ILogger<KidsService> logger,
         IKidsPushNotificationService? pushService = null)
     {
         _pessoaRepository = pessoaRepository;
         _criancaDetalheRepository = criancaDetalheRepository;
+        _kidsEstruturaRepository = kidsEstruturaRepository;
         _responsavelRepository = responsavelRepository;
         _checkinRepository = checkinRepository;
         _notificacaoRepository = notificacaoRepository;
         _perfilRepository = perfilRepository;
+        _usuarioRepository = usuarioRepository;
         _unitOfWork = unitOfWork;
+        _currentUserContext = currentUserContext;
+        _authorizationService = authorizationService;
+        _comunicacaoAutomacaoService = comunicacaoAutomacaoService;
         _pushService = pushService;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<CriancaDto>> GetCriancasAsync()
     {
+        await _authorizationService.EnsureOperadorAsync();
         var pessoas = await _pessoaRepository.GetAllAsync();
         var criancas = pessoas.Where(p => p.TipoPessoa == TipoPessoa.Crianca && p.Ativo).ToList();
         
@@ -73,6 +96,7 @@ public class KidsService : IKidsService
 
     public async Task<CriancaDto?> GetCriancaByIdAsync(int criancaPessoaId)
     {
+        await _authorizationService.EnsureOperadorAsync();
         var pessoa = await _pessoaRepository.GetByIdAsync(criancaPessoaId);
         if (pessoa == null || pessoa.TipoPessoa != TipoPessoa.Crianca) return null;
         
@@ -85,8 +109,84 @@ public class KidsService : IKidsService
         return dto;
     }
 
+    public async Task<IEnumerable<MinhaCriancaResumoDto>> GetMinhasCriancasAsync()
+    {
+        var responsavelPessoaId = await GetRequiredCurrentUserPessoaIdAsync();
+        var criancaIds = (await _responsavelRepository.GetCriancaIdsAtivosByResponsavelIdAsync(responsavelPessoaId)).ToHashSet();
+        if (criancaIds.Count == 0)
+            return [];
+
+        var pessoas = await _pessoaRepository.GetAllAsync();
+        var criancas = pessoas
+            .Where(p => criancaIds.Contains(p.Id) && p.TipoPessoa == TipoPessoa.Crianca && p.Ativo)
+            .OrderBy(p => p.Nome)
+            .ToList();
+
+        var resultado = new List<MinhaCriancaResumoDto>();
+        foreach (var crianca in criancas)
+        {
+            var detalhe = await _criancaDetalheRepository.GetByPessoaIdAsync(crianca.Id);
+            var checkinAtivo = await _checkinRepository.GetCheckinAtivoPorCriancaAsync(crianca.Id);
+            resultado.Add(MapToMinhaCriancaResumoDto(crianca, detalhe, checkinAtivo));
+        }
+
+        _logger.LogInformation(
+            "Consulta Kids me/criancas para responsavel {ResponsavelPessoaId}. TotalCriancas={TotalCriancas}",
+            responsavelPessoaId,
+            resultado.Count);
+
+        return resultado;
+    }
+
+    public async Task<MinhaCriancaDetalheDto?> GetMinhaCriancaByIdAsync(int criancaPessoaId)
+    {
+        var responsavelPessoaId = await GetRequiredCurrentUserPessoaIdAsync();
+        await EnsureCriancaPertenceAoResponsavelAsync(criancaPessoaId, responsavelPessoaId);
+
+        var pessoa = await _pessoaRepository.GetByIdAsync(criancaPessoaId);
+        if (pessoa == null || pessoa.TipoPessoa != TipoPessoa.Crianca || !pessoa.Ativo)
+            return null;
+
+        var detalhe = await _criancaDetalheRepository.GetByPessoaIdAsync(criancaPessoaId);
+        var checkinAtivo = await _checkinRepository.GetCheckinAtivoPorCriancaAsync(criancaPessoaId);
+        var historico = await _checkinRepository.GetHistoricoPorCriancaAsync(criancaPessoaId, 10);
+
+        _logger.LogInformation(
+            "Consulta Kids me/criancas/{CriancaPessoaId} para responsavel {ResponsavelPessoaId}",
+            criancaPessoaId,
+            responsavelPessoaId);
+
+        return MapToMinhaCriancaDetalheDto(pessoa, detalhe, checkinAtivo, historico);
+    }
+
+    public async Task<IEnumerable<MeuCheckinResumoDto>> GetMeusCheckinsAsync()
+    {
+        var responsavelPessoaId = await GetRequiredCurrentUserPessoaIdAsync();
+        var criancaIds = (await _responsavelRepository.GetCriancaIdsAtivosByResponsavelIdAsync(responsavelPessoaId)).ToHashSet();
+        if (criancaIds.Count == 0)
+            return [];
+
+        var resultado = new List<MeuCheckinResumoDto>();
+        foreach (var criancaId in criancaIds)
+        {
+            var detalhe = await _criancaDetalheRepository.GetByPessoaIdAsync(criancaId);
+            var historico = await _checkinRepository.GetHistoricoPorCriancaAsync(criancaId, 10);
+            resultado.AddRange(historico.Select(c => MapToMeuCheckinResumoDto(c, detalhe?.SalaId)));
+        }
+
+        _logger.LogInformation(
+            "Consulta Kids me/checkins para responsavel {ResponsavelPessoaId}. TotalCheckins={TotalCheckins}",
+            responsavelPessoaId,
+            resultado.Count);
+
+        return resultado.OrderByDescending(c => c.CheckinTime).ToList();
+    }
+
     public async Task<CriancaDto> CreateCriancaAsync(CreateCriancaRequest request)
     {
+        await _authorizationService.EnsureLiderAsync();
+        await ValidateSalaTurmaAsync(request.SalaId, request.TurmaId);
+
         try
         {
             return await _unitOfWork.ExecuteInTransactionAsync(async () =>
@@ -121,6 +221,7 @@ public class KidsService : IKidsService
                     RestricoesAlimentares = request.RestricoesAlimentares,
                     Observacoes = request.Observacoes,
                     SalaId = request.SalaId,
+                    TurmaId = request.TurmaId,
                     DataCadastro = DateTime.UtcNow
                 };
 
@@ -200,6 +301,9 @@ public class KidsService : IKidsService
 
     public async Task<CriancaDto> UpdateCriancaAsync(int criancaPessoaId, UpdateCriancaRequest request)
     {
+        await _authorizationService.EnsureLiderAsync();
+        await ValidateSalaTurmaAsync(request.SalaId, request.TurmaId);
+
         var pessoa = await _pessoaRepository.GetByIdAsync(criancaPessoaId);
         if (pessoa == null || pessoa.TipoPessoa != TipoPessoa.Crianca)
             throw new ArgumentException("Criança não encontrada");
@@ -223,6 +327,7 @@ public class KidsService : IKidsService
                 RestricoesAlimentares = request.RestricoesAlimentares,
                 Observacoes = request.Observacoes,
                 SalaId = request.SalaId,
+                TurmaId = request.TurmaId,
                 DataCadastro = DateTime.UtcNow
             };
             await _criancaDetalheRepository.CreateAsync(detalhe);
@@ -233,6 +338,7 @@ public class KidsService : IKidsService
             detalhe.RestricoesAlimentares = request.RestricoesAlimentares;
             detalhe.Observacoes = request.Observacoes;
             detalhe.SalaId = request.SalaId;
+            detalhe.TurmaId = request.TurmaId;
             await _criancaDetalheRepository.UpdateAsync(detalhe);
         }
         
@@ -244,6 +350,7 @@ public class KidsService : IKidsService
 
     public async Task DeleteCriancaAsync(int criancaPessoaId)
     {
+        await _authorizationService.EnsureLiderAsync();
         var pessoa = await _pessoaRepository.GetByIdAsync(criancaPessoaId);
         if (pessoa == null || pessoa.TipoPessoa != TipoPessoa.Crianca)
             throw new ArgumentException("Criança não encontrada");
@@ -255,6 +362,7 @@ public class KidsService : IKidsService
 
     public async Task<ResponsavelCriancaDto> VincularResponsavelAsync(int criancaPessoaId, CreateResponsavelRequest request)
     {
+        await _authorizationService.EnsureLiderAsync();
         var crianca = await _pessoaRepository.GetByIdAsync(criancaPessoaId);
         if (crianca == null || crianca.TipoPessoa != TipoPessoa.Crianca)
             throw new ArgumentException("Criança não encontrada");
@@ -284,6 +392,7 @@ public class KidsService : IKidsService
 
     public async Task<ResponsavelCriancaDto> UpdateResponsavelAsync(int responsavelId, UpdateResponsavelRequest request)
     {
+        await _authorizationService.EnsureLiderAsync();
         var responsavel = await _responsavelRepository.GetByIdAsync(responsavelId);
         if (responsavel == null)
             throw new ArgumentException("Vínculo de responsável não encontrado");
@@ -303,6 +412,7 @@ public class KidsService : IKidsService
 
     public async Task DesvincularResponsavelAsync(int responsavelId)
     {
+        await _authorizationService.EnsureLiderAsync();
         var responsavel = await _responsavelRepository.GetByIdAsync(responsavelId);
         if (responsavel == null)
             throw new ArgumentException("Vínculo de responsável não encontrado");
@@ -312,139 +422,257 @@ public class KidsService : IKidsService
 
     public async Task<CheckinResponse> CheckinAsync(CheckinRequest request)
     {
-        var (response, responsavelIds, msg, tipo) = await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        await _authorizationService.EnsureOperadorAsync();
+
+        _logger.LogInformation(
+            "Iniciando check-in Kids para crianca {CriancaPessoaId}. Metodo={Metodo}. CheckinByPessoaId={CheckinByPessoaId}. UsuarioAtual={UsuarioAtualId}",
+            request.CriancaPessoaId,
+            request.Metodo,
+            request.CheckinByPessoaId,
+            _currentUserContext.UserId);
+
+        try
         {
-            var crianca = await _pessoaRepository.GetByIdAsync(request.CriancaPessoaId);
-            if (crianca == null || crianca.TipoPessoa != TipoPessoa.Crianca || !crianca.Ativo)
-                throw new ArgumentException("Criança não encontrada ou inativa");
-
-            var checkinAtivo = await _checkinRepository.GetCheckinAtivoPorCriancaAsync(request.CriancaPessoaId);
-            if (checkinAtivo != null)
-                throw new InvalidOperationException("Criança já possui um check-in ativo");
-
-            var codigoSessao = Guid.NewGuid().ToString("N")[..12].ToUpper();
-
-            var checkin = new KidsCheckin
+            var (response, responsavelIds, msg, tipo) = await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
-                CriancaPessoaId = request.CriancaPessoaId,
-                CheckinTime = DateTime.UtcNow,
-                CheckinByPessoaId = request.CheckinByPessoaId,
-                Metodo = request.Metodo,
-                CodigoSessao = codigoSessao,
-                Status = "CheckedIn",
-                Observacoes = request.Observacoes
-            };
+                var crianca = await _pessoaRepository.GetByIdAsync(request.CriancaPessoaId);
+                if (crianca == null || crianca.TipoPessoa != TipoPessoa.Crianca || !crianca.Ativo)
+                    throw new ArgumentException("Criança não encontrada ou inativa");
 
-            await _checkinRepository.CreateWithoutSaveAsync(checkin);
+                var checkinAtivo = await _checkinRepository.GetCheckinAtivoPorCriancaAsync(request.CriancaPessoaId);
+                if (checkinAtivo != null)
+                    throw new InvalidOperationException("Criança já possui um check-in ativo");
 
-            var responsaveis = await _responsavelRepository.GetByCriancaIdAsync(request.CriancaPessoaId);
-            var notificacoes = new List<NotificacaoCriadaDto>();
+                var codigoSessao = Guid.NewGuid().ToString("N")[..12].ToUpper();
+                var tokenRetirada = Guid.NewGuid().ToString("N")[..24].ToUpper();
+                var pinRetirada = Random.Shared.Next(100000, 999999).ToString();
+                var tokenRetiradaExpiraEm = DateTime.UtcNow.AddHours(8);
 
-            foreach (var responsavel in responsaveis)
-            {
-                var mensagem = $"Check-in realizado para {crianca.Nome} às {DateTime.UtcNow:HH:mm}";
-
-                var notificacao = new KidsNotificacao
+                var checkin = new KidsCheckin
                 {
                     CriancaPessoaId = request.CriancaPessoaId,
-                    ResponsavelPessoaId = responsavel.ResponsavelPessoaId,
-                    Tipo = "CHECKIN",
-                    Mensagem = mensagem,
-                    Status = "Pendente",
-                    DataCriacao = DateTime.UtcNow
+                    CheckinTime = DateTime.UtcNow,
+                    CheckinByPessoaId = request.CheckinByPessoaId,
+                    Metodo = request.Metodo,
+                    CodigoSessao = codigoSessao,
+                    TokenRetirada = tokenRetirada,
+                    PinRetirada = pinRetirada,
+                    TokenRetiradaExpiraEm = tokenRetiradaExpiraEm,
+                    Status = "CheckedIn",
+                    Observacoes = request.Observacoes
                 };
 
-                await _notificacaoRepository.CreateWithoutSaveAsync(notificacao);
+                await _checkinRepository.CreateWithoutSaveAsync(checkin);
 
-                notificacoes.Add(new NotificacaoCriadaDto
+                var responsaveis = await _responsavelRepository.GetByCriancaIdAsync(request.CriancaPessoaId);
+                var notificacoes = new List<NotificacaoCriadaDto>();
+
+                foreach (var responsavel in responsaveis)
                 {
-                    ResponsavelPessoaId = responsavel.ResponsavelPessoaId,
-                    ResponsavelNome = responsavel.Responsavel?.Nome ?? "N/A",
-                    Status = "Pendente"
+                    var mensagem = $"Check-in realizado para {crianca.Nome} às {DateTime.UtcNow:HH:mm}";
+
+                    var notificacao = new KidsNotificacao
+                    {
+                        CriancaPessoaId = request.CriancaPessoaId,
+                        ResponsavelPessoaId = responsavel.ResponsavelPessoaId,
+                        Titulo = "Check-in realizado",
+                        Tipo = "CHECKIN",
+                        Origem = "AUTOMATICA",
+                        Mensagem = mensagem,
+                        Status = "Enviado",
+                        EnviadoEm = DateTime.UtcNow,
+                        DataCriacao = DateTime.UtcNow,
+                        CriadoByPessoaId = request.CheckinByPessoaId
+                    };
+
+                    await _notificacaoRepository.CreateWithoutSaveAsync(notificacao);
+
+                    notificacoes.Add(new NotificacaoCriadaDto
+                    {
+                        ResponsavelPessoaId = responsavel.ResponsavelPessoaId,
+                        ResponsavelNome = responsavel.Responsavel?.Nome ?? "N/A",
+                        Status = "Pendente"
+                    });
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                var responsavelIds = notificacoes.Select(n => n.ResponsavelPessoaId).Distinct().ToList();
+                var msg = $"Check-in realizado para {crianca.Nome} às {DateTime.UtcNow:HH:mm}";
+                return (new CheckinResponse
+                {
+                    CheckinId = checkin.Id,
+                    CodigoSessao = codigoSessao,
+                    TokenRetirada = tokenRetirada,
+                    PinRetirada = pinRetirada,
+                    TokenRetiradaExpiraEm = tokenRetiradaExpiraEm,
+                    CheckinTime = checkin.CheckinTime,
+                    Notificacoes = notificacoes
+                }, responsavelIds, msg, "CHECKIN");
+            });
+
+            if (_pushService != null && responsavelIds.Count > 0)
+                await _comunicacaoAutomacaoService.ExecutarAvisoContextualKidsAsync(new ComunicacaoAvisoContextualKidsRequest
+                {
+                    ChaveEvento = $"kids:checkin:{request.CriancaPessoaId}:{response.CheckinId}",
+                    CriancaPessoaId = request.CriancaPessoaId,
+                    ResponsavelPessoaIds = responsavelIds,
+                    Titulo = "App Kids - Check-in",
+                    Mensagem = msg,
+                    Tipo = tipo
                 });
-            }
 
-            await _unitOfWork.SaveChangesAsync();
+            _logger.LogInformation(
+                "Check-in Kids concluido para crianca {CriancaPessoaId}. CheckinId={CheckinId}. CodigoSessao={CodigoSessao}. TotalResponsaveisNotificados={TotalResponsaveis}",
+                request.CriancaPessoaId,
+                response.CheckinId,
+                response.CodigoSessao,
+                response.Notificacoes.Count);
 
-            var responsavelIds = notificacoes.Select(n => n.ResponsavelPessoaId).Distinct().ToList();
-            var msg = $"Check-in realizado para {crianca.Nome} às {DateTime.UtcNow:HH:mm}";
-            return (new CheckinResponse
-            {
-                CheckinId = checkin.Id,
-                CodigoSessao = codigoSessao,
-                CheckinTime = checkin.CheckinTime,
-                Notificacoes = notificacoes
-            }, responsavelIds, msg, "CHECKIN");
-        });
-
-        if (_pushService != null && responsavelIds.Count > 0)
-            await _pushService.SendToPessoasAsync(responsavelIds, "App Kids - Check-in", msg, new Dictionary<string, string> { ["tipo"] = tipo });
-
-        return response;
+            return response;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Check-in Kids bloqueado para crianca {CriancaPessoaId}. Metodo={Metodo}",
+                request.CriancaPessoaId,
+                request.Metodo);
+            throw;
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Check-in Kids invalido para crianca {CriancaPessoaId}. Metodo={Metodo}",
+                request.CriancaPessoaId,
+                request.Metodo);
+            throw;
+        }
     }
 
     public async Task CheckoutAsync(CheckoutRequest request)
     {
+        await _authorizationService.EnsureOperadorAsync();
+
+        _logger.LogInformation(
+            "Iniciando check-out Kids para crianca {CriancaPessoaId}. CodigoSessao={CodigoSessao}. CheckoutByPessoaId={CheckoutByPessoaId}. Metodo={Metodo}. UsuarioAtual={UsuarioAtualId}",
+            request.CriancaPessoaId,
+            request.CodigoSessao,
+            request.CheckoutByPessoaId,
+            request.Metodo,
+            _currentUserContext.UserId);
+
         List<int>? responsavelIdsForPush = null;
         string? msgForPush = null;
 
-        await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        try
         {
-            var checkin = await _checkinRepository.GetByCodigoSessaoAsync(request.CodigoSessao);
-            if (checkin == null)
-                throw new ArgumentException("Código de sessão inválido");
-
-            if (checkin.CriancaPessoaId != request.CriancaPessoaId)
-                throw new ArgumentException("Código de sessão não corresponde à criança");
-
-            if (checkin.Status != "CheckedIn")
-                throw new InvalidOperationException("Check-in já foi finalizado");
-
-            var podeRetirar = await _responsavelRepository.PodeRetirarAsync(request.CriancaPessoaId, request.CheckoutByPessoaId);
-            if (!podeRetirar)
+            await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
-                var pessoa = await _pessoaRepository.GetByIdAsync(request.CheckoutByPessoaId);
-                if (pessoa == null || !pessoa.Ativo)
-                    throw new UnauthorizedAccessException("Você não tem autorização para retirar esta criança");
-            }
+                var checkin = await _checkinRepository.GetByCodigoSessaoAsync(request.CodigoSessao);
+                if (checkin == null)
+                    throw new ArgumentException("Código de sessão inválido");
 
-            checkin.CheckoutTime = DateTime.UtcNow;
-            checkin.CheckoutByPessoaId = request.CheckoutByPessoaId;
-            checkin.Status = "CheckedOut";
-            if (!string.IsNullOrEmpty(request.Metodo))
-                checkin.Metodo = request.Metodo;
+                if (checkin.CriancaPessoaId != request.CriancaPessoaId)
+                    throw new ArgumentException("Código de sessão não corresponde à criança");
 
-            await _checkinRepository.UpdateWithoutSaveAsync(checkin);
+                if (checkin.Status != "CheckedIn")
+                    throw new InvalidOperationException("Check-in já foi finalizado");
 
-            var responsaveis = await _responsavelRepository.GetByCriancaIdAsync(request.CriancaPessoaId);
-            var crianca = await _pessoaRepository.GetByIdAsync(request.CriancaPessoaId);
-            msgForPush = $"Check-out realizado para {crianca?.Nome ?? "criança"} às {DateTime.UtcNow:HH:mm}";
-            responsavelIdsForPush = responsaveis.Select(r => r.ResponsavelPessoaId).Distinct().ToList();
-
-            foreach (var responsavel in responsaveis)
-            {
-                var notificacao = new KidsNotificacao
+                var podeRetirar = await _responsavelRepository.PodeRetirarAsync(request.CriancaPessoaId, request.CheckoutByPessoaId);
+                if (!podeRetirar)
                 {
+                    var pessoa = await _pessoaRepository.GetByIdAsync(request.CheckoutByPessoaId);
+                    if (pessoa == null || !pessoa.Ativo)
+                        throw new UnauthorizedAccessException("Você não tem autorização para retirar esta criança");
+                }
+
+                checkin.CheckoutTime = DateTime.UtcNow;
+                checkin.CheckoutByPessoaId = request.CheckoutByPessoaId;
+                checkin.Status = "CheckedOut";
+                if (!string.IsNullOrEmpty(request.Metodo))
+                    checkin.Metodo = request.Metodo;
+
+                await _checkinRepository.UpdateWithoutSaveAsync(checkin);
+
+                var responsaveis = await _responsavelRepository.GetByCriancaIdAsync(request.CriancaPessoaId);
+                var crianca = await _pessoaRepository.GetByIdAsync(request.CriancaPessoaId);
+                msgForPush = $"Check-out realizado para {crianca?.Nome ?? "criança"} às {DateTime.UtcNow:HH:mm}";
+                responsavelIdsForPush = responsaveis.Select(r => r.ResponsavelPessoaId).Distinct().ToList();
+
+                foreach (var responsavel in responsaveis)
+                {
+                    var notificacao = new KidsNotificacao
+                    {
+                        CriancaPessoaId = request.CriancaPessoaId,
+                        ResponsavelPessoaId = responsavel.ResponsavelPessoaId,
+                        Titulo = "Check-out realizado",
+                        Tipo = "CHECKOUT",
+                        Origem = "AUTOMATICA",
+                        Mensagem = msgForPush,
+                        Status = "Enviado",
+                        EnviadoEm = DateTime.UtcNow,
+                        DataCriacao = DateTime.UtcNow,
+                        CriadoByPessoaId = request.CheckoutByPessoaId
+                    };
+
+                    await _notificacaoRepository.CreateWithoutSaveAsync(notificacao);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+            });
+
+            if (_pushService != null && responsavelIdsForPush != null && responsavelIdsForPush.Count > 0 && msgForPush != null)
+                await _comunicacaoAutomacaoService.ExecutarAvisoContextualKidsAsync(new ComunicacaoAvisoContextualKidsRequest
+                {
+                    ChaveEvento = $"kids:checkout:{request.CriancaPessoaId}:{request.CodigoSessao}",
                     CriancaPessoaId = request.CriancaPessoaId,
-                    ResponsavelPessoaId = responsavel.ResponsavelPessoaId,
-                    Tipo = "CHECKOUT",
+                    ResponsavelPessoaIds = responsavelIdsForPush,
+                    Titulo = "App Kids - Check-out",
                     Mensagem = msgForPush,
-                    Status = "Pendente",
-                    DataCriacao = DateTime.UtcNow
-                };
+                    Tipo = "CHECKOUT"
+                });
 
-                await _notificacaoRepository.CreateWithoutSaveAsync(notificacao);
-            }
-
-            await _unitOfWork.SaveChangesAsync();
-        });
-
-        if (_pushService != null && responsavelIdsForPush != null && responsavelIdsForPush.Count > 0 && msgForPush != null)
-            await _pushService.SendToPessoasAsync(responsavelIdsForPush, "App Kids - Check-out", msgForPush, new Dictionary<string, string> { ["tipo"] = "CHECKOUT" });
+            _logger.LogInformation(
+                "Check-out Kids concluido para crianca {CriancaPessoaId}. CodigoSessao={CodigoSessao}. CheckoutByPessoaId={CheckoutByPessoaId}",
+                request.CriancaPessoaId,
+                request.CodigoSessao,
+                request.CheckoutByPessoaId);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Check-out Kids negado para crianca {CriancaPessoaId}. CodigoSessao={CodigoSessao}. CheckoutByPessoaId={CheckoutByPessoaId}",
+                request.CriancaPessoaId,
+                request.CodigoSessao,
+                request.CheckoutByPessoaId);
+            throw;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Check-out Kids bloqueado para crianca {CriancaPessoaId}. CodigoSessao={CodigoSessao}",
+                request.CriancaPessoaId,
+                request.CodigoSessao);
+            throw;
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Check-out Kids invalido para crianca {CriancaPessoaId}. CodigoSessao={CodigoSessao}",
+                request.CriancaPessoaId,
+                request.CodigoSessao);
+            throw;
+        }
     }
 
     public async Task<IEnumerable<KidsCheckinDto>> GetHistoricoCheckinsAsync(int? criancaPessoaId = null)
     {
+        await _authorizationService.EnsureOperadorAsync();
         IEnumerable<KidsCheckin> checkins;
         
         if (criancaPessoaId.HasValue)
@@ -457,6 +685,64 @@ public class KidsService : IKidsService
         }
         
         return checkins.Select(MapToCheckinDto);
+    }
+
+    private async Task<int?> GetCurrentUserPessoaIdAsync()
+    {
+        if (!_currentUserContext.UserId.HasValue)
+            return null;
+
+        var usuario = await _usuarioRepository.GetByIdAsync(_currentUserContext.UserId.Value);
+        return usuario?.PessoaId;
+    }
+
+    private async Task<int> GetRequiredCurrentUserPessoaIdAsync()
+    {
+        var pessoaId = await GetCurrentUserPessoaIdAsync();
+        if (!pessoaId.HasValue)
+            throw new UnauthorizedAccessException("Usuário atual sem vínculo de pessoa válido.");
+
+        return pessoaId.Value;
+    }
+
+    private async Task EnsureCriancaPertenceAoResponsavelAsync(int criancaPessoaId, int? responsavelPessoaId = null)
+    {
+        var pessoaId = responsavelPessoaId ?? await GetCurrentUserPessoaIdAsync();
+        if (!pessoaId.HasValue)
+            throw new UnauthorizedAccessException("Usuário atual sem vínculo de pessoa válido.");
+
+        var possuiVinculo = await _responsavelRepository.ExisteVinculoAtivoAsync(criancaPessoaId, pessoaId.Value);
+        if (!possuiVinculo)
+            throw new UnauthorizedAccessException("Você não tem acesso a esta criança.");
+    }
+
+    private async Task ValidateSalaTurmaAsync(string? salaId, string? turmaId)
+    {
+        if (string.IsNullOrWhiteSpace(salaId) && string.IsNullOrWhiteSpace(turmaId))
+            return;
+
+        var salaNormalizada = string.IsNullOrWhiteSpace(salaId) ? null : salaId.Trim().ToUpperInvariant();
+        var turmaNormalizada = string.IsNullOrWhiteSpace(turmaId) ? null : turmaId.Trim().ToUpperInvariant();
+
+        if (!string.IsNullOrWhiteSpace(salaNormalizada))
+        {
+            var sala = await _kidsEstruturaRepository.GetSalaByIdAsync(salaNormalizada);
+            if (sala == null || !sala.Ativo)
+                throw new ArgumentException("Sala informada não encontrada ou inativa.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(turmaNormalizada))
+        {
+            var turma = await _kidsEstruturaRepository.GetTurmaByIdAsync(turmaNormalizada);
+            if (turma == null || !turma.Ativo)
+                throw new ArgumentException("Turma informada não encontrada ou inativa.");
+
+            if (string.IsNullOrWhiteSpace(salaNormalizada))
+                throw new ArgumentException("Sala é obrigatória quando uma turma é informada.");
+
+            if (!string.Equals(turma.SalaId, salaNormalizada, StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Turma informada não pertence à sala selecionada.");
+        }
     }
 
     private static CriancaDto MapToCriancaDto(
@@ -479,6 +765,7 @@ public class KidsService : IKidsService
             RestricoesAlimentares = detalhe?.RestricoesAlimentares,
             Observacoes = detalhe?.Observacoes,
             SalaId = detalhe?.SalaId,
+            TurmaId = detalhe?.TurmaId,
             DataCadastro = detalhe?.DataCadastro ?? pessoa.DataCriacao,
             Responsaveis = responsaveis.Select(MapToResponsavelDto).ToList(),
             EstaCheckedIn = checkinAtivo != null,
@@ -520,10 +807,74 @@ public class KidsService : IKidsService
             CheckoutByNome = checkin.CheckoutBy?.Nome,
             Metodo = checkin.Metodo,
             CodigoSessao = checkin.CodigoSessao,
+            TokenRetirada = checkin.TokenRetirada,
+            PinRetirada = checkin.PinRetirada,
+            TokenRetiradaExpiraEm = checkin.TokenRetiradaExpiraEm,
             Status = checkin.Status,
+            RetiradaConfirmadaPorPessoaId = checkin.RetiradaConfirmadaPorPessoaId,
+            RetiradaMetodo = checkin.RetiradaMetodo,
+            RetiradaEmModoExcecao = checkin.RetiradaEmModoExcecao,
+            RetiradaMotivoExcecao = checkin.RetiradaMotivoExcecao,
+            RetiradaPessoaNome = checkin.RetiradaPessoaNome,
             Observacoes = checkin.Observacoes
         };
     }
+
+    private static MinhaCriancaResumoDto MapToMinhaCriancaResumoDto(
+        Pessoa pessoa,
+        CriancaDetalhe? detalhe,
+        KidsCheckin? checkinAtivo)
+    {
+        return new MinhaCriancaResumoDto
+        {
+            PessoaId = pessoa.Id,
+            Nome = pessoa.Nome,
+            DataNascimento = pessoa.DataNascimento,
+            SalaId = detalhe?.SalaId,
+            TurmaId = detalhe?.TurmaId,
+            EstaCheckedIn = checkinAtivo != null,
+            CheckinAtual = checkinAtivo != null ? MapToMeuCheckinResumoDto(checkinAtivo, detalhe?.SalaId) : null,
+            TemAlertaCritico = !string.IsNullOrWhiteSpace(detalhe?.Alergias) ||
+                               !string.IsNullOrWhiteSpace(detalhe?.RestricoesAlimentares)
+        };
+    }
+
+    private static MinhaCriancaDetalheDto MapToMinhaCriancaDetalheDto(
+        Pessoa pessoa,
+        CriancaDetalhe? detalhe,
+        KidsCheckin? checkinAtivo,
+        IEnumerable<KidsCheckin> historico)
+    {
+        return new MinhaCriancaDetalheDto
+        {
+            PessoaId = pessoa.Id,
+            Nome = pessoa.Nome,
+            DataNascimento = pessoa.DataNascimento,
+            SalaId = detalhe?.SalaId,
+            TurmaId = detalhe?.TurmaId,
+            Alergias = detalhe?.Alergias,
+            RestricoesAlimentares = detalhe?.RestricoesAlimentares,
+            ObservacoesVisiveisAoResponsavel = null,
+            EstaCheckedIn = checkinAtivo != null,
+            CheckinAtual = checkinAtivo != null ? MapToMeuCheckinResumoDto(checkinAtivo, detalhe?.SalaId) : null,
+            HistoricoRecente = historico.Select(c => MapToMeuCheckinResumoDto(c, detalhe?.SalaId)).ToList()
+        };
+    }
+
+    private static MeuCheckinResumoDto MapToMeuCheckinResumoDto(KidsCheckin checkin, string? salaId = null)
+    {
+        return new MeuCheckinResumoDto
+        {
+            Id = checkin.Id,
+            CriancaPessoaId = checkin.CriancaPessoaId,
+            CriancaNome = checkin.Crianca?.Nome ?? string.Empty,
+            CheckinTime = checkin.CheckinTime,
+            CheckoutTime = checkin.CheckoutTime,
+            Status = checkin.Status,
+            SalaId = salaId,
+            TokenRetirada = checkin.TokenRetirada,
+            PinRetirada = checkin.PinRetirada,
+            TokenRetiradaExpiraEm = checkin.TokenRetiradaExpiraEm
+        };
+    }
 }
-
-

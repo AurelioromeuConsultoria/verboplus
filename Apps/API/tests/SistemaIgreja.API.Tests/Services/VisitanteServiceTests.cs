@@ -11,7 +11,7 @@ namespace SistemaIgreja.API.Tests.Services;
 public class VisitanteServiceTests
 {
     private readonly Mock<IVisitanteRepository> _repoMock = new();
-    private readonly Mock<IMensagemAgendadaService> _msgServiceMock = new();
+    private readonly Mock<IComunicacaoAutomacaoService> _comunicacaoAutomacaoServiceMock = new();
     private readonly Mock<IPessoaRepository> _pessoaRepoMock = new();
     private readonly Mock<IPessoaPerfilRepository> _pessoaPerfilRepoMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
@@ -20,7 +20,7 @@ public class VisitanteServiceTests
 
     public VisitanteServiceTests()
     {
-        _service = new VisitanteService(_repoMock.Object, _msgServiceMock.Object, _pessoaRepoMock.Object, _pessoaPerfilRepoMock.Object, _unitOfWorkMock.Object, _loggerMock.Object);
+        _service = new VisitanteService(_repoMock.Object, _comunicacaoAutomacaoServiceMock.Object, _pessoaRepoMock.Object, _pessoaPerfilRepoMock.Object, _unitOfWorkMock.Object, _loggerMock.Object);
         
         // Setup UnitOfWork: ExecuteInTransactionAsync deve executar o delegate passado
         _unitOfWorkMock.Setup(u => u.ExecuteInTransactionAsync(It.IsAny<Func<Task>>()))
@@ -55,7 +55,7 @@ public class VisitanteServiceTests
         var result = await _service.CreateAsync(dto);
 
         result.Id.Should().Be(5);
-        _msgServiceMock.Verify(m => m.AgendarMensagensParaVisitanteAsync(5), Times.Once);
+        _comunicacaoAutomacaoServiceMock.Verify(m => m.ExecutarNovoVisitanteAsync(5, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

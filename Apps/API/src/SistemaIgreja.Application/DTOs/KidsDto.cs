@@ -20,6 +20,7 @@ public class CriancaDto
     public string? RestricoesAlimentares { get; set; }
     public string? Observacoes { get; set; }
     public string? SalaId { get; set; }
+    public string? TurmaId { get; set; }
     public DateTime DataCadastro { get; set; }
     
     // Relacionamentos
@@ -58,6 +59,9 @@ public class CreateCriancaRequest
 
     [MaxLength(50)]
     public string? SalaId { get; set; }
+
+    [MaxLength(50)]
+    public string? TurmaId { get; set; }
 
     public List<ResponsavelRequest>? Responsaveis { get; set; }
 }
@@ -118,6 +122,9 @@ public class UpdateCriancaRequest
 
     [MaxLength(50)]
     public string? SalaId { get; set; }
+
+    [MaxLength(50)]
+    public string? TurmaId { get; set; }
 }
 
 // DTOs para Responsáveis
@@ -195,6 +202,9 @@ public class CheckinResponse
 {
     public int CheckinId { get; set; }
     public string CodigoSessao { get; set; } = string.Empty;
+    public string? TokenRetirada { get; set; }
+    public string? PinRetirada { get; set; }
+    public DateTime? TokenRetiradaExpiraEm { get; set; }
     public DateTime CheckinTime { get; set; }
     public List<NotificacaoCriadaDto> Notificacoes { get; set; } = new();
 }
@@ -219,23 +229,385 @@ public class KidsCheckinDto
     public string? CheckoutByNome { get; set; }
     public string Metodo { get; set; } = string.Empty;
     public string CodigoSessao { get; set; } = string.Empty;
+    public string? TokenRetirada { get; set; }
+    public string? PinRetirada { get; set; }
+    public DateTime? TokenRetiradaExpiraEm { get; set; }
     public string Status { get; set; } = string.Empty;
+    public int? RetiradaConfirmadaPorPessoaId { get; set; }
+    public string? RetiradaMetodo { get; set; }
+    public bool RetiradaEmModoExcecao { get; set; }
+    public string? RetiradaMotivoExcecao { get; set; }
+    public string? RetiradaPessoaNome { get; set; }
     public string? Observacoes { get; set; }
+}
+
+public class ValidarRetiradaRequest
+{
+    [MaxLength(80)]
+    public string? Token { get; set; }
+
+    [MaxLength(10)]
+    public string? Pin { get; set; }
+}
+
+public class ConfirmarRetiradaRequest
+{
+    [Required(ErrorMessage = "CheckinId é obrigatório")]
+    public int CheckinId { get; set; }
+
+    [MaxLength(80)]
+    public string? Token { get; set; }
+
+    [MaxLength(10)]
+    public string? Pin { get; set; }
+
+    [Required(ErrorMessage = "ResponsavelPessoaId é obrigatório")]
+    public int ResponsavelPessoaId { get; set; }
+
+    [Required(ErrorMessage = "Método é obrigatório")]
+    [MaxLength(20)]
+    public string Metodo { get; set; } = "QR";
+
+    [MaxLength(500)]
+    public string? Observacoes { get; set; }
+}
+
+public class RetiradaExcecaoRequest
+{
+    [Required(ErrorMessage = "CheckinId é obrigatório")]
+    public int CheckinId { get; set; }
+
+    [Required(ErrorMessage = "Nome da pessoa retirando é obrigatório")]
+    [MaxLength(200)]
+    public string PessoaRetirandoNome { get; set; } = string.Empty;
+
+    [MaxLength(50)]
+    public string? PessoaRetirandoDocumento { get; set; }
+
+    [Required(ErrorMessage = "Motivo é obrigatório")]
+    [MaxLength(500)]
+    public string Motivo { get; set; } = string.Empty;
+
+    [MaxLength(500)]
+    public string? Observacoes { get; set; }
+}
+
+public class RetiradaAutorizadoDto
+{
+    public int ResponsavelPessoaId { get; set; }
+    public string ResponsavelNome { get; set; } = string.Empty;
+    public string? Parentesco { get; set; }
+    public bool PodeRetirar { get; set; }
+}
+
+public class RetiradaValidacaoDto
+{
+    public int CheckinId { get; set; }
+    public int CriancaPessoaId { get; set; }
+    public string CriancaNome { get; set; } = string.Empty;
+    public string? SalaId { get; set; }
+    public DateTime CheckinTime { get; set; }
+    public DateTime? TokenRetiradaExpiraEm { get; set; }
+    public bool Expirado { get; set; }
+    public string MetodoValidado { get; set; } = string.Empty;
+    public List<string> MetodosDisponiveis { get; set; } = new();
+    public List<RetiradaAutorizadoDto> ResponsaveisAutorizados { get; set; } = new();
+}
+
+public class KidsPainelOperacionalDto
+{
+    public int TotalPresentes { get; set; }
+    public int TotalPendentesRetirada { get; set; }
+    public int TotalRetiradasHoje { get; set; }
+    public int TotalAlertasCriticos { get; set; }
+    public List<KidsPainelSalaDto> Salas { get; set; } = new();
+    public List<KidsPainelCriancaDto> CriancasPresentes { get; set; } = new();
+    public List<KidsPainelCriancaDto> Pendencias { get; set; } = new();
+    public List<KidsPainelCriancaDto> AlertasCriticos { get; set; } = new();
+}
+
+public class KidsPainelCriancaDto
+{
+    public int CriancaPessoaId { get; set; }
+    public string Nome { get; set; } = string.Empty;
+    public string? SalaId { get; set; }
+    public DateTime CheckinTime { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public bool TemAlergia { get; set; }
+    public bool TemRestricao { get; set; }
+    public bool TemObservacaoCritica { get; set; }
+    public bool TokenRetiradaAtivo { get; set; }
+    public bool RetiradaEmModoExcecao { get; set; }
+}
+
+public class KidsPainelSalaDto
+{
+    public string SalaId { get; set; } = "Sem sala";
+    public int TotalPresentes { get; set; }
+    public int TotalAlertasCriticos { get; set; }
+    public int TotalPendentesRetirada { get; set; }
+}
+
+public class CriarKidsOcorrenciaRequest
+{
+    [Required(ErrorMessage = "CriancaPessoaId é obrigatório")]
+    public int CriancaPessoaId { get; set; }
+
+    public int? CheckinId { get; set; }
+
+    [Required(ErrorMessage = "Tipo é obrigatório")]
+    [MaxLength(40)]
+    public string Tipo { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Titulo é obrigatório")]
+    [MaxLength(200)]
+    public string Titulo { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Descricao é obrigatória")]
+    [MaxLength(2000)]
+    public string Descricao { get; set; } = string.Empty;
+
+    public bool RequerContatoResponsavel { get; set; }
+    public bool VisivelAoResponsavel { get; set; }
+}
+
+public class AtualizarKidsOcorrenciaRequest
+{
+    [MaxLength(2000)]
+    public string? Descricao { get; set; }
+
+    [MaxLength(20)]
+    public string? Status { get; set; }
+
+    public bool? ContatoResponsavelRealizado { get; set; }
+    public bool? VisivelAoResponsavel { get; set; }
+}
+
+public class KidsOcorrenciaDto
+{
+    public int Id { get; set; }
+    public int CriancaPessoaId { get; set; }
+    public string CriancaNome { get; set; } = string.Empty;
+    public int? CheckinId { get; set; }
+    public string Tipo { get; set; } = string.Empty;
+    public string Titulo { get; set; } = string.Empty;
+    public string Descricao { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public bool RequerContatoResponsavel { get; set; }
+    public DateTime? ContatoResponsavelRealizadoEm { get; set; }
+    public string? ContatoResponsavelPorNome { get; set; }
+    public string? SalaId { get; set; }
+    public string? TurmaId { get; set; }
+    public int RegistradoPorPessoaId { get; set; }
+    public string RegistradoPorNome { get; set; } = string.Empty;
+    public DateTime DataCriacao { get; set; }
+    public DateTime? DataAtualizacao { get; set; }
+    public DateTime? EncerradoEm { get; set; }
+    public string? EncerradoPorNome { get; set; }
+    public bool VisivelAoResponsavel { get; set; }
+}
+
+public class KidsOcorrenciaResumoDto
+{
+    public int Id { get; set; }
+    public int CriancaPessoaId { get; set; }
+    public string CriancaNome { get; set; } = string.Empty;
+    public string Tipo { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public DateTime DataCriacao { get; set; }
+}
+
+public class KidsSalaDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Nome { get; set; } = string.Empty;
+    public int? CapacidadeMaxima { get; set; }
+    public bool Ativo { get; set; }
+    public DateTime DataCriacao { get; set; }
+    public DateTime? DataAtualizacao { get; set; }
+}
+
+public class CreateKidsSalaRequest
+{
+    [Required(ErrorMessage = "Id é obrigatório")]
+    [MaxLength(50)]
+    public string Id { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Nome é obrigatório")]
+    [MaxLength(120)]
+    public string Nome { get; set; } = string.Empty;
+
+    public int? CapacidadeMaxima { get; set; }
+    public bool Ativo { get; set; } = true;
+}
+
+public class UpdateKidsSalaRequest
+{
+    [Required(ErrorMessage = "Nome é obrigatório")]
+    [MaxLength(120)]
+    public string Nome { get; set; } = string.Empty;
+
+    public int? CapacidadeMaxima { get; set; }
+    public bool Ativo { get; set; } = true;
+}
+
+public class KidsTurmaDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string SalaId { get; set; } = string.Empty;
+    public string? SalaNome { get; set; }
+    public string Nome { get; set; } = string.Empty;
+    public int? CapacidadeMaxima { get; set; }
+    public bool Ativo { get; set; }
+    public DateTime DataCriacao { get; set; }
+    public DateTime? DataAtualizacao { get; set; }
+}
+
+public class CreateKidsTurmaRequest
+{
+    [Required(ErrorMessage = "Id é obrigatório")]
+    [MaxLength(50)]
+    public string Id { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "SalaId é obrigatório")]
+    [MaxLength(50)]
+    public string SalaId { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Nome é obrigatório")]
+    [MaxLength(120)]
+    public string Nome { get; set; } = string.Empty;
+
+    public int? CapacidadeMaxima { get; set; }
+    public bool Ativo { get; set; } = true;
+}
+
+public class UpdateKidsTurmaRequest
+{
+    [Required(ErrorMessage = "SalaId é obrigatório")]
+    [MaxLength(50)]
+    public string SalaId { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Nome é obrigatório")]
+    [MaxLength(120)]
+    public string Nome { get; set; } = string.Empty;
+
+    public int? CapacidadeMaxima { get; set; }
+    public bool Ativo { get; set; } = true;
+}
+
+public class KidsIndicadoresDto
+{
+    public int DiasAnalisados { get; set; }
+    public int TotalCriancasAtivas { get; set; }
+    public int TotalResponsaveisAtivos { get; set; }
+    public int TotalSalasAtivas { get; set; }
+    public int TotalTurmasAtivas { get; set; }
+    public int TotalCheckinsPeriodo { get; set; }
+    public decimal MediaCheckinsPorDia { get; set; }
+    public int TotalRetiradasQr { get; set; }
+    public int TotalRetiradasPin { get; set; }
+    public int TotalRetiradasExcecao { get; set; }
+    public int TotalOcorrenciasAbertas { get; set; }
+    public int TotalCriancasPresentesAgora { get; set; }
+}
+
+// DTOs do contexto do responsável (`me/*`)
+// Estes contratos existem para separar explicitamente a visão do responsável
+// da visão administrativa/operacional do módulo.
+public class MinhaCriancaResumoDto
+{
+    public int PessoaId { get; set; }
+    public string Nome { get; set; } = string.Empty;
+    public DateTime? DataNascimento { get; set; }
+    public string? SalaId { get; set; }
+    public string? TurmaId { get; set; }
+    public bool EstaCheckedIn { get; set; }
+    public MeuCheckinResumoDto? CheckinAtual { get; set; }
+    public bool TemAlertaCritico { get; set; }
+}
+
+public class MinhaCriancaDetalheDto
+{
+    public int PessoaId { get; set; }
+    public string Nome { get; set; } = string.Empty;
+    public DateTime? DataNascimento { get; set; }
+    public string? SalaId { get; set; }
+    public string? TurmaId { get; set; }
+    public string? Alergias { get; set; }
+    public string? RestricoesAlimentares { get; set; }
+    public string? ObservacoesVisiveisAoResponsavel { get; set; }
+    public bool EstaCheckedIn { get; set; }
+    public MeuCheckinResumoDto? CheckinAtual { get; set; }
+    public List<MeuCheckinResumoDto> HistoricoRecente { get; set; } = new();
+}
+
+public class MeuCheckinResumoDto
+{
+    public int Id { get; set; }
+    public int CriancaPessoaId { get; set; }
+    public string CriancaNome { get; set; } = string.Empty;
+    public DateTime CheckinTime { get; set; }
+    public DateTime? CheckoutTime { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? SalaId { get; set; }
+    public string? TokenRetirada { get; set; }
+    public string? PinRetirada { get; set; }
+    public DateTime? TokenRetiradaExpiraEm { get; set; }
 }
 
 // DTOs para Notificações
 public class KidsNotificacaoDto
 {
     public int Id { get; set; }
-    public int CriancaPessoaId { get; set; }
-    public string CriancaNome { get; set; } = string.Empty;
+    public int? CriancaPessoaId { get; set; }
+    public string? CriancaNome { get; set; }
     public int ResponsavelPessoaId { get; set; }
     public string ResponsavelNome { get; set; } = string.Empty;
+    public string Titulo { get; set; } = string.Empty;
     public string Tipo { get; set; } = string.Empty;
+    public string Origem { get; set; } = string.Empty;
     public string Mensagem { get; set; } = string.Empty;
     public DateTime? EnviadoEm { get; set; }
     public string Status { get; set; } = string.Empty;
+    public DateTime? LidoEm { get; set; }
+    public bool FoiLido { get; set; }
+    public int? CriadoByPessoaId { get; set; }
     public DateTime DataCriacao { get; set; }
+}
+
+public class MeuAvisoKidsDto
+{
+    public int Id { get; set; }
+    public string Titulo { get; set; } = string.Empty;
+    public string Mensagem { get; set; } = string.Empty;
+    public string Tipo { get; set; } = string.Empty;
+    public string Origem { get; set; } = string.Empty;
+    public int? CriancaPessoaId { get; set; }
+    public string? CriancaNome { get; set; }
+    public DateTime DataCriacao { get; set; }
+    public DateTime? EnviadoEm { get; set; }
+    public DateTime? LidoEm { get; set; }
+    public bool FoiLido { get; set; }
+}
+
+public class CreateKidsAvisoRequest
+{
+    [Required(ErrorMessage = "Titulo é obrigatório")]
+    [MaxLength(200)]
+    public string Titulo { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Mensagem é obrigatória")]
+    [MaxLength(1000)]
+    public string Mensagem { get; set; } = string.Empty;
+
+    [MaxLength(20)]
+    public string Tipo { get; set; } = "AVISO_GERAL";
+
+    [MaxLength(20)]
+    public string Destino { get; set; } = "GERAL";
+
+    public List<int> CriancaPessoaIds { get; set; } = new();
+    public List<int> ResponsavelPessoaIds { get; set; } = new();
 }
 
 // Registro de token FCM para push
@@ -248,4 +620,3 @@ public class RegisterDeviceTokenRequest
     [MaxLength(20)]
     public string Platform { get; set; } = "Android"; // "Android" ou "iOS"
 }
-

@@ -6,17 +6,24 @@ public class KidsNotificacao
 {
     public int Id { get; set; }
 
-    [Required]
-    public int CriancaPessoaId { get; set; }
-    public virtual Pessoa Crianca { get; set; } = null!;
+    public int? CriancaPessoaId { get; set; }
+    public virtual Pessoa? Crianca { get; set; }
 
     [Required]
     public int ResponsavelPessoaId { get; set; }
     public virtual Pessoa Responsavel { get; set; } = null!;
 
     [Required]
+    [MaxLength(200)]
+    public string Titulo { get; set; } = string.Empty;
+
+    [Required]
     [MaxLength(20)]
-    public string Tipo { get; set; } = string.Empty; // "CHECKIN", "CHECKOUT", "ALERTA"
+    public string Tipo { get; set; } = string.Empty; // "CHECKIN", "CHECKOUT", "ALERTA", "AVISO_GERAL", "AVISO_CRIANCA", "AVISO_RESPONSAVEL"
+
+    [Required]
+    [MaxLength(20)]
+    public string Origem { get; set; } = "AUTOMATICA"; // "AUTOMATICA" ou "MANUAL"
 
     [Required]
     [MaxLength(1000)]
@@ -26,10 +33,13 @@ public class KidsNotificacao
 
     [Required]
     [MaxLength(20)]
-    public string Status { get; set; } = "Pendente"; // "Pendente", "Enviado", "Falhou"
+    public string Status { get; set; } = "Enviado"; // "Enviado", "Falhou"
+
+    public DateTime? LidoEm { get; set; }
+
+    public int? CriadoByPessoaId { get; set; }
 
     [Required]
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 }
-
 

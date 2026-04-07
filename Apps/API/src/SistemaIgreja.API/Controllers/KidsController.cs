@@ -13,17 +13,198 @@ namespace SistemaIgreja.API.Controllers;
 public class KidsController : ControllerBase
 {
     private readonly IKidsService _service;
+    private readonly IKidsNotificacaoService _notificacaoService;
+    private readonly IKidsRetiradaService _retiradaService;
+    private readonly IKidsPainelService _painelService;
+    private readonly IKidsOcorrenciaService _ocorrenciaService;
+    private readonly IKidsEstruturaService _estruturaService;
+    private readonly IKidsIndicadoresService _indicadoresService;
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly IKidsDeviceTokenRepository _deviceTokenRepository;
 
     public KidsController(
         IKidsService service,
+        IKidsNotificacaoService notificacaoService,
+        IKidsRetiradaService retiradaService,
+        IKidsPainelService painelService,
+        IKidsOcorrenciaService ocorrenciaService,
+        IKidsEstruturaService estruturaService,
+        IKidsIndicadoresService indicadoresService,
         IUsuarioRepository usuarioRepository,
         IKidsDeviceTokenRepository deviceTokenRepository)
     {
         _service = service;
+        _notificacaoService = notificacaoService;
+        _retiradaService = retiradaService;
+        _painelService = painelService;
+        _ocorrenciaService = ocorrenciaService;
+        _estruturaService = estruturaService;
+        _indicadoresService = indicadoresService;
         _usuarioRepository = usuarioRepository;
         _deviceTokenRepository = deviceTokenRepository;
+    }
+
+    /// <summary>
+    /// Retorna indicadores operacionais consolidados do Kids.
+    /// </summary>
+    [HttpGet("indicadores")]
+    public async Task<ActionResult<KidsIndicadoresDto>> GetIndicadores([FromQuery] int dias = 30)
+    {
+        try
+        {
+            var indicadores = await _indicadoresService.GetIndicadoresAsync(dias);
+            return Ok(indicadores);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar indicadores de Kids", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lista a estrutura de salas do Kids.
+    /// </summary>
+    [HttpGet("salas")]
+    public async Task<ActionResult<IEnumerable<KidsSalaDto>>> GetSalas([FromQuery] bool incluirInativas = false)
+    {
+        try
+        {
+            var items = await _estruturaService.GetSalasAsync(incluirInativas);
+            return Ok(items);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar salas de Kids", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Cria uma nova sala do Kids.
+    /// </summary>
+    [HttpPost("salas")]
+    public async Task<ActionResult<KidsSalaDto>> CreateSala([FromBody] CreateKidsSalaRequest request)
+    {
+        try
+        {
+            var created = await _estruturaService.CreateSalaAsync(request);
+            return Ok(created);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao criar sala de Kids", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Atualiza uma sala do Kids.
+    /// </summary>
+    [HttpPut("salas/{id}")]
+    public async Task<ActionResult<KidsSalaDto>> UpdateSala(string id, [FromBody] UpdateKidsSalaRequest request)
+    {
+        try
+        {
+            var updated = await _estruturaService.UpdateSalaAsync(id, request);
+            return Ok(updated);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao atualizar sala de Kids", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lista as turmas do Kids.
+    /// </summary>
+    [HttpGet("turmas")]
+    public async Task<ActionResult<IEnumerable<KidsTurmaDto>>> GetTurmas([FromQuery] string? salaId = null, [FromQuery] bool incluirInativas = false)
+    {
+        try
+        {
+            var items = await _estruturaService.GetTurmasAsync(salaId, incluirInativas);
+            return Ok(items);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar turmas de Kids", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Cria uma nova turma do Kids.
+    /// </summary>
+    [HttpPost("turmas")]
+    public async Task<ActionResult<KidsTurmaDto>> CreateTurma([FromBody] CreateKidsTurmaRequest request)
+    {
+        try
+        {
+            var created = await _estruturaService.CreateTurmaAsync(request);
+            return Ok(created);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao criar turma de Kids", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Atualiza uma turma do Kids.
+    /// </summary>
+    [HttpPut("turmas/{id}")]
+    public async Task<ActionResult<KidsTurmaDto>> UpdateTurma(string id, [FromBody] UpdateKidsTurmaRequest request)
+    {
+        try
+        {
+            var updated = await _estruturaService.UpdateTurmaAsync(id, request);
+            return Ok(updated);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao atualizar turma de Kids", error = ex.Message });
+        }
     }
 
     /// <summary>
@@ -37,9 +218,121 @@ public class KidsController : ControllerBase
             var criancas = await _service.GetCriancasAsync();
             return Ok(criancas);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "Erro ao buscar crianças", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lista as crianças vinculadas ao responsável autenticado
+    /// </summary>
+    [HttpGet("me/criancas")]
+    public async Task<ActionResult<IEnumerable<MinhaCriancaResumoDto>>> GetMinhasCriancas()
+    {
+        try
+        {
+            var criancas = await _service.GetMinhasCriancasAsync();
+            return Ok(criancas);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar minhas crianças", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Obtém detalhe resumido de uma criança vinculada ao responsável autenticado
+    /// </summary>
+    [HttpGet("me/criancas/{criancaPessoaId}")]
+    public async Task<ActionResult<MinhaCriancaDetalheDto>> GetMinhaCriancaById(int criancaPessoaId)
+    {
+        try
+        {
+            var crianca = await _service.GetMinhaCriancaByIdAsync(criancaPessoaId);
+            if (crianca == null)
+                return NotFound(new { message = "Criança não encontrada" });
+
+            return Ok(crianca);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar minha criança", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lista os check-ins permitidos do responsável autenticado
+    /// </summary>
+    [HttpGet("me/checkins")]
+    public async Task<ActionResult<IEnumerable<MeuCheckinResumoDto>>> GetMeusCheckins()
+    {
+        try
+        {
+            var checkins = await _service.GetMeusCheckinsAsync();
+            return Ok(checkins);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar meus check-ins", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lista os avisos do responsável autenticado
+    /// </summary>
+    [HttpGet("me/avisos")]
+    public async Task<ActionResult<IEnumerable<MeuAvisoKidsDto>>> GetMeusAvisos([FromQuery] bool naoLidos = false, [FromQuery] string? tipo = null, [FromQuery] int? criancaPessoaId = null, [FromQuery] int? limit = null)
+    {
+        try
+        {
+            var avisos = await _notificacaoService.GetMeusAvisosAsync(naoLidos, tipo, criancaPessoaId, limit);
+            return Ok(avisos);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar meus avisos", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Marca um aviso como lido para o responsável autenticado
+    /// </summary>
+    [HttpPatch("me/avisos/{id}/lido")]
+    public async Task<ActionResult<MeuAvisoKidsDto>> MarcarMeuAvisoComoLido(int id)
+    {
+        try
+        {
+            var aviso = await _notificacaoService.MarcarComoLidoAsync(id);
+            return Ok(aviso);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao marcar aviso como lido", error = ex.Message });
         }
     }
 
@@ -57,6 +350,10 @@ public class KidsController : ControllerBase
 
             return Ok(crianca);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "Erro ao buscar criança", error = ex.Message });
@@ -73,6 +370,10 @@ public class KidsController : ControllerBase
         {
             var crianca = await _service.CreateCriancaAsync(request);
             return CreatedAtAction(nameof(GetCriancaById), new { criancaPessoaId = crianca.PessoaId }, crianca);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
         }
         catch (ArgumentException ex)
         {
@@ -105,6 +406,10 @@ public class KidsController : ControllerBase
             var crianca = await _service.UpdateCriancaAsync(criancaPessoaId, request);
             return Ok(crianca);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
         catch (ArgumentException ex)
         {
             return NotFound(new { message = ex.Message });
@@ -125,6 +430,10 @@ public class KidsController : ControllerBase
         {
             await _service.DeleteCriancaAsync(criancaPessoaId);
             return NoContent();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
         }
         catch (ArgumentException ex)
         {
@@ -151,6 +460,10 @@ public class KidsController : ControllerBase
                 nameof(GetCriancaById),
                 new { criancaPessoaId },
                 responsavel);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
         }
         catch (ArgumentException ex)
         {
@@ -179,6 +492,10 @@ public class KidsController : ControllerBase
             var responsavel = await _service.UpdateResponsavelAsync(responsavelId, request);
             return Ok(responsavel);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
         catch (ArgumentException ex)
         {
             return NotFound(new { message = ex.Message });
@@ -200,6 +517,10 @@ public class KidsController : ControllerBase
             await _service.DesvincularResponsavelAsync(responsavelId);
             return NoContent();
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
         catch (ArgumentException ex)
         {
             return NotFound(new { message = ex.Message });
@@ -220,6 +541,10 @@ public class KidsController : ControllerBase
         {
             var response = await _service.CheckinAsync(request);
             return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
         }
         catch (ArgumentException ex)
         {
@@ -276,9 +601,263 @@ public class KidsController : ControllerBase
             var historico = await _service.GetHistoricoCheckinsAsync(criancaPessoaId);
             return Ok(historico);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "Erro ao buscar histórico", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Retorna o painel operacional do culto atual do Kids.
+    /// </summary>
+    [HttpGet("painel-operacional")]
+    public async Task<ActionResult<KidsPainelOperacionalDto>> GetPainelOperacional([FromQuery] DateTime? data = null, [FromQuery] string? salaId = null)
+    {
+        try
+        {
+            var painel = await _painelService.GetPainelOperacionalAsync(data, salaId);
+            return Ok(painel);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao carregar painel operacional do Kids", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Registra uma ocorrência de Kids para uma criança.
+    /// </summary>
+    [HttpPost("ocorrencias")]
+    public async Task<ActionResult<KidsOcorrenciaDto>> CreateOcorrencia([FromBody] CriarKidsOcorrenciaRequest request)
+    {
+        try
+        {
+            var created = await _ocorrenciaService.CriarAsync(request);
+            return Ok(created);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao criar ocorrência de Kids", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lista ocorrências de uma criança.
+    /// </summary>
+    [HttpGet("criancas/{criancaPessoaId}/ocorrencias")]
+    public async Task<ActionResult<IEnumerable<KidsOcorrenciaDto>>> GetOcorrenciasByCrianca(int criancaPessoaId)
+    {
+        try
+        {
+            var items = await _ocorrenciaService.GetByCriancaAsync(criancaPessoaId);
+            return Ok(items);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar ocorrências da criança", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Atualiza uma ocorrência de Kids.
+    /// </summary>
+    [HttpPatch("ocorrencias/{id}")]
+    public async Task<ActionResult<KidsOcorrenciaDto>> UpdateOcorrencia(int id, [FromBody] AtualizarKidsOcorrenciaRequest request)
+    {
+        try
+        {
+            var updated = await _ocorrenciaService.AtualizarAsync(id, request);
+            return Ok(updated);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao atualizar ocorrência de Kids", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lista ocorrências abertas para operação.
+    /// </summary>
+    [HttpGet("ocorrencias/abertas")]
+    public async Task<ActionResult<IEnumerable<KidsOcorrenciaResumoDto>>> GetOcorrenciasAbertas()
+    {
+        try
+        {
+            var items = await _ocorrenciaService.GetAbertasAsync();
+            return Ok(items);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar ocorrências abertas de Kids", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Valida token ou PIN de retirada e carrega o contexto da sessão.
+    /// </summary>
+    [HttpPost("retirada/validar")]
+    public async Task<ActionResult<RetiradaValidacaoDto>> ValidarRetirada([FromBody] ValidarRetiradaRequest request)
+    {
+        try
+        {
+            var result = await _retiradaService.ValidarAsync(request);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao validar retirada", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Confirma a retirada segura da criança.
+    /// </summary>
+    [HttpPost("retirada/confirmar")]
+    public async Task<IActionResult> ConfirmarRetirada([FromBody] ConfirmarRetiradaRequest request)
+    {
+        try
+        {
+            await _retiradaService.ConfirmarAsync(request);
+            return Ok(new { message = "Retirada confirmada com sucesso" });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao confirmar retirada", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Registra retirada em modo de exceção com trilha auditável.
+    /// </summary>
+    [HttpPost("retirada/excecao")]
+    public async Task<IActionResult> RegistrarRetiradaExcecao([FromBody] RetiradaExcecaoRequest request)
+    {
+        try
+        {
+            await _retiradaService.RegistrarExcecaoAsync(request);
+            return Ok(new { message = "Retirada em exceção registrada com sucesso" });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao registrar retirada em exceção", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lista avisos manuais emitidos no módulo Kids
+    /// </summary>
+    [HttpGet("avisos")]
+    public async Task<ActionResult<IEnumerable<KidsNotificacaoDto>>> GetAvisos([FromQuery] string? tipo = null, [FromQuery] int? responsavelPessoaId = null, [FromQuery] int? criancaPessoaId = null, [FromQuery] int? limit = null)
+    {
+        try
+        {
+            var avisos = await _notificacaoService.GetAvisosAsync(tipo, responsavelPessoaId, criancaPessoaId, limit);
+            return Ok(avisos);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar avisos de Kids", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Cria um aviso manual para responsáveis do Kids
+    /// </summary>
+    [HttpPost("avisos")]
+    public async Task<ActionResult<KidsNotificacaoDto>> CreateAviso([FromBody] CreateKidsAvisoRequest request)
+    {
+        try
+        {
+            var aviso = await _notificacaoService.CriarAvisoAsync(request);
+            return Ok(aviso);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao criar aviso de Kids", error = ex.Message });
         }
     }
 
@@ -306,5 +885,3 @@ public class KidsController : ControllerBase
         }
     }
 }
-
-

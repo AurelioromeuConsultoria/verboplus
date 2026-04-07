@@ -24,6 +24,7 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly INotificacaoUsuarioService _notificacaoUsuarioService;
     private readonly ILogger<SolicitacaoTrocaEscalaService> _logger;
+    private readonly IAuditLogService _auditLogService;
 
     public SolicitacaoTrocaEscalaService(
         ISolicitacaoTrocaEscalaRepository repository,
@@ -32,7 +33,8 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
         IVoluntarioRepository voluntarioRepository,
         IUsuarioRepository usuarioRepository,
         INotificacaoUsuarioService notificacaoUsuarioService,
-        ILogger<SolicitacaoTrocaEscalaService> logger)
+        ILogger<SolicitacaoTrocaEscalaService> logger,
+        IAuditLogService auditLogService)
     {
         _repository = repository;
         _escalaRepository = escalaRepository;
@@ -41,6 +43,7 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
         _usuarioRepository = usuarioRepository;
         _notificacaoUsuarioService = notificacaoUsuarioService;
         _logger = logger;
+        _auditLogService = auditLogService;
     }
 
     public async Task<IEnumerable<SolicitacaoTrocaEscalaDto>> GetGerenciaveisAsync(int usuarioId, bool isAdmin, int? equipeId, StatusSolicitacaoTrocaEscala? status)
@@ -181,6 +184,11 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
             updated.VoluntarioSolicitanteId,
             updated.VoluntarioSubstitutoId,
             usuarioId);
+        await _auditLogService.RecordAsync(
+            "SolicitacaoTrocaEscala",
+            updated.Id.ToString(),
+            "Aprovar",
+            new { EscalaId = item.EscalaId, EscalaItemId = item.Id, item.EquipeId, updated.VoluntarioSolicitanteId, updated.VoluntarioSubstitutoId, UsuarioId = usuarioId });
         if (full != null)
         {
             await NotificarSolicitacaoAprovadaAsync(full, substituto, usuarioId);
@@ -214,6 +222,11 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
             item.EquipeId,
             updated.VoluntarioSolicitanteId,
             usuarioId);
+        await _auditLogService.RecordAsync(
+            "SolicitacaoTrocaEscala",
+            updated.Id.ToString(),
+            "Rejeitar",
+            new { EscalaId = item.EscalaId, EscalaItemId = item.Id, item.EquipeId, updated.VoluntarioSolicitanteId, UsuarioId = usuarioId });
         if (full != null)
         {
             await NotificarSolicitacaoRejeitadaAsync(full, usuarioId);

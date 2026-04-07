@@ -39,7 +39,9 @@ public class EscalaService : IEscalaService
     private readonly IEquipeRepository _equipeRepository;
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly INotificacaoUsuarioService _notificacaoUsuarioService;
+    private readonly IComunicacaoAutomacaoService _comunicacaoAutomacaoService;
     private readonly ILogger<EscalaService> _logger;
+    private readonly IAuditLogService _auditLogService;
 
     public EscalaService(
         IEscalaRepository repository,
@@ -50,7 +52,9 @@ public class EscalaService : IEscalaService
         IEquipeRepository equipeRepository,
         IUsuarioRepository usuarioRepository,
         INotificacaoUsuarioService notificacaoUsuarioService,
-        ILogger<EscalaService> logger)
+        IComunicacaoAutomacaoService comunicacaoAutomacaoService,
+        ILogger<EscalaService> logger,
+        IAuditLogService auditLogService)
     {
         _repository = repository;
         _eventoOcorrenciaRepository = eventoOcorrenciaRepository;
@@ -60,7 +64,9 @@ public class EscalaService : IEscalaService
         _equipeRepository = equipeRepository;
         _usuarioRepository = usuarioRepository;
         _notificacaoUsuarioService = notificacaoUsuarioService;
+        _comunicacaoAutomacaoService = comunicacaoAutomacaoService;
         _logger = logger;
+        _auditLogService = auditLogService;
     }
 
     public async Task<EscalaDto?> GetByIdAsync(int id, int usuarioId, bool isAdmin)
@@ -367,6 +373,11 @@ public class EscalaService : IEscalaService
             updated.EquipeId,
             updated.Itens.Count,
             usuarioId);
+        await _auditLogService.RecordAsync(
+            "Escala",
+            updated.Id.ToString(),
+            "Publicar",
+            new { updated.EquipeId, Itens = updated.Itens.Count, UsuarioId = usuarioId });
         var updatedFull = await _repository.GetByIdAsync(updated.Id);
         return MapToDto(updatedFull!);
     }
@@ -465,6 +476,11 @@ public class EscalaService : IEscalaService
             equipeId,
             updatedFull?.Itens.Count ?? 0,
             usuarioId);
+        await _auditLogService.RecordAsync(
+            "Escala",
+            escala.Id.ToString(),
+            "GerarAutomatico",
+            new { EventoOcorrenciaId = eventoOcorrenciaId, EquipeId = equipeId, ItensGerados = updatedFull?.Itens.Count ?? 0, UsuarioId = usuarioId });
         return MapToDto(updatedFull!);
     }
 
@@ -488,6 +504,11 @@ public class EscalaService : IEscalaService
             updated.EquipeId,
             updated.VoluntarioId,
             usuarioId);
+        await _auditLogService.RecordAsync(
+            "EscalaItem",
+            updated.Id.ToString(),
+            "Confirmar",
+            new { EscalaId = escalaId, updated.EquipeId, updated.VoluntarioId, UsuarioId = usuarioId });
         if (updatedFull != null)
         {
             await NotificarRespostaEscalaAsync(updatedFull, true, usuarioId);
@@ -516,6 +537,11 @@ public class EscalaService : IEscalaService
             updated.VoluntarioId,
             usuarioId,
             !string.IsNullOrWhiteSpace(updated.MotivoRecusa));
+        await _auditLogService.RecordAsync(
+            "EscalaItem",
+            updated.Id.ToString(),
+            "Recusar",
+            new { EscalaId = escalaId, updated.EquipeId, updated.VoluntarioId, UsuarioId = usuarioId, MotivoInformado = !string.IsNullOrWhiteSpace(updated.MotivoRecusa) });
         if (updatedFull != null)
         {
             await NotificarRespostaEscalaAsync(updatedFull, false, usuarioId);
@@ -549,6 +575,11 @@ public class EscalaService : IEscalaService
             updated.VoluntarioId,
             compareceu,
             usuarioId);
+        await _auditLogService.RecordAsync(
+            "EscalaItem",
+            updated.Id.ToString(),
+            "RegistrarPresenca",
+            new { EscalaId = escalaId, updated.EquipeId, updated.VoluntarioId, Compareceu = compareceu, UsuarioId = usuarioId });
         var updatedFull = await _repository.GetItemByIdAsync(updated.Id);
         return MapItemToDto(updatedFull!);
     }
@@ -608,8 +639,8 @@ public class EscalaService : IEscalaService
     public async Task<int> EnviarLembretesPendentesAsync(DateTime? referencia = null)
     {
         var agora = referencia ?? DateTime.Now;
-        var notificacoes = new List<CriarNotificacaoUsuarioDto>();
         var atualizados = new List<EscalaItem>();
+        var lembretes = new List<ComunicacaoLembreteOperacionalRequest>();
 
         var janela24Inicio = agora.AddHours(23);
         var janela24Fim = agora.AddHours(25);
@@ -665,13 +696,13 @@ public class EscalaService : IEscalaService
             }
 
             atualizados.Add(item);
-            notificacoes.Add(new CriarNotificacaoUsuarioDto
+            lembretes.Add(new ComunicacaoLembreteOperacionalRequest
             {
-                UsuarioId = usuario.Id,
-                Tipo = TipoNotificacaoUsuario.Escala,
+                ChaveEvento = $"escala:{item.Id}:{(item.DataLembrete24HorasEnviado.HasValue ? "24h" : "7d")}",
+                PessoaId = pessoaId.Value,
                 Titulo = lembreteTitulo,
                 Mensagem = lembreteMensagem,
-                Link = "/minhas-escalas"
+                Objetivo = "lembrete-escala"
             });
         }
 
@@ -680,12 +711,12 @@ public class EscalaService : IEscalaService
             await _repository.UpdateItemAsync(item);
         }
 
-        await _notificacaoUsuarioService.CriarParaUsuariosAsync(notificacoes);
+        var totalEnviado = await _comunicacaoAutomacaoService.ExecutarLembretesOperacionaisAsync(lembretes);
         _logger.LogInformation(
             "Lembretes de escala processados. Referencia={Referencia} Quantidade={Quantidade}",
             agora,
-            notificacoes.Count);
-        return notificacoes.Count;
+            totalEnviado);
+        return totalEnviado;
     }
 
     private async Task ValidarConflitoPessoaAsync(

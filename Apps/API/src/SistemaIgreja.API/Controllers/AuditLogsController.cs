@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.DTOs.Auditoria;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Domain.Entities;
+using System.Security.Claims;
 
 namespace SistemaIgreja.API.Controllers;
 
@@ -21,8 +23,31 @@ public class AuditLogsController : ControllerBase
     [HttpGet("paged")]
     public async Task<ActionResult<PagedResultDto<AuditLogDto>>> GetPaged([FromQuery] AuditLogPagedQueryDto query)
     {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem visualizar auditoria.");
+        }
+
         var result = await _service.GetPagedAsync(query);
         return Ok(result);
     }
-}
 
+    [HttpGet("metrics")]
+    public async Task<ActionResult<AuditLogMetricsDto>> GetMetrics([FromQuery] AuditLogPagedQueryDto query)
+    {
+        if (!IsAdminUser())
+        {
+            return StatusCode(403, "Apenas administradores podem visualizar auditoria.");
+        }
+
+        var result = await _service.GetMetricsAsync(query);
+        return Ok(result);
+    }
+
+    private bool IsAdminUser()
+    {
+        var tipoUsuarioId = User.FindFirstValue("TipoUsuarioId");
+        return tipoUsuarioId == ((int)TipoUsuario.Admin).ToString() ||
+               tipoUsuarioId == ((int)TipoUsuario.Ambos).ToString();
+    }
+}

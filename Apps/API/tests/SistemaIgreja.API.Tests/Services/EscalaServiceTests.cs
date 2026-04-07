@@ -18,7 +18,9 @@ public class EscalaServiceTests
     private readonly Mock<IEquipeRepository> _equipeRepositoryMock = new();
     private readonly Mock<IUsuarioRepository> _usuarioRepositoryMock = new();
     private readonly Mock<INotificacaoUsuarioService> _notificacaoUsuarioServiceMock = new();
+    private readonly Mock<IComunicacaoAutomacaoService> _comunicacaoAutomacaoServiceMock = new();
     private readonly Mock<ILogger<EscalaService>> _loggerMock = new();
+    private readonly Mock<IAuditLogService> _auditLogServiceMock = new();
     private readonly EscalaService _service;
 
     public EscalaServiceTests()
@@ -32,7 +34,9 @@ public class EscalaServiceTests
             _equipeRepositoryMock.Object,
             _usuarioRepositoryMock.Object,
             _notificacaoUsuarioServiceMock.Object,
-            _loggerMock.Object);
+            _comunicacaoAutomacaoServiceMock.Object,
+            _loggerMock.Object,
+            _auditLogServiceMock.Object);
     }
 
     [Fact]
@@ -495,15 +499,18 @@ public class EscalaServiceTests
         _usuarioRepositoryMock.Setup(r => r.GetByPessoaIdAsync(202)).ReturnsAsync((Usuario?)null);
         _escalaRepositoryMock.Setup(r => r.UpdateItemAsync(It.IsAny<EscalaItem>()))
             .ReturnsAsync((EscalaItem x) => x);
+        _comunicacaoAutomacaoServiceMock
+            .Setup(s => s.ExecutarLembretesOperacionaisAsync(It.IsAny<IEnumerable<ComunicacaoLembreteOperacionalRequest>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
 
         var total = await _service.EnviarLembretesPendentesAsync(referencia);
 
         total.Should().Be(1);
         itemElegivel.DataLembrete24HorasEnviado.Should().Be(referencia);
         itemRecusado.DataLembrete24HorasEnviado.Should().BeNull();
-        _notificacaoUsuarioServiceMock.Verify(n => n.CriarParaUsuariosAsync(It.Is<IEnumerable<CriarNotificacaoUsuarioDto>>(lista =>
+        _comunicacaoAutomacaoServiceMock.Verify(n => n.ExecutarLembretesOperacionaisAsync(It.Is<IEnumerable<ComunicacaoLembreteOperacionalRequest>>(lista =>
             lista.Count() == 1 &&
-            lista.First().UsuarioId == 40 &&
-            lista.First().Titulo == "Lembrete: escala em 24 horas")), Times.Once);
+            lista.First().PessoaId == 101 &&
+            lista.First().Titulo == "Lembrete: escala em 24 horas"), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

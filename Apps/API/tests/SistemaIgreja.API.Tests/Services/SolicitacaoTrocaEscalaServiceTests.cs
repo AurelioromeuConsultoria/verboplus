@@ -17,6 +17,7 @@ public class SolicitacaoTrocaEscalaServiceTests
     private readonly Mock<IUsuarioRepository> _usuarioRepositoryMock = new();
     private readonly Mock<INotificacaoUsuarioService> _notificacaoUsuarioServiceMock = new();
     private readonly Mock<ILogger<SolicitacaoTrocaEscalaService>> _loggerMock = new();
+    private readonly Mock<IAuditLogService> _auditLogServiceMock = new();
     private readonly SolicitacaoTrocaEscalaService _service;
 
     public SolicitacaoTrocaEscalaServiceTests()
@@ -28,7 +29,8 @@ public class SolicitacaoTrocaEscalaServiceTests
             _voluntarioRepositoryMock.Object,
             _usuarioRepositoryMock.Object,
             _notificacaoUsuarioServiceMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            _auditLogServiceMock.Object);
     }
 
     [Fact]
