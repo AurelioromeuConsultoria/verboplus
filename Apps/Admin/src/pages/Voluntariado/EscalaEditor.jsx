@@ -110,7 +110,7 @@ function getActionButtonProps(item, action) {
 
 export default function EscalaEditor() {
   const { ocorrenciaId, equipeId } = useParams();
-  const { usuario } = useAuth();
+  const { isAdmin } = useAuth();
   const confirmDialog = useConfirmDialog();
 
   const [loading, setLoading] = useState(true);
@@ -130,7 +130,6 @@ export default function EscalaEditor() {
   const [substitutosDisponiveis, setSubstitutosDisponiveis] = useState([]);
   const [substitutoSelecionado, setSubstitutoSelecionado] = useState('');
 
-  const isAdmin = Number(usuario?.tipoUsuario) === 1 || Number(usuario?.tipoUsuario) === 3;
   const { t } = useTranslation();
   const escalaRascunho = escala && Number(escala.status) === 1;
 

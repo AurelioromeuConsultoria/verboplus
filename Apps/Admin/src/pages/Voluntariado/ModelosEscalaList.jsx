@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { escalasModelosApi, equipesApi } from '@/lib/api';
@@ -18,6 +19,7 @@ export default function ModelosEscalaList() {
   const [modelos, setModelos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingModelos, setLoadingModelos] = useState(false);
+  const [refreshingModelos, setRefreshingModelos] = useState(false);
   const [error, setError] = useState(null);
   const confirmDialog = useConfirmDialog();
 
@@ -36,13 +38,17 @@ export default function ModelosEscalaList() {
     }
   };
 
-  const loadModelos = async () => {
+  const loadModelos = async ({ silent = false } = {}) => {
     if (!equipeId) {
       setModelos([]);
       return;
     }
     try {
-      setLoadingModelos(true);
+      if (silent) {
+        setRefreshingModelos(true);
+      } else {
+        setLoadingModelos(true);
+      }
       const res = await escalasModelosApi.getByEquipe(equipeId);
       setModelos(res.data || []);
     } catch (err) {
@@ -50,7 +56,11 @@ export default function ModelosEscalaList() {
       toast.error('Erro ao carregar modelos');
       setModelos([]);
     } finally {
-      setLoadingModelos(false);
+      if (silent) {
+        setRefreshingModelos(false);
+      } else {
+        setLoadingModelos(false);
+      }
     }
   };
 
@@ -123,15 +133,33 @@ export default function ModelosEscalaList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Modelos {equipeId ? `— ${equipes.find((e) => String(e.id) === equipeId)?.nome || ''}` : ''}</CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>Modelos {equipeId ? `— ${equipes.find((e) => String(e.id) === equipeId)?.nome || ''}` : ''}</CardTitle>
+            {equipeId ? (
+              <PageRefreshButton onClick={() => loadModelos({ silent: true })} refreshing={refreshingModelos} />
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent>
           {!equipeId ? (
-            <p className="text-muted-foreground">Selecione uma equipe para listar os modelos.</p>
+            <PageEmptyState
+              title="Selecione uma equipe para listar os modelos."
+              description="Os modelos de escala são organizados por equipe."
+            />
           ) : loadingModelos ? (
             <LoadingPage text="Carregando modelos..." />
           ) : !modelos.length ? (
-            <p className="text-muted-foreground">Nenhum modelo para esta equipe. Crie um para usar o preenchimento automático.</p>
+            <PageEmptyState
+              title="Nenhum modelo para esta equipe."
+              description="Crie um modelo para usar o preenchimento automático."
+              action={(
+                <Button asChild>
+                  <Link to={equipeId ? `/voluntariado/modelos-escala/novo?equipeId=${equipeId}` : '/voluntariado/modelos-escala/novo'}>
+                    <Plus className="h-4 w-4 mr-2" /> Novo modelo
+                  </Link>
+                </Button>
+              )}
+            />
           ) : (
             <Table>
               <TableHeader>

@@ -7,6 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
+import { TableRowActions, RowIconButtonAction, RowIconLinkAction } from '@/components/ui/list-actions';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
@@ -21,22 +23,33 @@ export default function FornecedoresList() {
   const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const confirmDialog = useConfirmDialog();
   const { can } = useAuth();
 
-  const load = async () => {
+  const load = async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      if (!silent) {
+        setError(null);
+      }
       const res = await fornecedoresApi.getAll();
       setItems(res.data || []);
     } catch (err) {
       setError(t('suppliers.errorLoad'));
       console.error(err);
     } finally {
-      setLoading(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -115,11 +128,24 @@ export default function FornecedoresList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('suppliers.listTitle')} ({total})</CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>{t('suppliers.listTitle')} ({total})</CardTitle>
+            <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          </div>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">{t('suppliers.emptyMessage')}</div>
+            <PageEmptyState
+              title={t('suppliers.emptyMessage')}
+              description="Tente ajustar os filtros ou cadastre um novo fornecedor."
+              action={canEdit ? (
+                <Button asChild>
+                  <Link to="/financeiro/fornecedores/novo">
+                    <Plus className="h-4 w-4 mr-2" /> {t('suppliers.new')}
+                  </Link>
+                </Button>
+              ) : null}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -139,20 +165,20 @@ export default function FornecedoresList() {
                     <TableCell>{f.telefone || '-'}</TableCell>
                     <TableCell>{f.contatoNome || '-'}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
+                      <TableRowActions>
                         {canEdit && (
-                          <Button variant="ghost" size="sm" asChild>
+                          <RowIconLinkAction>
                             <Link to={`/financeiro/fornecedores/${f.id}/editar`}>
                               <Edit className="h-4 w-4" />
                             </Link>
-                          </Button>
+                          </RowIconLinkAction>
                         )}
                         {canDelete && (
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(f.id)}>
+                          <RowIconButtonAction onClick={() => handleDelete(f.id)}>
                             <Trash2 className="h-4 w-4" />
-                          </Button>
+                          </RowIconButtonAction>
                         )}
-                      </div>
+                      </TableRowActions>
                     </TableCell>
                   </TableRow>
                 ))}

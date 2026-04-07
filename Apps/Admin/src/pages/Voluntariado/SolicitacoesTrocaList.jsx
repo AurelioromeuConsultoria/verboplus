@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRightLeft, CalendarDays, CheckCircle2, Clock3, RefreshCcw, Search, XCircle } from 'lucide-react';
+import { ArrowRightLeft, CalendarDays, CheckCircle2, Clock3, Search, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { equipesApi, solicitacoesTrocasEscalasApi } from '@/lib/api';
 import { usePagination } from '@/hooks/usePagination';
@@ -49,6 +50,7 @@ function getStatusBadge(status) {
 
 export default function SolicitacoesTrocaList() {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [equipes, setEquipes] = useState([]);
   const [solicitacoes, setSolicitacoes] = useState([]);
@@ -59,9 +61,11 @@ export default function SolicitacoesTrocaList() {
   const load = async (options = {}) => {
     const equipeId = options.equipeId ?? filtroEquipeId;
     const status = options.status ?? filtroStatus;
+    const silent = options.silent ?? false;
 
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
 
       const [equipesRes, solicitacoesRes] = await Promise.all([
@@ -79,6 +83,7 @@ export default function SolicitacoesTrocaList() {
       setError('Erro ao carregar solicitações de troca');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -127,10 +132,7 @@ export default function SolicitacoesTrocaList() {
             Acompanhe pedidos de substituição das equipes e entre rápido nas pendências mais urgentes.
           </p>
         </div>
-        <Button variant="outline" onClick={() => load()}>
-          <RefreshCcw className="h-4 w-4 mr-2" />
-          Atualizar
-        </Button>
+        <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -211,9 +213,10 @@ export default function SolicitacoesTrocaList() {
         </CardHeader>
         <CardContent>
           {filtradas.length === 0 ? (
-            <div className="py-10 text-center text-muted-foreground">
-              Nenhuma solicitação encontrada para os filtros atuais.
-            </div>
+            <PageEmptyState
+              title="Nenhuma solicitacao encontrada"
+              description="Nao ha trocas de escala para os filtros atuais. Revise equipe, status ou busca para ampliar a leitura."
+            />
           ) : (
             <Table>
               <TableHeader>

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AdvancedSearch } from '@/components/ui/advanced-search';
@@ -21,6 +22,7 @@ export default function NoticiasList() {
   const [items, setItems] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     titulo: '',
@@ -29,9 +31,11 @@ export default function NoticiasList() {
   });
   const confirmDialog = useConfirmDialog();
 
-  const load = async () => {
+  const load = async (options = {}) => {
+    const silent = options.silent ?? false;
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const [noticiasRes, categoriasRes] = await Promise.all([
         noticiasApi.getAll(),
@@ -44,6 +48,7 @@ export default function NoticiasList() {
       console.error(err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -130,16 +135,19 @@ export default function NoticiasList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Notícias</h1>
           <p className="text-muted-foreground">Gerencie as notícias da igreja</p>
         </div>
-        <Button asChild>
-          <Link to="/noticias/novo">
-            <Plus className="h-4 w-4 mr-2" /> Nova Notícia
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          <Button asChild>
+            <Link to="/noticias/novo">
+              <Plus className="h-4 w-4 mr-2" /> Nova Notícia
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <AdvancedSearch
@@ -180,7 +188,18 @@ export default function NoticiasList() {
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhuma notícia encontrada.</div>
+            <PageEmptyState
+              title="Nenhuma noticia encontrada"
+              description="Nao ha noticias para os filtros atuais. Ajuste a busca ou crie um novo conteudo."
+              action={(
+                <Button asChild>
+                  <Link to="/noticias/novo">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nova Noticia
+                  </Link>
+                </Button>
+              )}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -258,5 +277,4 @@ export default function NoticiasList() {
     </div>
   );
 }
-
 

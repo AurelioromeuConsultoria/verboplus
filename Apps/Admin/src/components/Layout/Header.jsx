@@ -46,6 +46,7 @@ const routeLabelKeys = {
   'noticias': 'header.news',
   'contatos': 'header.contacts',
   'usuarios': 'header.users',
+  'operacao': 'header.operations',
   'perfil': 'header.profile',
   'categorias-midias': 'header.mediaCategories',
   'galerias-fotos': 'header.photoGalleries',

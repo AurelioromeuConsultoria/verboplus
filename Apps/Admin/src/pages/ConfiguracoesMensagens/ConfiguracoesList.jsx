@@ -3,18 +3,21 @@ import { Link } from 'react-router-dom';
 import { Plus, Edit, Trash2, Clock, MessageSquare, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { configuracoesMensagensApi } from '@/lib/api';
+import { formatShortTime } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
 
 const ConfiguracoesList = () => {
   const [configuracoes, setConfiguracoes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const confirmDialog = useConfirmDialog();
 
@@ -22,10 +25,16 @@ const ConfiguracoesList = () => {
     fetchConfiguracoes();
   }, []);
 
-  const fetchConfiguracoes = async () => {
+  const fetchConfiguracoes = async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      if (!silent) {
+        setError(null);
+      }
       const response = await configuracoesMensagensApi.getAll();
       setConfiguracoes(response.data || []);
     } catch (err) {
@@ -33,7 +42,11 @@ const ConfiguracoesList = () => {
       console.error('Erro ao buscar configurações:', err);
       toast.error(getApiErrorMessage(err, 'Erro ao carregar configurações de mensagens'));
     } finally {
-      setLoading(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -78,11 +91,6 @@ const ConfiguracoesList = () => {
     }
   };
 
-  const formatHorario = (horario) => {
-    if (!horario) return 'Não definido';
-    return horario.substring(0, 5); // HH:MM
-  };
-
   if (loading) return <LoadingPage text="Carregando configurações..." />;
   if (error) return <ErrorPage message={error} onRetry={fetchConfiguracoes} />;
 
@@ -94,12 +102,15 @@ const ConfiguracoesList = () => {
           <h1 className="text-3xl font-bold text-foreground">Configurações de Mensagens</h1>
           <p className="text-muted-foreground mt-1">Gerencie as mensagens automáticas enviadas aos visitantes</p>
         </div>
-        <Button asChild>
-          <Link to="/configuracoes-mensagens/novo">
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Configuração
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <PageRefreshButton onClick={() => fetchConfiguracoes({ silent: true })} refreshing={refreshing} />
+          <Button asChild>
+            <Link to="/configuracoes-mensagens/novo">
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Configuração
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Cards Grid */}
@@ -129,11 +140,9 @@ const ConfiguracoesList = () => {
               {/* Status Badge */}
               <div className="mb-3">
                 {config.ativo ? (
-                  <Badge variant="default" className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700">
-                    Ativa
-                  </Badge>
+                  <StatusBadge tone="success">Ativa</StatusBadge>
                 ) : (
-                  <Badge variant="secondary">Inativa</Badge>
+                  <StatusBadge tone="neutral">Inativa</StatusBadge>
                 )}
               </div>
 
@@ -157,7 +166,7 @@ const ConfiguracoesList = () => {
                 </div>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Clock className="w-4 h-4 mr-2" />
-                  <span>Às {formatHorario(config.horarioEnvio)}</span>
+                  <span>As {formatShortTime(config.horarioEnvio)}</span>
                 </div>
               </div>
 
@@ -186,17 +195,18 @@ const ConfiguracoesList = () => {
 
       {/* Empty State */}
       {configuracoes.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma configuração encontrada</h3>
-          <p className="text-muted-foreground mb-4">Comece criando sua primeira configuração de mensagem automática.</p>
-          <Button asChild>
-            <Link to="/configuracoes-mensagens/novo">
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Configuração
-            </Link>
-          </Button>
-        </div>
+        <PageEmptyState
+          title="Nenhuma configuração encontrada"
+          description="Comece criando sua primeira configuração de mensagem automática."
+          action={(
+            <Button asChild>
+              <Link to="/configuracoes-mensagens/novo">
+                <Plus className="w-4 h-4 mr-2" />
+                Nova Configuração
+              </Link>
+            </Button>
+          )}
+        />
       )}
 
       <ConfirmDialog
@@ -217,4 +227,3 @@ const ConfiguracoesList = () => {
 };
 
 export default ConfiguracoesList;
-

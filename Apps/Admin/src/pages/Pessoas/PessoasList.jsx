@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Eye, Edit, Trash2, Phone, Mail, Download, UserPlus, RefreshCcw } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, Phone, Mail, Download, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AdvancedSearch } from '@/components/ui/advanced-search';
@@ -32,6 +33,7 @@ export default function PessoasList() {
   const [pessoas, setPessoas] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     nome: '',
@@ -51,12 +53,14 @@ export default function PessoasList() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const { can } = useAuth();
+  const { can, isAdmin } = useAuth();
   const { t } = useTranslation();
 
-  const loadPessoas = useCallback(async () => {
+  const loadPessoas = useCallback(async (options = {}) => {
+    const silent = options.silent ?? false;
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const ativoParam =
         filters.ativo === undefined ? undefined : (filters.ativo === true || filters.ativo === 'true');
@@ -84,6 +88,7 @@ export default function PessoasList() {
       toast.error(`Erro ao carregar pessoas: ${errorMessage}`);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [filters, page, pageSize, sortConfig.direction, sortConfig.field]);
 
@@ -275,9 +280,9 @@ export default function PessoasList() {
     return <ErrorPage message={error} onRetry={loadPessoas} />;
   }
 
-  const canEdit = can(RESOURCES.PESSOAS, ACTIONS.EDIT);
-  const canDelete = can(RESOURCES.PESSOAS, ACTIONS.DELETE);
-  const canCreateUsuario = can(RESOURCES.USUARIOS, ACTIONS.EDIT);
+  const canEdit = isAdmin && can(RESOURCES.PESSOAS, ACTIONS.EDIT);
+  const canDelete = isAdmin && can(RESOURCES.PESSOAS, ACTIONS.DELETE);
+  const canCreateUsuario = isAdmin && can(RESOURCES.USUARIOS, ACTIONS.EDIT);
 
   return (
     <div className="space-y-6">
@@ -289,10 +294,7 @@ export default function PessoasList() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={loadPessoas}>
-            <RefreshCcw className="h-4 w-4 mr-2" />
-            Atualizar
-          </Button>
+          <PageRefreshButton onClick={() => loadPessoas({ silent: true })} refreshing={refreshing} />
           {canEdit && (
             <Button asChild>
               <Link to="/pessoas/novo">
@@ -380,19 +382,18 @@ export default function PessoasList() {
             </div>
           )}
           {pessoas.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">
-                {total === 0 ? t('people.emptyMessage') : t('people.emptyPageMessage')}
-              </p>
-              {total === 0 && canEdit && (
+            <PageEmptyState
+              title="Nenhuma pessoa encontrada"
+              description={total === 0 ? t('people.emptyMessage') : t('people.emptyPageMessage')}
+              action={total === 0 && canEdit ? (
                 <Button asChild>
                   <Link to="/pessoas/novo">
                     <Plus className="h-4 w-4 mr-2" />
                     {t('people.emptyCta')}
                   </Link>
                 </Button>
-              )}
-            </div>
+              ) : null}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -577,5 +578,3 @@ export default function PessoasList() {
     </div>
   );
 }
-
-

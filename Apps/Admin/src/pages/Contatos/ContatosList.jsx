@@ -6,35 +6,49 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
+import { TableRowActions, RowIconButtonAction, RowIconLinkAction } from '@/components/ui/list-actions';
+import { BooleanStatusBadge } from '@/components/ui/status-badge';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { contatosApi } from '@/lib/api';
+import { formatDateBr } from '@/lib/formatters';
 import { toast } from 'sonner';
 
 export default function ContatosList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const [membroFilter, setMembroFilter] = useState('');
   const confirmDialog = useConfirmDialog();
 
-  const load = async () => {
+  const load = async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      if (!silent) {
+        setError(null);
+      }
       const res = await contatosApi.getAll();
       setItems(res.data || []);
     } catch (err) {
       setError('Erro ao carregar contatos');
       console.error(err);
     } finally {
-      setLoading(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -122,11 +136,24 @@ export default function ContatosList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Contatos ({total})</CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>Lista de Contatos ({total})</CardTitle>
+            <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          </div>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhum contato encontrado.</div>
+            <PageEmptyState
+              title="Nenhum contato encontrado."
+              description="Ajuste os filtros ou cadastre um novo contato."
+              action={(
+                <Button asChild>
+                  <Link to="/contatos/novo">
+                    <Plus className="h-4 w-4 mr-2" /> Novo Contato
+                  </Link>
+                </Button>
+              )}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -173,23 +200,21 @@ export default function ContatosList() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={contato.membro ? 'default' : 'secondary'}>
-                        {contato.membro ? 'Sim' : 'Não'}
-                      </Badge>
+                      <BooleanStatusBadge value={contato.membro} trueLabel="Sim" falseLabel="Nao" trueTone="info" />
                     </TableCell>
                     <TableCell>{contato.mensagem ? (contato.mensagem.length > 50 ? `${contato.mensagem.substring(0, 50)}...` : contato.mensagem) : '-'}</TableCell>
-                    <TableCell>{contato.dataCriacao ? new Date(contato.dataCriacao).toLocaleDateString('pt-BR') : '-'}</TableCell>
+                    <TableCell>{formatDateBr(contato.dataCriacao)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button variant="ghost" size="sm" asChild>
+                      <TableRowActions>
+                        <RowIconLinkAction>
                           <Link to={`/contatos/${contato.id}/editar`}>
                             <Edit className="h-4 w-4" />
                           </Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(contato.id)}>
+                        </RowIconLinkAction>
+                        <RowIconButtonAction onClick={() => handleDelete(contato.id)}>
                           <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                        </RowIconButtonAction>
+                      </TableRowActions>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -222,8 +247,6 @@ export default function ContatosList() {
     </div>
   );
 }
-
-
 
 
 

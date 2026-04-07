@@ -6,10 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
+import { RowIconButtonAction, RowIconLinkAction, TableRowActions } from '@/components/ui/list-actions';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { inscricoesEventosApi, eventosApi } from '@/lib/api';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { usePagination } from '@/hooks/usePagination';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatDateTimeBr } from '@/lib/formatters';
 import { useTranslation } from 'react-i18next';
 
 const STATUS_LABELS = (t) => ({
@@ -19,11 +25,11 @@ const STATUS_LABELS = (t) => ({
   4: t('eventRegistrations.status.present'),
 });
 
-const STATUS_COLORS = {
-  1: 'bg-yellow-100 text-yellow-800',
-  2: 'bg-green-100 text-green-800',
-  3: 'bg-red-100 text-red-800',
-  4: 'bg-blue-100 text-blue-800',
+const STATUS_TONES = {
+  1: 'warning',
+  2: 'success',
+  3: 'danger',
+  4: 'info',
 };
 
 export default function InscricoesEventosList() {
@@ -31,6 +37,7 @@ export default function InscricoesEventosList() {
   const [items, setItems] = useState([]);
   const [eventos, setEventos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const [eventoFilter, setEventoFilter] = useState('');
@@ -38,10 +45,16 @@ export default function InscricoesEventosList() {
   const [confirmState, setConfirmState] = useState({ open: false, action: null, id: null });
   const [confirmLoading, setConfirmLoading] = useState(false);
 
-  const load = async () => {
+  const load = async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      if (!silent) {
+        setError(null);
+      }
       const [inscricoesRes, eventosRes] = await Promise.all([
         inscricoesEventosApi.getAll(),
         eventosApi.getAll(),
@@ -52,7 +65,11 @@ export default function InscricoesEventosList() {
       setError(t('eventRegistrations.errorLoad', 'Erro ao carregar inscrições'));
       console.error(err);
     } finally {
-      setLoading(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -111,6 +128,8 @@ export default function InscricoesEventosList() {
     return true;
   });
 
+  const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
+
   if (loading) return <LoadingPage text={t('eventRegistrations.loading', 'Carregando inscrições...')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
@@ -121,6 +140,7 @@ export default function InscricoesEventosList() {
           <h1 className="text-3xl font-bold">{t('eventRegistrations.title')}</h1>
           <p className="text-muted-foreground">{t('eventRegistrations.subtitle')}</p>
         </div>
+        <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
       </div>
 
       <Card>
@@ -166,13 +186,14 @@ export default function InscricoesEventosList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('eventRegistrations.listTitle')} ({filtered.length})</CardTitle>
+          <CardTitle>{t('eventRegistrations.listTitle')} ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t('eventRegistrations.emptyMessage')}
-            </div>
+            <PageEmptyState
+              title={t('eventRegistrations.emptyMessage')}
+              description="Ajuste os filtros para ampliar o resultado ou aguarde novas inscrições."
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -188,7 +209,7 @@ export default function InscricoesEventosList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((inscricao) => (
+                {paginatedItems.map((inscricao) => (
                   <TableRow key={inscricao.id}>
                     <TableCell className="font-medium">{inscricao.nome}</TableCell>
                     <TableCell>
@@ -221,9 +242,9 @@ export default function InscricoesEventosList() {
                     </TableCell>
                     <TableCell>{inscricao.eventoTitulo || '-'}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${STATUS_COLORS[inscricao.status] || 'bg-gray-100 text-gray-800'}`}>
+                      <StatusBadge tone={STATUS_TONES[inscricao.status] || 'neutral'}>
                         {STATUS_LABELS(t)[inscricao.status] || inscricao.statusDescricao}
-                      </span>
+                      </StatusBadge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
@@ -231,38 +252,47 @@ export default function InscricoesEventosList() {
                         {inscricao.quantidadeAcompanhantes || 0}
                       </div>
                     </TableCell>
-                    <TableCell>{inscricao.dataInscricao ? new Date(inscricao.dataInscricao).toLocaleString('pt-BR') : '-'}</TableCell>
+                    <TableCell>{formatDateTimeBr(inscricao.dataInscricao)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-1">
-                        <Button variant="ghost" size="sm" asChild>
+                      <TableRowActions className="space-x-1">
+                        <RowIconLinkAction>
                           <Link to={`/inscricoes-eventos/${inscricao.id}`}>
                             <Eye className="h-4 w-4" />
                           </Link>
-                        </Button>
+                        </RowIconLinkAction>
                         {inscricao.status === 1 && (
-                          <Button variant="ghost" size="sm" onClick={() => handleConfirmar(inscricao.id)} title="Confirmar">
+                          <RowIconButtonAction onClick={() => handleConfirmar(inscricao.id)} title="Confirmar">
                             <CheckCircle className="h-4 w-4 text-green-600" />
-                          </Button>
+                          </RowIconButtonAction>
                         )}
                         {(inscricao.status === 1 || inscricao.status === 2) && (
-                          <Button variant="ghost" size="sm" onClick={() => handleCancelar(inscricao.id)} title="Cancelar">
+                          <RowIconButtonAction onClick={() => handleCancelar(inscricao.id)} title="Cancelar">
                             <XCircle className="h-4 w-4 text-red-600" />
-                          </Button>
+                          </RowIconButtonAction>
                         )}
-                        <Button variant="ghost" size="sm" asChild>
+                        <RowIconLinkAction>
                           <Link to={`/inscricoes-eventos/${inscricao.id}/editar`}>
                             <Edit className="h-4 w-4" />
                           </Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(inscricao.id)}>
+                        </RowIconLinkAction>
+                        <RowIconButtonAction onClick={() => handleDelete(inscricao.id)}>
                           <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                        </RowIconButtonAction>
+                      </TableRowActions>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+          )}
+          {filtered.length > 0 && (
+            <DataTablePagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           )}
         </CardContent>
       </Card>
@@ -287,8 +317,6 @@ export default function InscricoesEventosList() {
     </div>
   );
 }
-
-
 
 
 

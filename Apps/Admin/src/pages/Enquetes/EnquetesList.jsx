@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
@@ -18,14 +19,21 @@ import { toast } from 'sonner';
 export default function EnquetesList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const confirmDialog = useConfirmDialog();
 
-  const load = async () => {
+  const load = async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      if (!silent) {
+        setError(null);
+      }
       const res = await enquetesApi.getAll();
       setItems(res.data || []);
     } catch (err) {
@@ -33,7 +41,11 @@ export default function EnquetesList() {
       console.error(err);
       toast.error('Erro ao carregar enquetes');
     } finally {
-      setLoading(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -92,11 +104,14 @@ export default function EnquetesList() {
           <h1 className="text-3xl font-bold text-foreground">Enquetes</h1>
           <p className="text-muted-foreground">Gerencie as enquetes do sistema</p>
         </div>
-        <Button asChild>
-          <Link to="/enquetes/novo">
-            <Plus className="h-4 w-4 mr-2" /> Nova Enquete
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          <Button asChild>
+            <Link to="/enquetes/novo">
+              <Plus className="h-4 w-4 mr-2" /> Nova Enquete
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -122,23 +137,25 @@ export default function EnquetesList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Enquetes ({total})</CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>Lista de Enquetes ({total})</CardTitle>
+            <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          </div>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhuma enquete encontrada.
-              {items.length === 0 && (
-                <div className="mt-4">
-                  <Button asChild>
-                    <Link to="/enquetes/novo">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Criar Primeira Enquete
-                    </Link>
-                  </Button>
-                </div>
-              )}
-            </div>
+            <PageEmptyState
+              title="Nenhuma enquete encontrada."
+              description={items.length === 0 ? 'Crie a primeira enquete para começar.' : 'Ajuste os filtros para ampliar o resultado.'}
+              action={items.length === 0 ? (
+                <Button asChild>
+                  <Link to="/enquetes/novo">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar Primeira Enquete
+                  </Link>
+                </Button>
+              ) : null}
+            />
           ) : (
             <Table>
               <TableHeader>

@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
@@ -21,14 +22,17 @@ export default function ReceitasList() {
   const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const confirmDialog = useConfirmDialog();
   const { can } = useAuth();
 
-  const load = async () => {
+  const load = async (options = {}) => {
+    const silent = options.silent ?? false;
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const res = await receitasApi.getAll();
       setItems(res.data || []);
@@ -37,6 +41,7 @@ export default function ReceitasList() {
       console.error(err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -108,18 +113,21 @@ export default function ReceitasList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">{t('finance.revenues.title')}</h1>
           <p className="text-muted-foreground">{t('finance.revenues.subtitle')}</p>
         </div>
-        {canEdit && (
-          <Button asChild>
-            <Link to="/financeiro/receitas/novo">
-              <Plus className="h-4 w-4 mr-2" /> {t('finance.revenues.new')}
-            </Link>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          {canEdit && (
+            <Button asChild>
+              <Link to="/financeiro/receitas/novo">
+                <Plus className="h-4 w-4 mr-2" /> {t('finance.revenues.new')}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -146,7 +154,18 @@ export default function ReceitasList() {
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">{t('finance.revenues.emptyMessage')}</div>
+            <PageEmptyState
+              title="Nenhuma receita encontrada"
+              description={t('finance.revenues.emptyMessage')}
+              action={canEdit ? (
+                <Button asChild>
+                  <Link to="/financeiro/receitas/novo">
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('finance.revenues.new')}
+                  </Link>
+                </Button>
+              ) : null}
+            />
           ) : (
             <Table>
               <TableHeader>

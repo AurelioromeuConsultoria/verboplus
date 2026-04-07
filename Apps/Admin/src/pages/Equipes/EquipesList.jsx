@@ -8,11 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
+import { TableRowActions, RowIconButtonAction, RowIconLinkAction } from '@/components/ui/list-actions';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { equipesApi } from '@/lib/api';
+import { formatDateBr } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
@@ -27,24 +30,35 @@ const AREA_LABEL = {
 export default function EquipesList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const [area, setArea] = useState('');
   const confirmDialog = useConfirmDialog();
-  const { can } = useAuth();
+  const { can, isAdmin } = useAuth();
   const { t } = useTranslation();
 
-  const load = async () => {
+  const load = async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      if (!silent) {
+        setError(null);
+      }
       const res = await equipesApi.getAll();
       setItems(res.data || []);
     } catch (err) {
       setError('Erro ao carregar equipes');
       console.error(err);
     } finally {
-      setLoading(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -86,8 +100,8 @@ export default function EquipesList() {
   if (loading) return <LoadingPage text="Carregando equipes..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
-  const canEdit = can(RESOURCES.EQUIPES, ACTIONS.EDIT);
-  const canDelete = can(RESOURCES.EQUIPES, ACTIONS.DELETE);
+  const canEdit = isAdmin && can(RESOURCES.EQUIPES, ACTIONS.EDIT);
+  const canDelete = isAdmin && can(RESOURCES.EQUIPES, ACTIONS.DELETE);
 
   return (
     <div className="space-y-6">
@@ -139,11 +153,24 @@ export default function EquipesList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('volunteer.teams.listTitle')} ({total})</CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>{t('volunteer.teams.listTitle')} ({total})</CardTitle>
+            <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          </div>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhuma equipe encontrada.</div>
+            <PageEmptyState
+              title="Nenhuma equipe encontrada."
+              description="Ajuste os filtros ou cadastre uma nova equipe."
+              action={canEdit ? (
+                <Button asChild>
+                  <Link to="/equipes/novo">
+                    <Plus className="h-4 w-4 mr-2" /> {t('volunteer.teams.new')}
+                  </Link>
+                </Button>
+              ) : null}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -159,22 +186,22 @@ export default function EquipesList() {
                   <TableRow key={equipe.id}>
                     <TableCell className="font-medium">{equipe.nome}</TableCell>
                     <TableCell>{AREA_LABEL[equipe.area] || equipe.area}</TableCell>
-                    <TableCell>{new Date(equipe.dataCriacao).toLocaleDateString('pt-BR')}</TableCell>
+                    <TableCell>{formatDateBr(equipe.dataCriacao)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
+                      <TableRowActions>
                         {canEdit && (
-                          <Button variant="ghost" size="sm" asChild>
+                          <RowIconLinkAction>
                             <Link to={`/equipes/${equipe.id}/editar`}>
                               <Edit className="h-4 w-4" />
                             </Link>
-                          </Button>
+                          </RowIconLinkAction>
                         )}
                         {canDelete && (
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(equipe.id)}>
+                          <RowIconButtonAction onClick={() => handleDelete(equipe.id)}>
                             <Trash2 className="h-4 w-4" />
-                          </Button>
+                          </RowIconButtonAction>
                         )}
-                      </div>
+                      </TableRowActions>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -207,4 +234,3 @@ export default function EquipesList() {
     </div>
   );
 }
-

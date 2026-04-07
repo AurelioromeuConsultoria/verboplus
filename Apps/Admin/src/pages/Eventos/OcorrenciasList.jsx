@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, PlusCircle, RefreshCcw, Settings } from 'lucide-react';
+import { CalendarDays, PlusCircle, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { eventosApi, eventosOcorrenciasApi } from '@/lib/api';
@@ -30,6 +31,7 @@ export default function OcorrenciasList() {
   const { can } = useAuth();
   const [initialLoad, setInitialLoad] = useState(true);
   const [loadingOcorrencias, setLoadingOcorrencias] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [eventos, setEventos] = useState([]);
   const [ocorrencias, setOcorrencias] = useState([]);
@@ -58,10 +60,16 @@ export default function OcorrenciasList() {
     }
   };
 
-  const loadOcorrencias = async () => {
+  const loadOcorrencias = async ({ silent = false } = {}) => {
     try {
-      setLoadingOcorrencias(true);
-      setError(null);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoadingOcorrencias(true);
+      }
+      if (!silent) {
+        setError(null);
+      }
       const eventoId = filtroEventoId === 'all' ? undefined : Number(filtroEventoId);
       const res = await eventosOcorrenciasApi.getByPeriodo(
         `${dataInicio}T00:00:00`,
@@ -73,7 +81,11 @@ export default function OcorrenciasList() {
       console.error(err);
       setError(t('events.occurrencesErrorLoad', 'Erro ao carregar ocorrências'));
     } finally {
-      setLoadingOcorrencias(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoadingOcorrencias(false);
+      }
       setInitialLoad(false);
     }
   };
@@ -129,10 +141,7 @@ export default function OcorrenciasList() {
           <p className="text-muted-foreground">{t('events.occurrencesSubtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={loadOcorrencias}>
-            <RefreshCcw className="h-4 w-4 mr-2" />
-            {t('events.occurrencesActions.refresh')}
-          </Button>
+          <PageRefreshButton onClick={() => loadOcorrencias({ silent: true })} refreshing={refreshing} />
           {canEdit && (
             <Button onClick={handleGerarOcorrencias}>
               <PlusCircle className="h-4 w-4 mr-2" />
@@ -186,9 +195,16 @@ export default function OcorrenciasList() {
               {t('events.occurrencesLoading', 'Carregando ocorrências...')}
             </div>
           ) : sorted.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t('events.occurrencesEmptyMessage')}
-            </div>
+            <PageEmptyState
+              title={t('events.occurrencesEmptyMessage')}
+              description="Ajuste o período, selecione um evento específico ou gere novas ocorrências."
+              action={canEdit ? (
+                <Button onClick={handleGerarOcorrencias}>
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  {t('events.occurrencesActions.generate')}
+                </Button>
+              ) : null}
+            />
           ) : (
             <Table>
               <TableHeader>

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AdvancedSearch } from '@/components/ui/advanced-search';
@@ -16,12 +17,14 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { exportToCSV } from '@/utils/export';
 import { visitantesApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from 'react-i18next';
 
 export default function VisitantesList() {
   const [visitantes, setVisitantes] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     nome: '',
@@ -38,11 +41,14 @@ export default function VisitantesList() {
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const confirmDialog = useConfirmDialog();
+  const { isAdmin } = useAuth();
   const { t } = useTranslation();
 
-  const loadVisitantes = useCallback(async () => {
+  const loadVisitantes = useCallback(async (options = {}) => {
+    const silent = options.silent ?? false;
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const response = await visitantesApi.getPaged({
         page,
@@ -66,6 +72,7 @@ export default function VisitantesList() {
       toast.error('Erro ao carregar visitantes');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [filters, page, pageSize, sortConfig.direction, sortConfig.field]);
 
@@ -242,19 +249,24 @@ export default function VisitantesList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">{t('visitors.title')}</h1>
           <p className="text-muted-foreground">
             {t('visitors.subtitle')}
           </p>
         </div>
-        <Button asChild>
-          <Link to="/visitantes/novo">
-            <Plus className="h-4 w-4 mr-2" />
-            {t('visitors.new')}
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <PageRefreshButton onClick={() => loadVisitantes({ silent: true })} refreshing={refreshing} />
+          {isAdmin && (
+            <Button asChild>
+              <Link to="/visitantes/novo">
+                <Plus className="h-4 w-4 mr-2" />
+                {t('visitors.new')}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <AdvancedSearch
@@ -315,19 +327,18 @@ export default function VisitantesList() {
             </div>
           )}
           {visitantes.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">
-                {total === 0 ? t('visitors.emptyMessage') : t('visitors.emptyPageMessage')}
-              </p>
-              {total === 0 && (
+            <PageEmptyState
+              title="Nenhum visitante encontrado"
+              description={total === 0 ? t('visitors.emptyMessage') : t('visitors.emptyPageMessage')}
+              action={total === 0 && isAdmin ? (
                 <Button asChild>
                   <Link to="/visitantes/novo">
                     <Plus className="h-4 w-4 mr-2" />
                     {t('visitors.emptyCta')}
                   </Link>
                 </Button>
-              )}
-            </div>
+              ) : null}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -423,18 +434,22 @@ export default function VisitantesList() {
                               <Eye className="h-4 w-4" />
                             </Link>
                           </Button>
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/visitantes/${visitante.id}/editar`}>
-                              <Edit className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(visitante.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {isAdmin && (
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link to={`/visitantes/${visitante.id}/editar`}>
+                                <Edit className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(visitante.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -484,4 +499,3 @@ export default function VisitantesList() {
     </div>
   );
 }
-

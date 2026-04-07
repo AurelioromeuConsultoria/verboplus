@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
+import { formatDateBr } from '@/lib/formatters';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
@@ -23,6 +25,7 @@ export default function GaleriasFotosList() {
   const [eventos, setEventos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const [eventoFilter, setEventoFilter] = useState('');
@@ -30,10 +33,16 @@ export default function GaleriasFotosList() {
   const [statusFilter, setStatusFilter] = useState('');
   const confirmDialog = useConfirmDialog();
 
-  const load = async () => {
+  const load = async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      if (!silent) {
+        setError(null);
+      }
       const [galeriasRes, eventosRes, categoriasRes] = await Promise.all([
         galeriasFotosApi.getAll(),
         eventosApi.getAll(),
@@ -46,7 +55,11 @@ export default function GaleriasFotosList() {
       setError(t('photoGalleries.errorLoad'));
       console.error(err);
     } finally {
-      setLoading(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -103,11 +116,14 @@ export default function GaleriasFotosList() {
           <h1 className="text-3xl font-bold">{t('photoGalleries.title')}</h1>
           <p className="text-muted-foreground">{t('photoGalleries.subtitle')}</p>
         </div>
-        <Button asChild>
-          <Link to="/galerias-fotos/novo">
-            <Plus className="h-4 w-4 mr-2" /> {t('photoGalleries.new')}
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          <Button asChild>
+            <Link to="/galerias-fotos/novo">
+              <Plus className="h-4 w-4 mr-2" /> {t('photoGalleries.new')}
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -172,7 +188,17 @@ export default function GaleriasFotosList() {
       {filtered.length === 0 ? (
         <Card>
           <CardContent className="py-8">
-            <div className="text-center text-muted-foreground">{t('photoGalleries.emptyMessage')}</div>
+            <PageEmptyState
+              title={t('photoGalleries.emptyMessage')}
+              description="Ajuste os filtros ou crie uma nova galeria."
+              action={(
+                <Button asChild>
+                  <Link to="/galerias-fotos/novo">
+                    <Plus className="h-4 w-4 mr-2" /> {t('photoGalleries.new')}
+                  </Link>
+                </Button>
+              )}
+            />
           </CardContent>
         </Card>
       ) : (
@@ -210,7 +236,7 @@ export default function GaleriasFotosList() {
                   <div className="space-y-2 mb-4 text-sm">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span>{galeria.data ? new Date(galeria.data).toLocaleDateString('pt-BR') : '-'}</span>
+                      <span>{formatDateBr(galeria.data)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Image className="h-4 w-4 text-muted-foreground" />
@@ -268,4 +294,3 @@ export default function GaleriasFotosList() {
     </div>
   );
 }
-

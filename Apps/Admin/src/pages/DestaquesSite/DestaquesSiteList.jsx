@@ -7,31 +7,45 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
+import { TableRowActions, RowIconButtonAction, RowIconLinkAction } from '@/components/ui/list-actions';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { destaquesSiteApi } from '@/lib/api';
+import { formatDateBr } from '@/lib/formatters';
 import { toast } from 'sonner';
 
 export default function DestaquesSiteList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const confirmDialog = useConfirmDialog();
 
-  const load = async () => {
+  const load = async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      if (!silent) {
+        setError(null);
+      }
       const res = await destaquesSiteApi.getAll();
       setItems(res.data || []);
     } catch (err) {
       setError('Erro ao carregar destaques do site');
       console.error(err);
     } finally {
-      setLoading(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -78,11 +92,14 @@ export default function DestaquesSiteList() {
           <h1 className="text-3xl font-bold">Destaques do Site</h1>
           <p className="text-muted-foreground">Gerencie os destaques do site</p>
         </div>
-        <Button asChild>
-          <Link to="/destaques-site/novo">
-            <Plus className="h-4 w-4 mr-2" /> Novo Destaque
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          <Button asChild>
+            <Link to="/destaques-site/novo">
+              <Plus className="h-4 w-4 mr-2" /> Novo Destaque
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -105,11 +122,24 @@ export default function DestaquesSiteList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Destaques do Site ({total})</CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>Lista de Destaques do Site ({total})</CardTitle>
+            <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          </div>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhum destaque encontrado.</div>
+            <PageEmptyState
+              title="Nenhum destaque encontrado."
+              description="Ajuste os filtros ou crie um novo destaque para o site."
+              action={(
+                <Button asChild>
+                  <Link to="/destaques-site/novo">
+                    <Plus className="h-4 w-4 mr-2" /> Novo Destaque
+                  </Link>
+                </Button>
+              )}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -133,18 +163,18 @@ export default function DestaquesSiteList() {
                         </a>
                       ) : '-'}
                     </TableCell>
-                    <TableCell>{destaque.dataCriacao ? new Date(destaque.dataCriacao).toLocaleDateString('pt-BR') : '-'}</TableCell>
+                    <TableCell>{formatDateBr(destaque.dataCriacao)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button variant="ghost" size="sm" asChild>
+                      <TableRowActions>
+                        <RowIconLinkAction>
                           <Link to={`/destaques-site/${destaque.id}/editar`}>
                             <Edit className="h-4 w-4" />
                           </Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(destaque.id)}>
+                        </RowIconLinkAction>
+                        <RowIconButtonAction onClick={() => handleDelete(destaque.id)}>
                           <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                        </RowIconButtonAction>
+                      </TableRowActions>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -177,5 +207,3 @@ export default function DestaquesSiteList() {
     </div>
   );
 }
-
-

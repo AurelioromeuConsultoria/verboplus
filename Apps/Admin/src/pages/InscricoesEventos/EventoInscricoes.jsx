@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState } from '@/components/ui/page-state';
+import { RowIconButtonAction, RowIconLinkAction, TableRowActions } from '@/components/ui/list-actions';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { inscricoesEventosApi, eventosApi } from '@/lib/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import InscricaoEventoPublicForm from '@/components/InscricaoEvento/InscricaoEventoPublicForm';
@@ -13,6 +16,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatDateBr } from '@/lib/formatters';
 
 const STATUS_LABELS = {
   1: 'Pendente',
@@ -21,11 +25,11 @@ const STATUS_LABELS = {
   4: 'Presente',
 };
 
-const STATUS_COLORS = {
-  1: 'bg-yellow-100 text-yellow-800',
-  2: 'bg-green-100 text-green-800',
-  3: 'bg-red-100 text-red-800',
-  4: 'bg-blue-100 text-blue-800',
+const STATUS_TONES = {
+  1: 'warning',
+  2: 'success',
+  3: 'danger',
+  4: 'info',
 };
 
 export default function EventoInscricoes() {
@@ -236,7 +240,10 @@ export default function EventoInscricoes() {
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhuma inscrição encontrada.</div>
+            <PageEmptyState
+              title="Nenhuma inscrição encontrada."
+              description="Novas inscrições aparecerão aqui conforme o evento receber respostas."
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -283,43 +290,43 @@ export default function EventoInscricoes() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${STATUS_COLORS[inscricao.status] || 'bg-gray-100 text-gray-800'}`}>
+                      <StatusBadge tone={STATUS_TONES[inscricao.status] || 'neutral'}>
                         {STATUS_LABELS[inscricao.status] || inscricao.statusDescricao}
-                      </span>
+                      </StatusBadge>
                     </TableCell>
                     <TableCell>{inscricao.quantidadeAcompanhantes || 0}</TableCell>
-                    <TableCell>{inscricao.dataInscricao ? new Date(inscricao.dataInscricao).toLocaleDateString('pt-BR') : '-'}</TableCell>
+                    <TableCell>{formatDateBr(inscricao.dataInscricao)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-1">
-                        <Button variant="ghost" size="sm" asChild>
+                      <TableRowActions className="space-x-1">
+                        <RowIconLinkAction>
                           <Link to={`/inscricoes-eventos/${inscricao.id}`}>
                             <Eye className="h-4 w-4" />
                           </Link>
-                        </Button>
+                        </RowIconLinkAction>
                         {inscricao.status === 1 && (
-                          <Button variant="ghost" size="sm" onClick={() => handleConfirmar(inscricao.id)} title="Confirmar">
+                          <RowIconButtonAction onClick={() => handleConfirmar(inscricao.id)} title="Confirmar">
                             <CheckCircle className="h-4 w-4 text-green-600" />
-                          </Button>
+                          </RowIconButtonAction>
                         )}
                         {(inscricao.status === 1 || inscricao.status === 2) && (
-                          <Button variant="ghost" size="sm" onClick={() => handleCancelar(inscricao.id)} title="Cancelar">
+                          <RowIconButtonAction onClick={() => handleCancelar(inscricao.id)} title="Cancelar">
                             <XCircle className="h-4 w-4 text-red-600" />
-                          </Button>
+                          </RowIconButtonAction>
                         )}
                         {inscricao.status === 2 && (
-                          <Button variant="ghost" size="sm" onClick={() => handleMarcaPresente(inscricao.id)} title="Marcar Presença">
+                          <RowIconButtonAction onClick={() => handleMarcaPresente(inscricao.id)} title="Marcar Presenca">
                             <UserCheck className="h-4 w-4 text-blue-600" />
-                          </Button>
+                          </RowIconButtonAction>
                         )}
-                        <Button variant="ghost" size="sm" asChild>
+                        <RowIconLinkAction>
                           <Link to={`/inscricoes-eventos/${inscricao.id}/editar`}>
                             <Edit className="h-4 w-4" />
                           </Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(inscricao.id)}>
+                        </RowIconLinkAction>
+                        <RowIconButtonAction onClick={() => handleDelete(inscricao.id)}>
                           <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                        </RowIconButtonAction>
+                      </TableRowActions>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -361,7 +368,6 @@ export default function EventoInscricoes() {
     </div>
   );
 }
-
 
 
 

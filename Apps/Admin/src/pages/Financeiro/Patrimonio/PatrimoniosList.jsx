@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
@@ -30,6 +31,7 @@ export default function PatrimoniosList() {
   const [items, setItems] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const [categoriaId, setCategoriaId] = useState('');
@@ -37,9 +39,11 @@ export default function PatrimoniosList() {
   const confirmDialog = useConfirmDialog();
   const { can } = useAuth();
 
-  const load = async () => {
+  const load = async (options = {}) => {
+    const silent = options.silent ?? false;
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const [itemsRes, categoriasRes] = await Promise.all([
         patrimonioApi.getAll(),
@@ -52,6 +56,7 @@ export default function PatrimoniosList() {
       console.error(err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -119,6 +124,7 @@ export default function PatrimoniosList() {
           <p className="text-muted-foreground">{t('finance.patrimony.subtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
           <Button variant="outline" asChild>
             <Link to="/financeiro/patrimonio/relatorio-geral">
               <BarChart3 className="mr-2 h-4 w-4" /> {t('finance.patrimony.report')}
@@ -204,7 +210,18 @@ export default function PatrimoniosList() {
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">{t('finance.patrimony.emptyMessage')}</div>
+            <PageEmptyState
+              title="Nenhum patrimonio encontrado"
+              description={t('finance.patrimony.emptyMessage')}
+              action={canEdit ? (
+                <Button asChild>
+                  <Link to="/financeiro/patrimonio/novo">
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('finance.patrimony.new')}
+                  </Link>
+                </Button>
+              ) : null}
+            />
           ) : (
             <Table>
               <TableHeader>

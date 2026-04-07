@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { notificacoesApi } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -18,12 +19,15 @@ function getTipoLabel(tipo) {
 
 export default function NotificacoesList() {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [notificacoes, setNotificacoes] = useState([]);
 
-  const load = async () => {
+  const load = async (options = {}) => {
+    const silent = options.silent ?? false;
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const res = await notificacoesApi.getMinhas();
       setNotificacoes(res.data || []);
@@ -32,6 +36,7 @@ export default function NotificacoesList() {
       setError('Erro ao carregar notificações');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -74,16 +79,22 @@ export default function NotificacoesList() {
             Central de avisos operacionais do sistema, com foco em escalas e trocas.
           </p>
         </div>
-        <Button variant="outline" onClick={marcarTodas}>
-          <CheckCheck className="h-4 w-4 mr-2" />
-          Marcar todas como lidas
-        </Button>
+        <div className="flex items-center gap-2">
+          <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          <Button variant="outline" onClick={marcarTodas}>
+            <CheckCheck className="h-4 w-4 mr-2" />
+            Marcar todas como lidas
+          </Button>
+        </div>
       </div>
 
       {notificacoes.length === 0 ? (
         <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">
-            Nenhuma notificação encontrada.
+          <CardContent>
+            <PageEmptyState
+              title="Nenhuma notificacao encontrada"
+              description="Sua central esta limpa no momento. Novos avisos operacionais vao aparecer aqui."
+            />
           </CardContent>
         </Card>
       ) : (

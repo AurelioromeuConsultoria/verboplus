@@ -7,6 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
+import { BooleanStatusBadge } from '@/components/ui/status-badge';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
@@ -21,14 +23,17 @@ export default function CategoriasDespesasList() {
   const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const confirmDialog = useConfirmDialog();
   const { can } = useAuth();
 
-  const load = async () => {
+  const load = async (options = {}) => {
+    const silent = options.silent ?? false;
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const res = await categoriasDespesasApi.getAll();
       setItems(res.data || []);
@@ -37,6 +42,7 @@ export default function CategoriasDespesasList() {
       console.error(err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -81,18 +87,21 @@ export default function CategoriasDespesasList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">{t('finance.expenseCategories.title')}</h1>
           <p className="text-muted-foreground">{t('finance.expenseCategories.subtitle')}</p>
         </div>
-        {canEdit && (
-          <Button asChild>
-            <Link to="/financeiro/categorias-despesas/novo">
-              <Plus className="h-4 w-4 mr-2" /> {t('finance.expenseCategories.new')}
-            </Link>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          {canEdit && (
+            <Button asChild>
+              <Link to="/financeiro/categorias-despesas/novo">
+                <Plus className="h-4 w-4 mr-2" /> {t('finance.expenseCategories.new')}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -119,7 +128,18 @@ export default function CategoriasDespesasList() {
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">{t('finance.expenseCategories.emptyMessage')}</div>
+            <PageEmptyState
+              title="Nenhuma categoria encontrada"
+              description={t('finance.expenseCategories.emptyMessage')}
+              action={canEdit ? (
+                <Button asChild>
+                  <Link to="/financeiro/categorias-despesas/novo">
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('finance.expenseCategories.new')}
+                  </Link>
+                </Button>
+              ) : null}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -136,9 +156,11 @@ export default function CategoriasDespesasList() {
                     <TableCell className="font-medium">{c.nome}</TableCell>
                     <TableCell>{c.descricao || '-'}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs ${c.ativo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {c.ativo ? t('finance.expenseCategories.statusActive') : t('finance.expenseCategories.statusInactive')}
-                      </span>
+                      <BooleanStatusBadge
+                        value={c.ativo}
+                        trueLabel={t('finance.expenseCategories.statusActive')}
+                        falseLabel={t('finance.expenseCategories.statusInactive')}
+                      />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">

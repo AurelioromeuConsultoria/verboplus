@@ -8,6 +8,7 @@ export const RESOURCES = {
   VISITANTES: 'visitantes',
   CONFIG_MENSAGENS: 'configuracoes-mensagens',
   MENSAGENS_AGENDADAS: 'mensagens-agendadas',
+  COMUNICACAO: 'comunicacao',
   EQUIPES: 'equipes',
   CARGOS: 'cargos',
   VOLUNTARIOS: 'voluntarios',

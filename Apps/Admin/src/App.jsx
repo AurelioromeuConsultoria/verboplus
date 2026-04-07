@@ -20,6 +20,13 @@ const PerfisList = lazy(() => import('./pages/Perfis/PerfisList'));
 const ConfiguracoesList = lazy(() => import('./pages/ConfiguracoesMensagens/ConfiguracoesList'));
 const ConfiguracaoForm = lazy(() => import('./pages/ConfiguracoesMensagens/ConfiguracaoForm'));
 const MensagensAgendadas = lazy(() => import('./pages/MensagensAgendadas/MensagensAgendadas'));
+const ComunicacaoCampanhasList = lazy(() => import('./pages/Comunicacao/ComunicacaoCampanhasList'));
+const ComunicacaoCampanhaForm = lazy(() => import('./pages/Comunicacao/ComunicacaoCampanhaForm'));
+const ComunicacaoCampanhaDetails = lazy(() => import('./pages/Comunicacao/ComunicacaoCampanhaDetails'));
+const ComunicacaoTemplatesList = lazy(() => import('./pages/Comunicacao/ComunicacaoTemplatesList'));
+const ComunicacaoTemplateForm = lazy(() => import('./pages/Comunicacao/ComunicacaoTemplateForm'));
+const ComunicacaoSegmentosList = lazy(() => import('./pages/Comunicacao/ComunicacaoSegmentosList'));
+const ComunicacaoSegmentoForm = lazy(() => import('./pages/Comunicacao/ComunicacaoSegmentoForm'));
 const EquipesList = lazy(() => import('./pages/Equipes/EquipesList'));
 const EquipeForm = lazy(() => import('./pages/Equipes/EquipeForm'));
 const CargosList = lazy(() => import('./pages/Cargos/CargosList'));
@@ -55,6 +62,7 @@ const InscricaoEventoForm = lazy(() => import('./pages/InscricoesEventos/Inscric
 const EventoInscricoes = lazy(() => import('./pages/InscricoesEventos/EventoInscricoes'));
 const UsuariosList = lazy(() => import('./pages/Usuarios/UsuariosList'));
 const AuditoriaList = lazy(() => import('./pages/Auditoria/AuditoriaList'));
+const OperacaoDashboard = lazy(() => import('./pages/Operacao/OperacaoDashboard'));
 const Perfil = lazy(() => import('./pages/Perfil/Perfil'));
 const CategoriasMidiasList = lazy(() => import('./pages/CategoriasMidias/CategoriasMidiasList'));
 const CategoriaMidiaForm = lazy(() => import('./pages/CategoriasMidias/CategoriaMidiaForm'));
@@ -138,12 +146,12 @@ function App() {
             </RequirePermission>
           } />
           <Route path="pessoas/novo" element={
-            <RequirePermission resource={RESOURCES.PESSOAS} action={ACTIONS.EDIT}>
+            <RequirePermission resource={RESOURCES.PESSOAS} action={ACTIONS.EDIT} requireAdmin>
               <PessoaForm />
             </RequirePermission>
           } />
           <Route path="pessoas/:id/editar" element={
-            <RequirePermission resource={RESOURCES.PESSOAS} action={ACTIONS.EDIT}>
+            <RequirePermission resource={RESOURCES.PESSOAS} action={ACTIONS.EDIT} requireAdmin>
               <PessoaForm />
             </RequirePermission>
           } />
@@ -162,22 +170,22 @@ function App() {
 
           {/* Rotas de Visitantes */}
           <Route path="visitantes" element={
-            <RequirePermission resource={RESOURCES.VISITANTES}>
+            <RequirePermission resource={RESOURCES.VISITANTES} requireAdmin>
               <VisitantesList />
             </RequirePermission>
           } />
           <Route path="visitantes/novo" element={
-            <RequirePermission resource={RESOURCES.VISITANTES} action={ACTIONS.EDIT}>
+            <RequirePermission resource={RESOURCES.VISITANTES} action={ACTIONS.EDIT} requireAdmin>
               <VisitanteForm />
             </RequirePermission>
           } />
           <Route path="visitantes/:id/editar" element={
-            <RequirePermission resource={RESOURCES.VISITANTES} action={ACTIONS.EDIT}>
+            <RequirePermission resource={RESOURCES.VISITANTES} action={ACTIONS.EDIT} requireAdmin>
               <VisitanteForm />
             </RequirePermission>
           } />
           <Route path="visitantes/:id" element={
-            <RequirePermission resource={RESOURCES.VISITANTES}>
+            <RequirePermission resource={RESOURCES.VISITANTES} requireAdmin>
               <VisitanteDetails />
             </RequirePermission>
           } />
@@ -205,6 +213,51 @@ function App() {
               <MensagensAgendadas />
             </RequirePermission>
           } />
+          <Route path="comunicacao/campanhas" element={
+            <RequirePermission resource={RESOURCES.COMUNICACAO}>
+              <ComunicacaoCampanhasList />
+            </RequirePermission>
+          } />
+          <Route path="comunicacao/campanhas/nova" element={
+            <RequirePermission resource={RESOURCES.COMUNICACAO} action={ACTIONS.EDIT}>
+              <ComunicacaoCampanhaForm />
+            </RequirePermission>
+          } />
+          <Route path="comunicacao/campanhas/:id" element={
+            <RequirePermission resource={RESOURCES.COMUNICACAO}>
+              <ComunicacaoCampanhaDetails />
+            </RequirePermission>
+          } />
+          <Route path="comunicacao/templates" element={
+            <RequirePermission resource={RESOURCES.COMUNICACAO}>
+              <ComunicacaoTemplatesList />
+            </RequirePermission>
+          } />
+          <Route path="comunicacao/templates/novo" element={
+            <RequirePermission resource={RESOURCES.COMUNICACAO} action={ACTIONS.EDIT}>
+              <ComunicacaoTemplateForm />
+            </RequirePermission>
+          } />
+          <Route path="comunicacao/templates/:id/editar" element={
+            <RequirePermission resource={RESOURCES.COMUNICACAO} action={ACTIONS.EDIT}>
+              <ComunicacaoTemplateForm />
+            </RequirePermission>
+          } />
+          <Route path="comunicacao/segmentos" element={
+            <RequirePermission resource={RESOURCES.COMUNICACAO}>
+              <ComunicacaoSegmentosList />
+            </RequirePermission>
+          } />
+          <Route path="comunicacao/segmentos/novo" element={
+            <RequirePermission resource={RESOURCES.COMUNICACAO} action={ACTIONS.EDIT}>
+              <ComunicacaoSegmentoForm />
+            </RequirePermission>
+          } />
+          <Route path="comunicacao/segmentos/:id/editar" element={
+            <RequirePermission resource={RESOURCES.COMUNICACAO} action={ACTIONS.EDIT}>
+              <ComunicacaoSegmentoForm />
+            </RequirePermission>
+          } />
 
           {/* Rotas de Equipes */}
           <Route path="equipes" element={
@@ -213,12 +266,12 @@ function App() {
             </RequirePermission>
           } />
           <Route path="equipes/novo" element={
-            <RequirePermission resource={RESOURCES.EQUIPES} action={ACTIONS.EDIT}>
+            <RequirePermission resource={RESOURCES.EQUIPES} action={ACTIONS.EDIT} requireAdmin>
               <EquipeForm />
             </RequirePermission>
           } />
           <Route path="equipes/:id/editar" element={
-            <RequirePermission resource={RESOURCES.EQUIPES} action={ACTIONS.EDIT}>
+            <RequirePermission resource={RESOURCES.EQUIPES} action={ACTIONS.EDIT} requireAdmin>
               <EquipeForm />
             </RequirePermission>
           } />
@@ -247,12 +300,12 @@ function App() {
             </RequirePermission>
           } />
           <Route path="voluntarios/novo" element={
-            <RequirePermission resource={RESOURCES.VOLUNTARIOS} action={ACTIONS.EDIT}>
+            <RequirePermission resource={RESOURCES.VOLUNTARIOS} action={ACTIONS.EDIT} requireAdmin>
               <VoluntarioForm />
             </RequirePermission>
           } />
           <Route path="voluntarios/:id/editar" element={
-            <RequirePermission resource={RESOURCES.VOLUNTARIOS} action={ACTIONS.EDIT}>
+            <RequirePermission resource={RESOURCES.VOLUNTARIOS} action={ACTIONS.EDIT} requireAdmin>
               <VoluntarioForm />
             </RequirePermission>
           } />
@@ -433,27 +486,32 @@ function App() {
 
           {/* Rotas de Usuários */}
           <Route path="usuarios" element={
-            <RequirePermission resource={RESOURCES.USUARIOS}>
+            <RequirePermission resource={RESOURCES.USUARIOS} requireAdmin>
               <UsuariosList />
             </RequirePermission>
           } />
           <Route path="auditoria" element={
-            <RequirePermission resource={RESOURCES.USUARIOS}>
+            <RequirePermission resource={RESOURCES.AUDITORIA} requireAdmin>
               <AuditoriaList />
             </RequirePermission>
           } />
+          <Route path="operacao" element={
+            <RequirePermission resource={RESOURCES.AUDITORIA} requireAdmin>
+              <OperacaoDashboard />
+            </RequirePermission>
+          } />
           <Route path="perfis-acesso" element={
-            <RequirePermission resource={RESOURCES.PERFIS_ACESSO}>
+            <RequirePermission resource={RESOURCES.PERFIS_ACESSO} requireAdmin>
               <PerfisAcessoList />
             </RequirePermission>
           } />
           <Route path="perfis-acesso/novo" element={
-            <RequirePermission resource={RESOURCES.PERFIS_ACESSO} action={ACTIONS.EDIT}>
+            <RequirePermission resource={RESOURCES.PERFIS_ACESSO} action={ACTIONS.EDIT} requireAdmin>
               <PerfilAcessoForm />
             </RequirePermission>
           } />
           <Route path="perfis-acesso/:id/editar" element={
-            <RequirePermission resource={RESOURCES.PERFIS_ACESSO} action={ACTIONS.EDIT}>
+            <RequirePermission resource={RESOURCES.PERFIS_ACESSO} action={ACTIONS.EDIT} requireAdmin>
               <PerfilAcessoForm />
             </RequirePermission>
           } />
@@ -518,9 +576,29 @@ function App() {
           } />
 
           {/* Rotas de Kids */}
+          <Route path="kids/painel" element={
+            <RequirePermission resource={RESOURCES.KIDS}>
+              <KidsCheckinsList section="painel" />
+            </RequirePermission>
+          } />
+          <Route path="kids/criancas" element={
+            <RequirePermission resource={RESOURCES.KIDS}>
+              <KidsCheckinsList section="criancas" />
+            </RequirePermission>
+          } />
+          <Route path="kids/estrutura" element={
+            <RequirePermission resource={RESOURCES.KIDS}>
+              <KidsCheckinsList section="estrutura" />
+            </RequirePermission>
+          } />
+          <Route path="kids/historico" element={
+            <RequirePermission resource={RESOURCES.KIDS}>
+              <KidsCheckinsList section="historico" />
+            </RequirePermission>
+          } />
           <Route path="kids/checkins" element={
             <RequirePermission resource={RESOURCES.KIDS}>
-              <KidsCheckinsList />
+              <KidsCheckinsList section="overview" />
             </RequirePermission>
           } />
 

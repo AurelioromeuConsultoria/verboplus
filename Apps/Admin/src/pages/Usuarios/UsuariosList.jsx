@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
+import { formatDateBr, formatDateTimeBr } from '@/lib/formatters';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
@@ -35,6 +37,7 @@ export default function UsuariosList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const [tipoFilter, setTipoFilter] = useState('');
@@ -42,13 +45,15 @@ export default function UsuariosList() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const confirmDialog = useConfirmDialog();
-  const { can } = useAuth();
+  const { can, isAdmin } = useAuth();
   const pessoaIdParam = searchParams.get('pessoaId');
   const pessoaIdInicial = pessoaIdParam ? Number(pessoaIdParam) : null;
 
-  const load = async () => {
+  const load = async (options = {}) => {
+    const silent = options.silent ?? false;
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const res = await usuariosApi.getAll();
       setItems(res.data || []);
@@ -57,6 +62,7 @@ export default function UsuariosList() {
       console.error(err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -140,27 +146,30 @@ export default function UsuariosList() {
   if (loading) return <LoadingPage text="Carregando usuários..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
-  const canEdit = can(RESOURCES.USUARIOS, ACTIONS.EDIT);
-  const canDelete = can(RESOURCES.USUARIOS, ACTIONS.DELETE);
+  const canEdit = isAdmin && can(RESOURCES.USUARIOS, ACTIONS.EDIT);
+  const canDelete = isAdmin && can(RESOURCES.USUARIOS, ACTIONS.DELETE);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Usuários</h1>
           <p className="text-muted-foreground">Gerencie os usuários do sistema</p>
         </div>
-        {canEdit && (
-          <Button
-            onClick={() => {
-              setSearchParams({});
-              setEditingId(null);
-              setShowForm(true);
-            }}
-          >
-            <Plus className="h-4 w-4 mr-2" /> Novo Usuário
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          {canEdit && (
+            <Button
+              onClick={() => {
+                setSearchParams({});
+                setEditingId(null);
+                setShowForm(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" /> Novo Usuário
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -214,7 +223,22 @@ export default function UsuariosList() {
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhum usuário encontrado.</div>
+            <PageEmptyState
+              title="Nenhum usuario encontrado"
+              description="Nao ha usuarios para os filtros atuais. Ajuste os filtros ou crie um novo acesso."
+              action={canEdit ? (
+                <Button
+                  onClick={() => {
+                    setSearchParams({});
+                    setEditingId(null);
+                    setShowForm(true);
+                  }}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Usuario
+                </Button>
+              ) : null}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -245,8 +269,8 @@ export default function UsuariosList() {
                         {usuario.ativo ? 'Ativo' : 'Inativo'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{usuario.dataCriacao ? new Date(usuario.dataCriacao).toLocaleDateString('pt-BR') : '-'}</TableCell>
-                    <TableCell>{usuario.ultimoAcesso ? new Date(usuario.ultimoAcesso).toLocaleString('pt-BR') : 'Nunca'}</TableCell>
+                    <TableCell>{formatDateBr(usuario.dataCriacao)}</TableCell>
+                    <TableCell>{usuario.ultimoAcesso ? formatDateTimeBr(usuario.ultimoAcesso) : 'Nunca'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-1">
                         {canEdit && (
@@ -306,9 +330,6 @@ export default function UsuariosList() {
     </div>
   );
 }
-
-
-
 
 
 

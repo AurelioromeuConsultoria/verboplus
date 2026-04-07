@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, CalendarDays, CheckCircle2, Clock3, Filter, RefreshCcw, Settings, XCircle } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CheckCircle2, Clock3, Filter, Settings, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { eventosApi, eventosOcorrenciasApi } from '@/lib/api';
@@ -24,8 +25,9 @@ function getRiskClassName(nivelRisco) {
 }
 
 export default function PainelCoberturaVoluntariado() {
-  const { usuario } = useAuth();
+  const { isAdmin } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [eventos, setEventos] = useState([]);
   const [cards, setCards] = useState([]);
@@ -43,9 +45,11 @@ export default function PainelCoberturaVoluntariado() {
     return d.toISOString().slice(0, 10);
   });
 
-  const load = async () => {
+  const load = async (options = {}) => {
+    const silent = options.silent ?? false;
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
 
       const eventoId = filtroEventoId === 'all' ? undefined : Number(filtroEventoId);
@@ -66,6 +70,7 @@ export default function PainelCoberturaVoluntariado() {
       setError('Erro ao carregar painel de cobertura');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -106,7 +111,6 @@ export default function PainelCoberturaVoluntariado() {
   }, [busca, cards]);
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 12);
-  const isAdmin = Number(usuario?.tipoUsuario) === 1 || Number(usuario?.tipoUsuario) === 3;
 
   const handleProcessarLembretes = async () => {
     try {
@@ -140,10 +144,7 @@ export default function PainelCoberturaVoluntariado() {
               Processar lembretes
             </Button>
           )}
-          <Button variant="outline" onClick={load}>
-            <RefreshCcw className="h-4 w-4 mr-2" />
-            Atualizar
-          </Button>
+          <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
         </div>
       </div>
 
@@ -241,8 +242,11 @@ export default function PainelCoberturaVoluntariado() {
       <div className="space-y-4">
         {paginatedItems.length === 0 ? (
           <Card>
-            <CardContent className="py-10 text-center text-muted-foreground">
-              Nenhuma ocorrência encontrada para os filtros atuais.
+            <CardContent>
+              <PageEmptyState
+                title="Nenhuma ocorrencia encontrada"
+                description="Nao ha ocorrencias no periodo ou com o nivel de risco selecionado. Ajuste os filtros para ampliar o painel."
+              />
             </CardContent>
           </Card>
         ) : (

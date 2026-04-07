@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
@@ -21,14 +22,17 @@ export default function DespesasList() {
   const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const confirmDialog = useConfirmDialog();
   const { can } = useAuth();
 
-  const load = async () => {
+  const load = async (options = {}) => {
+    const silent = options.silent ?? false;
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const res = await despesasApi.getAll();
       setItems(res.data || []);
@@ -37,6 +41,7 @@ export default function DespesasList() {
       console.error(err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -108,18 +113,21 @@ export default function DespesasList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">{t('finance.expenses.title')}</h1>
           <p className="text-muted-foreground">{t('finance.expenses.subtitle')}</p>
         </div>
-        {canEdit && (
-          <Button asChild>
-            <Link to="/financeiro/despesas/novo">
-              <Plus className="h-4 w-4 mr-2" /> {t('finance.expenses.new')}
-            </Link>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          {canEdit && (
+            <Button asChild>
+              <Link to="/financeiro/despesas/novo">
+                <Plus className="h-4 w-4 mr-2" /> {t('finance.expenses.new')}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -146,7 +154,18 @@ export default function DespesasList() {
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">{t('finance.expenses.emptyMessage')}</div>
+            <PageEmptyState
+              title="Nenhuma despesa encontrada"
+              description={t('finance.expenses.emptyMessage')}
+              action={canEdit ? (
+                <Button asChild>
+                  <Link to="/financeiro/despesas/novo">
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('finance.expenses.new')}
+                  </Link>
+                </Button>
+              ) : null}
+            />
           ) : (
             <Table>
               <TableHeader>

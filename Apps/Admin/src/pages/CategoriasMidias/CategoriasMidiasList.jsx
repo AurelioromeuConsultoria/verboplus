@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
+import { formatDateBr } from '@/lib/formatters';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { categoriasMidiasApi } from '@/lib/api';
@@ -15,21 +17,32 @@ import { getApiErrorMessage } from '@/lib/apiError';
 export default function CategoriasMidiasList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const confirmDialog = useConfirmDialog();
 
-  const load = async () => {
+  const load = async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      if (!silent) {
+        setError(null);
+      }
       const res = await categoriasMidiasApi.getAll();
       setItems(res.data || []);
     } catch (err) {
       setError('Erro ao carregar categorias de mídia');
       console.error(err);
     } finally {
-      setLoading(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -104,11 +117,24 @@ export default function CategoriasMidiasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Categorias de Mídia</CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>Lista de Categorias de Mídia</CardTitle>
+            <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          </div>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhuma categoria encontrada.</div>
+            <PageEmptyState
+              title="Nenhuma categoria encontrada."
+              description="Ajuste a busca ou crie uma nova categoria de mídia."
+              action={(
+                <Button asChild>
+                  <Link to="/categorias-midias/novo">
+                    <Plus className="h-4 w-4 mr-2" /> Nova Categoria
+                  </Link>
+                </Button>
+              )}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -124,7 +150,7 @@ export default function CategoriasMidiasList() {
                   <TableRow key={categoria.id}>
                     <TableCell className="font-medium">{categoria.nome}</TableCell>
                     <TableCell>{categoria.descricao || '-'}</TableCell>
-                    <TableCell>{categoria.dataCriacao ? new Date(categoria.dataCriacao).toLocaleDateString('pt-BR') : '-'}</TableCell>
+                    <TableCell>{formatDateBr(categoria.dataCriacao)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
                         <Button variant="ghost" size="sm" asChild>
@@ -161,8 +187,6 @@ export default function CategoriasMidiasList() {
     </div>
   );
 }
-
-
 
 
 

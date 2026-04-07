@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, CalendarDays, CheckCircle2, Clock3, RefreshCcw, Settings, XCircle } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CheckCircle2, Clock3, Settings, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { eventosApi, eventosOcorrenciasApi } from '@/lib/api';
@@ -33,6 +34,7 @@ function getRiskClassName(nivelRisco) {
 export default function EscalasList() {
   const [initialLoad, setInitialLoad] = useState(true);
   const [loadingOcorrencias, setLoadingOcorrencias] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [eventos, setEventos] = useState([]);
   const [ocorrencias, setOcorrencias] = useState([]);
@@ -62,10 +64,16 @@ export default function EscalasList() {
     }
   };
 
-  const loadOcorrencias = async () => {
+  const loadOcorrencias = async ({ silent = false } = {}) => {
     try {
-      setLoadingOcorrencias(true);
-      setError(null);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoadingOcorrencias(true);
+      }
+      if (!silent) {
+        setError(null);
+      }
       const eventoId = filtroEventoId === 'all' ? undefined : Number(filtroEventoId);
       const res = await eventosOcorrenciasApi.getByPeriodo(
         `${dataInicio}T00:00:00`,
@@ -95,7 +103,11 @@ export default function EscalasList() {
       console.error(err);
       setError('Erro ao carregar ocorrências para escala');
     } finally {
-      setLoadingOcorrencias(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoadingOcorrencias(false);
+      }
       setInitialLoad(false);
     }
   };
@@ -127,10 +139,7 @@ export default function EscalasList() {
           <Button variant="outline" asChild>
             <Link to="/eventos/ocorrencias">Eventos → Ocorrências</Link>
           </Button>
-          <Button variant="outline" onClick={loadOcorrencias}>
-            <RefreshCcw className="h-4 w-4 mr-2" />
-            Atualizar
-          </Button>
+          <PageRefreshButton onClick={() => loadOcorrencias({ silent: true })} refreshing={refreshing} />
         </div>
       </div>
 
@@ -170,13 +179,24 @@ export default function EscalasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('volunteer.schedules.listTitle')} ({total})</CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>{t('volunteer.schedules.listTitle')} ({total})</CardTitle>
+            <PageRefreshButton onClick={() => loadOcorrencias({ silent: true })} refreshing={refreshing} />
+          </div>
         </CardHeader>
         <CardContent>
           {loadingOcorrencias ? (
             <div className="text-center py-8 text-muted-foreground">Carregando ocorrências...</div>
           ) : sorted.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhuma ocorrência encontrada para o período.</div>
+            <PageEmptyState
+              title="Nenhuma ocorrência encontrada para o período."
+              description="Ajuste os filtros ou gere novas ocorrências a partir do módulo de eventos."
+              action={(
+                <Button variant="outline" asChild>
+                  <Link to="/eventos/ocorrencias">Eventos → Ocorrências</Link>
+                </Button>
+              )}
+            />
           ) : (
             <Table>
               <TableHeader>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Filter, Phone, Mail, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Filter, Phone, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
@@ -23,17 +24,20 @@ export default function VoluntariosList() {
   const [equipes, setEquipes] = useState([]);
   const [cargos, setCargos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const [equipeId, setEquipeId] = useState('');
   const [cargoId, setCargoId] = useState('');
   const confirmDialog = useConfirmDialog();
-  const { can } = useAuth();
+  const { can, isAdmin } = useAuth();
   const { t } = useTranslation();
 
-  const load = async () => {
+  const load = async (options = {}) => {
+    const silent = options.silent ?? false;
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const [v, e, c] = await Promise.all([
         voluntariosApi.getAll(),
@@ -48,6 +52,7 @@ export default function VoluntariosList() {
       console.error(err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -89,23 +94,26 @@ export default function VoluntariosList() {
   if (loading) return <LoadingPage text="Carregando voluntários..." />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
-  const canEdit = can(RESOURCES.VOLUNTARIOS, ACTIONS.EDIT);
-  const canDelete = can(RESOURCES.VOLUNTARIOS, ACTIONS.DELETE);
+  const canEdit = isAdmin && can(RESOURCES.VOLUNTARIOS, ACTIONS.EDIT);
+  const canDelete = isAdmin && can(RESOURCES.VOLUNTARIOS, ACTIONS.DELETE);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">{t('volunteer.volunteers.title')}</h1>
           <p className="text-muted-foreground">{t('volunteer.volunteers.subtitle')}</p>
         </div>
-        {canEdit && (
-          <Button asChild>
-            <Link to="/voluntarios/novo">
-              <Plus className="h-4 w-4 mr-2" /> {t('volunteer.volunteers.new')}
-            </Link>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          {canEdit && (
+            <Button asChild>
+              <Link to="/voluntarios/novo">
+                <Plus className="h-4 w-4 mr-2" /> {t('volunteer.volunteers.new')}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -160,7 +168,18 @@ export default function VoluntariosList() {
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhum voluntário encontrado.</div>
+            <PageEmptyState
+              title="Nenhum voluntario encontrado"
+              description="Nao ha voluntarios para os filtros atuais. Ajuste equipe, cargo ou busca para ampliar a lista."
+              action={canEdit ? (
+                <Button asChild>
+                  <Link to="/voluntarios/novo">
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('volunteer.volunteers.new')}
+                  </Link>
+                </Button>
+              ) : null}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -239,4 +258,3 @@ export default function VoluntariosList() {
     </div>
   );
 }
-

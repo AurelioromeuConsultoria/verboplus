@@ -15,13 +15,12 @@ export function Loading({ className, size = 'default', text = 'Carregando...' })
   );
 }
 
-export function LoadingPage({ text = 'Carregando...' }) {
+export function LoadingPage({ text = 'Carregando...', className }) {
   return (
-    <div className="flex h-64 items-center justify-center">
+    <div className={`flex min-h-[16rem] items-center justify-center rounded-lg border border-dashed bg-muted/20 ${className || ''}`}>
       <Loading size="lg" text={text} />
     </div>
   );
 }
 
 export default Loading;
-

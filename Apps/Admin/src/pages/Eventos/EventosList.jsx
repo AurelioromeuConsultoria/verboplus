@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AdvancedSearch } from '@/components/ui/advanced-search';
@@ -24,6 +25,7 @@ export default function EventosList() {
   const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     titulo: '',
@@ -34,9 +36,11 @@ export default function EventosList() {
   const confirmDialog = useConfirmDialog();
   const { can } = useAuth();
 
-  const load = async () => {
+  const load = async (options = {}) => {
+    const silent = options.silent ?? false;
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const res = await eventosApi.getAll();
       const raw = res.data || [];
@@ -46,6 +50,7 @@ export default function EventosList() {
       console.error(err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -151,18 +156,21 @@ export default function EventosList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">{t('events.title')}</h1>
           <p className="text-muted-foreground">{t('events.subtitle')}</p>
         </div>
-        {canEdit && (
-          <Button asChild>
-            <Link to="/eventos/novo">
-              <Plus className="h-4 w-4 mr-2" /> {t('events.new')}
-            </Link>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          {canEdit && (
+            <Button asChild>
+              <Link to="/eventos/novo">
+                <Plus className="h-4 w-4 mr-2" /> {t('events.new')}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <AdvancedSearch
@@ -203,7 +211,18 @@ export default function EventosList() {
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">{t('events.emptyMessage')}</div>
+            <PageEmptyState
+              title="Nenhum evento encontrado"
+              description={t('events.emptyMessage')}
+              action={canEdit ? (
+                <Button asChild>
+                  <Link to="/eventos/novo">
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('events.new')}
+                  </Link>
+                </Button>
+              ) : null}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -292,4 +311,3 @@ export default function EventosList() {
     </div>
   );
 }
-

@@ -72,6 +72,7 @@ export function AuthProvider({ children }) {
   };
 
   const isAuthenticated = !!usuario;
+  const isAdmin = Number(usuario?.tipoUsuario) === 1 || Number(usuario?.tipoUsuario) === 3;
 
   const can = (resource, action = 'view') => {
     if (!usuario) return false;
@@ -92,6 +93,7 @@ export function AuthProvider({ children }) {
         logout,
         atualizarUsuario,
         isAuthenticated,
+        isAdmin,
         can,
       }}
     >

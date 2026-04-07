@@ -7,6 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
+import { formatDateBr } from '@/lib/formatters';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
@@ -17,21 +19,32 @@ import { toast } from 'sonner';
 export default function CategoriasNoticiasList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
   const confirmDialog = useConfirmDialog();
 
-  const load = async () => {
+  const load = async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      if (!silent) {
+        setError(null);
+      }
       const res = await categoriasNoticiasApi.getAll();
       setItems(res.data || []);
     } catch (err) {
       setError('Erro ao carregar categorias de notícias');
       console.error(err);
     } finally {
-      setLoading(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -106,11 +119,24 @@ export default function CategoriasNoticiasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Categorias de Notícias ({total})</CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>Lista de Categorias de Notícias ({total})</CardTitle>
+            <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          </div>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhuma categoria encontrada.</div>
+            <PageEmptyState
+              title="Nenhuma categoria encontrada."
+              description="Ajuste os filtros ou crie uma nova categoria de notícia."
+              action={(
+                <Button asChild>
+                  <Link to="/categorias-noticias/novo">
+                    <Plus className="h-4 w-4 mr-2" /> Nova Categoria
+                  </Link>
+                </Button>
+              )}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -124,7 +150,7 @@ export default function CategoriasNoticiasList() {
                 {paginatedItems.map((categoria) => (
                   <TableRow key={categoria.id}>
                     <TableCell className="font-medium">{categoria.nome}</TableCell>
-                    <TableCell>{new Date(categoria.dataCriacao).toLocaleDateString('pt-BR')}</TableCell>
+                    <TableCell>{formatDateBr(categoria.dataCriacao)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
                         <Button variant="ghost" size="sm" asChild>
@@ -168,5 +194,3 @@ export default function CategoriasNoticiasList() {
     </div>
   );
 }
-
-

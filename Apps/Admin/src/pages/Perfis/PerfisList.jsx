@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
@@ -38,14 +39,17 @@ function getPerfilLabel(value) {
 export default function PerfisList() {
   const [perfis, setPerfis] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [filtroPerfil, setFiltroPerfil] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
   const confirmDialog = useConfirmDialog();
 
-  const loadPerfis = async () => {
+  const loadPerfis = async (options = {}) => {
+    const silent = options.silent ?? false;
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const response = await pessoasPerfisApi.getAll();
       setPerfis(response.data || []);
@@ -55,6 +59,7 @@ export default function PerfisList() {
       toast.error('Erro ao carregar perfis');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -141,13 +146,14 @@ export default function PerfisList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Perfis</h1>
           <p className="text-muted-foreground">
             Gerencie os perfis das pessoas
           </p>
         </div>
+        <PageRefreshButton onClick={() => loadPerfis({ silent: true })} refreshing={refreshing} />
       </div>
 
       <Card>
@@ -198,13 +204,12 @@ export default function PerfisList() {
         </CardHeader>
         <CardContent>
           {perfisFiltrados.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                {perfis.length === 0 
-                  ? 'Nenhum perfil cadastrado ainda.'
-                  : 'Nenhum perfil encontrado com os filtros aplicados.'}
-              </p>
-            </div>
+            <PageEmptyState
+              title={perfis.length === 0 ? 'Nenhum perfil cadastrado' : 'Nenhum perfil encontrado'}
+              description={perfis.length === 0
+                ? 'Ainda nao ha perfis vinculados para exibicao nesta area.'
+                : 'Os filtros atuais nao retornaram perfis. Ajuste perfil ou status para ampliar a busca.'}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -300,5 +305,4 @@ export default function PerfisList() {
     </div>
   );
 }
-
 

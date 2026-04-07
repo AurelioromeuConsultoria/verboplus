@@ -8,8 +8,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Eye,
-  RefreshCw
+  Eye
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { AdvancedSearch } from '@/components/ui/advanced-search';
 import { mensagensAgendadasApi, visitantesApi } from '@/lib/api';
@@ -51,8 +51,13 @@ const MensagensAgendadas = () => {
   });
 
   const fetchVisitantes = useCallback(async () => {
-    const visitantesResponse = await visitantesApi.getAll();
-    setVisitantes(visitantesResponse.data || []);
+    try {
+      const visitantesResponse = await visitantesApi.getAll();
+      setVisitantes(visitantesResponse.data || []);
+    } catch (err) {
+      console.warn('Nao foi possivel carregar visitantes para enriquecer a listagem.', err);
+      setVisitantes([]);
+    }
   }, []);
 
   const fetchMensagens = useCallback(async ({ showLoader = false } = {}) => {
@@ -234,16 +239,7 @@ const MensagensAgendadas = () => {
             </Select>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => fetchMensagens()}
-            disabled={refreshing}
-            title="Atualizar lista"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Atualizando...' : 'Atualizar'}
-          </Button>
+          <PageRefreshButton onClick={() => fetchMensagens()} refreshing={refreshing} />
         </div>
       </div>
 
@@ -358,17 +354,13 @@ const MensagensAgendadas = () => {
         </CardHeader>
         <CardContent>
           {mensagens.length === 0 ? (
-            <div className="text-center py-12">
-              <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">
-                {total === 0 ? 'Nenhuma mensagem encontrada' : 'Nenhuma mensagem nesta página'}
-              </h3>
-              <p className="text-muted-foreground">
-                {total === 0
-                  ? 'As mensagens aparecerão aqui quando visitantes forem cadastrados.'
-                  : 'Tente navegar para outra página ou ajustar os filtros.'}
-              </p>
-            </div>
+            <PageEmptyState
+              title={total === 0 ? 'Nenhuma mensagem encontrada' : 'Nenhuma mensagem nesta pagina'}
+              description={total === 0
+                ? 'As mensagens aparecerao aqui quando houver agendamentos compativeis com os filtros atuais.'
+                : 'Nao ha mensagens nesta pagina atual. Tente navegar ou ajustar os filtros.'}
+              icon={MessageSquare}
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -457,4 +449,3 @@ const MensagensAgendadas = () => {
 };
 
 export default MensagensAgendadas;
-

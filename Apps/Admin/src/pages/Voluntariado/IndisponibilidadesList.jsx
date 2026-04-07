@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { indisponibilidadesVoluntariosApi, voluntariosApi } from '@/lib/api';
@@ -19,6 +20,7 @@ export default function IndisponibilidadesList() {
   const [itens, setItens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingItens, setLoadingItens] = useState(false);
+  const [refreshingItens, setRefreshingItens] = useState(false);
   const [error, setError] = useState(null);
   const [novaData, setNovaData] = useState('');
   const [novoMotivo, setNovoMotivo] = useState('');
@@ -40,13 +42,17 @@ export default function IndisponibilidadesList() {
     }
   };
 
-  const loadItens = async () => {
+  const loadItens = async ({ silent = false } = {}) => {
     if (!voluntarioId) {
       setItens([]);
       return;
     }
     try {
-      setLoadingItens(true);
+      if (silent) {
+        setRefreshingItens(true);
+      } else {
+        setLoadingItens(true);
+      }
       const res = await indisponibilidadesVoluntariosApi.getByVoluntario(voluntarioId);
       setItens(res.data || []);
     } catch (err) {
@@ -54,7 +60,11 @@ export default function IndisponibilidadesList() {
       toast.error('Erro ao carregar indisponibilidades');
       setItens([]);
     } finally {
-      setLoadingItens(false);
+      if (silent) {
+        setRefreshingItens(false);
+      } else {
+        setLoadingItens(false);
+      }
     }
   };
 
@@ -181,16 +191,21 @@ export default function IndisponibilidadesList() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Datas indisponíveis {voluntario ? `— ${voluntario.nome}` : ''}</CardTitle>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>Datas indisponíveis {voluntario ? `— ${voluntario.nome}` : ''}</CardTitle>
+                {voluntarioId ? (
+                  <PageRefreshButton onClick={() => loadItens({ silent: true })} refreshing={refreshingItens} />
+                ) : null}
+              </div>
             </CardHeader>
             <CardContent>
               {loadingItens ? (
                 <LoadingPage text="Carregando..." />
               ) : !itens.length ? (
-                <div className="flex items-center gap-2 text-muted-foreground py-4">
-                  <CalendarOff className="h-5 w-5" />
-                  Nenhuma data cadastrada.
-                </div>
+                <PageEmptyState
+                  title="Nenhuma data cadastrada."
+                  description="Adicione a primeira indisponibilidade para esse voluntário."
+                />
               ) : (
                 <Table>
                   <TableHeader>

@@ -29,10 +29,12 @@ import {
   ChevronsUpDown,
   BarChart3,
   Baby,
+  ActivitySquare,
   LogIn,
   Cog,
   Shield,
-  Package
+  Package,
+  Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -58,18 +60,28 @@ const menuItems = [
     href: '/usuarios',
     icon: UserCog,
     permission: RESOURCES.USUARIOS,
+    adminOnly: true,
   },
   {
     titleKey: 'menu.audit',
     href: '/auditoria',
     icon: Shield,
-    permission: RESOURCES.USUARIOS,
+    permission: RESOURCES.AUDITORIA,
+    adminOnly: true,
+  },
+  {
+    titleKey: 'menu.operations',
+    href: '/operacao',
+    icon: Activity,
+    permission: RESOURCES.AUDITORIA,
+    adminOnly: true,
   },
   {
     titleKey: 'menu.accessProfiles',
     href: '/perfis-acesso',
     icon: UserCog,
     permission: RESOURCES.PERFIS_ACESSO,
+    adminOnly: true,
   },
 ];
 
@@ -101,6 +113,7 @@ const menuGroups = [
         href: '/visitantes',
         icon: Users,
         permission: RESOURCES.VISITANTES,
+        adminOnly: true,
       },
       {
         titleKey: 'menu.messageSettings',
@@ -113,6 +126,24 @@ const menuGroups = [
         href: '/mensagens-agendadas',
         icon: CalendarDays,
         permission: RESOURCES.MENSAGENS_AGENDADAS,
+      },
+      {
+        titleKey: 'menu.communicationCampaigns',
+        href: '/comunicacao/campanhas',
+        icon: MessageSquare,
+        permission: RESOURCES.COMUNICACAO,
+      },
+      {
+        titleKey: 'menu.communicationTemplates',
+        href: '/comunicacao/templates',
+        icon: Folder,
+        permission: RESOURCES.COMUNICACAO,
+      },
+      {
+        titleKey: 'menu.communicationSegments',
+        href: '/comunicacao/segmentos',
+        icon: Users,
+        permission: RESOURCES.COMUNICACAO,
       },
     ],
   },
@@ -366,6 +397,30 @@ const menuGroups = [
     icon: Baby,
     items: [
       {
+        titleKey: 'menu.kidsPanel',
+        href: '/kids/painel',
+        icon: ActivitySquare,
+        permission: RESOURCES.KIDS,
+      },
+      {
+        titleKey: 'menu.kidsChildren',
+        href: '/kids/criancas',
+        icon: Users,
+        permission: RESOURCES.KIDS,
+      },
+      {
+        titleKey: 'menu.kidsStructure',
+        href: '/kids/estrutura',
+        icon: Cog,
+        permission: RESOURCES.KIDS,
+      },
+      {
+        titleKey: 'menu.kidsHistory',
+        href: '/kids/historico',
+        icon: ClipboardList,
+        permission: RESOURCES.KIDS,
+      },
+      {
         titleKey: 'menu.kidsCheckins',
         href: '/kids/checkins',
         icon: LogIn,
@@ -377,8 +432,16 @@ const menuGroups = [
 
 export function Sidebar() {
   const location = useLocation();
-  const { can } = useAuth();
+  const { can, isAdmin } = useAuth();
   const { t } = useTranslation();
+
+  const canSeeMenuItem = (item) => {
+    if (item.adminOnly) {
+      return isAdmin;
+    }
+
+    return !item.permission || can(item.permission, 'view');
+  };
   const [openGroups, setOpenGroups] = useState({});
 
   const toggleGroup = (groupKey) => {
@@ -450,7 +513,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-        {menuItems.filter((item) => !item.permission || can(item.permission, 'view')).map((item) => {
+        {menuItems.filter(canSeeMenuItem).map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.href || 
             (item.href !== '/' && location.pathname.startsWith(item.href));
@@ -474,7 +537,7 @@ export function Sidebar() {
 
         {/* Menu Groups */}
         {menuGroups.map((group, groupIndex) => {
-          const visibleItems = group.items.filter((item) => !item.permission || can(item.permission, 'view'));
+          const visibleItems = group.items.filter(canSeeMenuItem);
           if (visibleItems.length === 0) return null;
           const groupKey = group.titleKey.split('.').pop();
           const isOpen = openGroups[groupKey] ?? false;
