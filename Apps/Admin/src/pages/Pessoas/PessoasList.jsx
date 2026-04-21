@@ -15,18 +15,19 @@ import { AdvancedSearch } from '@/components/ui/advanced-search';
 import { SortableTableHeader } from '@/components/ui/sortable-table-header';
 import { exportToCSV } from '@/utils/export';
 import { pessoasApi } from '@/lib/api';
+import { formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
 import { useTranslation } from 'react-i18next';
 
 const PERFIS_OPTIONS = [
-  { value: 'Visitante', label: 'Visitante' },
-  { value: 'Membro', label: 'Membro' },
-  { value: 'Voluntario', label: 'Voluntário' },
-  { value: 'Lider', label: 'Líder' },
+  { value: 'Visitante', labelKey: 'visitor' },
+  { value: 'Membro', labelKey: 'member' },
+  { value: 'Voluntario', labelKey: 'volunteer' },
+  { value: 'Lider', labelKey: 'leader' },
   { value: 'Kids', label: 'Kids' },
-  { value: 'Admin', label: 'Administrador' },
+  { value: 'Admin', labelKey: 'admin' },
 ];
 
 export default function PessoasList() {
@@ -82,10 +83,10 @@ export default function PessoasList() {
       setPessoas(data.items || []);
       setTotal(Number(data.total || 0));
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || 'Erro ao carregar pessoas';
+      const errorMessage = err.response?.data?.message || err.message || t('people.errorLoad');
       setError(errorMessage);
       console.error('Erro ao carregar pessoas:', err);
-      toast.error(`Erro ao carregar pessoas: ${errorMessage}`);
+      toast.error(t('people.errorLoadToast', { message: errorMessage }));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -104,7 +105,7 @@ export default function PessoasList() {
     try {
       setDeleting(true);
       await pessoasApi.delete(pessoaToDelete.id);
-      toast.success('Pessoa excluída com sucesso');
+      toast.success(t('people.deleteSuccess'));
       setDeleteDialogOpen(false);
       setPessoaToDelete(null);
       // Recarrega a página atual; se ficar vazia, volta uma página.
@@ -113,7 +114,7 @@ export default function PessoasList() {
         setPage((p) => Math.max(1, p - 1));
       }
     } catch (err) {
-      toast.error('Erro ao excluir pessoa');
+      toast.error(t('people.deleteError'));
       console.error('Erro ao excluir pessoa:', err);
     } finally {
       setDeleting(false);
@@ -182,12 +183,12 @@ export default function PessoasList() {
       await loadPessoas();
       if (page > 1 && pessoas.length === ids.length) setPage((p) => Math.max(1, p - 1));
       if (fail > 0) {
-        toast.warning(`${ok} excluída(s), ${fail} falha(s).`);
+        toast.warning(t('people.bulkDeletePartial', { ok, fail }));
       } else {
-        toast.success(`${ok} pessoa(s) excluída(s) com sucesso`);
+        toast.success(t('people.bulkDeleteSuccess', { count: ok }));
       }
     } catch (err) {
-      toast.error('Erro ao excluir em lote');
+      toast.error(t('people.bulkDeleteError'));
     } finally {
       setBulkDeleting(false);
     }
@@ -239,31 +240,31 @@ export default function PessoasList() {
       }
 
       const exportData = all.map(pessoa => ({
-      Nome: pessoa.nome || '',
-      Email: pessoa.email || '',
-      Telefone: pessoa.telefone || '',
-      WhatsApp: pessoa.whatsApp || '',
-      'Tipo de Pessoa': pessoa.tipoPessoa || '',
-      Perfis: pessoa.perfis?.filter(p => !p.dataFim).map(p => p.perfil).join('; ') || '',
-      Ativo: pessoa.ativo ? 'Sim' : 'Não',
-      'Data de Criação': pessoa.dataCriacao ? new Date(pessoa.dataCriacao).toLocaleDateString('pt-BR') : '',
+      [t('people.export.name')]: pessoa.nome || '',
+      [t('people.export.email')]: pessoa.email || '',
+      [t('people.export.phone')]: pessoa.telefone || '',
+      [t('people.export.whatsapp')]: pessoa.whatsApp || '',
+      [t('people.export.personType')]: pessoa.tipoPessoa || '',
+      [t('people.export.profiles')]: pessoa.perfis?.filter(p => !p.dataFim).map(p => p.perfil).join('; ') || '',
+      [t('people.export.active')]: pessoa.ativo ? t('people.boolean.yes') : t('people.boolean.no'),
+      [t('people.export.createdAt')]: pessoa.dataCriacao ? formatDate(pessoa.dataCriacao) : '',
     }));
 
     exportToCSV(exportData, 'pessoas', [
-      { key: 'Nome', label: 'Nome' },
-      { key: 'Email', label: 'Email' },
-      { key: 'Telefone', label: 'Telefone' },
-      { key: 'WhatsApp', label: 'WhatsApp' },
-      { key: 'Tipo de Pessoa', label: 'Tipo de Pessoa' },
-      { key: 'Perfis', label: 'Perfis' },
-      { key: 'Ativo', label: 'Ativo' },
-      { key: 'Data de Criação', label: 'Data de Criação' },
+      { key: t('people.export.name'), label: t('people.export.name') },
+      { key: t('people.export.email'), label: t('people.export.email') },
+      { key: t('people.export.phone'), label: t('people.export.phone') },
+      { key: t('people.export.whatsapp'), label: t('people.export.whatsapp') },
+      { key: t('people.export.personType'), label: t('people.export.personType') },
+      { key: t('people.export.profiles'), label: t('people.export.profiles') },
+      { key: t('people.export.active'), label: t('people.export.active') },
+      { key: t('people.export.createdAt'), label: t('people.export.createdAt') },
     ]);
 
-    toast.success('Dados exportados com sucesso!');
+    toast.success(t('people.export.success'));
     } catch (err) {
       console.error('Erro ao exportar pessoas:', err);
-      toast.error('Erro ao exportar dados');
+      toast.error(t('people.export.error'));
     }
   };
 
@@ -273,12 +274,17 @@ export default function PessoasList() {
   }, [filters]);
 
   if (loading) {
-    return <LoadingPage text="Carregando pessoas..." />;
+    return <LoadingPage text={t('people.loading')} />;
   }
 
   if (error) {
     return <ErrorPage message={error} onRetry={loadPessoas} />;
   }
+
+  const perfisOptions = PERFIS_OPTIONS.map((option) => ({
+    value: option.value,
+    label: option.label ?? t(`people.filters.profileOptions.${option.labelKey}`),
+  }));
 
   const canEdit = isAdmin && can(RESOURCES.PESSOAS, ACTIONS.EDIT);
   const canDelete = isAdmin && can(RESOURCES.PESSOAS, ACTIONS.DELETE);
@@ -308,33 +314,33 @@ export default function PessoasList() {
 
       <AdvancedSearch
         searchFields={[
-          { key: 'nome', label: 'Nome', type: 'text', placeholder: 'Buscar por nome...' },
-          { key: 'email', label: 'Email', type: 'text', placeholder: 'Buscar por email...' },
-          { key: 'telefone', label: 'Telefone', type: 'text', placeholder: 'Buscar por telefone...' },
-          { key: 'whatsApp', label: 'WhatsApp', type: 'text', placeholder: 'Buscar por WhatsApp...' },
+          { key: 'nome', label: t('people.fields.name'), type: 'text', placeholder: t('people.search.namePlaceholder') },
+          { key: 'email', label: t('people.fields.email'), type: 'text', placeholder: t('people.search.emailPlaceholder') },
+          { key: 'telefone', label: t('people.fields.phone'), type: 'text', placeholder: t('people.search.phonePlaceholder') },
+          { key: 'whatsApp', label: t('people.fields.whatsapp'), type: 'text', placeholder: t('people.search.whatsappPlaceholder') },
         ]}
         filterFields={[
           {
             key: 'perfil',
-            label: 'Perfil',
+            label: t('people.filters.profile'),
             type: 'select',
-            options: PERFIS_OPTIONS,
+            options: perfisOptions,
           },
           {
             key: 'tipoPessoa',
-            label: 'Tipo de Pessoa',
+            label: t('people.filters.personType'),
             type: 'select',
             options: [
-              { value: 'Adulto', label: 'Adulto' },
-              { value: 'Crianca', label: 'Criança' },
+              { value: 'Adulto', label: t('people.form.personType.adult') },
+              { value: 'Crianca', label: t('people.form.personType.child') },
             ],
           },
           {
             key: 'ativo',
-            label: 'Status',
+            label: t('people.filters.status'),
             type: 'boolean',
-            trueLabel: 'Ativo',
-            falseLabel: 'Inativo',
+            trueLabel: t('people.status.active'),
+            falseLabel: t('people.status.inactive'),
           },
         ]}
         values={filters}
@@ -359,7 +365,7 @@ export default function PessoasList() {
             {total > 0 && (
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
-                Exportar CSV
+                {t('people.export.button')}
               </Button>
             )}
           </div>
@@ -368,22 +374,22 @@ export default function PessoasList() {
           {selectedIds.size > 0 && canDelete && (
             <div className="flex items-center justify-between rounded-md border bg-muted/50 px-4 py-2 mb-4">
               <span className="text-sm font-medium">
-                {selectedIds.size} selecionada(s)
+                {t('people.selectedCount', { count: selectedIds.size })}
               </span>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
-                  Limpar seleção
+                  {t('people.clearSelection')}
                 </Button>
                 <Button variant="destructive" size="sm" onClick={handleBulkDeleteClick}>
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir selecionadas
+                  {t('people.deleteSelected')}
                 </Button>
               </div>
             </div>
           )}
           {pessoas.length === 0 ? (
             <PageEmptyState
-              title="Nenhuma pessoa encontrada"
+              title={t('people.emptyTitle')}
               description={total === 0 ? t('people.emptyMessage') : t('people.emptyPageMessage')}
               action={total === 0 && canEdit ? (
                 <Button asChild>
@@ -403,30 +409,30 @@ export default function PessoasList() {
                       <Checkbox
                         checked={allPageSelected}
                         onCheckedChange={toggleSelectAll}
-                        aria-label="Selecionar todas"
+                        aria-label={t('people.selectAll')}
                       />
                     </TableHead>
                   )}
                   <SortableTableHeader field="nome" onSort={handleSort} sortConfig={sortConfig}>
-                    Nome
+                    {t('people.fields.name')}
                   </SortableTableHeader>
                   <SortableTableHeader field="email" onSort={handleSort} sortConfig={sortConfig}>
-                    Email
+                    {t('people.fields.email')}
                   </SortableTableHeader>
                   <SortableTableHeader field="telefone" onSort={handleSort} sortConfig={sortConfig}>
-                    Telefone
+                    {t('people.fields.phone')}
                   </SortableTableHeader>
                   <SortableTableHeader field="whatsApp" onSort={handleSort} sortConfig={sortConfig}>
-                    WhatsApp
+                    {t('people.fields.whatsapp')}
                   </SortableTableHeader>
                   <SortableTableHeader field="tipoPessoa" onSort={handleSort} sortConfig={sortConfig}>
-                    Tipo
+                    {t('people.table.type')}
                   </SortableTableHeader>
-                  <TableHead>Perfis</TableHead>
+                  <TableHead>{t('people.table.profiles')}</TableHead>
                   <SortableTableHeader field="ativo" onSort={handleSort} sortConfig={sortConfig}>
-                    Ativo
+                    {t('people.table.active')}
                   </SortableTableHeader>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="text-right">{t('people.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -437,7 +443,7 @@ export default function PessoasList() {
                         <Checkbox
                           checked={selectedIds.has(pessoa.id)}
                           onCheckedChange={() => toggleSelect(pessoa.id)}
-                          aria-label={`Selecionar ${pessoa.nome}`}
+                          aria-label={t('people.selectOne', { name: pessoa.nome })}
                         />
                       </TableCell>
                     )}
@@ -497,7 +503,7 @@ export default function PessoasList() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={pessoa.ativo ? 'default' : 'secondary'}>
-                        {pessoa.ativo ? 'Sim' : 'Não'}
+                        {pessoa.ativo ? t('people.boolean.yes') : t('people.boolean.no')}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -515,7 +521,7 @@ export default function PessoasList() {
                           </Button>
                         )}
                         {canCreateUsuario && (
-                          <Button variant="ghost" size="sm" asChild title="Criar acesso para esta pessoa">
+                          <Button variant="ghost" size="sm" asChild title={t('people.actions.createAccess')}>
                             <Link to={`/usuarios?pessoaId=${pessoa.id}`}>
                               <UserPlus className="h-4 w-4" />
                             </Link>
@@ -556,9 +562,9 @@ export default function PessoasList() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
-        title="Excluir Pessoa"
-        description={`Tem certeza que deseja excluir "${pessoaToDelete?.nome}"? Esta ação não pode ser desfeita.`}
-        confirmText="Excluir"
+        title={t('people.deleteTitle')}
+        description={t('people.deleteDescription', { name: pessoaToDelete?.nome || t('people.deleteFallbackName') })}
+        confirmText={t('people.deleteConfirm')}
         cancelText={t('actions.cancel')}
         variant="destructive"
         loading={deleting}
@@ -568,9 +574,9 @@ export default function PessoasList() {
         open={bulkDeleteDialogOpen}
         onOpenChange={setBulkDeleteDialogOpen}
         onConfirm={handleBulkDeleteConfirm}
-        title="Excluir em lote"
-        description={`Tem certeza que deseja excluir ${selectedIds.size} pessoa(s) selecionada(s)? Esta ação não pode ser desfeita.`}
-        confirmText="Excluir"
+        title={t('people.bulkDeleteTitle')}
+        description={t('people.bulkDeleteDescription', { count: selectedIds.size })}
+        confirmText={t('people.deleteConfirm')}
         cancelText={t('actions.cancel')}
         variant="destructive"
         loading={bulkDeleting}

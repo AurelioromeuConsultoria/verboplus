@@ -15,7 +15,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { formatDateTimeBr } from '@/lib/formatters';
+import { formatDateTime } from '@/lib/formatters';
 import { useTranslation } from 'react-i18next';
 
 const STATUS_LABELS = (t) => ({
@@ -62,7 +62,7 @@ export default function InscricoesEventosList() {
       setItems(inscricoesRes.data || []);
       setEventos(eventosRes.data || []);
     } catch (err) {
-      setError(t('eventRegistrations.errorLoad', 'Erro ao carregar inscrições'));
+      setError(t('eventRegistrations.errorLoad'));
       console.error(err);
     } finally {
       if (silent) {
@@ -84,10 +84,10 @@ export default function InscricoesEventosList() {
   const handleConfirmar = async (id) => {
     try {
       await inscricoesEventosApi.confirmar(id);
-      toast.success(t('eventRegistrations.confirmSuccess', 'Inscrição confirmada!'));
+      toast.success(t('eventRegistrations.confirmSuccess'));
       await load();
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao confirmar inscrição'));
+      toast.error(getApiErrorMessage(err, t('eventRegistrations.errorConfirm')));
     }
   };
 
@@ -102,10 +102,10 @@ export default function InscricoesEventosList() {
       setConfirmLoading(true);
       if (action === 'delete') {
         await inscricoesEventosApi.delete(id);
-        toast.success('Inscrição excluída!');
+        toast.success(t('eventRegistrations.deleteSuccess'));
       } else if (action === 'cancel') {
         await inscricoesEventosApi.cancelar(id);
-        toast.success('Inscrição cancelada!');
+        toast.success(t('eventRegistrations.cancelSuccess'));
       }
       setConfirmState({ open: false, action: null, id: null });
       await load();
@@ -113,7 +113,7 @@ export default function InscricoesEventosList() {
       toast.error(
         getApiErrorMessage(
           err,
-          action === 'delete' ? 'Erro ao excluir inscrição' : 'Erro ao cancelar inscrição'
+          action === 'delete' ? t('eventRegistrations.errorDelete') : t('eventRegistrations.errorCancel')
         )
       );
     } finally {
@@ -130,7 +130,7 @@ export default function InscricoesEventosList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text={t('eventRegistrations.loading', 'Carregando inscrições...')} />;
+  if (loading) return <LoadingPage text={t('eventRegistrations.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -192,7 +192,7 @@ export default function InscricoesEventosList() {
           {filtered.length === 0 ? (
             <PageEmptyState
               title={t('eventRegistrations.emptyMessage')}
-              description="Ajuste os filtros para ampliar o resultado ou aguarde novas inscrições."
+              description={t('eventRegistrations.emptyDescription')}
             />
           ) : (
             <Table>
@@ -252,7 +252,7 @@ export default function InscricoesEventosList() {
                         {inscricao.quantidadeAcompanhantes || 0}
                       </div>
                     </TableCell>
-                    <TableCell>{formatDateTimeBr(inscricao.dataInscricao)}</TableCell>
+                    <TableCell>{formatDateTime(inscricao.dataInscricao)}</TableCell>
                     <TableCell className="text-right">
                       <TableRowActions className="space-x-1">
                         <RowIconLinkAction>
@@ -261,12 +261,12 @@ export default function InscricoesEventosList() {
                           </Link>
                         </RowIconLinkAction>
                         {inscricao.status === 1 && (
-                          <RowIconButtonAction onClick={() => handleConfirmar(inscricao.id)} title="Confirmar">
+                          <RowIconButtonAction onClick={() => handleConfirmar(inscricao.id)} title={t('eventRegistrations.confirmAction')}>
                             <CheckCircle className="h-4 w-4 text-green-600" />
                           </RowIconButtonAction>
                         )}
                         {(inscricao.status === 1 || inscricao.status === 2) && (
-                          <RowIconButtonAction onClick={() => handleCancelar(inscricao.id)} title="Cancelar">
+                          <RowIconButtonAction onClick={() => handleCancelar(inscricao.id)} title={t('eventRegistrations.cancelAction')}>
                             <XCircle className="h-4 w-4 text-red-600" />
                           </RowIconButtonAction>
                         )}
@@ -306,19 +306,25 @@ export default function InscricoesEventosList() {
         onConfirm={runConfirmedAction}
         loading={confirmLoading}
         variant={confirmState.action === 'delete' ? 'destructive' : 'default'}
-        title={confirmState.action === 'delete' ? 'Excluir inscrição?' : 'Cancelar inscrição?'}
+        title={
+          confirmState.action === 'delete'
+            ? t('eventRegistrations.confirmDialog.deleteTitle')
+            : t('eventRegistrations.confirmDialog.cancelTitle')
+        }
         description={
           confirmState.action === 'delete'
-            ? 'Essa ação não pode ser desfeita.'
-            : 'A inscrição ficará com status cancelada.'
+            ? t('eventRegistrations.confirmDialog.deleteDescription')
+            : t('eventRegistrations.confirmDialog.cancelDescription')
         }
-        confirmText={confirmState.action === 'delete' ? 'Excluir' : 'Cancelar'}
+        confirmText={
+          confirmState.action === 'delete'
+            ? t('eventRegistrations.confirmDialog.confirmDelete')
+            : t('eventRegistrations.confirmDialog.confirmCancel')
+        }
       />
     </div>
   );
 }
-
-
 
 
 

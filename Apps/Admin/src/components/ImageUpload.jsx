@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon, Video, Music, FileText, File, Eye, ExternalLink, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -15,14 +16,6 @@ const FILE_TYPE_ICONS = {
   audio: Music,
   pdf: FileText,
   file: File,
-};
-
-const FILE_TYPE_LABELS = {
-  image: 'Imagem',
-  video: 'Vídeo',
-  audio: 'Áudio',
-  pdf: 'PDF',
-  file: 'Arquivo',
 };
 
 function detectFileType(url, accept, type) {
@@ -50,8 +43,16 @@ function getFileTypeIcon(fileType) {
   return FILE_TYPE_ICONS[fileType] || File;
 }
 
-function getFileTypeLabel(fileType) {
-  return FILE_TYPE_LABELS[fileType] || 'Arquivo';
+function getFileTypeLabel(fileType, t) {
+  const labels = {
+    image: t('imageUpload.fileTypes.image'),
+    video: t('imageUpload.fileTypes.video'),
+    audio: t('imageUpload.fileTypes.audio'),
+    pdf: t('imageUpload.fileTypes.pdf'),
+    file: t('imageUpload.fileTypes.file'),
+  };
+
+  return labels[fileType] || labels.file;
 }
 
 function getUploadEndpoint(fileType) {
@@ -72,13 +73,14 @@ export function ImageUpload({
   required = false,
   type = 'auto',
 }) {
+  const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputRef = useRef(null);
   
   const fileType = detectFileType(value, accept, type);
   const FileIcon = getFileTypeIcon(fileType);
-  const fileTypeLabel = getFileTypeLabel(fileType);
+  const fileTypeLabel = getFileTypeLabel(fileType, t);
   const absoluteUrl = value ? getAbsoluteUrl(value) : null;
   
   const handleFileSelect = async (e) => {
@@ -87,7 +89,7 @@ export function ImageUpload({
     
     // Validar tamanho
     if (file.size > MAX_FILE_SIZE) {
-      toast.error(`Arquivo muito grande. Máximo: 500MB`);
+      toast.error(t('imageUpload.fileTooLarge', { size: '500MB' }));
       return;
     }
     
@@ -99,7 +101,7 @@ export function ImageUpload({
       }
       return file.type.match(new RegExp(trimmed.replace('*', '.*')));
     })) {
-      toast.error(`Tipo de arquivo não permitido. Aceitos: ${accept}`);
+      toast.error(t('imageUpload.fileTypeNotAllowed', { accept }));
       return;
     }
     
@@ -118,9 +120,9 @@ export function ImageUpload({
       // A API pode retornar url, path ou o próprio caminho como string
       const uploadedUrl = response.data?.url || response.data?.path || response.data || '';
       onChange(uploadedUrl);
-      toast.success(`${fileTypeLabel} enviado com sucesso!`);
+      toast.success(t('imageUpload.uploadSuccess', { fileType: fileTypeLabel }));
     } catch (error) {
-      const errorMessage = error.response?.data?.message || `Erro ao fazer upload do ${fileTypeLabel.toLowerCase()}`;
+      const errorMessage = error.response?.data?.message || t('imageUpload.uploadError', { fileType: fileTypeLabel.toLowerCase() });
       toast.error(errorMessage);
       console.error(error);
     } finally {
@@ -151,7 +153,7 @@ export function ImageUpload({
         return (
           <img
             src={absoluteUrl}
-            alt="Preview"
+            alt={t('imageUpload.previewAlt')}
             className="rounded object-cover border"
             style={{ width: size, height: size }}
             onError={(e) => {
@@ -194,7 +196,7 @@ export function ImageUpload({
         return (
           <img
             src={absoluteUrl}
-            alt="Visualização"
+            alt={t('imageUpload.previewTitle', { fileType: fileTypeLabel })}
             className="max-h-[80vh] w-auto mx-auto rounded"
           />
         );
@@ -205,14 +207,14 @@ export function ImageUpload({
             controls
             className="max-h-[80vh] w-full rounded"
           >
-            Seu navegador não suporta vídeo.
+            {t('imageUpload.browserNotSupportVideo')}
           </video>
         );
       case 'audio':
         return (
           <div className="p-8">
             <audio src={absoluteUrl} controls className="w-full">
-              Seu navegador não suporta áudio.
+              {t('imageUpload.browserNotSupportAudio')}
             </audio>
           </div>
         );
@@ -221,17 +223,17 @@ export function ImageUpload({
           <iframe
             src={absoluteUrl}
             className="w-full h-[80vh] rounded border"
-            title="Visualização PDF"
+            title={t('imageUpload.pdfTitle')}
           />
         );
       default:
         return (
           <div className="p-8 text-center">
             <File className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">Visualização não disponível</p>
+            <p className="text-muted-foreground">{t('imageUpload.previewUnavailable')}</p>
             <Button onClick={handleOpenUrl} className="mt-4" variant="outline">
               <ExternalLink className="h-4 w-4 mr-2" />
-              Abrir URL
+              {t('imageUpload.openUrl')}
             </Button>
           </div>
         );
@@ -274,12 +276,12 @@ export function ImageUpload({
               {uploading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Enviando...
+                  {t('imageUpload.uploading')}
                 </>
               ) : (
                 <>
                   <Upload className="h-4 w-4 mr-2" />
-                  {absoluteUrl ? 'Substituir' : `Enviar ${fileTypeLabel}`}
+                  {absoluteUrl ? t('imageUpload.replace') : t('imageUpload.upload', { fileType: fileTypeLabel })}
                 </>
               )}
             </Button>
@@ -292,7 +294,7 @@ export function ImageUpload({
                   onClick={() => setPreviewOpen(true)}
                 >
                   <Eye className="h-4 w-4 mr-2" />
-                  Ver {fileTypeLabel}
+                  {t('imageUpload.view', { fileType: fileTypeLabel })}
                 </Button>
                 
                 <Button
@@ -301,7 +303,7 @@ export function ImageUpload({
                   onClick={handleOpenUrl}
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  Abrir URL
+                  {t('imageUpload.openUrl')}
                 </Button>
                 
                 <Button
@@ -311,7 +313,7 @@ export function ImageUpload({
                   disabled={uploading}
                 >
                   <X className="h-4 w-4 mr-2" />
-                  Remover
+                  {t('imageUpload.remove')}
                 </Button>
               </>
             )}
@@ -328,7 +330,7 @@ export function ImageUpload({
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Visualizar {fileTypeLabel}</DialogTitle>
+            <DialogTitle>{t('imageUpload.previewDialogTitle', { fileType: fileTypeLabel })}</DialogTitle>
           </DialogHeader>
           <div className="flex justify-center items-center min-h-[200px]">
             {renderModalContent()}

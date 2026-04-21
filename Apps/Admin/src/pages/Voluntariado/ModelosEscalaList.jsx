@@ -12,8 +12,10 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { escalasModelosApi, equipesApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function ModelosEscalaList() {
+  const { t } = useTranslation();
   const [equipes, setEquipes] = useState([]);
   const [equipeId, setEquipeId] = useState('');
   const [modelos, setModelos] = useState([]);
@@ -31,7 +33,7 @@ export default function ModelosEscalaList() {
       setEquipes(res.data || []);
       if (res.data?.length && !equipeId) setEquipeId(String(res.data[0].id));
     } catch (err) {
-      setError('Erro ao carregar equipes');
+      setError(t('volunteer.schedules.models.errorLoadTeams'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -53,7 +55,7 @@ export default function ModelosEscalaList() {
       setModelos(res.data || []);
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao carregar modelos');
+      toast.error(t('volunteer.schedules.models.errorLoadModels'));
       setModelos([]);
     } finally {
       if (silent) {
@@ -74,55 +76,58 @@ export default function ModelosEscalaList() {
 
   const handleDelete = async (modelo) => {
     confirmDialog.show({
-      title: 'Excluir modelo de escala',
-      description: `Excluir o modelo "${modelo.nome || (modelo.eventoNome ? modelo.eventoNome : 'Sem nome')}" da equipe ${modelo.equipeNome}?`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('volunteer.schedules.models.deleteTitle'),
+      description: t('volunteer.schedules.models.deleteDescription', {
+        name: modelo.nome || modelo.eventoNome || t('volunteer.schedules.models.noName'),
+        team: modelo.equipeNome,
+      }),
+      confirmText: t('volunteer.schedules.models.deleteConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await escalasModelosApi.delete(modelo.id);
-          toast.success('Modelo excluído');
+          toast.success(t('volunteer.schedules.models.deleteSuccess'));
           await loadModelos();
         } catch (err) {
-          const msg = err.response?.data?.message || err.response?.data || 'Erro ao excluir';
-          toast.error(typeof msg === 'string' ? msg : 'Erro ao excluir');
+          const msg = err.response?.data?.message || err.response?.data || t('volunteer.schedules.models.deleteError');
+          toast.error(typeof msg === 'string' ? msg : t('volunteer.schedules.models.deleteError'));
           throw err;
         }
       },
     });
   };
 
-  if (loading) return <LoadingPage text="Carregando equipes..." />;
+  if (loading) return <LoadingPage text={t('volunteer.schedules.models.loadingTeams')} />;
   if (error) return <ErrorPage message={error} onRetry={loadEquipes} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Modelos de Escala</h1>
+          <h1 className="text-3xl font-bold">{t('volunteer.schedules.models.title')}</h1>
           <p className="text-muted-foreground">
-            Defina quantas pessoas (por cargo) cada equipe precisa por evento. Usado no &quot;Preencher automaticamente&quot;.
+            {t('volunteer.schedules.models.subtitle')}
           </p>
         </div>
         <Button asChild>
           <Link to={equipeId ? `/voluntariado/modelos-escala/novo?equipeId=${equipeId}` : '/voluntariado/modelos-escala/novo'}>
-            <Plus className="h-4 w-4 mr-2" /> Novo modelo
+            <Plus className="h-4 w-4 mr-2" /> {t('volunteer.schedules.models.new')}
           </Link>
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtrar por equipe</CardTitle>
+          <CardTitle>{t('volunteer.schedules.models.filterByTeam')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Select value={equipeId || 'all'} onValueChange={(v) => setEquipeId(v === 'all' ? '' : v)}>
             <SelectTrigger className="max-w-xs">
-              <SelectValue placeholder="Selecione a equipe" />
+              <SelectValue placeholder={t('volunteer.schedules.models.selectTeam')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="all">{t('volunteer.schedules.models.allTeams')}</SelectItem>
               {equipes.map((e) => (
                 <SelectItem key={e.id} value={String(e.id)}>{e.nome}</SelectItem>
               ))}
@@ -134,7 +139,7 @@ export default function ModelosEscalaList() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
-            <CardTitle>Modelos {equipeId ? `— ${equipes.find((e) => String(e.id) === equipeId)?.nome || ''}` : ''}</CardTitle>
+            <CardTitle>{t('volunteer.schedules.models.listTitle', { team: equipeId ? `— ${equipes.find((e) => String(e.id) === equipeId)?.nome || ''}` : '' })}</CardTitle>
             {equipeId ? (
               <PageRefreshButton onClick={() => loadModelos({ silent: true })} refreshing={refreshingModelos} />
             ) : null}
@@ -143,19 +148,19 @@ export default function ModelosEscalaList() {
         <CardContent>
           {!equipeId ? (
             <PageEmptyState
-              title="Selecione uma equipe para listar os modelos."
-              description="Os modelos de escala são organizados por equipe."
+              title={t('volunteer.schedules.models.emptySelectTitle')}
+              description={t('volunteer.schedules.models.emptySelectDescription')}
             />
           ) : loadingModelos ? (
-            <LoadingPage text="Carregando modelos..." />
+            <LoadingPage text={t('volunteer.schedules.models.loadingModels')} />
           ) : !modelos.length ? (
             <PageEmptyState
-              title="Nenhum modelo para esta equipe."
-              description="Crie um modelo para usar o preenchimento automático."
+              title={t('volunteer.schedules.models.emptyTitle')}
+              description={t('volunteer.schedules.models.emptyDescription')}
               action={(
                 <Button asChild>
                   <Link to={equipeId ? `/voluntariado/modelos-escala/novo?equipeId=${equipeId}` : '/voluntariado/modelos-escala/novo'}>
-                    <Plus className="h-4 w-4 mr-2" /> Novo modelo
+                    <Plus className="h-4 w-4 mr-2" /> {t('volunteer.schedules.models.new')}
                   </Link>
                 </Button>
               )}
@@ -164,24 +169,24 @@ export default function ModelosEscalaList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Evento</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Equipe</TableHead>
-                  <TableHead>Dias folga</TableHead>
-                  <TableHead>Itens (cargo × qtd)</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('volunteer.schedules.models.table.event')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.models.table.name')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.models.table.team')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.models.table.daysOff')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.models.table.items')}</TableHead>
+                  <TableHead className="text-right">{t('volunteer.schedules.models.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {modelos.map((m) => (
                   <TableRow key={m.id}>
-                    <TableCell>{m.eventoNome ?? 'Padrão (qualquer evento)'}</TableCell>
+                    <TableCell>{m.eventoNome ?? t('volunteer.schedules.models.defaultAnyEvent')}</TableCell>
                     <TableCell>{m.nome || '-'}</TableCell>
                     <TableCell>{m.equipeNome}</TableCell>
                     <TableCell>{m.diasFolgaAposEscala ?? '-'}</TableCell>
                     <TableCell>
                       {m.itens?.length
-                        ? m.itens.map((i) => `${i.cargoNome || 'Qualquer'} × ${i.quantidade}`).join(', ')
+                        ? m.itens.map((i) => `${i.cargoNome || t('volunteer.schedules.models.anyRole')} × ${i.quantidade}`).join(', ')
                         : '-'}
                     </TableCell>
                     <TableCell className="text-right">

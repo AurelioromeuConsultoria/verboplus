@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { galeriasFotosApi } from '@/lib/api';
+import { formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { UPLOADS_BASE_URL } from '@/lib/env';
@@ -248,7 +249,7 @@ export default function GaleriaFotos() {
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <label className="text-sm font-medium text-muted-foreground">{t('photoGalleries.date')}</label>
-              <p className="text-base">{galeria?.data ? new Date(galeria.data).toLocaleDateString('pt-BR') : '-'}</p>
+              <p className="text-base">{galeria?.data ? formatDate(galeria.data) : '-'}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">{t('photoGalleries.quantityPhotos')}</label>
@@ -483,4 +484,3 @@ export default function GaleriaFotos() {
     </div>
   );
 }
-

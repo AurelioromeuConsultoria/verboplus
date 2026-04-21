@@ -10,8 +10,10 @@ import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { comunicacaoSegmentosApi } from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function ComunicacaoSegmentosList() {
+  const { t } = useTranslation();
   const [segmentos, setSegmentos] = useState([]);
   const [estimativas, setEstimativas] = useState({});
   const [loading, setLoading] = useState(true);
@@ -39,7 +41,7 @@ export default function ComunicacaoSegmentosList() {
 
       setEstimativas(Object.fromEntries(estimativasEntries));
     } catch (err) {
-      const msg = getApiErrorMessage(err, 'Erro ao carregar segmentos');
+      const msg = getApiErrorMessage(err, t('communicationSegmentsManagement.errorLoad'));
       setError(msg);
       toast.error(msg);
     } finally {
@@ -52,26 +54,26 @@ export default function ComunicacaoSegmentosList() {
     load();
   }, [load]);
 
-  if (loading) return <LoadingPage text="Carregando segmentos..." />;
+  if (loading) return <LoadingPage text={t('communicationSegmentsManagement.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Segmentos de Comunicação</h1>
-          <p className="text-muted-foreground mt-1">Salve públicos prioritários e entenda a audiência prevista antes do disparo.</p>
+          <h1 className="text-3xl font-bold text-foreground">{t('communicationSegmentsManagement.title')}</h1>
+          <p className="text-muted-foreground mt-1">{t('communicationSegmentsManagement.subtitle')}</p>
         </div>
 
         <div className="flex items-center gap-2">
           <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
           <Button variant="outline" asChild>
-            <Link to="/comunicacao/campanhas">Campanhas</Link>
+            <Link to="/comunicacao/campanhas">{t('communicationSegmentsManagement.actions.campaigns')}</Link>
           </Button>
           <Button asChild>
             <Link to="/comunicacao/segmentos/novo">
               <Plus className="w-4 h-4 mr-2" />
-              Novo Segmento
+              {t('communicationSegmentsManagement.actions.new')}
             </Link>
           </Button>
         </div>
@@ -79,9 +81,9 @@ export default function ComunicacaoSegmentosList() {
 
       {segmentos.length === 0 ? (
         <PageEmptyState
-          title="Nenhum segmento cadastrado"
-          description="Crie segmentos básicos para reutilizar públicos prioritários do módulo."
-          action={<Button asChild><Link to="/comunicacao/segmentos/novo">Criar segmento</Link></Button>}
+          title={t('communicationSegmentsManagement.emptyTitle')}
+          description={t('communicationSegmentsManagement.emptyDescription')}
+          action={<Button asChild><Link to="/comunicacao/segmentos/novo">{t('communicationSegmentsManagement.actions.createFirst')}</Link></Button>}
         />
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -97,33 +99,35 @@ export default function ComunicacaoSegmentosList() {
                       <p className="text-sm text-muted-foreground">{segmento.descricao || segmento.publicoAlvo}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      {segmento.padrao && <Badge variant="secondary">Padrão</Badge>}
-                      <Badge variant={segmento.ativo ? 'outline' : 'destructive'}>{segmento.ativo ? 'Ativo' : 'Inativo'}</Badge>
+                      {segmento.padrao && <Badge variant="secondary">{t('communicationSegmentsManagement.badges.default')}</Badge>}
+                      <Badge variant={segmento.ativo ? 'outline' : 'destructive'}>
+                        {segmento.ativo ? t('communicationSegmentsManagement.badges.active') : t('communicationSegmentsManagement.badges.inactive')}
+                      </Badge>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                     <div className="rounded-lg border border-border p-3">
-                      <div className="flex items-center gap-2 text-muted-foreground"><Users className="w-4 h-4" /> Total</div>
+                      <div className="flex items-center gap-2 text-muted-foreground"><Users className="w-4 h-4" /> {t('communicationSegmentsManagement.stats.total')}</div>
                       <div className="text-xl font-semibold mt-1">{estimativa?.totalDestinatarios ?? '-'}</div>
                     </div>
                     <div className="rounded-lg border border-border p-3">
-                      <div className="text-muted-foreground">WhatsApp</div>
+                      <div className="text-muted-foreground">{t('communicationSegmentsManagement.stats.whatsApp')}</div>
                       <div className="text-xl font-semibold mt-1">{estimativa?.comWhatsApp ?? '-'}</div>
                     </div>
                     <div className="rounded-lg border border-border p-3">
-                      <div className="text-muted-foreground">E-mail</div>
+                      <div className="text-muted-foreground">{t('communicationSegmentsManagement.stats.email')}</div>
                       <div className="text-xl font-semibold mt-1">{estimativa?.comEmail ?? '-'}</div>
                     </div>
                     <div className="rounded-lg border border-border p-3">
-                      <div className="flex items-center gap-2 text-muted-foreground"><MessageSquareMore className="w-4 h-4" /> Contextual</div>
+                      <div className="flex items-center gap-2 text-muted-foreground"><MessageSquareMore className="w-4 h-4" /> {t('communicationSegmentsManagement.stats.contextual')}</div>
                       <div className="text-xl font-semibold mt-1">{estimativa ? estimativa.comPush + estimativa.comNotificacaoInterna : '-'}</div>
                     </div>
                   </div>
 
                   <div className="flex justify-end">
                     <Button variant="outline" size="sm" asChild>
-                      <Link to={`/comunicacao/segmentos/${segmento.id}/editar`}>Editar</Link>
+                      <Link to={`/comunicacao/segmentos/${segmento.id}/editar`}>{t('actions.edit')}</Link>
                     </Button>
                   </div>
                 </CardContent>

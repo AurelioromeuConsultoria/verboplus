@@ -10,12 +10,6 @@ import { usuariosApi, perfisAcessoApi, pessoasApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
-const TIPO_USUARIO_OPTIONS = [
-  { value: 1, label: 'Administrador' },
-  { value: 2, label: 'Portal' },
-  { value: 3, label: 'Ambos' },
-];
-
 export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = null }) {
   const isEditing = Boolean(id);
   const { t } = useTranslation();
@@ -84,7 +78,7 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
         }));
       }
     } catch (err) {
-      setError('Erro ao carregar usuário');
+      setError(t('usersManagement.form.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -111,44 +105,44 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
     e.preventDefault();
 
     if (!isEditing && formData.modoPessoa === 'existente' && !formData.pessoaId) {
-      toast.error('Selecione uma pessoa');
+      toast.error(t('usersManagement.form.validation.selectPerson'));
       return;
     }
 
     if (!isEditing && formData.modoPessoa === 'nova') {
       if (!formData.nome.trim()) {
-        toast.error('Nome é obrigatório');
+        toast.error(t('usersManagement.form.validation.nameRequired'));
         return;
       }
 
       if (!formData.email.trim()) {
-        toast.error('Email é obrigatório');
+        toast.error(t('usersManagement.form.validation.emailRequired'));
         return;
       }
 
       if (!/.+@.+\..+/.test(formData.email)) {
-        toast.error('Email inválido');
+        toast.error(t('usersManagement.form.validation.emailInvalid'));
         return;
       }
     }
 
     if (!isEditing && !formData.senha) {
-      toast.error('Senha é obrigatória');
+      toast.error(t('usersManagement.form.validation.passwordRequired'));
       return;
     }
 
     if (!isEditing && formData.senha.length < 6) {
-      toast.error('Senha deve ter no mínimo 6 caracteres');
+      toast.error(t('usersManagement.form.validation.passwordMin'));
       return;
     }
 
     if (!isEditing && formData.senha !== formData.confirmarSenha) {
-      toast.error('As senhas não coincidem');
+      toast.error(t('usersManagement.form.validation.passwordMismatch'));
       return;
     }
 
     if (!formData.perfilAcessoId) {
-      toast.error('Perfil de acesso é obrigatório');
+      toast.error(t('usersManagement.form.validation.profileRequired'));
       return;
     }
 
@@ -162,7 +156,7 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
           ativo: formData.ativo,
           perfilAcessoId: Number(formData.perfilAcessoId),
         });
-        toast.success('Usuário atualizado com sucesso');
+        toast.success(t('usersManagement.form.updateSuccess'));
       } else {
         await usuariosApi.create({
           pessoaId: formData.modoPessoa === 'existente' ? Number(formData.pessoaId) : null,
@@ -172,13 +166,13 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
           tipoUsuario: formData.tipoUsuario,
           perfilAcessoId: Number(formData.perfilAcessoId),
         });
-        toast.success('Usuário criado com sucesso');
+        toast.success(t('usersManagement.form.createSuccess'));
       }
       if (onSuccess) onSuccess();
     } catch (err) {
       const errorMessage = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || 'Erro ao salvar usuário');
+        : (err.response?.data?.message || t('usersManagement.form.saveError'));
       toast.error(errorMessage);
       console.error(err);
     } finally {
@@ -186,14 +180,20 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
     }
   };
 
-  if (loading && isEditing && !formData.nome) return <LoadingPage text="Carregando usuário..." />;
+  const userTypeOptions = [
+    { value: 1, label: t('usersManagement.userTypes.administrator') },
+    { value: 2, label: t('usersManagement.userTypes.portal') },
+    { value: 3, label: t('usersManagement.userTypes.both') },
+  ];
+
+  if (loading && isEditing && !formData.nome) return <LoadingPage text={t('usersManagement.form.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{isEditing ? 'Editar Usuário' : 'Novo Usuário'}</CardTitle>
+          <CardTitle>{isEditing ? t('usersManagement.form.editTitle') : t('usersManagement.form.createTitle')}</CardTitle>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -202,7 +202,7 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isEditing && (
               <div className="space-y-2">
-                <Label htmlFor="modoPessoa">Vínculo com Pessoa *</Label>
+                <Label htmlFor="modoPessoa">{t('usersManagement.form.linkMode')} *</Label>
                 <select
                   id="modoPessoa"
                   name="modoPessoa"
@@ -210,15 +210,15 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
                   onChange={handleChange}
                   className="w-full px-3 py-2 border rounded"
                 >
-                  <option value="existente">Usar pessoa existente</option>
-                  <option value="nova">Criar nova pessoa</option>
+                  <option value="existente">{t('usersManagement.form.linkModeExisting')}</option>
+                  <option value="nova">{t('usersManagement.form.linkModeNew')}</option>
                 </select>
               </div>
             )}
 
             {!isEditing && formData.modoPessoa === 'existente' && (
               <div className="space-y-2">
-                <Label htmlFor="pessoaId">Pessoa *</Label>
+                <Label htmlFor="pessoaId">{t('usersManagement.form.person')} *</Label>
                 <select
                   id="pessoaId"
                   name="pessoaId"
@@ -227,7 +227,7 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
                   className="w-full px-3 py-2 border rounded"
                   required
                 >
-                  <option value="">Selecione</option>
+                  <option value="">{t('actions.select')}</option>
                   {pessoas.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.nome} {p.email ? `(${p.email})` : ''}
@@ -236,7 +236,7 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
                 </select>
                 {pessoaSelecionada && (
                   <p className="text-xs text-muted-foreground">
-                    Será criado acesso para: {pessoaSelecionada.nome}
+                    {t('usersManagement.form.personHint', { name: pessoaSelecionada.nome })}
                   </p>
                 )}
               </div>
@@ -245,25 +245,25 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
             {(isEditing || formData.modoPessoa === 'nova') && (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="nome">Nome *</Label>
+                  <Label htmlFor="nome">{t('usersManagement.table.name')} *</Label>
                   <Input
                     id="nome"
                     name="nome"
                     value={formData.nome}
                     onChange={handleChange}
-                    placeholder="Nome completo"
+                    placeholder={t('usersManagement.form.placeholders.name')}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">{t('usersManagement.table.email')} *</Label>
                   <Input
                     id="email"
                     name="email"
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
-                    placeholder="email@exemplo.com"
+                    placeholder={t('usersManagement.form.placeholders.email')}
                     required
                   />
                 </div>
@@ -272,7 +272,7 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="tipoUsuario">Tipo de Usuário *</Label>
+                <Label htmlFor="tipoUsuario">{t('usersManagement.filters.userType')} *</Label>
                 <select
                   id="tipoUsuario"
                   name="tipoUsuario"
@@ -281,7 +281,7 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
                   className="w-full px-3 py-2 border rounded"
                   required
                 >
-                  {TIPO_USUARIO_OPTIONS.map((opt) => (
+                  {userTypeOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
@@ -289,7 +289,7 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="perfilAcessoId">Perfil de Acesso *</Label>
+                <Label htmlFor="perfilAcessoId">{t('usersManagement.form.accessProfile')} *</Label>
                 <select
                   id="perfilAcessoId"
                   name="perfilAcessoId"
@@ -298,7 +298,7 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
                   className="w-full px-3 py-2 border rounded"
                   required
                 >
-                  <option value="">Selecione</option>
+                  <option value="">{t('actions.select')}</option>
                   {perfis.map((p) => (
                     <option key={p.id} value={p.id}>{p.nome}</option>
                   ))}
@@ -314,7 +314,7 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
                     onChange={handleChange}
                     className="h-4 w-4"
                   />
-                  <Label htmlFor="ativo" className="cursor-pointer">Usuário ativo</Label>
+                  <Label htmlFor="ativo" className="cursor-pointer">{t('usersManagement.form.activeUser')}</Label>
                 </div>
               )}
             </div>
@@ -322,27 +322,27 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
             {!isEditing && (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="senha">Senha *</Label>
+                  <Label htmlFor="senha">{t('usersManagement.form.password')} *</Label>
                   <Input
                     id="senha"
                     name="senha"
                     type="password"
                     value={formData.senha}
                     onChange={handleChange}
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder={t('usersManagement.form.placeholders.password')}
                     required={!isEditing}
                     minLength={6}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirmarSenha">Confirmar Senha *</Label>
+                  <Label htmlFor="confirmarSenha">{t('usersManagement.form.confirmPassword')} *</Label>
                   <Input
                     id="confirmarSenha"
                     name="confirmarSenha"
                     type="password"
                     value={formData.confirmarSenha}
                     onChange={handleChange}
-                    placeholder="Confirme a senha"
+                    placeholder={t('usersManagement.form.placeholders.confirmPassword')}
                     required={!isEditing}
                   />
                 </div>
@@ -363,7 +363,6 @@ export default function UsuarioForm({ id, onClose, onSuccess, pessoaIdInicial = 
     </div>
   );
 }
-
 
 
 

@@ -8,7 +8,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AlertTriangle, Trash2, Info } from 'lucide-react';
+import { AlertTriangle, Info } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export function ConfirmDialog({
   open,
@@ -16,11 +17,12 @@ export function ConfirmDialog({
   onConfirm,
   title,
   description,
-  confirmText = 'Confirmar',
-  cancelText = 'Cancelar',
+  confirmText,
+  cancelText,
   variant = 'default',
   loading = false,
 }) {
+  const { t } = useTranslation();
   const handleConfirm = () => {
     onConfirm();
   };
@@ -42,13 +44,13 @@ export function ConfirmDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>{cancelText}</AlertDialogCancel>
+          <AlertDialogCancel disabled={loading}>{cancelText || t('actions.cancel')}</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={loading}
             className={variant === 'destructive' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
           >
-            {loading ? 'Processando...' : confirmText}
+            {loading ? t('confirmDialog.processing') : (confirmText || t('confirmDialog.confirm'))}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

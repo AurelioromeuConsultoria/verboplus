@@ -10,16 +10,10 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { comunicacaoSegmentosApi } from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { toast } from 'sonner';
-
-const publicosOptions = [
-  { value: 'visitantes', label: 'Visitantes' },
-  { value: 'membros', label: 'Membros' },
-  { value: 'voluntarios', label: 'Voluntários' },
-  { value: 'responsaveis-kids', label: 'Responsáveis do Kids' },
-  { value: 'pessoas', label: 'Pessoas' },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function ComunicacaoSegmentoForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
@@ -32,6 +26,14 @@ export default function ComunicacaoSegmentoForm() {
     publicoAlvo: 'visitantes',
     ativo: true,
   });
+
+  const publicosOptions = [
+    { value: 'visitantes', label: t('communicationSegmentsManagement.form.audiences.visitors') },
+    { value: 'membros', label: t('communicationSegmentsManagement.form.audiences.members') },
+    { value: 'voluntarios', label: t('communicationSegmentsManagement.form.audiences.volunteers') },
+    { value: 'responsaveis-kids', label: t('communicationSegmentsManagement.form.audiences.kidsGuardians') },
+    { value: 'pessoas', label: t('communicationSegmentsManagement.form.audiences.people') },
+  ];
 
   useEffect(() => {
     if (!isEditing) return;
@@ -47,7 +49,7 @@ export default function ComunicacaoSegmentoForm() {
           ativo: data.ativo ?? true,
         });
       } catch (err) {
-        setError(getApiErrorMessage(err, 'Erro ao carregar segmento'));
+        setError(getApiErrorMessage(err, t('communicationSegmentsManagement.form.errorLoad')));
       } finally {
         setPageLoading(false);
       }
@@ -60,7 +62,7 @@ export default function ComunicacaoSegmentoForm() {
     e.preventDefault();
 
     if (!formData.nome.trim() || !formData.publicoAlvo.trim()) {
-      toast.error('Preencha nome e público alvo do segmento.');
+      toast.error(t('communicationSegmentsManagement.form.validation.requiredFields'));
       return;
     }
 
@@ -76,16 +78,18 @@ export default function ComunicacaoSegmentoForm() {
       if (isEditing) await comunicacaoSegmentosApi.update(id, payload);
       else await comunicacaoSegmentosApi.create(payload);
 
-      toast.success(isEditing ? 'Segmento atualizado com sucesso.' : 'Segmento criado com sucesso.');
+      toast.success(isEditing
+        ? t('communicationSegmentsManagement.form.updateSuccess')
+        : t('communicationSegmentsManagement.form.createSuccess'));
       navigate('/comunicacao/segmentos');
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao salvar segmento'));
+      toast.error(getApiErrorMessage(err, t('communicationSegmentsManagement.form.errorSave')));
     } finally {
       setLoading(false);
     }
   };
 
-  if (pageLoading) return <LoadingPage text="Carregando segmento..." />;
+  if (pageLoading) return <LoadingPage text={t('communicationSegmentsManagement.form.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={() => window.location.reload()} />;
 
   return (
@@ -97,29 +101,41 @@ export default function ComunicacaoSegmentoForm() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold text-foreground">{isEditing ? 'Editar Segmento' : 'Novo Segmento'}</h1>
-          <p className="text-muted-foreground mt-1">Salve públicos prioritários para reutilizar em campanhas e automações.</p>
+          <h1 className="text-3xl font-bold text-foreground">
+            {isEditing ? t('communicationSegmentsManagement.form.editTitle') : t('communicationSegmentsManagement.form.newTitle')}
+          </h1>
+          <p className="text-muted-foreground mt-1">{t('communicationSegmentsManagement.form.subtitle')}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Dados do segmento</CardTitle>
+          <CardTitle>{t('communicationSegmentsManagement.form.cardTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="nome">Nome</Label>
-              <Input id="nome" value={formData.nome} onChange={(e) => setFormData((prev) => ({ ...prev, nome: e.target.value }))} />
+              <Label htmlFor="nome">{t('communicationSegmentsManagement.form.fields.name')}</Label>
+              <Input
+                id="nome"
+                value={formData.nome}
+                placeholder={t('communicationSegmentsManagement.form.fields.namePlaceholder')}
+                onChange={(e) => setFormData((prev) => ({ ...prev, nome: e.target.value }))}
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição</Label>
-              <Input id="descricao" value={formData.descricao} onChange={(e) => setFormData((prev) => ({ ...prev, descricao: e.target.value }))} />
+              <Label htmlFor="descricao">{t('communicationSegmentsManagement.form.fields.description')}</Label>
+              <Input
+                id="descricao"
+                value={formData.descricao}
+                placeholder={t('communicationSegmentsManagement.form.fields.descriptionPlaceholder')}
+                onChange={(e) => setFormData((prev) => ({ ...prev, descricao: e.target.value }))}
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="publicoAlvo">Público alvo</Label>
+              <Label htmlFor="publicoAlvo">{t('communicationSegmentsManagement.form.fields.targetAudience')}</Label>
               <select id="publicoAlvo" value={formData.publicoAlvo} onChange={(e) => setFormData((prev) => ({ ...prev, publicoAlvo: e.target.value }))} className="w-full rounded-md border border-input bg-background px-3 py-2">
                 {publicosOptions.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
@@ -130,17 +146,17 @@ export default function ComunicacaoSegmentoForm() {
             {isEditing && (
               <label className="flex items-center gap-3 rounded-lg border border-border p-3 cursor-pointer">
                 <input type="checkbox" checked={formData.ativo} onChange={(e) => setFormData((prev) => ({ ...prev, ativo: e.target.checked }))} />
-                <span className="text-sm font-medium">Segmento ativo</span>
+                <span className="text-sm font-medium">{t('communicationSegmentsManagement.form.fields.active')}</span>
               </label>
             )}
 
             <div className="flex justify-end gap-3 pt-4 border-t border-border">
               <Button type="button" variant="outline" asChild>
-                <Link to="/comunicacao/segmentos">Cancelar</Link>
+                <Link to="/comunicacao/segmentos">{t('actions.cancel')}</Link>
               </Button>
               <Button type="submit" disabled={loading}>
                 <Save className="w-4 h-4 mr-2" />
-                {loading ? 'Salvando...' : 'Salvar'}
+                {loading ? t('actions.saving') : t('actions.save')}
               </Button>
             </div>
           </form>

@@ -13,6 +13,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { despesasApi, fornecedoresApi, categoriasDespesasApi, contasBancariasApi, centrosCustosApi, projetosApi } from '@/lib/api';
+import { formatCurrency, formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
@@ -69,15 +70,6 @@ export default function DespesasList() {
         }
       },
     });
-  };
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
   const getStatusLabel = (status) => {
@@ -155,7 +147,7 @@ export default function DespesasList() {
         <CardContent>
           {filtered.length === 0 ? (
             <PageEmptyState
-              title="Nenhuma despesa encontrada"
+              title={t('finance.expenses.emptyTitle', 'Nenhuma despesa encontrada')}
               description={t('finance.expenses.emptyMessage')}
               action={canEdit ? (
                 <Button asChild>

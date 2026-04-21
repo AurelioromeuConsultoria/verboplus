@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Filter, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
-import { formatDateBr } from '@/lib/formatters';
+import { formatDate } from '@/lib/formatters';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
@@ -17,6 +18,7 @@ import { categoriasNoticiasApi } from '@/lib/api';
 import { toast } from 'sonner';
 
 export default function CategoriasNoticiasList() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -37,7 +39,7 @@ export default function CategoriasNoticiasList() {
       const res = await categoriasNoticiasApi.getAll();
       setItems(res.data || []);
     } catch (err) {
-      setError('Erro ao carregar categorias de notícias');
+      setError(t('newsCategories.errorLoad'));
       console.error(err);
     } finally {
       if (silent) {
@@ -53,20 +55,22 @@ export default function CategoriasNoticiasList() {
   }, []);
 
   const handleDelete = async (id) => {
-    const categoria = items.find(c => c.id === id);
+    const categoria = items.find((c) => c.id === id);
     confirmDialog.show({
-      title: 'Excluir Categoria',
-      description: `Tem certeza que deseja excluir "${categoria?.nome || 'esta categoria'}"? Esta ação não pode ser desfeita. Se houver notícias vinculadas, a exclusão será bloqueada.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('newsCategories.deleteTitle'),
+      description: t('newsCategories.deleteDescription', {
+        name: categoria?.nome || t('newsCategories.deleteFallbackName'),
+      }),
+      confirmText: t('newsCategories.deleteConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await categoriasNoticiasApi.delete(id);
-          toast.success('Categoria excluída com sucesso');
+          toast.success(t('newsCategories.deleteSuccess'));
           await load();
         } catch (err) {
-          const errorMsg = err.response?.data?.message || 'Erro ao excluir categoria. Pode haver notícias vinculadas.';
+          const errorMsg = err.response?.data?.message || t('newsCategories.deleteError');
           toast.error(errorMsg);
           console.error(err);
           throw err;
@@ -82,35 +86,35 @@ export default function CategoriasNoticiasList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text="Carregando categorias de notícias..." />;
+  if (loading) return <LoadingPage text={t('newsCategories.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Categorias de Notícias</h1>
-          <p className="text-muted-foreground">Gerencie as categorias de notícias</p>
+          <h1 className="text-3xl font-bold">{t('newsCategories.title')}</h1>
+          <p className="text-muted-foreground">{t('newsCategories.subtitle')}</p>
         </div>
         <Button asChild>
           <Link to="/categorias-noticias/novo">
-            <Plus className="h-4 w-4 mr-2" /> Nova Categoria
+            <Plus className="h-4 w-4 mr-2" /> {t('newsCategories.new')}
           </Link>
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('newsCategories.filtersTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por nome</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('newsCategories.searchLabel')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite o nome da categoria"
+                placeholder={t('newsCategories.searchPlaceholder')}
               />
             </div>
           </div>
@@ -120,19 +124,19 @@ export default function CategoriasNoticiasList() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
-            <CardTitle>Lista de Categorias de Notícias ({total})</CardTitle>
+            <CardTitle>{t('newsCategories.listTitle', { total })}</CardTitle>
             <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
           </div>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
             <PageEmptyState
-              title="Nenhuma categoria encontrada."
-              description="Ajuste os filtros ou crie uma nova categoria de notícia."
+              title={t('newsCategories.emptyTitle')}
+              description={t('newsCategories.emptyDescription')}
               action={(
                 <Button asChild>
                   <Link to="/categorias-noticias/novo">
-                    <Plus className="h-4 w-4 mr-2" /> Nova Categoria
+                    <Plus className="h-4 w-4 mr-2" /> {t('newsCategories.new')}
                   </Link>
                 </Button>
               )}
@@ -141,16 +145,16 @@ export default function CategoriasNoticiasList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Data de Criação</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('newsCategories.table.name')}</TableHead>
+                  <TableHead>{t('newsCategories.table.createdAt')}</TableHead>
+                  <TableHead className="text-right">{t('newsCategories.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedItems.map((categoria) => (
                   <TableRow key={categoria.id}>
                     <TableCell className="font-medium">{categoria.nome}</TableCell>
-                    <TableCell>{formatDateBr(categoria.dataCriacao)}</TableCell>
+                    <TableCell>{formatDate(categoria.dataCriacao)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
                         <Button variant="ghost" size="sm" asChild>
@@ -158,7 +162,7 @@ export default function CategoriasNoticiasList() {
                             <Edit className="h-4 w-4" />
                           </Link>
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(categoria.id)}>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(categoria.id)} title={t('newsCategories.deleteConfirm')}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

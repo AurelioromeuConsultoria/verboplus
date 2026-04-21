@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
 import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '@/lib/formatters';
 
 function getStatusOcorrenciaLabel(status, t) {
   const value = Number(status);
@@ -56,7 +57,7 @@ export default function OcorrenciasList() {
       setEventos(eventosRes.data || []);
     } catch (err) {
       console.error(err);
-      setError(t('events.errorLoad', 'Erro ao carregar eventos'));
+      setError(t('events.errorLoad'));
     }
   };
 
@@ -79,7 +80,7 @@ export default function OcorrenciasList() {
       setOcorrencias(res.data || []);
     } catch (err) {
       console.error(err);
-      setError(t('events.occurrencesErrorLoad', 'Erro ao carregar ocorrências'));
+      setError(t('events.occurrencesErrorLoad'));
     } finally {
       if (silent) {
         setRefreshing(false);
@@ -100,7 +101,7 @@ export default function OcorrenciasList() {
 
   const handleGerarOcorrencias = async () => {
     if (filtroEventoId === 'all') {
-      toast.error('Selecione um evento para gerar ocorrências');
+      toast.error(t('events.occurrencesGenerateSelectEvent'));
       return;
     }
 
@@ -112,25 +113,23 @@ export default function OcorrenciasList() {
       );
       const total = res.data?.totalCriadas ?? 0;
       if (total > 0) {
-        toast.success(`${total} ocorrência(s) criada(s)`);
+        toast.success(t('events.occurrencesGenerateCreated', { count: total }));
         await loadOcorrencias();
       } else {
-        toast.warning(
-          'Nenhuma ocorrência nova foi criada. Verifique se o evento tem recorrências configuradas (Editar evento → Recorrências) e se a vigência cobre o período escolhido.'
-        );
+        toast.warning(t('events.occurrencesGenerateNone'));
         await loadOcorrencias();
       }
     } catch (err) {
       console.error(err);
-      const msg = err.response?.data?.message ?? err.response?.data ?? 'Erro ao gerar ocorrências';
-      toast.error(typeof msg === 'string' ? msg : 'Erro ao gerar ocorrências');
+      const msg = err.response?.data?.message ?? err.response?.data;
+      toast.error(typeof msg === 'string' ? msg : t('events.occurrencesGenerateError'));
     }
   };
 
   const sorted = [...ocorrencias].sort((a, b) => new Date(a.dataHoraInicio) - new Date(b.dataHoraInicio));
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(sorted, 20);
 
-  if (initialLoad) return <LoadingPage text={t('events.occurrencesLoading', 'Carregando ocorrências...')} />;
+  if (initialLoad) return <LoadingPage text={t('events.occurrencesLoading')} />;
   if (error) return <ErrorPage message={error} onRetry={loadOcorrencias} />;
 
   return (
@@ -161,10 +160,10 @@ export default function OcorrenciasList() {
               <Label>{t('events.occurrencesEventLabel')}</Label>
               <Select value={filtroEventoId} onValueChange={setFiltroEventoId}>
                 <SelectTrigger>
-                  <SelectValue placeholder={t('events.occurrencesAllEvents', 'Todos os eventos')} />
+                  <SelectValue placeholder={t('events.occurrencesAllEvents')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t('events.occurrencesAllEvents', 'Todos os eventos')}</SelectItem>
+                  <SelectItem value="all">{t('events.occurrencesAllEvents')}</SelectItem>
                   {eventos.map((evento) => (
                     <SelectItem key={evento.id} value={String(evento.id)}>
                       {evento.titulo}
@@ -192,12 +191,12 @@ export default function OcorrenciasList() {
         <CardContent>
           {loadingOcorrencias ? (
             <div className="text-center py-8 text-muted-foreground">
-              {t('events.occurrencesLoading', 'Carregando ocorrências...')}
+              {t('events.occurrencesLoading')}
             </div>
           ) : sorted.length === 0 ? (
             <PageEmptyState
               title={t('events.occurrencesEmptyMessage')}
-              description="Ajuste o período, selecione um evento específico ou gere novas ocorrências."
+              description={t('events.occurrencesEmptyDescription')}
               action={canEdit ? (
                 <Button onClick={handleGerarOcorrencias}>
                   <PlusCircle className="h-4 w-4 mr-2" />
@@ -223,7 +222,7 @@ export default function OcorrenciasList() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                        {new Date(item.dataHoraInicio).toLocaleString('pt-BR')}
+                        {formatDateTime(item.dataHoraInicio)}
                       </div>
                     </TableCell>
                     <TableCell>{getStatusOcorrenciaLabel(item.status, t)}</TableCell>

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Plus, Mail, MessageSquare, Bell, LayoutTemplate } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,17 +21,18 @@ const getCanalIcon = (canal) => {
   }
 };
 
-const getCanalLabel = (canal) => {
+const getCanalLabel = (canal, t) => {
   switch (Number(canal)) {
-    case 1: return 'WhatsApp';
-    case 2: return 'E-mail';
-    case 3: return 'Push';
-    case 4: return 'Notificação interna';
-    default: return `Canal ${canal}`;
+    case 1: return t('communicationTemplates.channels.whatsapp');
+    case 2: return t('communicationTemplates.channels.email');
+    case 3: return t('communicationTemplates.channels.push');
+    case 4: return t('communicationTemplates.channels.internalNotification');
+    default: return t('communicationTemplates.channels.fallback', { canal });
   }
 };
 
 export default function ComunicacaoTemplatesList() {
+  const { t } = useTranslation();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -44,39 +46,39 @@ export default function ComunicacaoTemplatesList() {
       const response = await comunicacaoTemplatesApi.getAll();
       setTemplates(response.data || []);
     } catch (err) {
-      const msg = getApiErrorMessage(err, 'Erro ao carregar templates');
+      const msg = getApiErrorMessage(err, t('communicationTemplates.errorLoad'));
       setError(msg);
       toast.error(msg);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  if (loading) return <LoadingPage text="Carregando templates..." />;
+  if (loading) return <LoadingPage text={t('communicationTemplates.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Templates de Comunicação</h1>
-          <p className="text-muted-foreground mt-1">Biblioteca inicial de templates reutilizáveis por canal.</p>
+          <h1 className="text-3xl font-bold text-foreground">{t('communicationTemplates.title')}</h1>
+          <p className="text-muted-foreground mt-1">{t('communicationTemplates.subtitle')}</p>
         </div>
 
         <div className="flex items-center gap-2">
           <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
           <Button variant="outline" asChild>
-            <Link to="/comunicacao/campanhas">Campanhas</Link>
+            <Link to="/comunicacao/campanhas">{t('communicationTemplates.actions.campaigns')}</Link>
           </Button>
           <Button asChild>
             <Link to="/comunicacao/templates/novo">
               <Plus className="w-4 h-4 mr-2" />
-              Novo Template
+              {t('communicationTemplates.actions.new')}
             </Link>
           </Button>
         </div>
@@ -84,11 +86,11 @@ export default function ComunicacaoTemplatesList() {
 
       {templates.length === 0 ? (
         <PageEmptyState
-          title="Nenhum template cadastrado"
-          description="Comece criando o primeiro template do módulo de comunicação."
+          title={t('communicationTemplates.emptyTitle')}
+          description={t('communicationTemplates.emptyDescription')}
           action={(
             <Button asChild>
-              <Link to="/comunicacao/templates/novo">Criar template</Link>
+              <Link to="/comunicacao/templates/novo">{t('communicationTemplates.actions.createFirst')}</Link>
             </Button>
           )}
         />
@@ -100,7 +102,7 @@ export default function ComunicacaoTemplatesList() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     {getCanalIcon(template.canal)}
-                    <span className="text-sm">{getCanalLabel(template.canal)}</span>
+                    <span className="text-sm">{getCanalLabel(template.canal, t)}</span>
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-foreground">{template.nome}</h2>
@@ -111,7 +113,7 @@ export default function ComunicacaoTemplatesList() {
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">v{template.versao}</Badge>
                   <Button variant="outline" size="sm" asChild>
-                    <Link to={`/comunicacao/templates/${template.id}/editar`}>Editar</Link>
+                    <Link to={`/comunicacao/templates/${template.id}/editar`}>{t('actions.edit')}</Link>
                   </Button>
                 </div>
               </CardContent>

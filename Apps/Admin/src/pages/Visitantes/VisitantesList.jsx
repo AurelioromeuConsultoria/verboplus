@@ -16,6 +16,7 @@ import { SortableTableHeader } from '@/components/ui/sortable-table-header';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { exportToCSV } from '@/utils/export';
 import { visitantesApi } from '@/lib/api';
+import { formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -67,9 +68,9 @@ export default function VisitantesList() {
       setVisitantes(data.items || []);
       setTotal(Number(data.total || 0));
     } catch (err) {
-      setError('Erro ao carregar visitantes');
+      setError(t('visitors.errorLoad'));
       console.error('Erro ao carregar visitantes:', err);
-      toast.error('Erro ao carregar visitantes');
+      toast.error(t('visitors.errorLoad'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -78,24 +79,24 @@ export default function VisitantesList() {
 
   const handleDelete = async (id) => {
     const visitante = visitantes.find(v => v.id === id);
-    const pessoaNome = visitante?.nome || 'esta visita';
+    const pessoaNome = visitante?.nome || t('visitors.visitFallback');
     const currentPageCount = visitantes.length;
     confirmDialog.show({
-      title: 'Excluir Visita',
-      description: `Tem certeza que deseja excluir a visita de "${pessoaNome}"? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('visitors.deleteTitle'),
+      description: t('visitors.deleteDescription', { name: pessoaNome }),
+      confirmText: t('visitors.deleteConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await visitantesApi.delete(id);
-          toast.success('Visita excluída com sucesso');
+          toast.success(t('visitors.deleteSuccess'));
           await loadVisitantes();
           if (page > 1 && currentPageCount === 1) {
             setPage((p) => Math.max(1, p - 1));
           }
         } catch (err) {
-          toast.error('Erro ao excluir visita');
+          toast.error(t('visitors.deleteError'));
           console.error('Erro ao excluir visita:', err);
           throw err;
         }
@@ -165,12 +166,12 @@ export default function VisitantesList() {
       await loadVisitantes();
       if (page > 1 && visitantes.length === ids.length) setPage((p) => Math.max(1, p - 1));
       if (fail > 0) {
-        toast.warning(`${ok} excluída(s), ${fail} falha(s).`);
+        toast.warning(t('visitors.bulkDeletePartial', { ok, fail }));
       } else {
-        toast.success(`${ok} visita(s) excluída(s) com sucesso`);
+        toast.success(t('visitors.bulkDeleteSuccess', { count: ok }));
       }
     } catch {
-      toast.error('Erro ao excluir em lote');
+      toast.error(t('visitors.bulkDeleteError'));
     } finally {
       setBulkDeleting(false);
     }
@@ -218,19 +219,19 @@ export default function VisitantesList() {
       }
 
       const exportData = all.map(v => ({
-        Nome: v.nome || '',
-        Email: v.email || '',
-        Telefone: v.telefone || '',
-        WhatsApp: v.whatsApp || '',
-        'Data da Visita': v.dataVisita ? new Date(v.dataVisita).toLocaleDateString('pt-BR') : '',
-        Observações: v.observacoes || '',
+        [t('visitors.export.name')]: v.nome || '',
+        [t('visitors.export.email')]: v.email || '',
+        [t('visitors.export.phone')]: v.telefone || '',
+        [t('visitors.export.whatsapp')]: v.whatsApp || '',
+        [t('visitors.export.visitDate')]: v.dataVisita ? formatDate(v.dataVisita) : '',
+        [t('visitors.export.notes')]: v.observacoes || '',
       }));
 
       exportToCSV(exportData, 'visitantes');
-      toast.success('Dados exportados com sucesso!');
+      toast.success(t('visitors.export.success'));
     } catch (err) {
       console.error('Erro ao exportar visitantes:', err);
-      toast.error('Erro ao exportar dados');
+      toast.error(t('visitors.export.error'));
     }
   };
 
@@ -240,7 +241,7 @@ export default function VisitantesList() {
   }, [filters]);
 
   if (loading) {
-    return <LoadingPage text="Carregando visitantes..." />;
+    return <LoadingPage text={t('visitors.loading')} />;
   }
 
   if (error) {
@@ -271,15 +272,15 @@ export default function VisitantesList() {
 
       <AdvancedSearch
         searchFields={[
-          { key: 'nome', label: 'Nome', type: 'text', placeholder: 'Buscar por nome...' },
-          { key: 'email', label: 'Email', type: 'text', placeholder: 'Buscar por email...' },
-          { key: 'telefone', label: 'Telefone', type: 'text', placeholder: 'Buscar por telefone...' },
-          { key: 'whatsApp', label: 'WhatsApp', type: 'text', placeholder: 'Buscar por WhatsApp...' },
+          { key: 'nome', label: t('visitors.search.name'), type: 'text', placeholder: t('visitors.search.namePlaceholder') },
+          { key: 'email', label: t('visitors.search.email'), type: 'text', placeholder: t('visitors.search.emailPlaceholder') },
+          { key: 'telefone', label: t('visitors.search.phone'), type: 'text', placeholder: t('visitors.search.phonePlaceholder') },
+          { key: 'whatsApp', label: t('visitors.search.whatsapp'), type: 'text', placeholder: t('visitors.search.whatsappPlaceholder') },
         ]}
         filterFields={[
           {
             key: 'dataVisita',
-            label: 'Data da Visita',
+            label: t('visitors.search.visitDate'),
             type: 'date-range',
           },
         ]}
@@ -304,7 +305,7 @@ export default function VisitantesList() {
             {total > 0 && (
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
-                Exportar CSV
+                {t('visitors.export.button')}
               </Button>
             )}
           </div>
@@ -313,22 +314,22 @@ export default function VisitantesList() {
           {selectedIds.size > 0 && (
             <div className="flex items-center justify-between rounded-md border bg-muted/50 px-4 py-2 mb-4">
               <span className="text-sm font-medium">
-                {selectedIds.size} selecionada(s)
+                {t('visitors.selectedCount', { count: selectedIds.size })}
               </span>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
-                  Limpar seleção
+                  {t('visitors.clearSelection')}
                 </Button>
                 <Button variant="destructive" size="sm" onClick={handleBulkDeleteClick}>
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir selecionadas
+                  {t('visitors.deleteSelected')}
                 </Button>
               </div>
             </div>
           )}
           {visitantes.length === 0 ? (
             <PageEmptyState
-              title="Nenhum visitante encontrado"
+              title={t('visitors.emptyTitle')}
               description={total === 0 ? t('visitors.emptyMessage') : t('visitors.emptyPageMessage')}
               action={total === 0 && isAdmin ? (
                 <Button asChild>
@@ -347,19 +348,19 @@ export default function VisitantesList() {
                     <Checkbox
                       checked={allPageSelected}
                       onCheckedChange={toggleSelectAll}
-                      aria-label="Selecionar todas"
+                      aria-label={t('visitors.selectAll')}
                     />
                   </TableHead>
                   <SortableTableHeader field="dataVisita" onSort={handleSort} sortConfig={sortConfig}>
-                    Data da Visita
+                    {t('visitors.table.visitDate')}
                   </SortableTableHeader>
                   <SortableTableHeader field="nome" onSort={handleSort} sortConfig={sortConfig}>
-                    Pessoa
+                    {t('visitors.table.person')}
                   </SortableTableHeader>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Observações</TableHead>
-                  <TableHead>Perfis</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('visitors.table.contact')}</TableHead>
+                  <TableHead>{t('visitors.table.notes')}</TableHead>
+                  <TableHead>{t('visitors.table.profiles')}</TableHead>
+                  <TableHead className="text-right">{t('visitors.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -373,11 +374,11 @@ export default function VisitantesList() {
                         <Checkbox
                           checked={selectedIds.has(visitante.id)}
                           onCheckedChange={() => toggleSelect(visitante.id)}
-                          aria-label={`Selecionar ${visitante.nome || 'visita'}`}
+                          aria-label={t('visitors.selectOne', { name: visitante.nome || t('visitors.visitFallback') })}
                         />
                       </TableCell>
                       <TableCell>
-                        {visitante.dataVisita ? new Date(visitante.dataVisita).toLocaleDateString('pt-BR') : '-'}
+                        {visitante.dataVisita ? formatDate(visitante.dataVisita) : '-'}
                       </TableCell>
                       <TableCell className="font-medium">
                         {visitante.nome || '-'}
@@ -489,9 +490,9 @@ export default function VisitantesList() {
         open={bulkDeleteDialogOpen}
         onOpenChange={setBulkDeleteDialogOpen}
         onConfirm={handleBulkDeleteConfirm}
-        title="Excluir em lote"
-        description={`Tem certeza que deseja excluir ${selectedIds.size} visita(s) selecionada(s)? Esta ação não pode ser desfeita.`}
-        confirmText="Excluir"
+        title={t('visitors.bulkDeleteTitle')}
+        description={t('visitors.bulkDeleteDescription', { count: selectedIds.size })}
+        confirmText={t('visitors.deleteConfirm')}
         cancelText={t('actions.cancel')}
         variant="destructive"
         loading={bulkDeleting}

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Play, Mail, MessageSquare, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Play, Mail, MessageSquare, AlertTriangle, CheckCircle2, RotateCcw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,40 +11,41 @@ import { PageRefreshButton } from '@/components/ui/page-state';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { comunicacaoCampanhasApi, comunicacaoDiagnosticoApi, comunicacaoEntregasApi } from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatDateTime } from '@/lib/formatters';
 import { toast } from 'sonner';
 
-const getStatusLabel = (status) => {
+const getStatusLabel = (status, t) => {
   switch (Number(status)) {
-    case 1: return 'Rascunho';
-    case 2: return 'Agendada';
-    case 3: return 'Processando';
-    case 4: return 'Concluída';
-    case 5: return 'Com falhas';
-    case 6: return 'Cancelada';
-    default: return `Status ${status}`;
+    case 1: return t('communicationCampaignDetails.status.draft');
+    case 2: return t('communicationCampaignDetails.status.scheduled');
+    case 3: return t('communicationCampaignDetails.status.processing');
+    case 4: return t('communicationCampaignDetails.status.completed');
+    case 5: return t('communicationCampaignDetails.status.withFailures');
+    case 6: return t('communicationCampaignDetails.status.canceled');
+    default: return t('communicationCampaignDetails.status.fallback', { status });
   }
 };
 
-const getEntregaStatus = (status) => {
+const getEntregaStatus = (status, t) => {
   switch (Number(status)) {
-    case 1: return 'Pendente';
-    case 2: return 'Reservado';
-    case 3: return 'Enviado';
-    case 4: return 'Entregue';
-    case 5: return 'Falhou';
-    case 6: return 'Cancelado';
-    case 7: return 'Ignorado';
-    default: return `Status ${status}`;
+    case 1: return t('communicationCampaignDetails.deliveryStatus.pending');
+    case 2: return t('communicationCampaignDetails.deliveryStatus.reserved');
+    case 3: return t('communicationCampaignDetails.deliveryStatus.sent');
+    case 4: return t('communicationCampaignDetails.deliveryStatus.delivered');
+    case 5: return t('communicationCampaignDetails.deliveryStatus.failed');
+    case 6: return t('communicationCampaignDetails.deliveryStatus.canceled');
+    case 7: return t('communicationCampaignDetails.deliveryStatus.ignored');
+    default: return t('communicationCampaignDetails.deliveryStatus.fallback', { status });
   }
 };
 
-const getCanalLabel = (canal) => {
+const getCanalLabel = (canal, t) => {
   switch (Number(canal)) {
-    case 1: return 'WhatsApp';
-    case 2: return 'E-mail';
-    case 3: return 'Push';
-    case 4: return 'Notificação interna';
-    default: return `Canal ${canal}`;
+    case 1: return t('communicationCampaignDetails.channels.whatsapp');
+    case 2: return t('communicationCampaignDetails.channels.email');
+    case 3: return t('communicationCampaignDetails.channels.push');
+    case 4: return t('communicationCampaignDetails.channels.internalNotification');
+    default: return t('communicationCampaignDetails.channels.fallback', { canal });
   }
 };
 
@@ -56,6 +58,7 @@ const getCanalIcon = (canal) => {
 };
 
 export default function ComunicacaoCampanhaDetails() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const [campanha, setCampanha] = useState(null);
   const [entregas, setEntregas] = useState([]);
@@ -88,12 +91,12 @@ export default function ComunicacaoCampanhaDetails() {
         setHealthChecks({});
       }
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Erro ao carregar detalhes da campanha'));
+      setError(getApiErrorMessage(err, t('communicationCampaignDetails.errorLoad')));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     load();
@@ -103,20 +106,34 @@ export default function ComunicacaoCampanhaDetails() {
     try {
       setProcessing(true);
       const response = await comunicacaoEntregasApi.processarPendentes(100);
-      toast.success(`${response.data?.processadas ?? 0} entregas processadas.`);
+      toast.success(t('communicationCampaignDetails.processPendingSuccess', { count: response.data?.processadas ?? 0 }));
       await load({ silent: true });
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao processar pendências'));
+      toast.error(getApiErrorMessage(err, t('communicationCampaignDetails.processPendingError')));
     } finally {
       setProcessing(false);
     }
   };
 
-  if (loading) return <LoadingPage text="Carregando detalhes da campanha..." />;
+  const reprocessarEntrega = async (entregaId) => {
+    try {
+      const response = await comunicacaoEntregasApi.reprocessar(entregaId);
+      const entregaAtualizada = response.data;
+      setEntregas((prev) => prev.map((item) => (item.id === entregaId ? entregaAtualizada : item)));
+      toast.success(t('communicationCampaignDetails.reprocessSuccess'));
+      await load({ silent: true });
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, t('communicationCampaignDetails.reprocessError')));
+    }
+  };
+
+  if (loading) return <LoadingPage text={t('communicationCampaignDetails.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
-  if (!campanha) return <ErrorPage message="Campanha não encontrada." onRetry={load} />;
+  if (!campanha) return <ErrorPage message={t('communicationCampaignDetails.notFound')} onRetry={load} />;
 
   const falhas = entregas.filter((entrega) => Number(entrega.status) === 5);
+  const ignoradas = entregas.filter((entrega) => Number(entrega.status) === 7);
+  const sucessos = entregas.filter((entrega) => [3, 4].includes(Number(entrega.status)));
   const entregasFiltradas = entregas.filter((entrega) => {
     const statusOk = statusFilter === 'todos' || String(entrega.status) === statusFilter;
     const canalOk = canalFilter === 'todos' || String(entrega.canal) === canalFilter;
@@ -162,23 +179,26 @@ export default function ComunicacaoCampanhaDetails() {
 
         <div className="flex items-center gap-2">
           <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
+          <Button variant="outline" asChild>
+            <Link to="/comunicacao/preferencias">{t('communicationCampaignDetails.actions.preferences')}</Link>
+          </Button>
           <Button onClick={processarPendentes} disabled={processing}>
             <Play className="w-4 h-4 mr-2" />
-            {processing ? 'Processando...' : 'Processar pendências'}
+            {processing ? t('communicationCampaignDetails.actions.processing') : t('communicationCampaignDetails.actions.processPending')}
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">Status</div><div className="text-lg font-semibold mt-1">{getStatusLabel(campanha.status)}</div></CardContent></Card>
-        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">Entregas</div><div className="text-2xl font-bold mt-1">{campanha.totalEntregas}</div></CardContent></Card>
-        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">Falhas</div><div className="text-2xl font-bold mt-1">{campanha.totalFalhas}</div></CardContent></Card>
-        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">Agendamento</div><div className="text-sm font-medium mt-1">{campanha.dataAgendamento ? new Date(campanha.dataAgendamento).toLocaleString('pt-BR') : 'Imediato / rascunho'}</div></CardContent></Card>
+        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">{t('communicationCampaignDetails.cards.status')}</div><div className="text-lg font-semibold mt-1">{getStatusLabel(campanha.status, t)}</div></CardContent></Card>
+        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">{t('communicationCampaignDetails.cards.deliveries')}</div><div className="text-2xl font-bold mt-1">{campanha.totalEntregas}</div></CardContent></Card>
+        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">{t('communicationCampaignDetails.cards.failures')}</div><div className="text-2xl font-bold mt-1">{campanha.totalFalhas}</div></CardContent></Card>
+        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">{t('communicationCampaignDetails.cards.scheduling')}</div><div className="text-sm font-medium mt-1">{campanha.dataAgendamento ? formatDateTime(campanha.dataAgendamento) : t('communicationCampaignDetails.cards.immediateDraft')}</div></CardContent></Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Canais</CardTitle>
+          <CardTitle>{t('communicationCampaignDetails.channelsCard.title')}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {resumoPorCanal.map((canal) => (
@@ -186,20 +206,20 @@ export default function ComunicacaoCampanhaDetails() {
               <div className="flex items-center gap-2">
                 {getCanalIcon(canal.canal)}
                 <div>
-                  <div className="font-medium">{getCanalLabel(canal.canal)}</div>
-                  <div className="text-sm text-muted-foreground">{canal.nomeTemplate || 'Sem template vinculado'}</div>
+                  <div className="font-medium">{getCanalLabel(canal.canal, t)}</div>
+                  <div className="text-sm text-muted-foreground">{canal.nomeTemplate || t('communicationCampaignDetails.channelsCard.noLinkedTemplate')}</div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {canal.diagnostico || 'Sem diagnóstico detalhado para este canal.'}
+                    {canal.diagnostico || t('communicationCampaignDetails.channelsCard.noDetailedDiagnosis')}
                   </div>
                   <div className="text-xs text-muted-foreground mt-2">
-                    {canal.sucessos} com sucesso • {canal.falhas} falhas
+                    {t('communicationCampaignDetails.channelsCard.summary', { success: canal.sucessos, failures: canal.falhas })}
                   </div>
                 </div>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <Badge variant="secondary">Prioridade {canal.prioridade}</Badge>
+                <Badge variant="secondary">{t('communicationCampaignDetails.channelsCard.priority', { priority: canal.prioridade })}</Badge>
                 <Badge variant={canal.configOk ? 'outline' : 'destructive'}>
-                  {canal.configOk ? `${canal.total} entregas` : 'Configuração pendente'}
+                  {canal.configOk ? t('communicationCampaignDetails.channelsCard.deliveries', { count: canal.total }) : t('communicationCampaignDetails.channelsCard.configurationPending')}
                 </Badge>
               </div>
             </div>
@@ -210,17 +230,17 @@ export default function ComunicacaoCampanhaDetails() {
       {falhas.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Falhas recentes por canal</CardTitle>
+            <CardTitle>{t('communicationCampaignDetails.recentFailures.title')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {falhas.slice(0, 10).map((entrega) => (
               <div key={`falha-${entrega.id}`} className="rounded-lg border border-red-200 bg-red-50/50 p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="font-medium">{getCanalLabel(entrega.canal)}</div>
-                  <Badge variant="destructive">{getEntregaStatus(entrega.status)}</Badge>
+                  <div className="font-medium">{getCanalLabel(entrega.canal, t)}</div>
+                  <Badge variant="destructive">{getEntregaStatus(entrega.status, t)}</Badge>
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">{entrega.destinoResolvido}</div>
-                <div className="text-sm mt-2 whitespace-pre-wrap">{entrega.erro || 'Falha sem mensagem detalhada.'}</div>
+                <div className="text-sm mt-2 whitespace-pre-wrap">{entrega.erro || t('communicationCampaignDetails.recentFailures.noDetailedMessage')}</div>
               </div>
             ))}
           </CardContent>
@@ -229,7 +249,7 @@ export default function ComunicacaoCampanhaDetails() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Entregas</CardTitle>
+          <CardTitle>{t('communicationCampaignDetails.deliveriesTable.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -239,7 +259,7 @@ export default function ComunicacaoCampanhaDetails() {
               variant={statusFilter === 'todos' ? 'default' : 'outline'}
               onClick={() => setStatusFilter('todos')}
             >
-              Todos
+              {t('communicationCampaignDetails.filters.all')}
             </Button>
             <Button
               type="button"
@@ -247,7 +267,7 @@ export default function ComunicacaoCampanhaDetails() {
               variant={statusFilter === '5' ? 'destructive' : 'outline'}
               onClick={() => setStatusFilter('5')}
             >
-              Falhas
+              {t('communicationCampaignDetails.filters.failures')}
             </Button>
             <Button
               type="button"
@@ -255,7 +275,7 @@ export default function ComunicacaoCampanhaDetails() {
               variant={statusFilter === '1' ? 'secondary' : 'outline'}
               onClick={() => setStatusFilter('1')}
             >
-              Pendentes
+              {t('communicationCampaignDetails.filters.pending')}
             </Button>
             <Button
               type="button"
@@ -263,7 +283,15 @@ export default function ComunicacaoCampanhaDetails() {
               variant={statusFilter === '3' ? 'secondary' : 'outline'}
               onClick={() => setStatusFilter('3')}
             >
-              Enviadas
+              {t('communicationCampaignDetails.filters.sent')}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={statusFilter === '7' ? 'secondary' : 'outline'}
+              onClick={() => setStatusFilter('7')}
+            >
+              {t('communicationCampaignDetails.filters.ignored')}
             </Button>
 
             <div className="h-6 w-px bg-border mx-1" />
@@ -274,7 +302,7 @@ export default function ComunicacaoCampanhaDetails() {
               variant={canalFilter === 'todos' ? 'default' : 'outline'}
               onClick={() => setCanalFilter('todos')}
             >
-              Todos os canais
+              {t('communicationCampaignDetails.filters.allChannels')}
             </Button>
             {(campanha.canais || []).map((canal) => (
               <Button
@@ -284,40 +312,61 @@ export default function ComunicacaoCampanhaDetails() {
                 variant={canalFilter === String(canal.canal) ? 'secondary' : 'outline'}
                 onClick={() => setCanalFilter(String(canal.canal))}
               >
-                {getCanalLabel(canal.canal)}
+                {getCanalLabel(canal.canal, t)}
               </Button>
             ))}
+          </div>
+
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Badge variant="outline">{t('communicationCampaignDetails.summary.success', { count: sucessos.length })}</Badge>
+            <Badge variant="destructive">{t('communicationCampaignDetails.summary.failures', { count: falhas.length })}</Badge>
+            <Badge variant="secondary">{t('communicationCampaignDetails.summary.ignored', { count: ignoradas.length })}</Badge>
           </div>
 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Canal</TableHead>
-                <TableHead>Destino</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Tentativas</TableHead>
-                <TableHead>Erro</TableHead>
+                <TableHead>{t('communicationCampaignDetails.deliveriesTable.channel')}</TableHead>
+                <TableHead>{t('communicationCampaignDetails.deliveriesTable.destination')}</TableHead>
+                <TableHead>{t('communicationCampaignDetails.deliveriesTable.status')}</TableHead>
+                <TableHead>{t('communicationCampaignDetails.deliveriesTable.attempts')}</TableHead>
+                <TableHead>{t('communicationCampaignDetails.deliveriesTable.error')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {entregasFiltradas.map((entrega) => (
                 <TableRow key={entrega.id}>
-                  <TableCell>{getCanalLabel(entrega.canal)}</TableCell>
+                  <TableCell>{getCanalLabel(entrega.canal, t)}</TableCell>
                   <TableCell>{entrega.destinoResolvido}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {Number(entrega.status) === 5 ? <AlertTriangle className="w-4 h-4 text-red-500" /> : <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                      <span>{getEntregaStatus(entrega.status)}</span>
+                      <span>{getEntregaStatus(entrega.status, t)}</span>
                     </div>
                   </TableCell>
                   <TableCell>{entrega.tentativas}</TableCell>
-                  <TableCell className="whitespace-normal">{entrega.erro || '-'}</TableCell>
+                  <TableCell className="whitespace-normal">
+                    <div className="space-y-2">
+                      <div>{entrega.erro || '-'}</div>
+                      {entrega.podeReprocessar && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => reprocessarEntrega(entrega.id)}
+                        >
+                          <RotateCcw className="w-4 h-4 mr-2" />
+                          {t('communicationCampaignDetails.actions.reprocess')}
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
               {entregasFiltradas.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    Nenhuma entrega encontrada para o filtro atual.
+                    {t('communicationCampaignDetails.deliveriesTable.empty')}
                   </TableCell>
                 </TableRow>
               )}

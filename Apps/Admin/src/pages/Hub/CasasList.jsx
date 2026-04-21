@@ -16,8 +16,10 @@ import { hubCasasApi, usuariosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
+import { useTranslation } from 'react-i18next';
 
 export default function CasasList() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +42,7 @@ export default function CasasList() {
       setItems(c.data || []);
       setUsuarios(u.data || []);
     } catch (err) {
-      setError('Erro ao carregar casas');
+      setError(t('housesList.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -74,18 +76,20 @@ export default function CasasList() {
   const handleDelete = async (id) => {
     const casa = items.find((c) => c.id === id);
     confirmDialog.show({
-      title: 'Excluir Casa',
-      description: `Tem certeza que deseja excluir "${casa?.nome || 'esta casa'}"? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('housesList.deleteTitle'),
+      description: t('housesList.deleteDescription', {
+        name: casa?.nome || t('housesList.deleteFallbackName'),
+      }),
+      confirmText: t('housesList.deleteConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await hubCasasApi.delete(id);
-          toast.success('Casa excluída com sucesso');
+          toast.success(t('housesList.deleteSuccess'));
           await load();
         } catch (err) {
-          toast.error('Erro ao excluir casa');
+          toast.error(t('housesList.deleteError'));
           console.error(err);
           throw err;
         }
@@ -100,7 +104,7 @@ export default function CasasList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text="Carregando casas..." />;
+  if (loading) return <LoadingPage text={t('housesList.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   const canEdit = can(RESOURCES.HUB, ACTIONS.EDIT);
@@ -110,15 +114,15 @@ export default function CasasList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Hub - Casas</h1>
-          <p className="text-muted-foreground">Gerencie as casas abertas para evangelização</p>
+          <h1 className="text-3xl font-bold">{t('housesList.title')}</h1>
+          <p className="text-muted-foreground">{t('housesList.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
           {canEdit && (
             <Button asChild>
               <Link to="/hub/casas/novo">
-                <Plus className="h-4 w-4 mr-2" /> Nova Casa
+                <Plus className="h-4 w-4 mr-2" /> {t('housesList.new')}
               </Link>
             </Button>
           )}
@@ -127,16 +131,16 @@ export default function CasasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('housesList.filters.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por nome</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('housesList.filters.search')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite o nome da casa"
+                placeholder={t('housesList.filters.searchPlaceholder')}
               />
             </div>
           </div>
@@ -145,18 +149,18 @@ export default function CasasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Casas ({total})</CardTitle>
+          <CardTitle>{t('housesList.listTitle', { total })}</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
             <PageEmptyState
-              title="Nenhuma casa encontrada"
-              description={busca ? 'Nenhuma casa corresponde ao filtro atual. Tente outro nome ou limpe a busca.' : 'Ainda nao ha casas cadastradas para exibicao.'}
+              title={t('housesList.emptyTitle')}
+              description={busca ? t('housesList.emptyFiltered') : t('housesList.emptyDescription')}
               action={canEdit ? (
                 <Button asChild>
                   <Link to="/hub/casas/novo">
                     <Plus className="mr-2 h-4 w-4" />
-                    Nova Casa
+                    {t('housesList.new')}
                   </Link>
                 </Button>
               ) : null}
@@ -165,13 +169,13 @@ export default function CasasList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Aberto por</TableHead>
-                  <TableHead>Líder</TableHead>
-                  <TableHead>Timóteo</TableHead>
-                  <TableHead>Anfitrião</TableHead>
-                  <TableHead>Endereço</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('housesList.table.name')}</TableHead>
+                  <TableHead>{t('housesList.table.openedBy')}</TableHead>
+                  <TableHead>{t('housesList.table.leader')}</TableHead>
+                  <TableHead>{t('housesList.table.timothy')}</TableHead>
+                  <TableHead>{t('housesList.table.host')}</TableHead>
+                  <TableHead>{t('housesList.table.address')}</TableHead>
+                  <TableHead className="text-right">{t('housesList.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

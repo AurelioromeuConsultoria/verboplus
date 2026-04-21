@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Filter, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,7 +14,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { cargosApi } from '@/lib/api';
-import { formatDateBr } from '@/lib/formatters';
+import { formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
@@ -43,7 +43,7 @@ export default function CargosList() {
       const res = await cargosApi.getAll();
       setItems(res.data || []);
     } catch (err) {
-      setError('Erro ao carregar cargos');
+      setError(t('volunteer.roles.errorLoad'));
       console.error(err);
     } finally {
       if (silent) {
@@ -61,18 +61,18 @@ export default function CargosList() {
   const handleDelete = async (id) => {
     const cargo = items.find(c => c.id === id);
     confirmDialog.show({
-      title: 'Excluir Cargo',
-      description: `Tem certeza que deseja excluir "${cargo?.nome || 'este cargo'}"? Esta ação não pode ser desfeita. Se houver voluntários vinculados, a exclusão será bloqueada.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('volunteer.roles.deleteTitle'),
+      description: t('volunteer.roles.deleteDescription', { name: cargo?.nome || t('volunteer.roles.thisRole') }),
+      confirmText: t('volunteer.roles.deleteConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await cargosApi.delete(id);
-          toast.success('Cargo excluído com sucesso');
+          toast.success(t('volunteer.roles.deleteSuccess'));
           await load();
         } catch (err) {
-          const errorMsg = err.response?.data?.message || 'Erro ao excluir cargo. Pode haver voluntários vinculados.';
+          const errorMsg = err.response?.data?.message || t('volunteer.roles.deleteError');
           toast.error(errorMsg);
           console.error(err);
           throw err;
@@ -88,7 +88,7 @@ export default function CargosList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text="Carregando cargos..." />;
+  if (loading) return <LoadingPage text={t('volunteer.roles.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   const canEdit = can(RESOURCES.CARGOS, ACTIONS.EDIT);
@@ -112,16 +112,16 @@ export default function CargosList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('volunteer.roles.filtersTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por nome</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('volunteer.roles.searchLabel')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite o nome do cargo"
+                placeholder={t('volunteer.roles.searchPlaceholder')}
               />
             </div>
           </div>
@@ -138,8 +138,8 @@ export default function CargosList() {
         <CardContent>
           {filtered.length === 0 ? (
             <PageEmptyState
-              title="Nenhum cargo encontrado."
-              description="Ajuste os filtros ou cadastre um novo cargo."
+              title={t('volunteer.roles.emptyTitle')}
+              description={t('volunteer.roles.emptyDescription')}
               action={canEdit ? (
                 <Button asChild>
                   <Link to="/cargos/novo">
@@ -152,16 +152,16 @@ export default function CargosList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Data de Criação</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('volunteer.roles.table.name')}</TableHead>
+                  <TableHead>{t('volunteer.roles.table.createdAt')}</TableHead>
+                  <TableHead className="text-right">{t('volunteer.roles.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedItems.map((cargo) => (
                   <TableRow key={cargo.id}>
                     <TableCell className="font-medium">{cargo.nome}</TableCell>
-                    <TableCell>{formatDateBr(cargo.dataCriacao)}</TableCell>
+                    <TableCell>{formatDate(cargo.dataCriacao)}</TableCell>
                     <TableCell className="text-right">
                       <TableRowActions>
                         {canEdit && (

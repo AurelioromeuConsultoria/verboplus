@@ -6,19 +6,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { equipesApi, escalasApi, escalasModelosApi, eventosOcorrenciasApi, solicitacoesTrocasEscalasApi, voluntariosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '@/lib/formatters';
 
 function getEscalaStatusLabel(status) {
   const value = Number(status);
-  if (value === 1) return 'Rascunho';
-  if (value === 2) return 'Publicada';
-  if (value === 3) return 'Fechada';
-  return 'Desconhecido';
+  if (value === 1) return 'draft';
+  if (value === 2) return 'published';
+  if (value === 3) return 'closed';
+  return 'unknown';
 }
 
 function getEscalaStatusClassName(status) {
@@ -31,13 +33,13 @@ function getEscalaStatusClassName(status) {
 
 function getEscalaItemStatusLabel(status) {
   const value = Number(status);
-  if (value === 1) return 'Pendente';
-  if (value === 2) return 'Confirmado';
-  if (value === 3) return 'Recusado';
-  if (value === 4) return 'Substituído';
-  if (value === 5) return 'Serviu';
-  if (value === 6) return 'Faltou';
-  return 'Desconhecido';
+  if (value === 1) return 'pending';
+  if (value === 2) return 'confirmed';
+  if (value === 3) return 'declined';
+  if (value === 4) return 'replaced';
+  if (value === 5) return 'served';
+  if (value === 6) return 'missed';
+  return 'unknown';
 }
 
 function getEscalaItemStatusClassName(status) {
@@ -57,11 +59,11 @@ function getActionButtonProps(item, action) {
   if (action === 'confirmar') {
     return status === 2
       ? {
-          label: 'Confirmado',
+          labelKey: 'confirmed',
           className: '!border-emerald-600 !bg-emerald-600 !text-white hover:!bg-emerald-700 hover:!text-white',
         }
       : {
-          label: 'Confirmar',
+          labelKey: 'confirm',
           className: '',
         };
   }
@@ -69,11 +71,11 @@ function getActionButtonProps(item, action) {
   if (action === 'recusar') {
     return status === 3
       ? {
-          label: 'Recusado',
+          labelKey: 'declined',
           className: '!border-rose-600 !bg-rose-600 !text-white hover:!bg-rose-700 hover:!text-white',
         }
       : {
-          label: 'Recusar',
+          labelKey: 'decline',
           className: '',
         };
   }
@@ -81,11 +83,11 @@ function getActionButtonProps(item, action) {
   if (action === 'serviu') {
     return status === 5
       ? {
-          label: 'Serviu',
+          labelKey: 'served',
           className: '!border-sky-600 !bg-sky-600 !text-white hover:!bg-sky-700 hover:!text-white',
         }
       : {
-          label: 'Serviu',
+          labelKey: 'served',
           className: '',
         };
   }
@@ -93,17 +95,17 @@ function getActionButtonProps(item, action) {
   if (action === 'faltou') {
     return status === 6
       ? {
-          label: 'Faltou',
+          labelKey: 'missed',
           className: '!border-amber-500 !bg-amber-400 !text-black hover:!bg-amber-400 hover:!text-black',
         }
       : {
-          label: 'Faltou',
+          labelKey: 'missed',
           className: '',
         };
   }
 
   return {
-    label: '',
+    labelKey: '',
     className: '',
   };
 }
@@ -233,7 +235,7 @@ export default function EscalaEditor() {
         if (errModelo.response?.status === 404) {
           setModeloEscala(null);
         } else {
-          console.error('Erro ao carregar modelo da escala:', errModelo);
+          console.error(t('volunteer.schedules.editor.logs.errorLoadModel'), errModelo);
           setModeloEscala(null);
         }
       }
@@ -253,7 +255,7 @@ export default function EscalaEditor() {
       }
     } catch (err) {
       console.error(err);
-      setError('Erro ao carregar dados da escala');
+      setError(t('volunteer.schedules.editor.errorLoad'));
     } finally {
       setLoading(false);
     }
@@ -273,7 +275,7 @@ export default function EscalaEditor() {
         const res = await escalasApi.getSugestoes(escala.id, Number(equipeId));
         setSugestoes(res.data || []);
       } catch (err) {
-        console.error('Erro ao carregar sugestões:', err);
+        console.error(t('volunteer.schedules.editor.logs.errorLoadSuggestions'), err);
         setSugestoes([]);
       }
     };
@@ -290,7 +292,7 @@ export default function EscalaEditor() {
       observacoes: null,
     });
     setEscala(created.data);
-    toast.success('Escala criada');
+    toast.success(t('volunteer.schedules.editor.createSuccess'));
     return created.data;
   };
 
@@ -301,7 +303,7 @@ export default function EscalaEditor() {
       let motivoExcecao = null;
 
       if (forcarConflito) {
-        motivoExcecao = window.prompt(`Motivo da exceção para ${voluntario.nome}:`, '')?.trim();
+        motivoExcecao = window.prompt(t('volunteer.schedules.editor.prompts.exceptionReason', { name: voluntario.nome }), '')?.trim();
         if (!motivoExcecao) {
           return;
         }
@@ -317,12 +319,14 @@ export default function EscalaEditor() {
       });
 
       await load();
-      toast.success(forcarConflito ? 'Voluntário adicionado com exceção manual' : 'Voluntário adicionado à escala');
+      toast.success(forcarConflito
+        ? t('volunteer.schedules.editor.addVolunteerExceptionSuccess')
+        : t('volunteer.schedules.editor.addVolunteerSuccess'));
     } catch (err) {
       console.error(err);
       const message = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || 'Erro ao adicionar item na escala');
+        : (err.response?.data?.message || t('volunteer.schedules.editor.errorAddItem'));
       toast.error(message);
     } finally {
       setSaving(false);
@@ -331,19 +335,22 @@ export default function EscalaEditor() {
 
   const handleDeleteItem = async (item) => {
     confirmDialog.show({
-      title: 'Remover da escala',
-      description: `Deseja remover "${item.voluntarioNome}" da equipe "${item.equipeNome}"?`,
-      confirmText: 'Remover',
-      cancelText: 'Cancelar',
+      title: t('volunteer.schedules.editor.removeDialogTitle'),
+      description: t('volunteer.schedules.editor.removeDialogDescription', {
+        volunteer: item.voluntarioNome,
+        team: item.equipeNome,
+      }),
+      confirmText: t('actions.remove'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await escalasApi.deleteItem(escala.id, item.id);
-          toast.success('Item removido da escala');
+          toast.success(t('volunteer.schedules.editor.removeSuccess'));
           await load();
         } catch (err) {
           console.error(err);
-          toast.error('Erro ao remover item da escala');
+          toast.error(t('volunteer.schedules.editor.errorRemoveItem'));
           throw err;
         }
       },
@@ -354,13 +361,13 @@ export default function EscalaEditor() {
     try {
       setGerandoAuto(true);
       await escalasApi.gerarAutomatico(ocorrenciaId, equipeId);
-      toast.success('Escala preenchida automaticamente');
+      toast.success(t('volunteer.schedules.editor.autoFillSuccess'));
       await load();
     } catch (err) {
       console.error(err);
       const message = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || 'Erro ao preencher escala');
+        : (err.response?.data?.message || t('volunteer.schedules.editor.errorAutoFill'));
       toast.error(message);
     } finally {
       setGerandoAuto(false);
@@ -371,13 +378,13 @@ export default function EscalaEditor() {
     if (!escala) return;
     try {
       await escalasApi.publicar(escala.id);
-      toast.success('Escala publicada com sucesso');
+      toast.success(t('volunteer.schedules.editor.publishSuccess'));
       await load();
     } catch (err) {
       console.error(err);
       const message = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || 'Erro ao publicar escala');
+        : (err.response?.data?.message || t('volunteer.schedules.editor.errorPublish'));
       toast.error(message);
     }
   };
@@ -386,13 +393,13 @@ export default function EscalaEditor() {
     if (!escala) return;
     try {
       await escalasApi.confirmarItem(escala.id, item.id);
-      toast.success('Item confirmado');
+      toast.success(t('volunteer.schedules.editor.itemConfirmed'));
       await load();
     } catch (err) {
       console.error(err);
       const message = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || 'Erro ao confirmar item');
+        : (err.response?.data?.message || t('volunteer.schedules.editor.errorConfirmItem'));
       toast.error(message);
     }
   };
@@ -400,18 +407,18 @@ export default function EscalaEditor() {
   const handleRecusarItem = async (item) => {
     if (!escala) return;
 
-    const motivoRecusa = window.prompt(`Motivo da recusa de ${item.voluntarioNome}:`, item.motivoRecusa || '');
+    const motivoRecusa = window.prompt(t('volunteer.schedules.editor.prompts.declineReason', { name: item.voluntarioNome }), item.motivoRecusa || '');
     if (motivoRecusa === null) return;
 
     try {
       await escalasApi.recusarItem(escala.id, item.id, { motivoRecusa });
-      toast.success('Item marcado como recusado');
+      toast.success(t('volunteer.schedules.editor.itemDeclined'));
       await load();
     } catch (err) {
       console.error(err);
       const message = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || 'Erro ao recusar item');
+        : (err.response?.data?.message || t('volunteer.schedules.editor.errorDeclineItem'));
       toast.error(message);
     }
   };
@@ -422,7 +429,7 @@ export default function EscalaEditor() {
     const res = await escalasApi.getSugestoes(escala.id, Number(equipeId));
     const disponiveis = (res.data || []).filter((x) => x.disponivel && x.voluntarioId !== solicitacao.voluntarioSolicitanteId);
     if (!disponiveis.length) {
-      toast.error('Nenhum substituto disponível no momento');
+      toast.error(t('volunteer.schedules.editor.noSubstituteAvailable'));
       return;
     }
     setTrocaSelecionada(solicitacao);
@@ -438,7 +445,7 @@ export default function EscalaEditor() {
         voluntarioSubstitutoId: Number(substitutoSelecionado),
         observacaoResposta: null,
       });
-      toast.success('Solicitação aprovada');
+      toast.success(t('volunteer.schedules.editor.exchangeApproved'));
       setTrocaDialogOpen(false);
       setTrocaSelecionada(null);
       setSubstitutosDisponiveis([]);
@@ -448,24 +455,26 @@ export default function EscalaEditor() {
       console.error(err);
       const message = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || 'Erro ao aprovar solicitação');
+        : (err.response?.data?.message || t('volunteer.schedules.editor.errorApproveExchange'));
       toast.error(message);
     }
   };
 
   const handleRejeitarTroca = async (solicitacao) => {
-    const observacaoResposta = window.prompt(`Motivo da rejeição da solicitação de ${solicitacao.voluntarioSolicitanteNome}:`, '');
+    const observacaoResposta = window.prompt(t('volunteer.schedules.editor.prompts.rejectExchangeReason', {
+      name: solicitacao.voluntarioSolicitanteNome,
+    }), '');
     if (observacaoResposta === null) return;
 
     try {
       await solicitacoesTrocasEscalasApi.rejeitar(solicitacao.id, { observacaoResposta });
-      toast.success('Solicitação rejeitada');
+      toast.success(t('volunteer.schedules.editor.exchangeRejected'));
       await load();
     } catch (err) {
       console.error(err);
       const message = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || 'Erro ao rejeitar solicitação');
+        : (err.response?.data?.message || t('volunteer.schedules.editor.errorRejectExchange'));
       toast.error(message);
     }
   };
@@ -475,8 +484,8 @@ export default function EscalaEditor() {
 
     const observacaoOperacional = window.prompt(
       compareceu
-        ? `Observação de presença para ${item.voluntarioNome}:`
-        : `Observação de falta para ${item.voluntarioNome}:`,
+        ? t('volunteer.schedules.editor.prompts.attendanceNote', { name: item.voluntarioNome })
+        : t('volunteer.schedules.editor.prompts.absenceNote', { name: item.voluntarioNome }),
       item.observacaoOperacional || ''
     );
 
@@ -487,32 +496,34 @@ export default function EscalaEditor() {
         compareceu,
         observacaoOperacional,
       });
-      toast.success(compareceu ? 'Presença registrada' : 'Falta registrada');
+      toast.success(compareceu ? t('volunteer.schedules.editor.attendanceSuccess') : t('volunteer.schedules.editor.absenceSuccess'));
       await load();
     } catch (err) {
       console.error(err);
       const message = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || 'Erro ao registrar presença');
+        : (err.response?.data?.message || t('volunteer.schedules.editor.errorRegisterAttendance'));
       toast.error(message);
     }
   };
 
-  if (loading) return <LoadingPage text="Carregando editor de escala..." />;
+  if (loading) return <LoadingPage text={t('volunteer.schedules.editor.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
-  if (!ocorrencia) return <ErrorPage message="Ocorrência não encontrada" onRetry={load} />;
+  if (!ocorrencia) return <ErrorPage message={t('volunteer.schedules.byOccurrence.notFound')} onRetry={load} />;
 
-  const escalaStatusLabel = escala ? getEscalaStatusLabel(escala.status) : 'Não criada';
+  const escalaStatusLabel = escala
+    ? t(`volunteer.schedules.editor.scheduleStatus.${getEscalaStatusLabel(escala.status)}`)
+    : t('volunteer.schedules.editor.scheduleStatus.notCreated');
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" asChild>
-            <Link to={`/voluntariado/escalas/ocorrencia/${ocorrenciaId}`}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar
-            </Link>
+              <Link to={`/voluntariado/escalas/ocorrencia/${ocorrenciaId}`}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                {t('actions.back')}
+              </Link>
           </Button>
           <div>
             <h1 className="text-3xl font-bold">
@@ -520,7 +531,7 @@ export default function EscalaEditor() {
               {escala?.equipeNome ? ` — ${escala.equipeNome}` : ''}
             </h1>
             <p className="text-muted-foreground">
-              {ocorrencia.eventoTitulo} — {new Date(ocorrencia.dataHoraInicio).toLocaleString('pt-BR')}
+              {ocorrencia.eventoTitulo} — {formatDateTime(ocorrencia.dataHoraInicio)}
             </p>
           </div>
         </div>
@@ -535,7 +546,7 @@ export default function EscalaEditor() {
               disabled={gerandoAuto}
             >
               <Wand2 className="h-4 w-4 mr-2" />
-              {gerandoAuto ? 'Preenchendo...' : 'Preencher automaticamente'}
+              {gerandoAuto ? t('volunteer.schedules.editor.autoFilling') : t('volunteer.schedules.editor.autoFill')}
             </Button>
           )}
           <Button
@@ -543,45 +554,45 @@ export default function EscalaEditor() {
             disabled={!escala || !escala.itens?.length}
           >
             <Send className="h-4 w-4 mr-2" />
-            Publicar Escala
+            {t('volunteer.schedules.editor.publish')}
           </Button>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <Card><CardHeader><CardTitle>Total</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{resumoEscala.total}</CardContent></Card>
-        <Card><CardHeader><CardTitle>Confirmados</CardTitle></CardHeader><CardContent className="text-2xl font-bold text-emerald-400">{resumoEscala.confirmados}</CardContent></Card>
-        <Card><CardHeader><CardTitle>Pendentes</CardTitle></CardHeader><CardContent className="text-2xl font-bold text-amber-400">{resumoEscala.pendentes}</CardContent></Card>
-        <Card><CardHeader><CardTitle>Recusas</CardTitle></CardHeader><CardContent className="text-2xl font-bold text-rose-400">{resumoEscala.recusados}</CardContent></Card>
-        <Card><CardHeader><CardTitle>Dia do evento</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">{new Date(ocorrencia.dataHoraInicio).toLocaleString('pt-BR')}</CardContent></Card>
+        <Card><CardHeader><CardTitle>{t('volunteer.schedules.editor.summary.total')}</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{resumoEscala.total}</CardContent></Card>
+        <Card><CardHeader><CardTitle>{t('volunteer.schedules.editor.summary.confirmed')}</CardTitle></CardHeader><CardContent className="text-2xl font-bold text-emerald-400">{resumoEscala.confirmados}</CardContent></Card>
+        <Card><CardHeader><CardTitle>{t('volunteer.schedules.editor.summary.pending')}</CardTitle></CardHeader><CardContent className="text-2xl font-bold text-amber-400">{resumoEscala.pendentes}</CardContent></Card>
+        <Card><CardHeader><CardTitle>{t('volunteer.schedules.editor.summary.declined')}</CardTitle></CardHeader><CardContent className="text-2xl font-bold text-rose-400">{resumoEscala.recusados}</CardContent></Card>
+        <Card><CardHeader><CardTitle>{t('volunteer.schedules.editor.summary.eventDay')}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">{formatDateTime(ocorrencia.dataHoraInicio)}</CardContent></Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Cobertura do modelo</CardTitle>
+          <CardTitle>{t('volunteer.schedules.editor.modelCoverageTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           {!modeloEscala ? (
             <div className="flex items-center justify-between gap-4 rounded-lg border border-dashed p-4">
               <div>
-                <div className="font-medium">Nenhum modelo configurado para esta equipe neste evento.</div>
+                <div className="font-medium">{t('volunteer.schedules.editor.noModelTitle')}</div>
                 <div className="text-sm text-muted-foreground">
-                  O preenchimento manual funciona, mas você fica sem uma referência clara do mínimo necessário.
+                  {t('volunteer.schedules.editor.noModelDescription')}
                 </div>
               </div>
               <Button variant="outline" asChild>
                 <Link to={`/voluntariado/modelos-escala/novo?equipeId=${equipeId}`}>
-                  Criar modelo
+                  {t('volunteer.schedules.editor.createModel')}
                 </Link>
               </Button>
             </div>
           ) : coberturaModelo.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Este modelo não tem itens definidos.</div>
+            <div className="text-sm text-muted-foreground">{t('volunteer.schedules.editor.modelWithoutItems')}</div>
           ) : (
             <div className="space-y-3">
               {modeloEscala.nome && (
                 <div className="text-sm text-muted-foreground">
-                  Modelo: <span className="font-medium text-foreground">{modeloEscala.nome}</span>
+                  {t('volunteer.schedules.editor.modelLabel')} <span className="font-medium text-foreground">{modeloEscala.nome}</span>
                 </div>
               )}
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -592,10 +603,12 @@ export default function EscalaEditor() {
                   >
                     <div className="font-medium">{item.cargoNome}</div>
                     <div className="mt-2 text-sm text-muted-foreground">
-                      Preenchido: <span className="font-semibold text-foreground">{item.preenchidos}/{item.necessario}</span>
+                      {t('volunteer.schedules.editor.filledLabel')} <span className="font-semibold text-foreground">{item.preenchidos}/{item.necessario}</span>
                     </div>
                     <div className={`mt-1 text-sm font-medium ${item.completo ? 'text-emerald-300' : 'text-amber-300'}`}>
-                      {item.completo ? 'Cobertura completa' : `Faltam ${item.faltando}`}
+                      {item.completo
+                        ? t('volunteer.schedules.editor.fullCoverage')
+                        : t('volunteer.schedules.editor.missingCount', { count: item.faltando })}
                     </div>
                   </div>
                 ))}
@@ -608,28 +621,28 @@ export default function EscalaEditor() {
       <div className="grid gap-6 xl:grid-cols-[1.1fr_1.4fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Quem pode servir agora</CardTitle>
+            <CardTitle>{t('volunteer.schedules.editor.availableNowTitle')}</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Escolha direto na lista. A tela já prioriza quem está disponível para esta equipe e ocorrência.
+              {t('volunteer.schedules.editor.availableNowDescription')}
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
             {voluntariosDisponiveis.length === 0 ? (
               <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-                Nenhum voluntário disponível no momento para esta equipe.
+                {t('volunteer.schedules.editor.noAvailableVolunteers')}
               </div>
             ) : (
               voluntariosDisponiveis.map((voluntario) => (
                 <div key={voluntario.id} className="flex items-center justify-between rounded-xl border p-4 gap-4">
                   <div className="space-y-1">
-                    <div className="font-medium">{voluntario.nome}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {voluntario.cargoNome || 'Sem cargo'} • Histórico recente: {voluntario.cargaRecente}
+                      <div className="font-medium">{voluntario.nome}</div>
+                      <div className="text-sm text-muted-foreground">
+                      {voluntario.cargoNome || t('volunteer.schedules.byOccurrence.noRole')} • {t('volunteer.schedules.editor.recentHistory', { count: voluntario.cargaRecente })}
+                      </div>
                     </div>
-                  </div>
                   <Button size="sm" onClick={() => handleAddVoluntario(voluntario)} disabled={saving || Boolean(escala && !escalaRascunho)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Adicionar
+                    {t('actions.add')}
                   </Button>
                 </div>
               ))
@@ -637,13 +650,13 @@ export default function EscalaEditor() {
 
             {isAdmin && voluntariosBloqueados.length > 0 && (
               <div className="space-y-3 pt-2">
-                <div className="text-sm font-medium text-muted-foreground">Bloqueados para esta ocorrência</div>
+                <div className="text-sm font-medium text-muted-foreground">{t('volunteer.schedules.editor.blockedTitle')}</div>
                 {voluntariosBloqueados.map((voluntario) => (
                   <div key={voluntario.id} className="flex items-center justify-between rounded-xl border border-dashed p-4 gap-4 opacity-80">
                     <div className="space-y-1">
                       <div className="font-medium">{voluntario.nome}</div>
                       <div className="text-sm text-muted-foreground">
-                        {voluntario.cargoNome || 'Sem cargo'} • {voluntario.motivoBloqueio || 'Indisponível'}
+                        {voluntario.cargoNome || t('volunteer.schedules.byOccurrence.noRole')} • {voluntario.motivoBloqueio || t('volunteer.schedules.editor.unavailable')}
                       </div>
                     </div>
                     <Button
@@ -652,7 +665,7 @@ export default function EscalaEditor() {
                       onClick={() => handleAddVoluntario(voluntario, true)}
                       disabled={saving || Boolean(escala && !escalaRascunho)}
                     >
-                      Adicionar com exceção
+                      {t('volunteer.schedules.editor.addWithException')}
                     </Button>
                   </div>
                 ))}
@@ -663,15 +676,15 @@ export default function EscalaEditor() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Escala montada ({escala?.itens?.length || 0})</CardTitle>
+            <CardTitle>{t('volunteer.schedules.editor.builtScheduleTitle', { count: escala?.itens?.length || 0 })}</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Acompanhe respostas e faça ajustes sem sair da mesma visão.
+              {t('volunteer.schedules.editor.builtScheduleDescription')}
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
             {!escala || !escala.itens?.length ? (
               <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-                Nenhum voluntário adicionado à escala ainda.
+                {t('volunteer.schedules.editor.emptySchedule')}
               </div>
             ) : (
               escala.itens.map((item) => {
@@ -686,48 +699,48 @@ export default function EscalaEditor() {
                       <div className="space-y-1">
                         <div className="font-medium text-base">{item.voluntarioNome}</div>
                         <div className="text-sm text-muted-foreground">
-                          {item.cargoNome || 'Sem cargo'} • {item.equipeNome}
+                          {item.cargoNome || t('volunteer.schedules.byOccurrence.noRole')} • {item.equipeNome}
                         </div>
                       </div>
                       <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${getEscalaItemStatusClassName(item.status)}`}>
-                        {getEscalaItemStatusLabel(item.status)}
+                        {t(`volunteer.schedules.editor.itemStatus.${getEscalaItemStatusLabel(item.status)}`)}
                       </span>
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-2">
                       <div className="text-sm text-muted-foreground">
-                        Resposta: {item.dataConfirmacao
-                          ? new Date(item.dataConfirmacao).toLocaleString('pt-BR')
+                        {t('volunteer.schedules.editor.responseLabel')} {item.dataConfirmacao
+                          ? formatDateTime(item.dataConfirmacao)
                           : item.dataRecusa
-                            ? new Date(item.dataRecusa).toLocaleString('pt-BR')
-                            : 'Aguardando resposta'}
+                            ? formatDateTime(item.dataRecusa)
+                            : t('volunteer.schedules.editor.awaitingResponse')}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Observações: {item.observacaoOperacional || item.motivoRecusa || (item.conflitoAprovado ? 'Exceção manual' : '—')}
+                        {t('volunteer.schedules.editor.notesLabel')} {item.observacaoOperacional || item.motivoRecusa || (item.conflitoAprovado ? t('volunteer.schedules.editor.manualException') : '—')}
                       </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
                       <Button variant="outline" size="sm" className={confirmarButton.className} onClick={() => handleConfirmarItem(item)}>
                         <CheckCircle2 className="h-4 w-4 mr-2" />
-                        {confirmarButton.label}
+                        {t(`volunteer.schedules.editor.actionButtons.${confirmarButton.labelKey}`)}
                       </Button>
                       <Button variant="outline" size="sm" className={recusarButton.className} onClick={() => handleRecusarItem(item)}>
                         <XCircle className="h-4 w-4 mr-2" />
-                        {recusarButton.label}
+                        {t(`volunteer.schedules.editor.actionButtons.${recusarButton.labelKey}`)}
                       </Button>
                       <Button variant="outline" size="sm" className={serviuButton.className} onClick={() => handleRegistrarPresenca(item, true)}>
                         <UserCheck className="h-4 w-4 mr-2" />
-                        {serviuButton.label}
+                        {t(`volunteer.schedules.editor.actionButtons.${serviuButton.labelKey}`)}
                       </Button>
                       <Button variant="outline" size="sm" className={faltouButton.className} onClick={() => handleRegistrarPresenca(item, false)}>
                         <UserX className="h-4 w-4 mr-2" />
-                        {faltouButton.label}
+                        {t(`volunteer.schedules.editor.actionButtons.${faltouButton.labelKey}`)}
                       </Button>
                       {escalaRascunho && (
                         <Button variant="ghost" size="sm" onClick={() => handleDeleteItem(item)}>
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Remover
+                          {t('actions.remove')}
                         </Button>
                       )}
                     </div>
@@ -742,37 +755,37 @@ export default function EscalaEditor() {
       {solicitacoesTroca.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Solicitações de troca</CardTitle>
+            <CardTitle>{t('volunteer.schedules.editor.exchangeRequestsTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Solicitante</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Motivo</TableHead>
-                  <TableHead>Substituto</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('volunteer.schedules.exchangeRequests.table.requester')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.exchangeRequests.table.status')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.exchangeRequests.table.reason')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.exchangeRequests.table.substitute')}</TableHead>
+                  <TableHead className="text-right">{t('volunteer.schedules.exchangeRequests.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {solicitacoesTroca.map((solicitacao) => (
                   <TableRow key={solicitacao.id}>
                     <TableCell className="font-medium">{solicitacao.voluntarioSolicitanteNome}</TableCell>
-                    <TableCell>{solicitacao.status === 1 ? 'Pendente' : solicitacao.status === 2 ? 'Aprovada' : 'Rejeitada'}</TableCell>
-                    <TableCell>{solicitacao.motivo || '-'}</TableCell>
-                    <TableCell>{solicitacao.voluntarioSubstitutoNome || '-'}</TableCell>
+                    <TableCell>{solicitacao.status === 1 ? t('volunteer.schedules.exchangeRequests.status.pending') : solicitacao.status === 2 ? t('volunteer.schedules.exchangeRequests.status.approved') : t('volunteer.schedules.exchangeRequests.status.rejected')}</TableCell>
+                    <TableCell>{solicitacao.motivo || t('common.notInformed')}</TableCell>
+                    <TableCell>{solicitacao.voluntarioSubstitutoNome || t('common.notInformed')}</TableCell>
                     <TableCell className="text-right">
                       {solicitacao.status === 1 ? (
                         <div className="flex items-center justify-end gap-2">
                           <Button variant="outline" size="sm" onClick={() => handleAprovarTroca(solicitacao)}>
-                            Aprovar
+                            {t('volunteer.schedules.exchangeRequests.status.approved')}
                           </Button>
                           <Button variant="outline" size="sm" onClick={() => handleRejeitarTroca(solicitacao)}>
-                            Rejeitar
+                            {t('volunteer.schedules.exchangeRequests.status.rejected')}
                           </Button>
                         </div>
-                      ) : '-'}
+                      ) : t('common.notInformed')}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -785,9 +798,9 @@ export default function EscalaEditor() {
       <Dialog open={trocaDialogOpen} onOpenChange={setTrocaDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Aprovar solicitação de troca</DialogTitle>
+            <DialogTitle>{t('volunteer.schedules.editor.approveExchangeTitle')}</DialogTitle>
             <DialogDescription>
-              Selecione o substituto disponível para assumir esta escala.
+              {t('volunteer.schedules.editor.approveExchangeDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -796,7 +809,7 @@ export default function EscalaEditor() {
                 <div>
                   <div className="font-medium">{sub.voluntarioNome}</div>
                   <div className="text-sm text-muted-foreground">
-                    {sub.cargoNome || 'Sem cargo'} • Carga recente: {sub.cargaRecente}
+                    {sub.cargoNome || t('volunteer.schedules.byOccurrence.noRole')} • {t('volunteer.schedules.editor.recentLoad', { count: sub.cargaRecente })}
                   </div>
                 </div>
                 <input
@@ -810,8 +823,8 @@ export default function EscalaEditor() {
             ))}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setTrocaDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={confirmAprovarTroca}>Confirmar substituto</Button>
+            <Button variant="outline" onClick={() => setTrocaDialogOpen(false)}>{t('actions.cancel')}</Button>
+            <Button onClick={confirmAprovarTroca}>{t('volunteer.schedules.editor.confirmSubstitute')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

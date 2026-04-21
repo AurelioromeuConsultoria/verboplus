@@ -11,8 +11,11 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { equipesApi, escalasApi, eventosApi } from '@/lib/api';
 import { usePagination } from '@/hooks/usePagination';
+import { formatDateTime } from '@/lib/formatters';
+import { useTranslation } from 'react-i18next';
 
 export default function HistoricoVoluntarios() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [equipes, setEquipes] = useState([]);
@@ -55,7 +58,7 @@ export default function HistoricoVoluntarios() {
       setRegistros(historicoRes.data || []);
     } catch (err) {
       console.error(err);
-      setError('Erro ao carregar histórico operacional');
+      setError(t('volunteer.history.errorLoad'));
     } finally {
       setLoading(false);
     }
@@ -91,58 +94,56 @@ export default function HistoricoVoluntarios() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtrados, 15);
 
-  if (loading) return <LoadingPage text="Carregando histórico do voluntariado..." />;
+  if (loading) return <LoadingPage text={t('volunteer.history.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Histórico Operacional</h1>
-          <p className="text-muted-foreground">
-            Acompanhe presença, faltas, pendências e carga recente dos voluntários.
-          </p>
+          <h1 className="text-3xl font-bold">{t('volunteer.history.title')}</h1>
+          <p className="text-muted-foreground">{t('volunteer.history.subtitle')}</p>
         </div>
         <Button variant="outline" onClick={load}>
           <RefreshCcw className="h-4 w-4 mr-2" />
-          Atualizar
+          {t('volunteer.history.refresh')}
         </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
-          <CardHeader><CardTitle>Voluntários</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('volunteer.history.summary.volunteers')}</CardTitle></CardHeader>
           <CardContent className="text-2xl font-bold">{resumo.voluntarios}</CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Presenças</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('volunteer.history.summary.presences')}</CardTitle></CardHeader>
           <CardContent className="text-2xl font-bold text-green-600">{resumo.presencas}</CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Faltas</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('volunteer.history.summary.absences')}</CardTitle></CardHeader>
           <CardContent className="text-2xl font-bold text-red-600">{resumo.faltas}</CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Pendências</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('volunteer.history.summary.pending')}</CardTitle></CardHeader>
           <CardContent className="text-2xl font-bold text-amber-600">{resumo.pendentes}</CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('volunteer.history.filtersTitle')}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-5">
           <div className="space-y-2 md:col-span-2">
-            <Label>Buscar</Label>
-            <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome do voluntário ou equipe" />
+            <Label>{t('volunteer.history.searchLabel')}</Label>
+            <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('volunteer.history.searchPlaceholder')} />
           </div>
           <div className="space-y-2">
-            <Label>Equipe</Label>
+            <Label>{t('volunteer.history.teamLabel')}</Label>
             <Select value={equipeId} onValueChange={setEquipeId}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="all">{t('volunteer.history.allTeamsOption')}</SelectItem>
                 {equipes.map((equipe) => (
                   <SelectItem key={equipe.id} value={String(equipe.id)}>{equipe.nome}</SelectItem>
                 ))}
@@ -150,11 +151,11 @@ export default function HistoricoVoluntarios() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Evento</Label>
+            <Label>{t('volunteer.history.eventLabel')}</Label>
             <Select value={eventoId} onValueChange={setEventoId}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="all">{t('volunteer.history.allEventsOption')}</SelectItem>
                 {eventos.map((evento) => (
                   <SelectItem key={evento.id} value={String(evento.id)}>{evento.titulo}</SelectItem>
                 ))}
@@ -163,11 +164,11 @@ export default function HistoricoVoluntarios() {
           </div>
           <div className="grid gap-4 md:grid-cols-2 md:col-span-5">
             <div className="space-y-2">
-              <Label>Data início</Label>
+              <Label>{t('volunteer.history.startDateLabel')}</Label>
               <Input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Data fim</Label>
+              <Label>{t('volunteer.history.endDateLabel')}</Label>
               <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
             </div>
           </div>
@@ -176,24 +177,24 @@ export default function HistoricoVoluntarios() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Voluntários ({total})</CardTitle>
+          <CardTitle>{t('volunteer.history.listTitle', { total })}</CardTitle>
         </CardHeader>
         <CardContent>
           {filtrados.length === 0 ? (
-            <div className="py-10 text-center text-muted-foreground">Nenhum voluntário encontrado para os filtros atuais.</div>
+            <div className="py-10 text-center text-muted-foreground">{t('volunteer.history.empty')}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Voluntário</TableHead>
-                  <TableHead>Equipes</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Presenças</TableHead>
-                  <TableHead>Faltas</TableHead>
-                  <TableHead>Pendentes</TableHead>
-                  <TableHead>Carga no mês</TableHead>
-                  <TableHead>Última escala</TableHead>
-                  <TableHead>Próxima escala</TableHead>
+                  <TableHead>{t('volunteer.history.table.volunteer')}</TableHead>
+                  <TableHead>{t('volunteer.history.table.teams')}</TableHead>
+                  <TableHead>{t('volunteer.history.table.total')}</TableHead>
+                  <TableHead>{t('volunteer.history.table.presences')}</TableHead>
+                  <TableHead>{t('volunteer.history.table.absences')}</TableHead>
+                  <TableHead>{t('volunteer.history.table.pending')}</TableHead>
+                  <TableHead>{t('volunteer.history.table.monthLoad')}</TableHead>
+                  <TableHead>{t('volunteer.history.table.lastSchedule')}</TableHead>
+                  <TableHead>{t('volunteer.history.table.nextSchedule')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -211,8 +212,8 @@ export default function HistoricoVoluntarios() {
                     <TableCell className="text-red-600">{item.faltas}</TableCell>
                     <TableCell className="text-amber-600">{item.pendentes}</TableCell>
                     <TableCell>{item.cargaMesAtual}</TableCell>
-                    <TableCell>{item.ultimaEscalaEm ? new Date(item.ultimaEscalaEm).toLocaleString('pt-BR') : '-'}</TableCell>
-                    <TableCell>{item.proximaEscalaEm ? new Date(item.proximaEscalaEm).toLocaleString('pt-BR') : '-'}</TableCell>
+                    <TableCell>{item.ultimaEscalaEm ? formatDateTime(item.ultimaEscalaEm) : '-'}</TableCell>
+                    <TableCell>{item.proximaEscalaEm ? formatDateTime(item.proximaEscalaEm) : '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

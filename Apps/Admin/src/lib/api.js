@@ -20,3 +20,4 @@ export * from '../api/comunicacao';
 export * from '../api/financeiro/cadastros';
 export * from '../api/financeiro/lancamentos';
 export * from '../api/financeiro/relatorios';
+export * from '../api/tenants';

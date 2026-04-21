@@ -12,8 +12,10 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { noticiasApi, categoriasNoticiasApi, uploadApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function NoticiaForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
@@ -54,7 +56,7 @@ export default function NoticiaForm() {
         });
       }
     } catch (err) {
-      setError('Erro ao carregar dados');
+      setError(t('news.form.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -71,7 +73,7 @@ export default function NoticiaForm() {
   const handleExtrairDeUrl = async () => {
     const url = urlImportar?.trim();
     if (!url) {
-      toast.error('Informe a URL do artigo');
+      toast.error(t('news.form.import.validation.urlRequired'));
       return;
     }
     try {
@@ -85,7 +87,7 @@ export default function NoticiaForm() {
           imagemPath = imgRes.data?.url || imgRes.data?.path || '';
           // Se o backend tiver ProductionUploadSync configurado, a imagem já foi enviada para produção
         } catch (_) {
-          toast.info('Conteúdo extraído. Imagem do link não foi possível baixar; adicione manualmente se quiser.');
+          toast.info(t('news.form.import.imageWarning'));
         }
       }
       setFormData((prev) => ({
@@ -97,10 +99,10 @@ export default function NoticiaForm() {
         url: d.url || url || prev.url,
         imagem: imagemPath || prev.imagem,
       }));
-      toast.success(imagemPath ? 'Conteúdo e imagem extraídos. Revise e salve.' : 'Conteúdo extraído. Revise e salve a notícia.');
+      toast.success(imagemPath ? t('news.form.import.successWithImage') : t('news.form.import.success'));
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data || 'Não foi possível extrair o conteúdo do link.';
-      toast.error(typeof msg === 'string' ? msg : 'Erro ao extrair conteúdo');
+      const msg = err.response?.data?.message || err.response?.data || t('news.form.import.extractUnavailable');
+      toast.error(typeof msg === 'string' ? msg : t('news.form.import.extractError'));
       console.error(err);
     } finally {
       setExtraindo(false);
@@ -126,7 +128,7 @@ export default function NoticiaForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.categoriaNoticiaId) {
-      toast.error('Categoria é obrigatória');
+      toast.error(t('news.form.validation.categoryRequired'));
       return;
     }
     try {
@@ -142,10 +144,10 @@ export default function NoticiaForm() {
       };
       if (isEditing) await noticiasApi.update(id, payload);
       else await noticiasApi.create(payload);
-      toast.success(isEditing ? 'Notícia atualizada com sucesso!' : 'Notícia criada com sucesso!');
+      toast.success(isEditing ? t('news.form.updateSuccess') : t('news.form.createSuccess'));
       navigate('/noticias');
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Erro ao salvar notícia';
+      const errorMessage = err.response?.data?.message || t('news.form.saveError');
       toast.error(errorMessage);
       console.error(err);
     } finally {
@@ -153,7 +155,7 @@ export default function NoticiaForm() {
     }
   };
 
-  if (loading && isEditing) return <LoadingPage text="Carregando notícia..." />;
+  if (loading && isEditing) return <LoadingPage text={t('news.form.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -161,30 +163,30 @@ export default function NoticiaForm() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" asChild>
           <Link to="/noticias">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('actions.back')}
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Notícia' : 'Nova Notícia'}</h1>
-          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações da notícia' : 'Cadastre uma nova notícia'}</p>
+          <h1 className="text-3xl font-bold">{isEditing ? t('news.form.editPageTitle') : t('news.form.createPageTitle')}</h1>
+          <p className="text-muted-foreground">{isEditing ? t('news.form.editSubtitle') : t('news.form.createSubtitle')}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isEditing ? 'Editar Notícia' : 'Cadastrar Notícia'}</CardTitle>
+          <CardTitle>{isEditing ? t('news.form.editCardTitle') : t('news.form.createCardTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           {!isEditing && (
             <div className="mb-6 p-4 rounded-lg border bg-muted/40 space-y-3">
-              <Label className="text-sm font-medium">Importar de link</Label>
+              <Label className="text-sm font-medium">{t('news.form.import.title')}</Label>
               <p className="text-sm text-muted-foreground">
-                Cole a URL de uma notícia (ex.: CPAD News, Guiame) para preencher título, data, descrição e texto automaticamente.
+                {t('news.form.import.description')}
               </p>
               <div className="flex gap-2 flex-wrap">
                 <Input
                   type="url"
-                  placeholder="https://exemplo.com/noticia/..."
+                  placeholder={t('news.form.import.placeholder')}
                   value={urlImportar}
                   onChange={(e) => setUrlImportar(e.target.value)}
                   className="flex-1 min-w-[200px]"
@@ -196,7 +198,7 @@ export default function NoticiaForm() {
                   disabled={extraindo}
                 >
                   {extraindo ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
-                  {extraindo ? ' Extraindo...' : ' Extrair conteúdo'}
+                  {extraindo ? ` ${t('news.form.import.extracting')}` : ` ${t('news.form.import.extract')}`}
                 </Button>
               </div>
             </div>
@@ -204,13 +206,13 @@ export default function NoticiaForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="titulo">Título *</Label>
-                <Input id="titulo" name="titulo" value={formData.titulo} onChange={handleChange} placeholder="Título da notícia" required />
+                <Label htmlFor="titulo">{t('news.table.title')} *</Label>
+                <Input id="titulo" name="titulo" value={formData.titulo} onChange={handleChange} placeholder={t('news.form.placeholders.title')} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="categoriaNoticiaId">Categoria *</Label>
+                <Label htmlFor="categoriaNoticiaId">{t('news.table.category')} *</Label>
                 <select id="categoriaNoticiaId" name="categoriaNoticiaId" value={formData.categoriaNoticiaId} onChange={handleChange} className="w-full px-3 py-2 border rounded" required>
-                  <option value="">Selecione</option>
+                  <option value="">{t('actions.select')}</option>
                   {categorias.map((c) => (
                     <option key={c.id} value={c.id}>{c.nome}</option>
                   ))}
@@ -219,38 +221,38 @@ export default function NoticiaForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição</Label>
-              <Textarea id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder="Descrição da notícia" rows={3} />
+              <Label htmlFor="descricao">{t('news.table.description')}</Label>
+              <Textarea id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder={t('news.form.placeholders.description')} rows={3} />
             </div>
 
             <div className="space-y-2">
               <RichTextEditor
-                label="Texto"
+                label={t('news.form.fields.content')}
                 name="texto"
                 value={formData.texto}
                 onChange={handleChange}
-                placeholder="Texto completo da notícia. Cole o texto e os espaços entre parágrafos serão preservados automaticamente."
+                placeholder={t('news.form.placeholders.content')}
               />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="data">Data</Label>
+                <Label htmlFor="data">{t('news.table.date')}</Label>
                 <Input id="data" name="data" type="datetime-local" value={formData.data} onChange={handleChange} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="url">URL</Label>
+                <Label htmlFor="url">{t('news.form.fields.url')}</Label>
                 <Input 
                   id="url" 
                   name="url" 
                   type="text" 
                   value={formData.url} 
                   onChange={handleChange} 
-                  placeholder="exemplo.com ou https://exemplo.com" 
+                  placeholder={t('news.form.placeholders.url')} 
                 />
                 {formData.url && !formData.url.match(/^https?:\/\//i) && (
                   <p className="text-xs text-muted-foreground">
-                    Será adicionado https:// automaticamente
+                    {t('news.form.urlHint')}
                   </p>
                 )}
               </div>
@@ -258,7 +260,7 @@ export default function NoticiaForm() {
 
             <div className="space-y-2">
               <ImageUpload
-                label="Imagem"
+                label={t('news.form.fields.image')}
                 value={formData.imagem}
                 onChange={(url) => setFormData((prev) => ({ ...prev, imagem: url }))}
                 accept="image/*"
@@ -268,10 +270,10 @@ export default function NoticiaForm() {
 
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={loading}>
-                <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+                <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : (isEditing ? t('actions.update') : t('actions.create'))}
               </Button>
               <Button type="button" variant="outline" asChild>
-                <Link to="/noticias">Cancelar</Link>
+                <Link to="/noticias">{t('actions.cancel')}</Link>
               </Button>
             </div>
           </form>
@@ -280,5 +282,4 @@ export default function NoticiaForm() {
     </div>
   );
 }
-
 

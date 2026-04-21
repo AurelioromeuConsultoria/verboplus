@@ -23,8 +23,11 @@ import { AdvancedSearch } from '@/components/ui/advanced-search';
 import { mensagensAgendadasApi, visitantesApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatDateTime } from '@/lib/formatters';
+import { useTranslation } from 'react-i18next';
 
 const MensagensAgendadas = () => {
+  const { t } = useTranslation();
   const [mensagens, setMensagens] = useState([]);
   const [visitantes, setVisitantes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,10 +58,10 @@ const MensagensAgendadas = () => {
       const visitantesResponse = await visitantesApi.getAll();
       setVisitantes(visitantesResponse.data || []);
     } catch (err) {
-      console.warn('Nao foi possivel carregar visitantes para enriquecer a listagem.', err);
+      console.warn(t('scheduledMessagesManagement.logs.enrichVisitorsWarning'), err);
       setVisitantes([]);
     }
-  }, []);
+  }, [t]);
 
   const fetchMensagens = useCallback(async ({ showLoader = false } = {}) => {
     try {
@@ -93,21 +96,21 @@ const MensagensAgendadas = () => {
         erro: Number(s.erro || 0),
       });
     } catch (err) {
-      const msg = getApiErrorMessage(err, 'Erro ao carregar dados');
+      const msg = getApiErrorMessage(err, t('scheduledMessagesManagement.errorLoad'));
       setError(msg);
-      console.error('Erro ao buscar dados:', err);
+      console.error(t('scheduledMessagesManagement.logs.fetchError'), err);
       toast.error(msg);
     } finally {
       if (showLoader) setLoading(false);
       setRefreshing(false);
     }
-  }, [filters.dataEnvio_from, filters.dataEnvio_to, filters.status, filters.texto, filters.visitanteId, page, pageSize]);
+  }, [filters.dataEnvio_from, filters.dataEnvio_to, filters.status, filters.texto, filters.visitanteId, page, pageSize, t]);
 
   useEffect(() => {
     fetchVisitantes().catch((err) => {
-      console.error('Erro ao carregar visitantes:', err);
+      console.error(t('scheduledMessagesManagement.logs.loadVisitorsError'), err);
     });
-  }, [fetchVisitantes]);
+  }, [fetchVisitantes, t]);
 
   useEffect(() => {
     fetchMensagens({ showLoader: true });
@@ -134,24 +137,24 @@ const MensagensAgendadas = () => {
 
   const getStatusText = (status) => {
     switch (Number(status)) {
-      case 1: return 'Agendada';
-      case 2: return 'Pronta para envio';
-      case 3: return 'Enviada';
-      case 4: return 'Erro';
-      case 5: return 'Cancelada';
-      case 6: return 'Em processamento';
-      default: return `Status ${status}`;
+      case 1: return t('scheduledMessagesManagement.status.scheduled');
+      case 2: return t('scheduledMessagesManagement.status.ready');
+      case 3: return t('scheduledMessagesManagement.status.sent');
+      case 4: return t('scheduledMessagesManagement.status.error');
+      case 5: return t('scheduledMessagesManagement.status.canceled');
+      case 6: return t('scheduledMessagesManagement.status.processing');
+      default: return t('scheduledMessagesManagement.status.unknown', { status });
     }
   };
 
   const getStatusIcon = (status) => {
     const statusText = getStatusText(status);
     switch (statusText) {
-      case 'Agendada':
+      case t('scheduledMessagesManagement.status.scheduled'):
         return <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" />;
-      case 'Enviada':
+      case t('scheduledMessagesManagement.status.sent'):
         return <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400" />;
-      case 'Erro':
+      case t('scheduledMessagesManagement.status.error'):
         return <XCircle className="w-4 h-4 text-red-500 dark:text-red-400" />;
       default:
         return <AlertCircle className="w-4 h-4 text-muted-foreground" />;
@@ -162,47 +165,27 @@ const MensagensAgendadas = () => {
     const statusText = getStatusText(status);
     
     switch (statusText) {
-      case 'Agendada':
-        return <Badge variant="default" className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700">Agendada</Badge>;
-      case 'Pronta para envio':
-        return <Badge variant="secondary">Pronta</Badge>;
-      case 'Em processamento':
-        return <Badge variant="secondary">Processando</Badge>;
-      case 'Enviada':
-        return <Badge variant="default" className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700">Enviada</Badge>;
-      case 'Erro':
-        return <Badge variant="destructive">Erro</Badge>;
-      case 'Cancelada':
-        return <Badge variant="outline">Cancelada</Badge>;
+      case t('scheduledMessagesManagement.status.scheduled'):
+        return <Badge variant="default" className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700">{statusText}</Badge>;
+      case t('scheduledMessagesManagement.status.ready'):
+        return <Badge variant="secondary">{t('scheduledMessagesManagement.status.readyShort')}</Badge>;
+      case t('scheduledMessagesManagement.status.processing'):
+        return <Badge variant="secondary">{t('scheduledMessagesManagement.status.processingShort')}</Badge>;
+      case t('scheduledMessagesManagement.status.sent'):
+        return <Badge variant="default" className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700">{statusText}</Badge>;
+      case t('scheduledMessagesManagement.status.error'):
+        return <Badge variant="destructive">{statusText}</Badge>;
+      case t('scheduledMessagesManagement.status.canceled'):
+        return <Badge variant="outline">{statusText}</Badge>;
       default:
         return <Badge variant="secondary">{statusText}</Badge>;
     }
   };
 
-  const formatDateTime = (dateString) => {
-    if (!dateString) return 'Data não definida';
-    
-    const date = new Date(dateString);
-    
-    // Verifica se a data é válida
-    if (isNaN(date.getTime())) {
-      console.warn('Data inválida recebida:', dateString);
-      return 'Data inválida';
-    }
-    
-    return date.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   const getVisitanteNome = (mensagem) => {
     if (mensagem?.nomeVisitante) return mensagem.nomeVisitante;
     const nome = visitanteNomeById.get(String(mensagem.visitanteId));
-    return nome || 'Visitante não encontrado';
+    return nome || t('scheduledMessagesManagement.visitorNotFound');
   };
 
   // Cancelamento não está implementado na API atualmente.
@@ -211,7 +194,7 @@ const MensagensAgendadas = () => {
     setPage(1);
   }, [filters]);
 
-  if (loading) return <LoadingPage text="Carregando mensagens..." />;
+  if (loading) return <LoadingPage text={t('scheduledMessagesManagement.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={() => fetchMensagens({ showLoader: true })} />;
 
   return (
@@ -219,19 +202,19 @@ const MensagensAgendadas = () => {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Mensagens Agendadas</h1>
-          <p className="text-muted-foreground mt-1">Acompanhe o status das mensagens automáticas</p>
+          <h1 className="text-3xl font-bold text-foreground">{t('scheduledMessagesManagement.title')}</h1>
+          <p className="text-muted-foreground mt-1">{t('scheduledMessagesManagement.subtitle')}</p>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground whitespace-nowrap">Auto-atualizar</span>
+            <span className="text-sm text-muted-foreground whitespace-nowrap">{t('scheduledMessagesManagement.autoRefresh.label')}</span>
             <Select value={String(autoRefreshSeconds)} onValueChange={(v) => setAutoRefreshSeconds(Number(v))}>
-              <SelectTrigger className="w-[140px]" title="Intervalo de atualização automática">
+              <SelectTrigger className="w-[140px]" title={t('scheduledMessagesManagement.autoRefresh.triggerTitle')}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="0">Desligado</SelectItem>
+                <SelectItem value="0">{t('scheduledMessagesManagement.autoRefresh.off')}</SelectItem>
                 <SelectItem value="10">10s</SelectItem>
                 <SelectItem value="30">30s</SelectItem>
                 <SelectItem value="60">60s</SelectItem>
@@ -252,7 +235,7 @@ const MensagensAgendadas = () => {
                 <MessageSquare className="w-8 h-8 text-muted-foreground" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-sm font-medium text-muted-foreground">{t('scheduledMessagesManagement.stats.total')}</p>
                 <p className="text-2xl font-bold text-foreground">{stats.total}</p>
               </div>
             </div>
@@ -266,7 +249,7 @@ const MensagensAgendadas = () => {
                 <Clock className="w-8 h-8 text-blue-500 dark:text-blue-400" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Agendadas</p>
+                <p className="text-sm font-medium text-muted-foreground">{t('scheduledMessagesManagement.stats.scheduled')}</p>
                 <p className="text-2xl font-bold text-blue-500 dark:text-blue-400">{stats.agendadas}</p>
               </div>
             </div>
@@ -280,7 +263,7 @@ const MensagensAgendadas = () => {
                 <CheckCircle className="w-8 h-8 text-green-500 dark:text-green-400" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Enviadas</p>
+                <p className="text-sm font-medium text-muted-foreground">{t('scheduledMessagesManagement.stats.sent')}</p>
                 <p className="text-2xl font-bold text-green-500 dark:text-green-400">{stats.enviadas}</p>
               </div>
             </div>
@@ -294,7 +277,7 @@ const MensagensAgendadas = () => {
                 <XCircle className="w-8 h-8 text-red-500 dark:text-red-400" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Com Erro</p>
+                <p className="text-sm font-medium text-muted-foreground">{t('scheduledMessagesManagement.stats.error')}</p>
                 <p className="text-2xl font-bold text-red-500 dark:text-red-400">{stats.erro}</p>
               </div>
             </div>
@@ -304,31 +287,31 @@ const MensagensAgendadas = () => {
 
       <AdvancedSearch
         searchFields={[
-          { key: 'texto', label: 'Mensagem/Visitante', type: 'text', placeholder: 'Buscar por texto ou nome do visitante...' },
+          { key: 'texto', label: t('scheduledMessagesManagement.filters.messageOrVisitor'), type: 'text', placeholder: t('scheduledMessagesManagement.filters.searchPlaceholder') },
         ]}
         filterFields={[
           {
             key: 'status',
-            label: 'Status',
+            label: t('scheduledMessagesManagement.filters.status'),
             type: 'select',
             options: [
-              { value: '1', label: 'Agendada' },
-              { value: '2', label: 'Pronta para envio' },
-              { value: '6', label: 'Em processamento' },
-              { value: '3', label: 'Enviada' },
-              { value: '4', label: 'Erro' },
-              { value: '5', label: 'Cancelada' },
+              { value: '1', label: t('scheduledMessagesManagement.status.scheduled') },
+              { value: '2', label: t('scheduledMessagesManagement.status.ready') },
+              { value: '6', label: t('scheduledMessagesManagement.status.processing') },
+              { value: '3', label: t('scheduledMessagesManagement.status.sent') },
+              { value: '4', label: t('scheduledMessagesManagement.status.error') },
+              { value: '5', label: t('scheduledMessagesManagement.status.canceled') },
             ],
           },
           {
             key: 'visitanteId',
-            label: 'Visitante',
+            label: t('scheduledMessagesManagement.filters.visitor'),
             type: 'select',
             options: visitantes.map((v) => ({ value: String(v.id), label: v.nome })),
           },
           {
             key: 'dataEnvio',
-            label: 'Data de Envio',
+            label: t('scheduledMessagesManagement.filters.sendDate'),
             type: 'date-range',
           },
         ]}
@@ -349,16 +332,16 @@ const MensagensAgendadas = () => {
       <Card>
         <CardHeader>
           <CardTitle>
-            Mensagens ({total})
+            {t('scheduledMessagesManagement.listTitle', { total })}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {mensagens.length === 0 ? (
             <PageEmptyState
-              title={total === 0 ? 'Nenhuma mensagem encontrada' : 'Nenhuma mensagem nesta pagina'}
+              title={total === 0 ? t('scheduledMessagesManagement.empty.title') : t('scheduledMessagesManagement.empty.pageTitle')}
               description={total === 0
-                ? 'As mensagens aparecerao aqui quando houver agendamentos compativeis com os filtros atuais.'
-                : 'Nao ha mensagens nesta pagina atual. Tente navegar ou ajustar os filtros.'}
+                ? t('scheduledMessagesManagement.empty.description')
+                : t('scheduledMessagesManagement.empty.pageDescription')}
               icon={MessageSquare}
             />
           ) : (
@@ -366,11 +349,11 @@ const MensagensAgendadas = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Visitante</TableHead>
-                    <TableHead>Mensagem</TableHead>
-                    <TableHead>Data/Hora Envio</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Ações</TableHead>
+                    <TableHead>{t('scheduledMessagesManagement.table.visitor')}</TableHead>
+                    <TableHead>{t('scheduledMessagesManagement.table.message')}</TableHead>
+                    <TableHead>{t('scheduledMessagesManagement.table.sendDateTime')}</TableHead>
+                    <TableHead>{t('scheduledMessagesManagement.table.status')}</TableHead>
+                    <TableHead>{t('scheduledMessagesManagement.table.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -384,7 +367,7 @@ const MensagensAgendadas = () => {
                               {getVisitanteNome(mensagem)}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              ID: {mensagem.visitanteId}
+                              {t('scheduledMessagesManagement.table.visitorId', { id: mensagem.visitanteId })}
                             </div>
                           </div>
                         </div>
@@ -416,7 +399,7 @@ const MensagensAgendadas = () => {
                           >
                             <Link
                               to={`/visitantes/${mensagem.visitanteId}`}
-                              title="Ver visitante"
+                              title={t('scheduledMessagesManagement.actions.viewVisitor')}
                             >
                               <Eye className="w-4 h-4" />
                             </Link>

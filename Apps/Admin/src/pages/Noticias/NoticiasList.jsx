@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Plus, Edit, Trash2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,9 +17,11 @@ import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { exportToCSV } from '@/utils/export';
 import { noticiasApi, categoriasNoticiasApi } from '@/lib/api';
+import { formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
 
 export default function NoticiasList() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +47,7 @@ export default function NoticiasList() {
       setItems(noticiasRes.data || []);
       setCategorias(categoriasRes.data || []);
     } catch (err) {
-      setError('Erro ao carregar notícias');
+      setError(t('news.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -59,18 +62,20 @@ export default function NoticiasList() {
   const handleDelete = async (id) => {
     const noticia = items.find(n => n.id === id);
     confirmDialog.show({
-      title: 'Excluir Notícia',
-      description: `Tem certeza que deseja excluir "${noticia?.titulo || 'esta notícia'}"? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('news.deleteTitle'),
+      description: t('news.deleteDescription', {
+        name: noticia?.titulo || t('news.deleteFallbackName'),
+      }),
+      confirmText: t('news.deleteConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await noticiasApi.delete(id);
-          toast.success('Notícia excluída com sucesso');
+          toast.success(t('news.deleteSuccess'));
           await load();
         } catch (err) {
-          toast.error('Erro ao excluir notícia');
+          toast.error(t('news.deleteError'));
           console.error(err);
           throw err;
         }
@@ -119,32 +124,32 @@ export default function NoticiasList() {
   // Exportação
   const handleExport = () => {
     const exportData = filtered.map(noticia => ({
-      Título: noticia.titulo || '',
-      Descrição: noticia.descricao || '',
-      Categoria: getCategoriaNome(noticia.categoriaNoticiaId),
-      Data: noticia.data ? new Date(noticia.data).toLocaleDateString('pt-BR') : '',
+      [t('news.table.title')]: noticia.titulo || '',
+      [t('news.table.description')]: noticia.descricao || '',
+      [t('news.table.category')]: getCategoriaNome(noticia.categoriaNoticiaId),
+      [t('news.table.date')]: noticia.data ? formatDate(noticia.data) : '',
       URL: noticia.url || '',
     }));
 
     exportToCSV(exportData, 'noticias');
-    toast.success('Dados exportados com sucesso!');
+    toast.success(t('news.exportSuccess'));
   };
 
-  if (loading) return <LoadingPage text="Carregando notícias..." />;
+  if (loading) return <LoadingPage text={t('news.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Notícias</h1>
-          <p className="text-muted-foreground">Gerencie as notícias da igreja</p>
+          <h1 className="text-3xl font-bold">{t('news.title')}</h1>
+          <p className="text-muted-foreground">{t('news.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
           <Button asChild>
             <Link to="/noticias/novo">
-              <Plus className="h-4 w-4 mr-2" /> Nova Notícia
+              <Plus className="h-4 w-4 mr-2" /> {t('news.new')}
             </Link>
           </Button>
         </div>
@@ -152,13 +157,13 @@ export default function NoticiasList() {
 
       <AdvancedSearch
         searchFields={[
-          { key: 'titulo', label: 'Título', type: 'text', placeholder: 'Buscar por título...' },
-          { key: 'descricao', label: 'Descrição', type: 'text', placeholder: 'Buscar por descrição...' },
+          { key: 'titulo', label: t('news.table.title'), type: 'text', placeholder: t('news.filters.searchTitle') },
+          { key: 'descricao', label: t('news.table.description'), type: 'text', placeholder: t('news.filters.searchDescription') },
         ]}
         filterFields={[
           {
             key: 'categoriaId',
-            label: 'Categoria',
+            label: t('news.table.category'),
             type: 'select',
             options: categorias.map(c => ({ value: c.id, label: c.nome })),
           },
@@ -177,11 +182,11 @@ export default function NoticiasList() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Lista de Notícias ({total})</CardTitle>
+            <CardTitle>{t('news.listTitle', { total })}</CardTitle>
             {filtered.length > 0 && (
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
-                Exportar CSV
+                {t('news.exportCsv')}
               </Button>
             )}
           </div>
@@ -189,13 +194,13 @@ export default function NoticiasList() {
         <CardContent>
           {filtered.length === 0 ? (
             <PageEmptyState
-              title="Nenhuma noticia encontrada"
-              description="Nao ha noticias para os filtros atuais. Ajuste a busca ou crie um novo conteudo."
+              title={t('news.emptyTitle')}
+              description={t('news.emptyDescription')}
               action={(
                 <Button asChild>
                   <Link to="/noticias/novo">
                     <Plus className="mr-2 h-4 w-4" />
-                    Nova Noticia
+                    {t('news.new')}
                   </Link>
                 </Button>
               )}
@@ -205,19 +210,19 @@ export default function NoticiasList() {
               <TableHeader>
                 <TableRow>
                   <SortableTableHeader field="titulo" onSort={handleSort} sortConfig={sortConfig}>
-                    Título
+                    {t('news.table.title')}
                   </SortableTableHeader>
                   <SortableTableHeader field="descricao" onSort={handleSort} sortConfig={sortConfig}>
-                    Descrição
+                    {t('news.table.description')}
                   </SortableTableHeader>
                   <SortableTableHeader field="categoriaNome" onSort={handleSort} sortConfig={sortConfig}>
-                    Categoria
+                    {t('news.table.category')}
                   </SortableTableHeader>
                   <SortableTableHeader field="data" onSort={handleSort} sortConfig={sortConfig}>
-                    Data
+                    {t('news.table.date')}
                   </SortableTableHeader>
                   <TableHead>URL</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="text-right">{t('news.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -226,7 +231,7 @@ export default function NoticiasList() {
                     <TableCell className="font-medium">{noticia.titulo || '-'}</TableCell>
                     <TableCell>{noticia.descricao ? (noticia.descricao.length > 50 ? `${noticia.descricao.substring(0, 50)}...` : noticia.descricao) : '-'}</TableCell>
                     <TableCell>{getCategoriaNome(noticia.categoriaNoticiaId)}</TableCell>
-                    <TableCell>{noticia.data ? new Date(noticia.data).toLocaleDateString('pt-BR') : '-'}</TableCell>
+                    <TableCell>{noticia.data ? formatDate(noticia.data) : '-'}</TableCell>
                     <TableCell>
                       {noticia.url ? (
                         <a href={noticia.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
@@ -277,4 +282,3 @@ export default function NoticiasList() {
     </div>
   );
 }
-

@@ -10,8 +10,10 @@ import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { escalasModelosApi, equipesApi, eventosApi, cargosApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function ModeloEscalaForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -69,7 +71,7 @@ export default function ModeloEscalaForm() {
         setFormData((p) => ({ ...p, equipeId: equipeIdFromQuery }));
       }
     } catch (err) {
-      setError(isEditing ? 'Erro ao carregar modelo' : 'Erro ao carregar dados');
+      setError(isEditing ? t('volunteer.schedules.models.form.errorLoadModel') : t('volunteer.schedules.models.form.errorLoadData'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -99,7 +101,7 @@ export default function ModeloEscalaForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.equipeId) {
-      toast.error('Selecione a equipe');
+      toast.error(t('volunteer.schedules.models.form.selectTeamError'));
       return;
     }
     const payload = {
@@ -117,7 +119,7 @@ export default function ModeloEscalaForm() {
         })),
     };
     if (!payload.itens.length) {
-      toast.error('Adicione pelo menos um item (cargo e quantidade)');
+      toast.error(t('volunteer.schedules.models.form.addItemError'));
       return;
     }
     try {
@@ -129,21 +131,21 @@ export default function ModeloEscalaForm() {
           ativo: payload.ativo,
           itens: payload.itens,
         });
-        toast.success('Modelo atualizado');
+        toast.success(t('volunteer.schedules.models.form.updateSuccess'));
       } else {
         await escalasModelosApi.create(payload);
-        toast.success('Modelo criado');
+        toast.success(t('volunteer.schedules.models.form.createSuccess'));
       }
       navigate('/voluntariado/modelos-escala');
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data || 'Erro ao salvar';
-      toast.error(typeof msg === 'string' ? msg : 'Erro ao salvar');
+      const msg = err.response?.data?.message || err.response?.data || t('volunteer.schedules.models.form.errorSave');
+      toast.error(typeof msg === 'string' ? msg : t('volunteer.schedules.models.form.errorSave'));
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <LoadingPage text="Carregando..." />;
+  if (loading) return <LoadingPage text={t('common.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -152,31 +154,31 @@ export default function ModeloEscalaForm() {
         <Button variant="ghost" asChild>
           <Link to="/voluntariado/modelos-escala">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
+            {t('actions.back')}
           </Link>
         </Button>
-        <h1 className="text-3xl font-bold">{isEditing ? 'Editar modelo de escala' : 'Novo modelo de escala'}</h1>
+        <h1 className="text-3xl font-bold">{isEditing ? t('volunteer.schedules.models.form.editTitle') : t('volunteer.schedules.models.form.newTitle')}</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Dados do modelo</CardTitle>
+            <CardTitle>{t('volunteer.schedules.models.form.dataTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Equipe *</Label>
+                <Label>{t('volunteer.schedules.models.form.fields.team')} *</Label>
                 <Select
                   value={formData.equipeId || 'all'}
                   onValueChange={(v) => setFormData((p) => ({ ...p, equipeId: v === 'all' ? '' : v }))}
                   disabled={isEditing}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione a equipe" />
+                    <SelectValue placeholder={t('volunteer.schedules.models.form.fields.selectTeam')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Selecione</SelectItem>
+                    <SelectItem value="all">{t('volunteer.schedules.models.form.fields.select')}</SelectItem>
                     {equipes.map((e) => (
                       <SelectItem key={e.id} value={String(e.id)}>{e.nome}</SelectItem>
                     ))}
@@ -184,44 +186,44 @@ export default function ModeloEscalaForm() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Evento (opcional)</Label>
+                <Label>{t('volunteer.schedules.models.form.fields.eventOptional')}</Label>
                 <Select
                   value={formData.eventoId || 'none'}
                   onValueChange={(v) => setFormData((p) => ({ ...p, eventoId: v === 'none' ? '' : v }))}
                   disabled={isEditing}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Padrão para qualquer evento" />
+                    <SelectValue placeholder={t('volunteer.schedules.models.form.fields.defaultAnyEvent')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Padrão (qualquer evento)</SelectItem>
+                    <SelectItem value="none">{t('volunteer.schedules.models.form.fields.defaultAnyEventOption')}</SelectItem>
                     {eventos.map((ev) => (
                       <SelectItem key={ev.id} value={String(ev.id)}>{ev.titulo}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">Se vazio, o modelo vale para qualquer evento desta equipe.</p>
+                <p className="text-xs text-muted-foreground">{t('volunteer.schedules.models.form.fields.eventHint')}</p>
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Nome (opcional)</Label>
+                <Label>{t('volunteer.schedules.models.form.fields.nameOptional')}</Label>
                 <Input
                   value={formData.nome}
                   onChange={(e) => setFormData((p) => ({ ...p, nome: e.target.value }))}
-                  placeholder="Ex: Culto dominical"
+                  placeholder={t('volunteer.schedules.models.form.fields.namePlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Dias de folga após escala</Label>
+                <Label>{t('volunteer.schedules.models.form.fields.daysOff')}</Label>
                 <Input
                   type="number"
                   min="0"
                   value={formData.diasFolgaAposEscala}
                   onChange={(e) => setFormData((p) => ({ ...p, diasFolgaAposEscala: e.target.value }))}
-                  placeholder="Ex: 7"
+                  placeholder={t('volunteer.schedules.models.form.fields.daysOffPlaceholder')}
                 />
-                <p className="text-xs text-muted-foreground">Não sugerir o mesmo voluntário nos próximos N dias.</p>
+                <p className="text-xs text-muted-foreground">{t('volunteer.schedules.models.form.fields.daysOffHint')}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -231,7 +233,7 @@ export default function ModeloEscalaForm() {
                 checked={formData.ativo}
                 onChange={(e) => setFormData((p) => ({ ...p, ativo: e.target.checked }))}
               />
-              <Label htmlFor="ativo">Modelo ativo</Label>
+              <Label htmlFor="ativo">{t('volunteer.schedules.models.form.fields.active')}</Label>
             </div>
           </CardContent>
         </Card>
@@ -239,13 +241,13 @@ export default function ModeloEscalaForm() {
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Itens (vagas por cargo)</CardTitle>
+              <CardTitle>{t('volunteer.schedules.models.form.itemsTitle')}</CardTitle>
               <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                <Plus className="h-4 w-4 mr-2" /> Adicionar
+                <Plus className="h-4 w-4 mr-2" /> {t('volunteer.schedules.models.form.add')}
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Defina quantas pessoas de cada cargo (ou qualquer cargo) são necessárias.
+              {t('volunteer.schedules.models.form.itemsHint')}
             </p>
           </CardHeader>
           <CardContent>
@@ -257,10 +259,10 @@ export default function ModeloEscalaForm() {
                     onValueChange={(v) => updateItem(index, 'cargoId', v === 'any' ? '' : v)}
                   >
                     <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Cargo" />
+                      <SelectValue placeholder={t('volunteer.schedules.models.form.fields.role')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="any">Qualquer cargo</SelectItem>
+                      <SelectItem value="any">{t('volunteer.schedules.models.form.fields.anyRole')}</SelectItem>
                       {cargos.map((c) => (
                         <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>
                       ))}
@@ -274,7 +276,7 @@ export default function ModeloEscalaForm() {
                     value={item.quantidade}
                     onChange={(e) => updateItem(index, 'quantidade', Number(e.target.value) || 1)}
                   />
-                  <span className="text-muted-foreground">pessoas</span>
+                  <span className="text-muted-foreground">{t('volunteer.schedules.models.form.fields.people')}</span>
                   <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(index)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -287,10 +289,10 @@ export default function ModeloEscalaForm() {
         <div className="flex gap-2">
           <Button type="submit" disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
-            {saving ? 'Salvando...' : 'Salvar'}
+            {saving ? t('actions.saving') : t('actions.save')}
           </Button>
           <Button type="button" variant="outline" asChild>
-            <Link to="/voluntariado/modelos-escala">Cancelar</Link>
+            <Link to="/voluntariado/modelos-escala">{t('actions.cancel')}</Link>
           </Button>
         </div>
       </form>

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { patrimonioApi, categoriasPatrimonioApi } from '@/lib/api';
+import { formatCurrency, formatDate } from '@/lib/formatters';
 import { useTranslation } from 'react-i18next';
 
 const PatrimonioRelatorioCharts = lazy(() => import('./PatrimonioRelatorioCharts'));
@@ -19,11 +20,6 @@ const statusKeyMap = {
   Ocioso: 'idle',
   Baixado: 'disposed',
 };
-
-const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', {
-  style: 'currency',
-  currency: 'BRL',
-}).format(Number(value || 0));
 
 const normalizeText = (value, fallback) => {
   const text = String(value || '').trim();
@@ -147,8 +143,6 @@ export default function PatrimonioRelatorio() {
         .slice(0, 5),
     };
   }, [filteredItems]);
-
-  const formatDate = (value) => value ? new Date(value).toLocaleDateString('pt-BR') : '-';
 
   const exportarCsv = () => {
     const linhas = [

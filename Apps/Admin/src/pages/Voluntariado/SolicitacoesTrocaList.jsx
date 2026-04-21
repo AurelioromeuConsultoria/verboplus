@@ -14,15 +14,17 @@ import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { equipesApi, solicitacoesTrocasEscalasApi } from '@/lib/api';
 import { usePagination } from '@/hooks/usePagination';
+import { formatDateTime } from '@/lib/formatters';
+import { useTranslation } from 'react-i18next';
 
-function getStatusBadge(status) {
+function getStatusBadge(status, t) {
   const value = Number(status);
 
   if (value === 1) {
     return (
       <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
         <Clock3 className="h-3 w-3" />
-        Pendente
+        {t('volunteer.schedules.exchangeRequests.status.pending')}
       </Badge>
     );
   }
@@ -31,7 +33,7 @@ function getStatusBadge(status) {
     return (
       <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
         <CheckCircle2 className="h-3 w-3" />
-        Aprovada
+        {t('volunteer.schedules.exchangeRequests.status.approved')}
       </Badge>
     );
   }
@@ -40,15 +42,16 @@ function getStatusBadge(status) {
     return (
       <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
         <XCircle className="h-3 w-3" />
-        Rejeitada
+        {t('volunteer.schedules.exchangeRequests.status.rejected')}
       </Badge>
     );
   }
 
-  return <Badge variant="secondary">Cancelada</Badge>;
+  return <Badge variant="secondary">{t('volunteer.schedules.exchangeRequests.status.canceled')}</Badge>;
 }
 
 export default function SolicitacoesTrocaList() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -80,7 +83,7 @@ export default function SolicitacoesTrocaList() {
       setSolicitacoes(solicitacoesRes.data || []);
     } catch (err) {
       console.error(err);
-      setError('Erro ao carregar solicitações de troca');
+      setError(t('volunteer.schedules.exchangeRequests.errorLoad'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -120,66 +123,64 @@ export default function SolicitacoesTrocaList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtradas, 20);
 
-  if (loading) return <LoadingPage text="Carregando solicitações de troca..." />;
+  if (loading) return <LoadingPage text={t('volunteer.schedules.exchangeRequests.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={() => load()} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Solicitações de Troca</h1>
-          <p className="text-muted-foreground">
-            Acompanhe pedidos de substituição das equipes e entre rápido nas pendências mais urgentes.
-          </p>
+          <h1 className="text-3xl font-bold">{t('volunteer.schedules.exchangeRequests.title')}</h1>
+          <p className="text-muted-foreground">{t('volunteer.schedules.exchangeRequests.subtitle')}</p>
         </div>
         <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
-          <CardHeader><CardTitle>Total</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('volunteer.schedules.exchangeRequests.summary.total')}</CardTitle></CardHeader>
           <CardContent className="text-2xl font-bold">{resumo.total}</CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Pendentes</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('volunteer.schedules.exchangeRequests.summary.pending')}</CardTitle></CardHeader>
           <CardContent className="text-2xl font-bold text-amber-600">{resumo.pendentes}</CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Aprovadas</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('volunteer.schedules.exchangeRequests.summary.approved')}</CardTitle></CardHeader>
           <CardContent className="text-2xl font-bold text-green-600">{resumo.aprovadas}</CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Rejeitadas</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('volunteer.schedules.exchangeRequests.summary.rejected')}</CardTitle></CardHeader>
           <CardContent className="text-2xl font-bold text-red-600">{resumo.rejeitadas}</CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('volunteer.schedules.exchangeRequests.filtersTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label>Buscar</Label>
+              <Label>{t('volunteer.schedules.exchangeRequests.searchLabel')}</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   className="pl-9"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  placeholder="Evento, equipe, voluntário ou motivo"
+                  placeholder={t('volunteer.schedules.exchangeRequests.searchPlaceholder')}
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Equipe</Label>
+              <Label>{t('volunteer.schedules.exchangeRequests.teamLabel')}</Label>
               <Select value={filtroEquipeId} onValueChange={setFiltroEquipeId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todas as equipes" />
+                  <SelectValue placeholder={t('volunteer.schedules.exchangeRequests.allTeams')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas as equipes</SelectItem>
+                  <SelectItem value="all">{t('volunteer.schedules.exchangeRequests.allTeams')}</SelectItem>
                   {equipes.map((equipe) => (
                     <SelectItem key={equipe.id} value={String(equipe.id)}>
                       {equipe.nome}
@@ -189,17 +190,17 @@ export default function SolicitacoesTrocaList() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label>{t('volunteer.schedules.exchangeRequests.statusLabel')}</Label>
               <Select value={filtroStatus} onValueChange={setFiltroStatus}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="1">Pendentes</SelectItem>
-                  <SelectItem value="2">Aprovadas</SelectItem>
-                  <SelectItem value="3">Rejeitadas</SelectItem>
-                  <SelectItem value="4">Canceladas</SelectItem>
+                  <SelectItem value="all">{t('volunteer.schedules.exchangeRequests.statusFilter.all')}</SelectItem>
+                  <SelectItem value="1">{t('volunteer.schedules.exchangeRequests.status.pending')}</SelectItem>
+                  <SelectItem value="2">{t('volunteer.schedules.exchangeRequests.status.approved')}</SelectItem>
+                  <SelectItem value="3">{t('volunteer.schedules.exchangeRequests.status.rejected')}</SelectItem>
+                  <SelectItem value="4">{t('volunteer.schedules.exchangeRequests.status.canceled')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -209,26 +210,26 @@ export default function SolicitacoesTrocaList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Gestão de trocas ({total})</CardTitle>
+          <CardTitle>{t('volunteer.schedules.exchangeRequests.listTitle', { total })}</CardTitle>
         </CardHeader>
         <CardContent>
           {filtradas.length === 0 ? (
             <PageEmptyState
-              title="Nenhuma solicitacao encontrada"
-              description="Nao ha trocas de escala para os filtros atuais. Revise equipe, status ou busca para ampliar a leitura."
+              title={t('volunteer.schedules.exchangeRequests.emptyTitle')}
+              description={t('volunteer.schedules.exchangeRequests.emptyDescription')}
             />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Evento</TableHead>
-                  <TableHead>Equipe</TableHead>
-                  <TableHead>Solicitante</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Substituto</TableHead>
-                  <TableHead>Motivo</TableHead>
-                  <TableHead>Resposta</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('volunteer.schedules.exchangeRequests.table.event')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.exchangeRequests.table.team')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.exchangeRequests.table.requester')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.exchangeRequests.table.status')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.exchangeRequests.table.substitute')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.exchangeRequests.table.reason')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.exchangeRequests.table.response')}</TableHead>
+                  <TableHead className="text-right">{t('volunteer.schedules.exchangeRequests.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -236,32 +237,32 @@ export default function SolicitacoesTrocaList() {
                   <TableRow key={item.id}>
                     <TableCell>
                       <div className="space-y-1">
-                        <div className="font-medium">{item.eventoTitulo || `Ocorrência #${item.eventoOcorrenciaId}`}</div>
+                        <div className="font-medium">{item.eventoTitulo || t('volunteer.schedules.exchangeRequests.occurrenceFallback', { id: item.eventoOcorrenciaId })}</div>
                         {item.eventoDataHoraInicio && (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <CalendarDays className="h-4 w-4" />
-                            {new Date(item.eventoDataHoraInicio).toLocaleString('pt-BR')}
+                            {formatDateTime(item.eventoDataHoraInicio)}
                           </div>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>{item.equipeNome}</TableCell>
                     <TableCell>{item.voluntarioSolicitanteNome}</TableCell>
-                    <TableCell>{getStatusBadge(item.status)}</TableCell>
-                    <TableCell>{item.voluntarioSubstitutoNome || '-'}</TableCell>
+                    <TableCell>{getStatusBadge(item.status, t)}</TableCell>
+                    <TableCell>{item.voluntarioSubstitutoNome || t('common.notInformed')}</TableCell>
                     <TableCell className="max-w-[280px]">
-                      <div className="line-clamp-3 text-sm">{item.motivo || '-'}</div>
+                      <div className="line-clamp-3 text-sm">{item.motivo || t('common.notInformed')}</div>
                     </TableCell>
                     <TableCell className="max-w-[280px]">
                       <div className="text-sm">
-                        {item.observacaoResposta || (Number(item.status) === 1 ? 'Aguardando análise' : '-')}
+                        {item.observacaoResposta || (Number(item.status) === 1 ? t('volunteer.schedules.exchangeRequests.awaitingReview') : t('common.notInformed'))}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="outline" size="sm" asChild>
                         <Link to={`/voluntariado/escalas/ocorrencia/${item.eventoOcorrenciaId}/equipe/${item.equipeId}`}>
                           <ArrowRightLeft className="h-4 w-4 mr-2" />
-                          Abrir escala
+                          {t('volunteer.schedules.exchangeRequests.openSchedule')}
                         </Link>
                       </Button>
                     </TableCell>

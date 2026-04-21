@@ -11,6 +11,7 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { toast } from 'sonner';
 import { User, Mail, Shield, Calendar, Clock, Lock, Palette, Sun, Moon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '@/lib/formatters';
 
 const TIPO_USUARIO_COLORS = {
   1: 'bg-blue-100 text-blue-800',
@@ -181,7 +182,7 @@ export default function Perfil() {
                 {t('profile.createdAt')}
               </label>
               <p className="text-base mt-1">
-                {usuario.dataCriacao ? new Date(usuario.dataCriacao).toLocaleString('pt-BR') : '-'}
+                {usuario.dataCriacao ? formatDateTime(usuario.dataCriacao) : '-'}
               </p>
             </div>
             {usuario.ultimoAcesso && (
@@ -191,7 +192,7 @@ export default function Perfil() {
                   {t('profile.lastAccess')}
                 </label>
                 <p className="text-base mt-1">
-                  {new Date(usuario.ultimoAcesso).toLocaleString('pt-BR')}
+                  {formatDateTime(usuario.ultimoAcesso)}
                 </p>
               </div>
             )}
@@ -254,7 +255,6 @@ export default function Perfil() {
     </div>
   );
 }
-
 
 
 

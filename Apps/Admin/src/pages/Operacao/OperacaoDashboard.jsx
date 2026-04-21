@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Activity, ShieldAlert, ShieldCheck, Siren, TimerReset } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { PageRefreshButton } from '@/components/ui/page-state';
 import { auditLogsApi, operacaoApi } from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatDateTime } from '@/lib/formatters';
 import { toast } from 'sonner';
 
 function getHealthVariant(status) {
@@ -22,11 +24,6 @@ function getSchedulerVariant(status) {
   if (status === 'Success') return 'default';
   if (status === 'Running') return 'secondary';
   return 'destructive';
-}
-
-function formatDateTime(value) {
-  if (!value) return '-';
-  return new Date(value).toLocaleString('pt-BR');
 }
 
 function formatDuration(ms) {
@@ -93,6 +90,7 @@ function buildCriticalAuditLink() {
 }
 
 export default function OperacaoDashboard() {
+  const { t } = useTranslation();
   const [health, setHealth] = useState(null);
   const [schedulers, setSchedulers] = useState([]);
   const [auditMetrics, setAuditMetrics] = useState({
@@ -143,7 +141,7 @@ export default function OperacaoDashboard() {
         topActionCount: Number(auditMetricsRes.data?.topActionCount || 0),
       });
     } catch (err) {
-      const msg = getApiErrorMessage(err, 'Erro ao carregar operação');
+      const msg = getApiErrorMessage(err, t('operation.errorLoad'));
       setError(msg);
       toast.error(msg);
     } finally {
@@ -171,15 +169,15 @@ export default function OperacaoDashboard() {
     };
   }, [auditMetrics.criticalActions, auditMetrics.failureActions, health, schedulers]);
 
-  if (loading) return <LoadingPage text="Carregando operação..." />;
+  if (loading) return <LoadingPage text={t('operation.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={() => load()} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Operação</h1>
-          <p className="mt-1 text-muted-foreground">Visão consolidada de saúde, schedulers e acesso rápido à investigação.</p>
+          <h1 className="text-3xl font-bold">{t('operation.title')}</h1>
+          <p className="mt-1 text-muted-foreground">{t('operation.subtitle')}</p>
         </div>
         <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
       </div>
@@ -187,44 +185,44 @@ export default function OperacaoDashboard() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Saúde geral</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('operation.cards.health.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
               <ShieldCheck className="h-5 w-5 text-primary" />
               <div className="text-2xl font-bold">{health?.status || '-'}</div>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">Duração total: {formatDuration(health?.totalDuration)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('operation.cards.health.duration', { value: formatDuration(health?.totalDuration) })}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Checks degradados</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('operation.cards.degradedChecks.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{operationSummary.degradedChecks}</div>
-            <p className="mt-1 text-xs text-muted-foreground">Dependências com atenção</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('operation.cards.degradedChecks.description')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Checks indisponíveis</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('operation.cards.unhealthyChecks.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{operationSummary.unhealthyChecks}</div>
-            <p className="mt-1 text-xs text-muted-foreground">Falhas críticas de ambiente</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('operation.cards.unhealthyChecks.description')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Schedulers com atenção</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('operation.cards.schedulersAttention.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{operationSummary.failedSchedulers}</div>
-            <p className="mt-1 text-xs text-muted-foreground">Última execução fora de sucesso</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('operation.cards.schedulersAttention.description')}</p>
           </CardContent>
         </Card>
       </div>
@@ -232,45 +230,48 @@ export default function OperacaoDashboard() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Auditoria 24h</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('operation.cards.audit24h.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
               <ShieldAlert className="h-5 w-5 text-primary" />
               <div className="text-2xl font-bold">{auditMetrics.totalLogs}</div>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">Eventos auditados no ultimo dia</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('operation.cards.audit24h.description')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Acoes criticas</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('operation.cards.criticalActions.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{auditMetrics.criticalActions}</div>
-            <p className="mt-1 text-xs text-muted-foreground">Operacoes sensiveis nas ultimas 24h</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('operation.cards.criticalActions.description')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Falhas e recusas</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('operation.cards.failures.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{auditMetrics.failureActions}</div>
-            <p className="mt-1 text-xs text-muted-foreground">Sinais de erro ou excecao operacional</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('operation.cards.failures.description')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Usuarios ativos</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('operation.cards.activeUsers.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{auditMetrics.distinctUsers}</div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Topo: {auditMetrics.topUserLabel} ({auditMetrics.topUserCount})
+              {t('operation.cards.activeUsers.topUser', {
+                user: auditMetrics.topUserLabel,
+                count: auditMetrics.topUserCount,
+              })}
             </p>
           </CardContent>
         </Card>
@@ -278,13 +279,13 @@ export default function OperacaoDashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Alertas operacionais</CardTitle>
+          <CardTitle className="text-base">{t('operation.alerts.title')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {operationSummary.unhealthyChecks === 0 && operationSummary.failedSchedulers === 0 ? (
             <div className="flex items-center gap-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
               <Activity className="h-4 w-4" />
-              Nenhum alerta crítico nesta leitura.
+              {t('operation.alerts.empty')}
             </div>
           ) : null}
 
@@ -292,8 +293,8 @@ export default function OperacaoDashboard() {
             <div className="flex items-start gap-3 rounded-lg border p-4">
               <Siren className="mt-0.5 h-4 w-4 text-red-600" />
               <div>
-                <div className="font-medium">Health check em estado crítico</div>
-                <div className="text-sm text-muted-foreground">Há {operationSummary.unhealthyChecks} verificação(ões) em estado `Unhealthy`.</div>
+                <div className="font-medium">{t('operation.alerts.unhealthyChecks.title')}</div>
+                <div className="text-sm text-muted-foreground">{t('operation.alerts.unhealthyChecks.description', { count: operationSummary.unhealthyChecks })}</div>
               </div>
             </div>
           ) : null}
@@ -302,8 +303,8 @@ export default function OperacaoDashboard() {
             <div className="flex items-start gap-3 rounded-lg border p-4">
               <TimerReset className="mt-0.5 h-4 w-4 text-amber-600" />
               <div>
-                <div className="font-medium">Schedulers exigem revisão</div>
-                <div className="text-sm text-muted-foreground">Há {operationSummary.failedSchedulers} scheduler(s) sem sucesso na última execução.</div>
+                <div className="font-medium">{t('operation.alerts.schedulers.title')}</div>
+                <div className="text-sm text-muted-foreground">{t('operation.alerts.schedulers.description', { count: operationSummary.failedSchedulers })}</div>
               </div>
             </div>
           ) : null}
@@ -312,13 +313,11 @@ export default function OperacaoDashboard() {
             <div className="flex items-start gap-3 rounded-lg border p-4">
               <ShieldAlert className="mt-0.5 h-4 w-4 text-red-600" />
               <div className="flex-1">
-                <div className="font-medium">Auditoria indica falhas recentes</div>
-                <div className="text-sm text-muted-foreground">
-                  Foram detectados {auditMetrics.failureActions} evento(s) de falha, recusa ou rejeição nas últimas 24 horas.
-                </div>
+                <div className="font-medium">{t('operation.alerts.auditFailures.title')}</div>
+                <div className="text-sm text-muted-foreground">{t('operation.alerts.auditFailures.description', { count: auditMetrics.failureActions })}</div>
               </div>
               <Button type="button" variant="outline" size="sm" asChild>
-                <Link to={buildAuditLink({ action: 'ErroEnvio', entityName: 'MensagemAgendada' })}>Investigar</Link>
+                <Link to={buildAuditLink({ action: 'ErroEnvio', entityName: 'MensagemAgendada' })}>{t('operation.actions.investigate')}</Link>
               </Button>
             </div>
           ) : null}
@@ -327,13 +326,11 @@ export default function OperacaoDashboard() {
             <div className="flex items-start gap-3 rounded-lg border p-4">
               <Activity className="mt-0.5 h-4 w-4 text-amber-600" />
               <div className="flex-1">
-                <div className="font-medium">Volume alto de ações críticas</div>
-                <div className="text-sm text-muted-foreground">
-                  A auditoria registrou {auditMetrics.criticalActions} ações críticas no período recente. Vale revisar o contexto operacional.
-                </div>
+                <div className="font-medium">{t('operation.alerts.criticalActions.title')}</div>
+                <div className="text-sm text-muted-foreground">{t('operation.alerts.criticalActions.description', { count: auditMetrics.criticalActions })}</div>
               </div>
               <Button type="button" variant="outline" size="sm" asChild>
-                <Link to={buildCriticalAuditLink()}>Abrir auditoria</Link>
+                <Link to={buildCriticalAuditLink()}>{t('operation.actions.openAudit')}</Link>
               </Button>
             </div>
           ) : null}
@@ -343,7 +340,7 @@ export default function OperacaoDashboard() {
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Health checks</CardTitle>
+            <CardTitle className="text-base">{t('operation.healthChecks.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -353,10 +350,10 @@ export default function OperacaoDashboard() {
                     <div className="font-medium">{item.name}</div>
                     <Badge variant={getHealthVariant(item.status)}>{item.status}</Badge>
                   </div>
-                  <div className="mt-1 text-sm text-muted-foreground">{item.description || 'Sem descrição adicional.'}</div>
-                  <div className="mt-2 text-xs text-muted-foreground">Duração: {formatDuration(item.duration)}</div>
+                  <div className="mt-1 text-sm text-muted-foreground">{item.description || t('operation.healthChecks.noDescription')}</div>
+                  <div className="mt-2 text-xs text-muted-foreground">{t('operation.healthChecks.duration', { value: formatDuration(item.duration) })}</div>
                   {item.error ? (
-                    <div className="mt-2 text-xs text-red-600">Erro: {item.error}</div>
+                    <div className="mt-2 text-xs text-red-600">{t('operation.healthChecks.error', { value: item.error })}</div>
                   ) : null}
                 </div>
               ))}
@@ -366,32 +363,32 @@ export default function OperacaoDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Acesso rápido</CardTitle>
+            <CardTitle className="text-base">{t('operation.quickAccess.title')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button type="button" variant="outline" className="w-full justify-start" asChild>
-              <Link to={buildAuditLink()}>Abrir auditoria</Link>
+              <Link to={buildAuditLink()}>{t('operation.quickAccess.openAudit')}</Link>
             </Button>
             <Button type="button" variant="outline" className="w-full justify-start" asChild>
-              <Link to="/mensagens-agendadas">Abrir mensagens agendadas</Link>
+              <Link to="/mensagens-agendadas">{t('operation.quickAccess.openScheduledMessages')}</Link>
             </Button>
             <Button type="button" variant="outline" className="w-full justify-start" asChild>
-              <Link to={buildAuditLink({ action: 'Login', entityName: 'Auth' })}>Abrir logins recentes</Link>
+              <Link to={buildAuditLink({ action: 'Login', entityName: 'Auth' })}>{t('operation.quickAccess.openRecentLogins')}</Link>
             </Button>
             <Button type="button" variant="outline" className="w-full justify-start" asChild>
-              <Link to={buildAuditLink({ action: 'AlterarSenha', entityName: 'Usuario' })}>Abrir alteracoes de senha</Link>
+              <Link to={buildAuditLink({ action: 'AlterarSenha', entityName: 'Usuario' })}>{t('operation.quickAccess.openPasswordChanges')}</Link>
             </Button>
             <Button type="button" variant="outline" className="w-full justify-start" asChild>
-              <Link to={buildAuditLink({ action: 'ErroEnvio', entityName: 'MensagemAgendada' })}>Abrir erros de envio</Link>
+              <Link to={buildAuditLink({ action: 'ErroEnvio', entityName: 'MensagemAgendada' })}>{t('operation.quickAccess.openDeliveryErrors')}</Link>
             </Button>
             <Button type="button" variant="outline" className="w-full justify-start" asChild>
-              <Link to="/pessoas/aniversariantes/campanha">Abrir campanha de aniversário</Link>
+              <Link to="/pessoas/aniversariantes/campanha">{t('operation.quickAccess.openBirthdayCampaign')}</Link>
             </Button>
             <Button type="button" variant="outline" className="w-full justify-start" asChild>
-              <Link to="/voluntariado/solicitacoes-troca">Abrir trocas de escala</Link>
+              <Link to="/voluntariado/solicitacoes-troca">{t('operation.quickAccess.openSwapRequests')}</Link>
             </Button>
             <Button type="button" variant="outline" className="w-full justify-start" asChild>
-              <Link to={buildAuditLink({ action: 'ErroEnvio', entityName: 'MensagemAgendada' })}>Abrir falhas e sinais operacionais</Link>
+              <Link to={buildAuditLink({ action: 'ErroEnvio', entityName: 'MensagemAgendada' })}>{t('operation.quickAccess.openOperationalSignals')}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -400,25 +397,29 @@ export default function OperacaoDashboard() {
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Sinais da auditoria nas ultimas 24h</CardTitle>
+            <CardTitle className="text-base">{t('operation.auditSignals.title')}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="rounded-lg border p-4">
-              <div className="text-sm font-medium text-muted-foreground">Entidade dominante</div>
+              <div className="text-sm font-medium text-muted-foreground">{t('operation.auditSignals.topEntity')}</div>
               <div className="mt-2 text-xl font-semibold">{auditMetrics.topEntityName}</div>
-              <div className="mt-1 text-xs text-muted-foreground">{auditMetrics.topEntityCount} registro(s)</div>
+              <div className="mt-1 text-xs text-muted-foreground">{t('operation.auditSignals.records', { count: auditMetrics.topEntityCount })}</div>
             </div>
             <div className="rounded-lg border p-4">
-              <div className="text-sm font-medium text-muted-foreground">Acao dominante</div>
+              <div className="text-sm font-medium text-muted-foreground">{t('operation.auditSignals.topAction')}</div>
               <div className="mt-2 text-xl font-semibold">{auditMetrics.topActionName}</div>
-              <div className="mt-1 text-xs text-muted-foreground">{auditMetrics.topActionCount} registro(s)</div>
+              <div className="mt-1 text-xs text-muted-foreground">{t('operation.auditSignals.records', { count: auditMetrics.topActionCount })}</div>
             </div>
             <div className="rounded-lg border p-4 md:col-span-2">
-              <div className="text-sm font-medium text-muted-foreground">Leitura operacional</div>
+              <div className="text-sm font-medium text-muted-foreground">{t('operation.auditSignals.operationalReading')}</div>
               <div className="mt-2 text-sm text-muted-foreground">
                 {operationSummary.auditAttention === 0
-                  ? 'Sem sinais relevantes de auditoria nas ultimas 24 horas.'
-                  : `A soma de acoes criticas e falhas chegou a ${operationSummary.auditAttention} evento(s), com destaque para ${auditMetrics.topActionName} em ${auditMetrics.topEntityName}.`}
+                  ? t('operation.auditSignals.noRelevantSignals')
+                  : t('operation.auditSignals.summary', {
+                      count: operationSummary.auditAttention,
+                      action: auditMetrics.topActionName,
+                      entity: auditMetrics.topEntityName,
+                    })}
               </div>
             </div>
           </CardContent>
@@ -426,26 +427,26 @@ export default function OperacaoDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Investigacao rapida</CardTitle>
+            <CardTitle className="text-base">{t('operation.investigation.title')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button type="button" variant="outline" className="w-full justify-start" asChild>
-              <Link to={buildAuditLink()}>Auditoria geral</Link>
+              <Link to={buildAuditLink()}>{t('operation.investigation.generalAudit')}</Link>
             </Button>
             <Button type="button" variant="outline" className="w-full justify-start" asChild>
-              <Link to={buildAuditLink({ action: 'ErroEnvio', entityName: 'MensagemAgendada' })}>Erros de envio</Link>
+              <Link to={buildAuditLink({ action: 'ErroEnvio', entityName: 'MensagemAgendada' })}>{t('operation.investigation.deliveryErrors')}</Link>
             </Button>
             <Button type="button" variant="outline" className="w-full justify-start" asChild>
-              <Link to={buildAuditLink({ action: 'Login', entityName: 'Auth' })}>Logins</Link>
+              <Link to={buildAuditLink({ action: 'Login', entityName: 'Auth' })}>{t('operation.investigation.logins')}</Link>
             </Button>
             <Button type="button" variant="outline" className="w-full justify-start" asChild>
-              <Link to={buildAuditLink({ action: 'AlterarSenha', entityName: 'Usuario' })}>Alteracoes de senha</Link>
+              <Link to={buildAuditLink({ action: 'AlterarSenha', entityName: 'Usuario' })}>{t('operation.investigation.passwordChanges')}</Link>
             </Button>
             <Button type="button" variant="outline" className="w-full justify-start" asChild>
-              <Link to={buildAuditLink({ entityName: 'Escala' })}>Escalas e operacao voluntaria</Link>
+              <Link to={buildAuditLink({ entityName: 'Escala' })}>{t('operation.investigation.volunteerOperations')}</Link>
             </Button>
             <Button type="button" variant="outline" className="w-full justify-start" asChild>
-              <Link to={buildCriticalAuditLink()}>Acoes criticas</Link>
+              <Link to={buildCriticalAuditLink()}>{t('operation.investigation.criticalActions')}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -453,22 +454,22 @@ export default function OperacaoDashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Schedulers</CardTitle>
+          <CardTitle className="text-base">{t('operation.schedulers.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           {schedulers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum scheduler monitorado no momento.</p>
+            <p className="text-sm text-muted-foreground">{t('operation.schedulers.empty')}</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Scheduler</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Início</TableHead>
-                    <TableHead>Fim</TableHead>
-                    <TableHead>Duração</TableHead>
-                    <TableHead>Detalhes</TableHead>
+                    <TableHead>{t('operation.schedulers.table.scheduler')}</TableHead>
+                    <TableHead>{t('operation.schedulers.table.status')}</TableHead>
+                    <TableHead>{t('operation.schedulers.table.start')}</TableHead>
+                    <TableHead>{t('operation.schedulers.table.end')}</TableHead>
+                    <TableHead>{t('operation.schedulers.table.duration')}</TableHead>
+                    <TableHead>{t('operation.schedulers.table.details')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

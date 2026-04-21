@@ -15,28 +15,12 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ImageUpload } from '@/components/ImageUpload';
 import { getAbsoluteUrl } from '@/lib/utils';
 import { pessoasApi } from '@/lib/api';
+import { formatDate, formatDateTime } from '@/lib/formatters';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
-const defaultMessage = `{Nome},
-
-Hoje celebramos a sua vida! 🎂
-
-Que neste novo ciclo, Cristo se manifeste de forma ainda mais clara em cada área da sua vida — nos seus caminhos, decisões e sonhos.
-
-Que você experimente um tempo de crescimento, intimidade com Deus e direção em cada passo. Que a graça te sustente, o amor te envolva e o propósito dEle te conduza todos os dias. 🙏✨
-
-Feliz aniversário! Você é parte importante daquilo que Deus está fazendo! 💛
-
-Equipe Kingdom`;
-
-function formatDateTime(value) {
-  if (!value) return '-';
-  return new Date(value).toLocaleString('pt-BR');
-}
-
-function formatDate(value) {
-  if (!value) return '-';
-  return new Date(value).toLocaleDateString('pt-BR');
+function buildDefaultMessage(t) {
+  return t('birthdayCampaignManagement.defaultMessage');
 }
 
 function renderPreview(template, nome) {
@@ -56,6 +40,7 @@ const initialFilters = {
 };
 
 export default function CampanhaAniversario() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
@@ -64,7 +49,7 @@ export default function CampanhaAniversario() {
   const [formData, setFormData] = useState({
     ativo: true,
     imagemUrl: '',
-    mensagemTemplate: defaultMessage,
+    mensagemTemplate: buildDefaultMessage(t),
     horarioEnvio: '09:00',
   });
   const [metricas, setMetricas] = useState({
@@ -78,7 +63,7 @@ export default function CampanhaAniversario() {
   const [recentes, setRecentes] = useState([]);
   const [filters, setFilters] = useState(initialFilters);
   const [testData, setTestData] = useState({
-    nome: 'Teste Kingdom',
+    nome: t('birthdayCampaignManagement.test.defaultName'),
     whatsApp: '',
   });
 
@@ -94,7 +79,7 @@ export default function CampanhaAniversario() {
       setFormData({
         ativo: data.ativo ?? true,
         imagemUrl: data.imagemUrl || '',
-        mensagemTemplate: data.mensagemTemplate || defaultMessage,
+        mensagemTemplate: data.mensagemTemplate || buildDefaultMessage(t),
         horarioEnvio: data.horarioEnvio || '09:00',
       });
       setMetricas(data.metricas || {});
@@ -106,7 +91,7 @@ export default function CampanhaAniversario() {
       });
     } catch (error) {
       console.error(error);
-      toast.error('Erro ao carregar a campanha de aniversário.');
+      toast.error(t('birthdayCampaignManagement.errorLoad'));
     } finally {
       setLoading(false);
     }
@@ -121,12 +106,12 @@ export default function CampanhaAniversario() {
     event.preventDefault();
 
     if (!formData.imagemUrl) {
-      toast.error('Envie a imagem da campanha antes de salvar.');
+      toast.error(t('birthdayCampaignManagement.validation.imageRequired'));
       return;
     }
 
     if (!formData.mensagemTemplate.trim()) {
-      toast.error('A legenda da campanha é obrigatória.');
+      toast.error(t('birthdayCampaignManagement.validation.messageRequired'));
       return;
     }
 
@@ -136,10 +121,10 @@ export default function CampanhaAniversario() {
       const data = response.data;
       setMetricas(data.metricas || {});
       setRecentes(data.enviosRecentes || []);
-      toast.success('Campanha de aniversário salva com sucesso.');
+      toast.success(t('birthdayCampaignManagement.saveSuccess'));
     } catch (error) {
       console.error(error);
-      toast.error(error.response?.data?.message || 'Erro ao salvar a campanha.');
+      toast.error(error.response?.data?.message || t('birthdayCampaignManagement.errorSave'));
     } finally {
       setSaving(false);
     }
@@ -150,17 +135,17 @@ export default function CampanhaAniversario() {
     event?.stopPropagation?.();
 
     if (!testData.whatsApp.trim()) {
-      toast.error('Informe um WhatsApp para teste.');
+      toast.error(t('birthdayCampaignManagement.test.whatsAppRequired'));
       return;
     }
 
     try {
       setSendingTest(true);
       const response = await pessoasApi.sendCampanhaAniversarioTeste(testData);
-      toast.success(response.data?.mensagem || 'Teste enviado com sucesso.');
+      toast.success(response.data?.mensagem || t('birthdayCampaignManagement.test.success'));
     } catch (error) {
       console.error(error);
-      const mensagem = error.response?.data?.mensagem || 'Erro ao enviar mensagem de teste.';
+      const mensagem = error.response?.data?.mensagem || t('birthdayCampaignManagement.test.error');
       const detalhes = error.response?.data?.detalhes;
       toast.error(detalhes ? `${mensagem} - ${detalhes}` : mensagem);
     } finally {
@@ -177,11 +162,11 @@ export default function CampanhaAniversario() {
     try {
       setResendingId(item.id);
       const response = await pessoasApi.resendCampanhaAniversarioHistorico(item.id);
-      toast.success(response.data?.mensagem || 'Mensagem reenviada com sucesso.');
+      toast.success(response.data?.mensagem || t('birthdayCampaignManagement.history.resendSuccess'));
       await loadConfiguracao(filters);
     } catch (error) {
       console.error(error);
-      const mensagem = error.response?.data?.mensagem || 'Erro ao reenviar mensagem.';
+      const mensagem = error.response?.data?.mensagem || t('birthdayCampaignManagement.history.resendError');
       const detalhes = error.response?.data?.detalhes;
       toast.error(detalhes ? `${mensagem} - ${detalhes}` : mensagem);
     } finally {
@@ -191,10 +176,10 @@ export default function CampanhaAniversario() {
   };
 
   if (loading) {
-    return <LoadingPage text="Carregando campanha de aniversário..." />;
+    return <LoadingPage text={t('birthdayCampaignManagement.loading')} />;
   }
 
-  const previewNome = testData.nome?.trim() || 'Fulano';
+  const previewNome = testData.nome?.trim() || t('birthdayCampaignManagement.preview.fallbackName');
   const previewMessage = renderPreview(formData.mensagemTemplate, previewNome);
   const previewImage = formData.imagemUrl ? getAbsoluteUrl(formData.imagemUrl) : null;
 
@@ -204,41 +189,41 @@ export default function CampanhaAniversario() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Gift className="h-8 w-8" />
-            Campanha de Aniversário
+            {t('birthdayCampaignManagement.title')}
           </h1>
           <p className="text-muted-foreground mt-2">
-            Configure a arte, a legenda e o horário do envio automático de aniversário pelo WhatsApp.
+            {t('birthdayCampaignManagement.subtitle')}
           </p>
         </div>
         <Button type="button" variant="outline" onClick={loadConfiguracao}>
           <RefreshCcw className="h-4 w-4 mr-2" />
-          Atualizar
+          {t('actions.refresh')}
         </Button>
       </div>
 
       <Alert>
         <Gift className="h-4 w-4" />
-        <AlertTitle>Como funciona</AlertTitle>
+        <AlertTitle>{t('birthdayCampaignManagement.howItWorks.title')}</AlertTitle>
         <AlertDescription>
-          O job roda em segundo plano, procura aniversariantes do dia com WhatsApp preenchido e envia a imagem com a legenda configurada no horário definido. Cada pessoa recebe no máximo uma vez por ano.
+          {t('birthdayCampaignManagement.howItWorks.description')}
         </AlertDescription>
       </Alert>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Configuração da campanha</CardTitle>
+            <CardTitle>{t('birthdayCampaignManagement.configuration.title')}</CardTitle>
             <CardDescription>
-              Use o placeholder <code>{'{Nome}'}</code> para personalizar a mensagem.
+              {t('birthdayCampaignManagement.configuration.description')} <code>{'{Nome}'}</code> {t('birthdayCampaignManagement.configuration.placeholderHint')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-1">
-                  <Label className="text-base">Campanha ativa</Label>
+                  <Label className="text-base">{t('birthdayCampaignManagement.configuration.activeLabel')}</Label>
                   <p className="text-sm text-muted-foreground">
-                    Quando ativa, o envio automático entra na rotina diária.
+                    {t('birthdayCampaignManagement.configuration.activeHint')}
                   </p>
                 </div>
                 <Switch
@@ -252,17 +237,17 @@ export default function CampanhaAniversario() {
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <ImageIcon className="h-4 w-4" />
-                  Imagem do WhatsApp
+                  {t('birthdayCampaignManagement.configuration.imageLabel')}
                 </Label>
                 <ImageUpload
-                  label="Imagem"
+                  label={t('birthdayCampaignManagement.configuration.imageLabel')}
                   value={formData.imagemUrl}
                   onChange={(value) => setFormData((current) => ({ ...current, imagemUrl: value }))}
                   accept="image/*"
                   type="image"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Prefira uma arte vertical, como a que será exibida no WhatsApp.
+                  {t('birthdayCampaignManagement.configuration.imageHint')}
                 </p>
               </div>
 
@@ -270,7 +255,7 @@ export default function CampanhaAniversario() {
                 <div className="space-y-2">
                   <Label htmlFor="horarioEnvio" className="flex items-center gap-2">
                     <Clock3 className="h-4 w-4" />
-                    Horário de envio
+                    {t('birthdayCampaignManagement.configuration.scheduleTime')}
                   </Label>
                   <Input
                     id="horarioEnvio"
@@ -282,7 +267,7 @@ export default function CampanhaAniversario() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="mensagemTemplate">Legenda</Label>
+                  <Label htmlFor="mensagemTemplate">{t('birthdayCampaignManagement.configuration.messageLabel')}</Label>
                   <Textarea
                     id="mensagemTemplate"
                     value={formData.mensagemTemplate}
@@ -297,7 +282,7 @@ export default function CampanhaAniversario() {
               <div className="flex justify-end">
                 <Button type="submit" disabled={saving}>
                   <Save className="h-4 w-4 mr-2" />
-                  {saving ? 'Salvando...' : 'Salvar campanha'}
+                  {saving ? t('actions.saving') : t('birthdayCampaignManagement.configuration.save')}
                 </Button>
               </div>
             </form>
@@ -307,21 +292,21 @@ export default function CampanhaAniversario() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Prévia</CardTitle>
+              <CardTitle>{t('birthdayCampaignManagement.preview.title')}</CardTitle>
               <CardDescription>
-                Visualização com o nome que será usado no teste.
+                {t('birthdayCampaignManagement.preview.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {previewImage ? (
                 <img
                   src={previewImage}
-                  alt="Prévia da campanha"
+                  alt={t('birthdayCampaignManagement.preview.imageAlt')}
                   className="w-full rounded-xl border object-cover"
                 />
               ) : (
                 <div className="flex h-56 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
-                  Envie uma imagem para ver a prévia.
+                  {t('birthdayCampaignManagement.preview.emptyImage')}
                 </div>
               )}
 
@@ -333,15 +318,15 @@ export default function CampanhaAniversario() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Enviar teste</CardTitle>
+              <CardTitle>{t('birthdayCampaignManagement.test.title')}</CardTitle>
               <CardDescription>
-                Dispare a arte atual para validar imagem, legenda e integração do WhatsApp.
+                {t('birthdayCampaignManagement.test.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <form onSubmit={handleSendTest} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="nomeTeste">Nome para prévia</Label>
+                  <Label htmlFor="nomeTeste">{t('birthdayCampaignManagement.test.nameLabel')}</Label>
                   <Input
                     id="nomeTeste"
                     value={testData.nome}
@@ -351,19 +336,19 @@ export default function CampanhaAniversario() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="whatsAppTeste">WhatsApp de teste</Label>
+                  <Label htmlFor="whatsAppTeste">{t('birthdayCampaignManagement.test.whatsAppLabel')}</Label>
                   <Input
                     id="whatsAppTeste"
                     value={testData.whatsApp}
                     onChange={(event) =>
                       setTestData((current) => ({ ...current, whatsApp: event.target.value }))
                     }
-                    placeholder="11999999999"
+                    placeholder={t('birthdayCampaignManagement.test.whatsAppPlaceholder')}
                   />
                 </div>
                 <Button type="submit" disabled={sendingTest} className="w-full">
                   <Send className="h-4 w-4 mr-2" />
-                  {sendingTest ? 'Enviando...' : 'Enviar teste por WhatsApp'}
+                  {sendingTest ? t('birthdayCampaignManagement.test.sending') : t('birthdayCampaignManagement.test.send')}
                 </Button>
               </form>
             </CardContent>
@@ -376,7 +361,7 @@ export default function CampanhaAniversario() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <History className="h-4 w-4" />
-              Histórico total
+              {t('birthdayCampaignManagement.metrics.totalHistory')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -387,7 +372,7 @@ export default function CampanhaAniversario() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4" />
-              Enviados no ano
+              {t('birthdayCampaignManagement.metrics.sentYear')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -398,7 +383,7 @@ export default function CampanhaAniversario() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
-              Falhas no ano
+              {t('birthdayCampaignManagement.metrics.failuresYear')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -409,7 +394,7 @@ export default function CampanhaAniversario() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Hourglass className="h-4 w-4" />
-              Pendentes no ano
+              {t('birthdayCampaignManagement.metrics.pendingYear')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -420,21 +405,21 @@ export default function CampanhaAniversario() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Gift className="h-4 w-4" />
-              Hoje
+              {t('birthdayCampaignManagement.metrics.today')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-lg font-semibold">{metricas.totalEnviadosHoje || 0} enviados</div>
-            <div className="text-sm text-muted-foreground">{metricas.totalFalhasHoje || 0} falhas</div>
+            <div className="text-lg font-semibold">{t('birthdayCampaignManagement.metrics.todaySent', { count: metricas.totalEnviadosHoje || 0 })}</div>
+            <div className="text-sm text-muted-foreground">{t('birthdayCampaignManagement.metrics.todayFailures', { count: metricas.totalFalhasHoje || 0 })}</div>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Histórico recente</CardTitle>
+          <CardTitle>{t('birthdayCampaignManagement.history.title')}</CardTitle>
           <CardDescription>
-            Acompanhe o resultado dos disparos, filtre rapidamente e reenvie mensagens quando necessário.
+            {t('birthdayCampaignManagement.history.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -442,35 +427,35 @@ export default function CampanhaAniversario() {
             <div className="space-y-2">
               <Label htmlFor="buscaHistorico" className="flex items-center gap-2">
                 <Search className="h-4 w-4" />
-                Buscar pessoa ou WhatsApp
+                {t('birthdayCampaignManagement.history.searchLabel')}
               </Label>
               <Input
                 id="buscaHistorico"
                 value={filters.busca}
                 onChange={(event) => setFilters((current) => ({ ...current, busca: event.target.value }))}
-                placeholder="Nome ou WhatsApp"
+                placeholder={t('birthdayCampaignManagement.history.searchPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label>{t('birthdayCampaignManagement.history.statusLabel')}</Label>
               <Select
                 value={filters.status}
                 onValueChange={(value) => setFilters((current) => ({ ...current, status: value }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os status" />
+                  <SelectValue placeholder={t('birthdayCampaignManagement.history.allStatuses')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="Enviado">Enviado</SelectItem>
-                  <SelectItem value="Erro">Erro</SelectItem>
-                  <SelectItem value="Pendente">Pendente</SelectItem>
-                  <SelectItem value="EmProcessamento">Em processamento</SelectItem>
+                  <SelectItem value="all">{t('birthdayCampaignManagement.history.allStatuses')}</SelectItem>
+                  <SelectItem value="Enviado">{t('birthdayCampaignManagement.history.status.sent')}</SelectItem>
+                  <SelectItem value="Erro">{t('birthdayCampaignManagement.history.status.error')}</SelectItem>
+                  <SelectItem value="Pendente">{t('birthdayCampaignManagement.history.status.pending')}</SelectItem>
+                  <SelectItem value="EmProcessamento">{t('birthdayCampaignManagement.history.status.processing')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Quantidade</Label>
+              <Label>{t('birthdayCampaignManagement.history.quantityLabel')}</Label>
               <Select
                 value={filters.limit}
                 onValueChange={(value) => setFilters((current) => ({ ...current, limit: value }))}
@@ -479,17 +464,17 @@ export default function CampanhaAniversario() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="20">20 registros</SelectItem>
-                  <SelectItem value="50">50 registros</SelectItem>
-                  <SelectItem value="100">100 registros</SelectItem>
-                  <SelectItem value="200">200 registros</SelectItem>
+                  <SelectItem value="20">{t('birthdayCampaignManagement.history.recordsCount', { count: 20 })}</SelectItem>
+                  <SelectItem value="50">{t('birthdayCampaignManagement.history.recordsCount', { count: 50 })}</SelectItem>
+                  <SelectItem value="100">{t('birthdayCampaignManagement.history.recordsCount', { count: 100 })}</SelectItem>
+                  <SelectItem value="200">{t('birthdayCampaignManagement.history.recordsCount', { count: 200 })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex items-end gap-2">
               <Button type="submit" variant="outline" className="w-full lg:w-auto">
                 <Search className="h-4 w-4 mr-2" />
-                Filtrar
+                {t('birthdayCampaignManagement.history.filter')}
               </Button>
               <Button
                 type="button"
@@ -501,27 +486,27 @@ export default function CampanhaAniversario() {
                   loadConfiguracao(resetFilters);
                 }}
               >
-                Limpar
+                {t('birthdayCampaignManagement.history.clear')}
               </Button>
             </div>
           </form>
 
           {recentes.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              Ainda não há envios registrados para esta campanha.
+              {t('birthdayCampaignManagement.history.empty')}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Pessoa</TableHead>
-                  <TableHead>WhatsApp</TableHead>
-                  <TableHead>Aniversário</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Tentativas</TableHead>
-                  <TableHead>Última tentativa</TableHead>
-                  <TableHead>Enviado em</TableHead>
-                  <TableHead className="w-[120px] text-right">Ações</TableHead>
+                  <TableHead>{t('birthdayCampaignManagement.history.table.person')}</TableHead>
+                  <TableHead>{t('birthdayCampaignManagement.history.table.whatsApp')}</TableHead>
+                  <TableHead>{t('birthdayCampaignManagement.history.table.birthday')}</TableHead>
+                  <TableHead>{t('birthdayCampaignManagement.history.table.status')}</TableHead>
+                  <TableHead>{t('birthdayCampaignManagement.history.table.attempts')}</TableHead>
+                  <TableHead>{t('birthdayCampaignManagement.history.table.lastAttempt')}</TableHead>
+                  <TableHead>{t('birthdayCampaignManagement.history.table.sentAt')}</TableHead>
+                  <TableHead className="w-[120px] text-right">{t('birthdayCampaignManagement.history.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -533,11 +518,11 @@ export default function CampanhaAniversario() {
                         <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.logErro}</div>
                       ) : null}
                     </TableCell>
-                    <TableCell>{item.whatsApp || '-'}</TableCell>
+                    <TableCell>{item.whatsApp || t('common.notInformed')}</TableCell>
                     <TableCell>{formatDate(item.dataAniversario)}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(item.status)}>
-                        {item.status}
+                        {t(`birthdayCampaignManagement.history.status.${item.status === 'EmProcessamento' ? 'processing' : item.status.toLowerCase()}`, { defaultValue: item.status })}
                       </Badge>
                     </TableCell>
                     <TableCell>{item.tentativas}</TableCell>
@@ -552,7 +537,7 @@ export default function CampanhaAniversario() {
                         disabled={resendingId === item.id}
                       >
                         <RotateCcw className="h-4 w-4 mr-2" />
-                        {resendingId === item.id ? 'Reenviando...' : 'Reenviar'}
+                        {resendingId === item.id ? t('birthdayCampaignManagement.history.resending') : t('birthdayCampaignManagement.history.resend')}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -568,14 +553,14 @@ export default function CampanhaAniversario() {
         onOpenChange={(open) => {
           if (!open) setConfirmResend(null);
         }}
-        title="Reenviar mensagem"
+        title={t('birthdayCampaignManagement.history.confirmResendTitle')}
         description={
           confirmResend
-            ? `Deseja reenviar agora a campanha de aniversário para ${confirmResend.nomePessoa}?`
+            ? t('birthdayCampaignManagement.history.confirmResendDescription', { name: confirmResend.nomePessoa })
             : ''
         }
-        confirmText={resendingId ? 'Reenviando...' : 'Reenviar agora'}
-        cancelText="Cancelar"
+        confirmText={resendingId ? t('birthdayCampaignManagement.history.resending') : t('birthdayCampaignManagement.history.confirmResend')}
+        cancelText={t('actions.cancel')}
         loading={Boolean(resendingId)}
         onConfirm={() => confirmResend && handleResend(confirmResend)}
       />

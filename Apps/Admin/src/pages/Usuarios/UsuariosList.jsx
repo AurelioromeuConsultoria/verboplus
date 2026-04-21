@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Edit, Trash2, Filter, UserCheck, UserX, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, UserCheck, UserX, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
-import { formatDateBr, formatDateTimeBr } from '@/lib/formatters';
+import { formatDate, formatDateTime } from '@/lib/formatters';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
@@ -21,19 +22,8 @@ import UsuarioForm from './UsuarioForm';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
 
-const TIPO_USUARIO_LABELS = {
-  1: 'Administrador',
-  2: 'Portal',
-  3: 'Ambos',
-};
-
-const TIPO_USUARIO_COLORS = {
-  1: 'bg-blue-100 text-blue-800',
-  2: 'bg-green-100 text-green-800',
-  3: 'bg-purple-100 text-purple-800',
-};
-
 export default function UsuariosList() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +48,7 @@ export default function UsuariosList() {
       const res = await usuariosApi.getAll();
       setItems(res.data || []);
     } catch (err) {
-      setError('Erro ao carregar usuários');
+      setError(t('usersManagement.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -78,20 +68,22 @@ export default function UsuariosList() {
   }, [pessoaIdInicial, showForm]);
 
   const handleDelete = async (id) => {
-    const usuario = items.find(u => u.id === id);
+    const usuario = items.find((u) => u.id === id);
     confirmDialog.show({
-      title: 'Excluir Usuário',
-      description: `Tem certeza que deseja excluir o usuário "${usuario?.nome || 'este usuário'}"? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('usersManagement.deleteTitle'),
+      description: t('usersManagement.deleteDescription', {
+        name: usuario?.nome || t('usersManagement.deleteFallbackName'),
+      }),
+      confirmText: t('usersManagement.deleteConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await usuariosApi.delete(id);
-          toast.success('Usuário excluído com sucesso');
+          toast.success(t('usersManagement.deleteSuccess'));
           await load();
         } catch (err) {
-          toast.error(err.response?.data?.message || 'Erro ao excluir usuário');
+          toast.error(err.response?.data?.message || t('usersManagement.deleteError'));
           console.error(err);
           throw err;
         }
@@ -108,10 +100,14 @@ export default function UsuariosList() {
         ativo: !usuario.ativo,
         perfilAcessoId: usuario.perfilAcessoId,
       });
-      toast.success(`Usuário ${!usuario.ativo ? 'ativado' : 'desativado'} com sucesso`);
+      toast.success(
+        !usuario.ativo
+          ? t('usersManagement.activateSuccess')
+          : t('usersManagement.deactivateSuccess')
+      );
       await load();
     } catch (err) {
-      toast.error('Erro ao alterar status do usuário');
+      toast.error(t('usersManagement.statusError'));
       console.error(err);
     }
   };
@@ -143,18 +139,23 @@ export default function UsuariosList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text="Carregando usuários..." />;
+  if (loading) return <LoadingPage text={t('usersManagement.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   const canEdit = isAdmin && can(RESOURCES.USUARIOS, ACTIONS.EDIT);
   const canDelete = isAdmin && can(RESOURCES.USUARIOS, ACTIONS.DELETE);
+  const userTypeLabels = {
+    1: t('usersManagement.userTypes.administrator'),
+    2: t('usersManagement.userTypes.portal'),
+    3: t('usersManagement.userTypes.both'),
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Usuários</h1>
-          <p className="text-muted-foreground">Gerencie os usuários do sistema</p>
+          <h1 className="text-3xl font-bold">{t('usersManagement.title')}</h1>
+          <p className="text-muted-foreground">{t('usersManagement.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
@@ -166,7 +167,7 @@ export default function UsuariosList() {
                 setShowForm(true);
               }}
             >
-              <Plus className="h-4 w-4 mr-2" /> Novo Usuário
+              <Plus className="h-4 w-4 mr-2" /> {t('usersManagement.new')}
             </Button>
           )}
         </div>
@@ -174,42 +175,42 @@ export default function UsuariosList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('usersManagement.filters.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('usersManagement.filters.search')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Nome ou email"
+                placeholder={t('usersManagement.filters.searchPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Tipo de Usuário</label>
+              <label className="text-sm font-medium">{t('usersManagement.filters.userType')}</label>
               <Select value={tipoFilter || 'all'} onValueChange={(value) => setTipoFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os tipos" />
+                  <SelectValue placeholder={t('usersManagement.filters.allTypes')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os tipos</SelectItem>
-                  <SelectItem value="1">Administrador</SelectItem>
-                  <SelectItem value="2">Portal</SelectItem>
-                  <SelectItem value="3">Ambos</SelectItem>
+                  <SelectItem value="all">{t('usersManagement.filters.allTypes')}</SelectItem>
+                  <SelectItem value="1">{t('usersManagement.userTypes.administrator')}</SelectItem>
+                  <SelectItem value="2">{t('usersManagement.userTypes.portal')}</SelectItem>
+                  <SelectItem value="3">{t('usersManagement.userTypes.both')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium">{t('usersManagement.filters.status')}</label>
               <Select value={statusFilter || 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os status" />
+                  <SelectValue placeholder={t('usersManagement.filters.allStatuses')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="true">Ativo</SelectItem>
-                  <SelectItem value="false">Inativo</SelectItem>
+                  <SelectItem value="all">{t('usersManagement.filters.allStatuses')}</SelectItem>
+                  <SelectItem value="true">{t('usersManagement.status.active')}</SelectItem>
+                  <SelectItem value="false">{t('usersManagement.status.inactive')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -219,13 +220,13 @@ export default function UsuariosList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Usuários ({total})</CardTitle>
+          <CardTitle>{t('usersManagement.listTitle', { total })}</CardTitle>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
             <PageEmptyState
-              title="Nenhum usuario encontrado"
-              description="Nao ha usuarios para os filtros atuais. Ajuste os filtros ou crie um novo acesso."
+              title={t('usersManagement.emptyTitle')}
+              description={t('usersManagement.emptyDescription')}
               action={canEdit ? (
                 <Button
                   onClick={() => {
@@ -235,7 +236,7 @@ export default function UsuariosList() {
                   }}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Novo Usuario
+                  {t('usersManagement.new')}
                 </Button>
               ) : null}
             />
@@ -243,14 +244,14 @@ export default function UsuariosList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Perfil</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Data Criação</TableHead>
-                  <TableHead>Último Acesso</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('usersManagement.table.name')}</TableHead>
+                  <TableHead>{t('usersManagement.table.email')}</TableHead>
+                  <TableHead>{t('usersManagement.table.type')}</TableHead>
+                  <TableHead>{t('usersManagement.table.profile')}</TableHead>
+                  <TableHead>{t('usersManagement.table.status')}</TableHead>
+                  <TableHead>{t('usersManagement.table.createdAt')}</TableHead>
+                  <TableHead>{t('usersManagement.table.lastAccess')}</TableHead>
+                  <TableHead className="text-right">{t('usersManagement.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -260,31 +261,36 @@ export default function UsuariosList() {
                     <TableCell>{usuario.email}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">
-                        {TIPO_USUARIO_LABELS[usuario.tipoUsuario] || usuario.tipoUsuarioDescricao}
+                        {userTypeLabels[usuario.tipoUsuario] || usuario.tipoUsuarioDescricao}
                       </Badge>
                     </TableCell>
                     <TableCell>{usuario.perfilAcessoNome || '-'}</TableCell>
                     <TableCell>
                       <Badge variant={usuario.ativo ? 'default' : 'secondary'}>
-                        {usuario.ativo ? 'Ativo' : 'Inativo'}
+                        {usuario.ativo ? t('usersManagement.status.active') : t('usersManagement.status.inactive')}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatDateBr(usuario.dataCriacao)}</TableCell>
-                    <TableCell>{usuario.ultimoAcesso ? formatDateTimeBr(usuario.ultimoAcesso) : 'Nunca'}</TableCell>
+                    <TableCell>{formatDate(usuario.dataCriacao)}</TableCell>
+                    <TableCell>{usuario.ultimoAcesso ? formatDateTime(usuario.ultimoAcesso) : t('usersManagement.never')}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-1">
                         {canEdit && (
-                          <Button variant="ghost" size="sm" onClick={() => handleToggleAtivo(usuario)} title={usuario.ativo ? 'Desativar' : 'Ativar'}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggleAtivo(usuario)}
+                            title={usuario.ativo ? t('usersManagement.actions.deactivate') : t('usersManagement.actions.activate')}
+                          >
                             {usuario.ativo ? <UserX className="h-4 w-4 text-red-600" /> : <UserCheck className="h-4 w-4 text-green-600" />}
                           </Button>
                         )}
                         {canEdit && (
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(usuario.id)}>
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(usuario.id)} title={t('actions.edit')}>
                             <Edit className="h-4 w-4" />
                           </Button>
                         )}
                         {canDelete && (
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(usuario.id)}>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(usuario.id)} title={t('usersManagement.deleteConfirm')}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
@@ -330,6 +336,3 @@ export default function UsuariosList() {
     </div>
   );
 }
-
-
-

@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { formatCurrency, formatDate } from '@/lib/formatters';
 
 export default function RelatoriosFinanceiros() {
   const { t } = useTranslation();
@@ -26,14 +27,6 @@ export default function RelatoriosFinanceiros() {
     return new Date().toISOString().split('T')[0];
   });
   const [relatorio, setRelatorio] = useState(null);
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('pt-BR');
-  };
 
   const gerarRelatorio = async () => {
     if (!dataInicio || !dataFim) {
@@ -164,7 +157,7 @@ export default function RelatoriosFinanceiros() {
                       <TableBody>
                         {relatorio.receitas.map((item, idx) => (
                           <TableRow key={idx}>
-                            <TableCell className="font-medium">{item.categoriaNome || 'Sem categoria'}</TableCell>
+                            <TableCell className="font-medium">{item.categoriaNome || t('finance.common.notCategorized')}</TableCell>
                             <TableCell className="text-right text-green-600">{formatCurrency(item.valor)}</TableCell>
                             <TableCell className="text-right">{item.quantidade}</TableCell>
                             <TableCell className="text-right">{item.percentual.toFixed(1)}%</TableCell>
@@ -189,7 +182,7 @@ export default function RelatoriosFinanceiros() {
                       <TableBody>
                         {relatorio.despesas.map((item, idx) => (
                           <TableRow key={idx}>
-                            <TableCell className="font-medium">{item.categoriaNome || 'Sem categoria'}</TableCell>
+                            <TableCell className="font-medium">{item.categoriaNome || t('finance.common.notCategorized')}</TableCell>
                             <TableCell className="text-right text-red-600">{formatCurrency(item.valor)}</TableCell>
                             <TableCell className="text-right">{item.quantidade}</TableCell>
                             <TableCell className="text-right">{item.percentual.toFixed(1)}%</TableCell>
@@ -229,7 +222,7 @@ export default function RelatoriosFinanceiros() {
                   <TableBody>
                     {relatorio.map((item, idx) => (
                       <TableRow key={idx}>
-                        <TableCell className="font-medium">{item.centroCusto || 'Sem centro de custo'}</TableCell>
+                        <TableCell className="font-medium">{item.centroCusto || t('finance.common.noCostCenter')}</TableCell>
                         <TableCell className="text-right text-green-600">{formatCurrency(item.totalReceitas)}</TableCell>
                         <TableCell className="text-right text-red-600">{formatCurrency(item.totalDespesas)}</TableCell>
                         <TableCell className={`text-right font-bold ${item.saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -271,7 +264,7 @@ export default function RelatoriosFinanceiros() {
                   <TableBody>
                     {relatorio.map((item, idx) => (
                       <TableRow key={idx}>
-                        <TableCell className="font-medium">{item.projeto || 'Sem projeto'}</TableCell>
+                        <TableCell className="font-medium">{item.projeto || t('finance.common.noProject')}</TableCell>
                         <TableCell className="text-right">{item.orcamento ? formatCurrency(item.orcamento) : '-'}</TableCell>
                         <TableCell className="text-right text-green-600">{formatCurrency(item.totalReceitas)}</TableCell>
                         <TableCell className="text-right text-red-600">{formatCurrency(item.totalDespesas)}</TableCell>

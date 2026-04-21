@@ -33,7 +33,7 @@ export default function CargoForm() {
       const c = res.data;
       setFormData({ nome: c.nome || '' });
     } catch (err) {
-      setError('Erro ao carregar cargo');
+      setError(t('rolesForm.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -50,7 +50,7 @@ export default function CargoForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      toast.error('Nome é obrigatório');
+      toast.error(t('rolesForm.validation.nameRequired'));
       return;
     }
     try {
@@ -58,17 +58,17 @@ export default function CargoForm() {
       const payload = { nome: formData.nome.trim() };
       if (isEditing) await cargosApi.update(id, payload);
       else await cargosApi.create(payload);
-      toast.success(isEditing ? 'Cargo atualizado com sucesso' : 'Cargo criado com sucesso');
+      toast.success(isEditing ? t('rolesForm.updateSuccess') : t('rolesForm.createSuccess'));
       navigate('/cargos');
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao salvar cargo'));
+      toast.error(getApiErrorMessage(err, t('rolesForm.saveError')));
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && isEditing) return <LoadingPage text="Carregando cargo..." />;
+  if (loading && isEditing) return <LoadingPage text={t('rolesForm.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -76,12 +76,12 @@ export default function CargoForm() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" asChild>
           <Link to="/cargos">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('actions.back')}
           </Link>
         </Button>
         <div>
           <h1 className="text-3xl font-bold">{isEditing ? t('volunteer.roles.edit') : t('volunteer.roles.new')}</h1>
-          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações do cargo' : 'Cadastre um novo cargo'}</p>
+          <p className="text-muted-foreground">{isEditing ? t('rolesForm.editSubtitle') : t('rolesForm.createSubtitle')}</p>
         </div>
       </div>
 
@@ -93,8 +93,8 @@ export default function CargoForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
-                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder="Nome do cargo" required />
+                <Label htmlFor="nome">{t('rolesForm.fields.name')} *</Label>
+                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder={t('rolesForm.placeholders.name')} required />
               </div>
             </div>
 
@@ -112,4 +112,3 @@ export default function CargoForm() {
     </div>
   );
 }
-

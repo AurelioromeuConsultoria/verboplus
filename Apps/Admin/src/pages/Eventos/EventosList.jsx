@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
 import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '@/lib/formatters';
 
 export default function EventosList() {
   const { t } = useTranslation();
@@ -61,18 +62,20 @@ export default function EventosList() {
   const handleDelete = async (id) => {
     const evento = items.find(e => e.id === id);
     confirmDialog.show({
-      title: 'Excluir Evento',
-      description: `Tem certeza que deseja excluir "${evento?.titulo || 'este evento'}"? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('events.deleteTitle'),
+      description: t('events.deleteDescription', {
+        title: evento?.titulo || t('events.deleteFallbackTitle'),
+      }),
+      confirmText: t('events.deleteConfirm'),
+      cancelText: t('common.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await eventosApi.delete(id);
-          toast.success('Evento excluído com sucesso');
+          toast.success(t('events.deleteSuccess'));
           await load();
         } catch (err) {
-          toast.error('Erro ao excluir evento');
+          toast.error(t('events.deleteError'));
           console.error(err);
           throw err;
         }
@@ -120,35 +123,35 @@ export default function EventosList() {
     if (!value) return '-';
     const d = new Date(value);
     if (isNaN(d.getTime()) || d.getFullYear() < 1900) return '-';
-    return d.toLocaleString('pt-BR');
+    return formatDateTime(d);
   };
 
   const getTipoLabel = (tipo, tipoDescricao) => {
     if (tipoDescricao) return tipoDescricao;
     const map = {
-      1: t('events.type.event', 'Evento'),
-      2: t('events.type.service', 'Culto'),
-      3: t('events.type.meeting', 'Reunião'),
-      4: t('events.type.other', 'Outro'),
+      1: t('events.type.event'),
+      2: t('events.type.service'),
+      3: t('events.type.meeting'),
+      4: t('events.type.other'),
     };
-    return map[tipo] ?? t('events.type.event', 'Evento');
+    return map[tipo] ?? t('events.type.event');
   };
 
   // Exportação
   const handleExport = () => {
     const exportData = filtered.map(evento => ({
-      [t('events.export.title', 'Título')]: evento.titulo || '',
-      [t('events.export.description', 'Descrição')]: evento.descricao || '',
-      [t('events.export.startDate', 'Data Início')]: formatEventDate(evento.dataInicio),
-      [t('events.export.endDate', 'Data Fim')]: formatEventDate(evento.dataFim),
-      [t('events.export.url', 'URL')]: evento.url || '',
+      [t('events.export.title')]: evento.titulo || '',
+      [t('events.export.description')]: evento.descricao || '',
+      [t('events.export.startDate')]: formatEventDate(evento.dataInicio),
+      [t('events.export.endDate')]: formatEventDate(evento.dataFim),
+      [t('events.export.url')]: evento.url || '',
     }));
 
     exportToCSV(exportData, 'eventos');
-    toast.success(t('events.export.success', 'Dados exportados com sucesso!'));
+    toast.success(t('events.export.success'));
   };
 
-  if (loading) return <LoadingPage text={t('events.loading', 'Carregando eventos...')} />;
+  if (loading) return <LoadingPage text={t('events.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   const canEdit = can(RESOURCES.EVENTOS, ACTIONS.EDIT);
@@ -175,13 +178,13 @@ export default function EventosList() {
 
       <AdvancedSearch
         searchFields={[
-          { key: 'titulo', label: t('events.fields.title', 'Título'), type: 'text', placeholder: t('events.search.titlePlaceholder', 'Buscar por título...') },
-          { key: 'descricao', label: t('events.fields.description', 'Descrição'), type: 'text', placeholder: t('events.search.descriptionPlaceholder', 'Buscar por descrição...') },
+          { key: 'titulo', label: t('events.fields.title'), type: 'text', placeholder: t('events.search.titlePlaceholder') },
+          { key: 'descricao', label: t('events.fields.description'), type: 'text', placeholder: t('events.search.descriptionPlaceholder') },
         ]}
         filterFields={[
           {
             key: 'dataInicio',
-            label: 'Data de Início',
+            label: t('events.fields.startDate'),
             type: 'date-range',
           },
         ]}
@@ -204,7 +207,7 @@ export default function EventosList() {
             {filtered.length > 0 && (
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
-                {t('events.export.button', 'Exportar CSV')}
+                {t('events.export.button')}
               </Button>
             )}
           </div>
@@ -212,7 +215,7 @@ export default function EventosList() {
         <CardContent>
           {filtered.length === 0 ? (
             <PageEmptyState
-              title="Nenhum evento encontrado"
+              title={t('events.emptyTitle')}
               description={t('events.emptyMessage')}
               action={canEdit ? (
                 <Button asChild>
@@ -228,20 +231,20 @@ export default function EventosList() {
               <TableHeader>
                 <TableRow>
                   <SortableTableHeader field="titulo" onSort={handleSort} sortConfig={sortConfig}>
-                      {t('events.fields.title', 'Título')}
+                    {t('events.fields.title')}
                   </SortableTableHeader>
-                    <TableHead>{t('events.fields.type', 'Tipo')}</TableHead>
+                  <TableHead>{t('events.fields.type')}</TableHead>
                   <SortableTableHeader field="descricao" onSort={handleSort} sortConfig={sortConfig}>
-                      {t('events.fields.description', 'Descrição')}
+                    {t('events.fields.description')}
                   </SortableTableHeader>
                   <SortableTableHeader field="dataInicio" onSort={handleSort} sortConfig={sortConfig}>
-                      {t('events.fields.startDate', 'Data Início')}
+                    {t('events.fields.startDate')}
                   </SortableTableHeader>
                   <SortableTableHeader field="dataFim" onSort={handleSort} sortConfig={sortConfig}>
-                      {t('events.fields.endDate', 'Data Fim')}
+                    {t('events.fields.endDate')}
                   </SortableTableHeader>
-                    <TableHead>URL</TableHead>
-                    <TableHead className="text-right">{t('eventRegistrations.table.actions', 'Ações')}</TableHead>
+                  <TableHead>{t('events.fields.url')}</TableHead>
+                  <TableHead className="text-right">{t('events.fields.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -261,7 +264,7 @@ export default function EventosList() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <Button variant="ghost" size="sm" asChild title="Ver Inscrições">
+                        <Button variant="ghost" size="sm" asChild title={t('events.actions.viewRegistrations')}>
                           <Link to={`/eventos/${evento.id}/inscricoes`}>
                             <Users className="h-4 w-4" />
                           </Link>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Shield, Eye, Search, ArrowUpRight, TriangleAlert } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,48 +14,52 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { auditLogsApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatDateTime } from '@/lib/formatters';
 
-const ENTITY_OPTIONS = [
-  { value: 'Auth', label: 'Autenticação' },
-  { value: 'CampanhaAniversario', label: 'Campanha de Aniversário' },
-  { value: 'CampanhaAniversarioEnvio', label: 'Envio da Campanha' },
-  { value: 'Escala', label: 'Escala' },
-  { value: 'EscalaItem', label: 'Item de Escala' },
-  { value: 'SolicitacaoTrocaEscala', label: 'Solicitação de Troca' },
-  { value: 'MensagemAgendada', label: 'Mensagem Agendada' },
-  { value: 'Pessoa', label: 'Pessoa' },
-  { value: 'PessoaPerfil', label: 'Perfil de Pessoa' },
-  { value: 'Visitante', label: 'Visitante' },
-  { value: 'Evento', label: 'Evento' },
-  { value: 'Noticia', label: 'Notícia' },
-  { value: 'Usuario', label: 'Usuário' },
-];
+function getEntityOptions(t) {
+  return [
+    { value: 'Auth', label: t('audit.entities.Auth') },
+    { value: 'CampanhaAniversario', label: t('audit.entities.CampanhaAniversario') },
+    { value: 'CampanhaAniversarioEnvio', label: t('audit.entities.CampanhaAniversarioEnvio') },
+    { value: 'Escala', label: t('audit.entities.Escala') },
+    { value: 'EscalaItem', label: t('audit.entities.EscalaItem') },
+    { value: 'SolicitacaoTrocaEscala', label: t('audit.entities.SolicitacaoTrocaEscala') },
+    { value: 'MensagemAgendada', label: t('audit.entities.MensagemAgendada') },
+    { value: 'Pessoa', label: t('audit.entities.Pessoa') },
+    { value: 'PessoaPerfil', label: t('audit.entities.PessoaPerfil') },
+    { value: 'Visitante', label: t('audit.entities.Visitante') },
+    { value: 'Evento', label: t('audit.entities.Evento') },
+    { value: 'Noticia', label: t('audit.entities.Noticia') },
+    { value: 'Usuario', label: t('audit.entities.Usuario') },
+  ];
+}
 
-const ACTION_OPTIONS = [
-  { value: 'Create', label: 'Criação' },
-  { value: 'Update', label: 'Edição' },
-  { value: 'Delete', label: 'Exclusão' },
-  { value: 'Login', label: 'Login' },
-  { value: 'RefreshToken', label: 'Refresh Token' },
-  { value: 'AlterarSenha', label: 'Alterar Senha' },
-  { value: 'Publicar', label: 'Publicar' },
-  { value: 'GerarAutomatico', label: 'Gerar Automático' },
-  { value: 'Confirmar', label: 'Confirmar' },
-  { value: 'Recusar', label: 'Recusar' },
-  { value: 'RegistrarPresenca', label: 'Registrar Presença' },
-  { value: 'Aprovar', label: 'Aprovar' },
-  { value: 'Rejeitar', label: 'Rejeitar' },
-  { value: 'Regerar', label: 'Regerar' },
-  { value: 'ProntaParaEnvio', label: 'Pronta para Envio' },
-  { value: 'Enviada', label: 'Enviada' },
-  { value: 'ErroEnvio', label: 'Erro de Envio' },
-  { value: 'AtualizarConfiguracao', label: 'Atualizar Configuração' },
-  { value: 'EnviarTeste', label: 'Enviar Teste' },
-  { value: 'Reenviar', label: 'Reenviar' },
-  { value: 'ProcessarDia', label: 'Processar Dia' },
-];
+function getActionOptions(t) {
+  return [
+    { value: 'Create', label: t('audit.actionsMap.Create') },
+    { value: 'Update', label: t('audit.actionsMap.Update') },
+    { value: 'Delete', label: t('audit.actionsMap.Delete') },
+    { value: 'Login', label: t('audit.actionsMap.Login') },
+    { value: 'RefreshToken', label: t('audit.actionsMap.RefreshToken') },
+    { value: 'AlterarSenha', label: t('audit.actionsMap.AlterarSenha') },
+    { value: 'Publicar', label: t('audit.actionsMap.Publicar') },
+    { value: 'GerarAutomatico', label: t('audit.actionsMap.GerarAutomatico') },
+    { value: 'Confirmar', label: t('audit.actionsMap.Confirmar') },
+    { value: 'Recusar', label: t('audit.actionsMap.Recusar') },
+    { value: 'RegistrarPresenca', label: t('audit.actionsMap.RegistrarPresenca') },
+    { value: 'Aprovar', label: t('audit.actionsMap.Aprovar') },
+    { value: 'Rejeitar', label: t('audit.actionsMap.Rejeitar') },
+    { value: 'Regerar', label: t('audit.actionsMap.Regerar') },
+    { value: 'ProntaParaEnvio', label: t('audit.actionsMap.ProntaParaEnvio') },
+    { value: 'Enviada', label: t('audit.actionsMap.Enviada') },
+    { value: 'ErroEnvio', label: t('audit.actionsMap.ErroEnvio') },
+    { value: 'AtualizarConfiguracao', label: t('audit.actionsMap.AtualizarConfiguracao') },
+    { value: 'EnviarTeste', label: t('audit.actionsMap.EnviarTeste') },
+    { value: 'Reenviar', label: t('audit.actionsMap.Reenviar') },
+    { value: 'ProcessarDia', label: t('audit.actionsMap.ProcessarDia') },
+  ];
+}
 
-const ACTION_LABELS = Object.fromEntries(ACTION_OPTIONS.map((item) => [item.value, item.label]));
 const QUICK_ACTIONS = ['Login', 'AlterarSenha', 'Publicar', 'Confirmar', 'Recusar', 'Aprovar', 'Rejeitar', 'ErroEnvio', 'ProcessarDia'];
 const DEFAULT_FILTERS = {
   search: '',
@@ -100,8 +105,8 @@ function buildSearchParamsFromFilters(filters) {
   return nextParams;
 }
 
-function getActionLabel(action) {
-  return ACTION_LABELS[action] || action;
+function getActionLabel(action, t) {
+  return t(`audit.actionsMap.${action}`, { defaultValue: action });
 }
 
 function getActionVariant(action) {
@@ -163,22 +168,22 @@ function formatTimeBucket(date) {
   return `${day}/${month} ${hour}:00`;
 }
 
-function getAuditDestination(item) {
+function getAuditDestination(item, t) {
   if (!item) return null;
 
   const entityId = item.entityId;
   const parsed = parseAuditJson(item.changesJson);
 
   if (item.entityName === 'Pessoa' && entityId) {
-    return { to: `/pessoas/${entityId}`, label: 'Abrir pessoa' };
+    return { to: `/pessoas/${entityId}`, label: t('audit.destinations.openPerson') };
   }
 
   if (item.entityName === 'Visitante' && entityId) {
-    return { to: `/visitantes/${entityId}`, label: 'Abrir visitante' };
+    return { to: `/visitantes/${entityId}`, label: t('audit.destinations.openVisitor') };
   }
 
   if (item.entityName === 'Usuario') {
-    return { to: '/usuarios', label: 'Abrir usuários' };
+    return { to: '/usuarios', label: t('audit.destinations.openUsers') };
   }
 
   if (item.entityName === 'PessoaPerfil') {
@@ -187,7 +192,7 @@ function getAuditDestination(item) {
       ?? parsed?.changes?.PessoaId?.oldValue;
 
     if (pessoaId) {
-      return { to: `/pessoas/${pessoaId}`, label: 'Abrir pessoa' };
+      return { to: `/pessoas/${pessoaId}`, label: t('audit.destinations.openPerson') };
     }
   }
 
@@ -198,10 +203,10 @@ function getAuditDestination(item) {
       ?? parsed?.changes?.VisitanteId?.oldValue;
 
     if (visitanteId) {
-      return { to: `/visitantes/${visitanteId}`, label: 'Abrir visitante' };
+      return { to: `/visitantes/${visitanteId}`, label: t('audit.destinations.openVisitor') };
     }
 
-    return { to: '/mensagens-agendadas', label: 'Abrir mensagens' };
+    return { to: '/mensagens-agendadas', label: t('audit.destinations.openMessages') };
   }
 
   if (item.entityName === 'Escala') {
@@ -215,28 +220,29 @@ function getAuditDestination(item) {
       ?? parsed?.changes?.EquipeId?.oldValue;
 
     if (ocorrenciaId && equipeId) {
-      return { to: `/voluntariado/escalas/ocorrencia/${ocorrenciaId}/equipe/${equipeId}`, label: 'Abrir escala' };
+      return { to: `/voluntariado/escalas/ocorrencia/${ocorrenciaId}/equipe/${equipeId}`, label: t('audit.destinations.openSchedule') };
     }
 
     if (ocorrenciaId) {
-      return { to: `/voluntariado/escalas/ocorrencia/${ocorrenciaId}`, label: 'Abrir ocorrência' };
+      return { to: `/voluntariado/escalas/ocorrencia/${ocorrenciaId}`, label: t('audit.destinations.openOccurrence') };
     }
 
-    return { to: '/voluntariado/escalas', label: 'Abrir escalas' };
+    return { to: '/voluntariado/escalas', label: t('audit.destinations.openSchedules') };
   }
 
   if (item.entityName === 'EscalaItem' || item.entityName === 'SolicitacaoTrocaEscala') {
-    return { to: '/voluntariado/solicitacoes-troca', label: 'Abrir trocas' };
+    return { to: '/voluntariado/solicitacoes-troca', label: t('audit.destinations.openSwaps') };
   }
 
   if (item.entityName === 'CampanhaAniversario' || item.entityName === 'CampanhaAniversarioEnvio') {
-    return { to: '/pessoas/aniversariantes/campanha', label: 'Abrir campanha' };
+    return { to: '/pessoas/aniversariantes/campanha', label: t('audit.destinations.openCampaign') };
   }
 
   return null;
 }
 
 export default function AuditoriaList() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
@@ -254,17 +260,17 @@ export default function AuditoriaList() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-
   const [filters, setFilters] = useState(() => ({
     ...DEFAULT_FILTERS,
     ...parseFiltersFromSearchParams(searchParams),
   }));
-
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selected, setSelected] = useState(null);
+
+  const entityOptions = useMemo(() => getEntityOptions(t), [t]);
+  const actionOptions = useMemo(() => getActionOptions(t), [t]);
 
   const applyAlertFilters = useCallback((patch) => {
     setFilters((current) => ({ ...current, ...patch }));
@@ -310,13 +316,13 @@ export default function AuditoriaList() {
         topActionCount: Number(metricsResp.data?.topActionCount || 0),
       });
     } catch (err) {
-      const msg = getApiErrorMessage(err, 'Erro ao carregar auditoria');
+      const msg = getApiErrorMessage(err, t('audit.errorLoad'));
       setError(msg);
       toast.error(msg);
     } finally {
       setLoading(false);
     }
-  }, [filters.action, filters.createdAt_from, filters.createdAt_to, filters.entityId, filters.entityName, filters.search, filters.userEmail, filters.userName, page, pageSize]);
+  }, [filters.action, filters.createdAt_from, filters.createdAt_to, filters.entityId, filters.entityName, filters.search, filters.userEmail, filters.userName, page, pageSize, t]);
 
   useEffect(() => {
     load();
@@ -345,11 +351,8 @@ export default function AuditoriaList() {
     }
   }, [filters, searchParams, setSearchParams]);
 
-  const prettyJson = useMemo(() => {
-    return formatAuditJson(selected?.changesJson);
-  }, [selected]);
-
-  const selectedDestination = useMemo(() => getAuditDestination(selected), [selected]);
+  const prettyJson = useMemo(() => formatAuditJson(selected?.changesJson), [selected]);
+  const selectedDestination = useMemo(() => getAuditDestination(selected, t), [selected, t]);
 
   const activeFilterCount = useMemo(() => {
     return Object.values(filters).filter((value) => value !== undefined && value !== '').length;
@@ -357,26 +360,28 @@ export default function AuditoriaList() {
 
   const periodLabel = useMemo(() => {
     if (filters.createdAt_from && filters.createdAt_to) {
-      return `${filters.createdAt_from} ate ${filters.createdAt_to}`;
+      return t('audit.periodLabel', { from: filters.createdAt_from, to: filters.createdAt_to });
     }
 
     if (filters.createdAt_from) {
-      return `desde ${filters.createdAt_from}`;
+      return t('audit.period.from', { value: filters.createdAt_from });
     }
 
     if (filters.createdAt_to) {
-      return `ate ${filters.createdAt_to}`;
+      return t('audit.period.to', { value: filters.createdAt_to });
     }
 
-    return 'todo o periodo';
-  }, [filters.createdAt_from, filters.createdAt_to]);
+    return t('audit.period.all');
+  }, [filters.createdAt_from, filters.createdAt_to, t]);
 
-  const currentActionLabel = filters.action ? getActionLabel(filters.action) : 'todas as ações';
+  const currentActionLabel = filters.action ? getActionLabel(filters.action, t) : t('audit.allActions');
+
   const recentCriticalItems = useMemo(() => {
     return items
       .filter((item) => QUICK_ACTIONS.includes(item.action) || ['Delete', 'ErroEnvio', 'Recusar', 'Rejeitar'].includes(item.action))
       .slice(0, 6);
   }, [items]);
+
   const trendBuckets = useMemo(() => {
     const map = new Map();
 
@@ -391,19 +396,21 @@ export default function AuditoriaList() {
       .map(([label, count]) => ({ label, count }))
       .reverse();
   }, [items]);
+
   const maxTrendCount = useMemo(() => {
     return trendBuckets.reduce((max, item) => Math.max(max, item.count), 1);
   }, [trendBuckets]);
+
   const alerts = useMemo(() => {
     const nextAlerts = [];
 
     if (metrics.failureActions >= 5) {
       nextAlerts.push({
         id: 'failure-spike',
-        title: 'Volume elevado de falhas ou recusas',
-        description: `${metrics.failureActions} eventos negativos encontrados no conjunto filtrado.`,
+        title: t('audit.alerts.failureSpike.title'),
+        description: t('audit.alerts.failureSpike.description', { count: metrics.failureActions }),
         variant: 'destructive',
-        actionLabel: 'Filtrar falhas',
+        actionLabel: t('audit.alerts.failureSpike.action'),
         action: () => applyAlertFilters({ action: 'ErroEnvio' }),
       });
     }
@@ -411,10 +418,10 @@ export default function AuditoriaList() {
     if (metrics.topActionName === 'ErroEnvio' && metrics.topActionCount >= 3) {
       nextAlerts.push({
         id: 'send-errors',
-        title: 'Erros de envio em destaque',
-        description: `${metrics.topActionCount} registros com erro de envio dominam o resultado atual.`,
+        title: t('audit.alerts.sendErrors.title'),
+        description: t('audit.alerts.sendErrors.description', { count: metrics.topActionCount }),
         variant: 'destructive',
-        actionLabel: 'Ver erros de envio',
+        actionLabel: t('audit.alerts.sendErrors.action'),
         action: () => applyAlertFilters({ action: 'ErroEnvio', entityName: 'MensagemAgendada' }),
       });
     }
@@ -422,10 +429,10 @@ export default function AuditoriaList() {
     if (metrics.topActionName === 'AlterarSenha' && metrics.topActionCount >= 3) {
       nextAlerts.push({
         id: 'password-changes',
-        title: 'Muitas alterações de senha',
-        description: `${metrics.topActionCount} alterações de senha aparecem como ação mais frequente.`,
+        title: t('audit.alerts.passwordChanges.title'),
+        description: t('audit.alerts.passwordChanges.description', { count: metrics.topActionCount }),
         variant: 'secondary',
-        actionLabel: 'Filtrar senhas',
+        actionLabel: t('audit.alerts.passwordChanges.action'),
         action: () => applyAlertFilters({ action: 'AlterarSenha', entityName: 'Usuario' }),
       });
     }
@@ -433,10 +440,10 @@ export default function AuditoriaList() {
     if (metrics.topActionName === 'Login' && metrics.topActionCount >= 10) {
       nextAlerts.push({
         id: 'login-activity',
-        title: 'Pico de login no período',
-        description: `${metrics.topActionCount} logins foram registrados com os filtros atuais.`,
+        title: t('audit.alerts.loginActivity.title'),
+        description: t('audit.alerts.loginActivity.description', { count: metrics.topActionCount }),
         variant: 'secondary',
-        actionLabel: 'Ver logins',
+        actionLabel: t('audit.alerts.loginActivity.action'),
         action: () => applyAlertFilters({ action: 'Login', entityName: 'Auth' }),
       });
     }
@@ -444,40 +451,40 @@ export default function AuditoriaList() {
     if (metrics.criticalActions >= 12) {
       nextAlerts.push({
         id: 'critical-actions',
-        title: 'Alta concentração de ações críticas',
-        description: `${metrics.criticalActions} ações críticas foram encontradas no conjunto filtrado.`,
+        title: t('audit.alerts.criticalActions.title'),
+        description: t('audit.alerts.criticalActions.description', { count: metrics.criticalActions }),
         variant: 'default',
-        actionLabel: 'Isolar críticas',
+        actionLabel: t('audit.alerts.criticalActions.action'),
         action: () => applyAlertFilters({ action: undefined }),
       });
     }
 
     return nextAlerts;
-  }, [applyAlertFilters, metrics.criticalActions, metrics.failureActions, metrics.topActionCount, metrics.topActionName]);
+  }, [applyAlertFilters, metrics.criticalActions, metrics.failureActions, metrics.topActionCount, metrics.topActionName, t]);
 
-  if (loading) return <LoadingPage text="Carregando auditoria..." />;
+  if (loading) return <LoadingPage text={t('audit.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Auditoria</h1>
-          <p className="text-muted-foreground mt-1">Histórico de alterações no sistema</p>
+          <h1 className="text-3xl font-bold">{t('audit.title')}</h1>
+          <p className="mt-1 text-muted-foreground">{t('audit.subtitle')}</p>
         </div>
       </div>
 
       <AdvancedSearch
         searchFields={[
-          { key: 'search', label: 'Busca geral', type: 'text', placeholder: 'Entidade, ação, usuário, e-mail ou ID...' },
-          { key: 'entityId', label: 'ID da entidade', type: 'text', placeholder: 'Ex.: 10, teste, 2026-04-02...' },
-          { key: 'userName', label: 'Nome do usuário', type: 'text', placeholder: 'Buscar por nome...' },
-          { key: 'userEmail', label: 'E-mail do usuário', type: 'text', placeholder: 'Buscar por e-mail...' },
+          { key: 'search', label: t('audit.search.general'), type: 'text', placeholder: t('audit.search.generalPlaceholder') },
+          { key: 'entityId', label: t('audit.search.entityId'), type: 'text', placeholder: t('audit.search.entityIdPlaceholder') },
+          { key: 'userName', label: t('audit.search.userName'), type: 'text', placeholder: t('audit.search.userNamePlaceholder') },
+          { key: 'userEmail', label: t('audit.search.userEmail'), type: 'text', placeholder: t('audit.search.userEmailPlaceholder') },
         ]}
         filterFields={[
-          { key: 'entityName', label: 'Entidade', type: 'select', options: ENTITY_OPTIONS },
-          { key: 'action', label: 'Ação', type: 'select', options: ACTION_OPTIONS },
-          { key: 'createdAt', label: 'Data', type: 'date-range' },
+          { key: 'entityName', label: t('audit.search.entity'), type: 'select', options: entityOptions },
+          { key: 'action', label: t('audit.search.action'), type: 'select', options: actionOptions },
+          { key: 'createdAt', label: t('audit.search.date'), type: 'date-range' },
         ]}
         values={filters}
         onChange={setFilters}
@@ -487,53 +494,53 @@ export default function AuditoriaList() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total no resultado</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('audit.cards.total.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{metrics.totalLogs}</div>
-            <p className="text-xs text-muted-foreground mt-1">Todos os logs do conjunto filtrado</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('audit.cards.total.description')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Ocorrências críticas</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('audit.cards.critical.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{metrics.criticalActions}</div>
-            <p className="text-xs text-muted-foreground mt-1">Ações sensíveis no conjunto filtrado</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('audit.cards.critical.description')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Falhas e recusas</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('audit.cards.failures.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{metrics.failureActions}</div>
-            <p className="text-xs text-muted-foreground mt-1">Erros operacionais e respostas negativas</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('audit.cards.failures.description')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Maior volume atual</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('audit.cards.highestVolume.title')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Usuário</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('audit.cards.highestVolume.user')}</div>
               <div className="font-semibold">{metrics.topUserLabel}</div>
-              <div className="text-xs text-muted-foreground">{metrics.topUserCount} registro(s)</div>
+              <div className="text-xs text-muted-foreground">{t('audit.records', { count: metrics.topUserCount })}</div>
             </div>
             <div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Entidade</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('audit.cards.highestVolume.entity')}</div>
               <div className="font-semibold">{metrics.topEntityName}</div>
-              <div className="text-xs text-muted-foreground">{metrics.topEntityCount} registro(s)</div>
+              <div className="text-xs text-muted-foreground">{t('audit.records', { count: metrics.topEntityCount })}</div>
             </div>
             <div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Ação</div>
-              <div className="font-semibold">{getActionLabel(metrics.topActionName)}</div>
-              <div className="text-xs text-muted-foreground">{metrics.topActionCount} registro(s)</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('audit.cards.highestVolume.action')}</div>
+              <div className="font-semibold">{getActionLabel(metrics.topActionName, t)}</div>
+              <div className="text-xs text-muted-foreground">{t('audit.records', { count: metrics.topActionCount })}</div>
             </div>
           </CardContent>
         </Card>
@@ -541,13 +548,13 @@ export default function AuditoriaList() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Alertas operacionais</CardTitle>
+          <CardTitle className="text-base">{t('audit.operationalAlerts')}</CardTitle>
         </CardHeader>
         <CardContent>
           {alerts.length === 0 ? (
             <div className="flex items-center gap-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
               <Shield className="h-4 w-4" />
-              Nenhum alerta automático disparado com os filtros atuais.
+              {t('audit.noAlerts')}
             </div>
           ) : (
             <div className="space-y-3">
@@ -557,7 +564,13 @@ export default function AuditoriaList() {
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{alert.title}</span>
-                      <Badge variant={alert.variant}>{alert.variant === 'destructive' ? 'Alta' : alert.variant === 'default' ? 'Média' : 'Atenção'}</Badge>
+                      <Badge variant={alert.variant}>
+                        {alert.variant === 'destructive'
+                          ? t('audit.alertPriority.high')
+                          : alert.variant === 'default'
+                            ? t('audit.alertPriority.medium')
+                            : t('audit.alertPriority.attention')}
+                      </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">{alert.description}</p>
                     {alert.actionLabel ? (
@@ -578,29 +591,27 @@ export default function AuditoriaList() {
       <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Eventos críticos recentes</CardTitle>
+            <CardTitle className="text-base">{t('audit.recentCriticalEvents')}</CardTitle>
           </CardHeader>
           <CardContent>
             {recentCriticalItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum evento crítico no resultado atual.</p>
+              <p className="text-sm text-muted-foreground">{t('audit.noCriticalEvents')}</p>
             ) : (
               <div className="space-y-3">
                 {recentCriticalItems.map((item) => {
-                  const destination = getAuditDestination(item);
+                  const destination = getAuditDestination(item, t);
                   return (
                     <div key={item.id} className="flex items-start justify-between gap-3 rounded-lg border p-3">
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant={getActionVariant(item.action)}>{getActionLabel(item.action)}</Badge>
-                          <span className="text-sm font-medium">{item.entityName}</span>
+                          <Badge variant={getActionVariant(item.action)}>{getActionLabel(item.action, t)}</Badge>
+                          <span className="text-sm font-medium">{t(`audit.entities.${item.entityName}`, { defaultValue: item.entityName })}</span>
                           <span className="text-xs text-muted-foreground">#{item.entityId}</span>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {item.userEmail || item.userName || (item.userId ? `User ${item.userId}` : 'Sistema')}
+                          {item.userEmail || item.userName || (item.userId ? t('audit.userFallback', { id: item.userId }) : t('audit.system'))}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {item.createdAt ? new Date(item.createdAt).toLocaleString('pt-BR') : '-'}
-                        </div>
+                        <div className="text-xs text-muted-foreground">{item.createdAt ? formatDateTime(item.createdAt) : '-'}</div>
                       </div>
                       <div className="flex items-center gap-1">
                         {destination ? (
@@ -632,11 +643,11 @@ export default function AuditoriaList() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Tendência recente</CardTitle>
+            <CardTitle className="text-base">{t('audit.recentTrend')}</CardTitle>
           </CardHeader>
           <CardContent>
             {trendBuckets.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sem dados suficientes para tendência.</p>
+              <p className="text-sm text-muted-foreground">{t('audit.noTrendData')}</p>
             ) : (
               <div className="space-y-3">
                 {trendBuckets.map((bucket) => (
@@ -661,7 +672,7 @@ export default function AuditoriaList() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Atalhos de investigação</CardTitle>
+          <CardTitle className="text-base">{t('audit.investigationShortcuts')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
@@ -671,7 +682,7 @@ export default function AuditoriaList() {
               size="sm"
               onClick={() => setFilters((current) => ({ ...current, createdAt_from: '', createdAt_to: '' }))}
             >
-              Todo o período
+              {t('audit.shortcuts.allPeriod')}
             </Button>
             <Button
               type="button"
@@ -682,7 +693,7 @@ export default function AuditoriaList() {
                 setFilters((current) => ({ ...current, createdAt_from: today, createdAt_to: today }));
               }}
             >
-              Hoje
+              {t('audit.shortcuts.today')}
             </Button>
             <Button
               type="button"
@@ -690,7 +701,7 @@ export default function AuditoriaList() {
               size="sm"
               onClick={() => setFilters((current) => ({ ...current, ...buildPeriodFilters(1) }))}
             >
-              Últimas 24h
+              {t('audit.shortcuts.last24h')}
             </Button>
             <Button
               type="button"
@@ -698,7 +709,7 @@ export default function AuditoriaList() {
               size="sm"
               onClick={() => setFilters((current) => ({ ...current, ...buildPeriodFilters(7) }))}
             >
-              Últimos 7 dias
+              {t('audit.shortcuts.last7d')}
             </Button>
             <Button
               type="button"
@@ -706,7 +717,7 @@ export default function AuditoriaList() {
               size="sm"
               onClick={() => setFilters((current) => ({ ...current, ...buildPeriodFilters(30) }))}
             >
-              Últimos 30 dias
+              {t('audit.shortcuts.last30d')}
             </Button>
           </div>
 
@@ -717,7 +728,7 @@ export default function AuditoriaList() {
               size="sm"
               onClick={() => setFilters((current) => ({ ...current, action: undefined }))}
             >
-              Todas as ações
+              {t('audit.allActions')}
             </Button>
             {QUICK_ACTIONS.map((action) => (
               <Button
@@ -727,84 +738,91 @@ export default function AuditoriaList() {
                 size="sm"
                 onClick={() => setFilters((current) => ({ ...current, action }))}
               >
-                {getActionLabel(action)}
+                {getActionLabel(action, t)}
               </Button>
             ))}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <Badge variant="secondary">Filtros ativos: {activeFilterCount}</Badge>
-            <Badge variant="outline">Período: {periodLabel}</Badge>
-            <Badge variant="outline">Ação: {currentActionLabel}</Badge>
-            {filters.entityName ? <Badge variant="outline">Entidade: {filters.entityName}</Badge> : null}
+            <Badge variant="secondary">{t('audit.activeFilters', { count: activeFilterCount })}</Badge>
+            <Badge variant="outline">{t('audit.periodLabelBadge', { value: periodLabel })}</Badge>
+            <Badge variant="outline">{t('audit.actionLabel', { value: currentActionLabel })}</Badge>
+            {filters.entityName ? (
+              <Badge variant="outline">
+                {t('audit.entityLabel', { value: t(`audit.entities.${filters.entityName}`, { defaultValue: filters.entityName }) })}
+              </Badge>
+            ) : null}
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Logs ({total})</CardTitle>
+          <CardTitle>{t('audit.logsTitle', { total })}</CardTitle>
         </CardHeader>
         <CardContent>
           {items.length === 0 ? (
-            <div className="text-center py-12">
-              <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">Nenhum log encontrado</h3>
-              <p className="text-muted-foreground">Ajuste os filtros ou aguarde novas alterações no sistema.</p>
+            <div className="py-12 text-center">
+              <Shield className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 text-lg font-medium text-foreground">{t('audit.noLogsTitle')}</h3>
+              <p className="text-muted-foreground">{t('audit.noLogsDescription')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Ação</TableHead>
-                    <TableHead>Entidade</TableHead>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Usuário</TableHead>
-                    <TableHead>IP</TableHead>
-                    <TableHead className="text-right">Detalhes</TableHead>
+                    <TableHead>{t('audit.table.date')}</TableHead>
+                    <TableHead>{t('audit.table.action')}</TableHead>
+                    <TableHead>{t('audit.table.entity')}</TableHead>
+                    <TableHead>{t('audit.table.entityId')}</TableHead>
+                    <TableHead>{t('audit.table.user')}</TableHead>
+                    <TableHead>{t('audit.table.ip')}</TableHead>
+                    <TableHead className="text-right">{t('audit.table.details')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((it) => (
-                    <TableRow key={it.id}>
-                      <TableCell>{it.createdAt ? new Date(it.createdAt).toLocaleString('pt-BR') : '-'}</TableCell>
-                      <TableCell>
-                        <Badge variant={getActionVariant(it.action)}>
-                          {getActionLabel(it.action)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{it.entityName}</TableCell>
-                      <TableCell>{it.entityId}</TableCell>
-                      <TableCell className="max-w-[260px] truncate">
-                        {it.userEmail || it.userName || (it.userId ? `User ${it.userId}` : '-') }
-                      </TableCell>
-                      <TableCell>{it.ipAddress || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {getAuditDestination(it) ? (
-                            <Button type="button" variant="ghost" size="sm" asChild>
-                              <Link to={getAuditDestination(it).to} title={getAuditDestination(it).label}>
-                                <ArrowUpRight className="h-4 w-4" />
-                              </Link>
+                  {items.map((it) => {
+                    const destination = getAuditDestination(it, t);
+                    return (
+                      <TableRow key={it.id}>
+                        <TableCell>{it.createdAt ? formatDateTime(it.createdAt) : '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant={getActionVariant(it.action)}>
+                            {getActionLabel(it.action, t)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{t(`audit.entities.${it.entityName}`, { defaultValue: it.entityName })}</TableCell>
+                        <TableCell>{it.entityId}</TableCell>
+                        <TableCell className="max-w-[260px] truncate">
+                          {it.userEmail || it.userName || (it.userId ? t('audit.userFallback', { id: it.userId }) : '-')}
+                        </TableCell>
+                        <TableCell>{it.ipAddress || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {destination ? (
+                              <Button type="button" variant="ghost" size="sm" asChild>
+                                <Link to={destination.to} title={destination.label}>
+                                  <ArrowUpRight className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            ) : null}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelected(it);
+                                setDetailsOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
                             </Button>
-                          ) : null}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelected(it);
-                              setDetailsOpen(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -828,19 +846,19 @@ export default function AuditoriaList() {
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Detalhes do log</DialogTitle>
+            <DialogTitle>{t('audit.dialog.title')}</DialogTitle>
             <DialogDescription>
-              {selected ? `${selected.entityName} ${selected.entityId} — ${getActionLabel(selected.action)}` : ''}
+              {selected ? `${t(`audit.entities.${selected.entityName}`, { defaultValue: selected.entityName })} ${selected.entityId} - ${getActionLabel(selected.action, t)}` : ''}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-1 gap-2 text-sm">
-              <div><span className="text-muted-foreground">Entidade:</span> {selected?.entityName || '-'}</div>
-              <div><span className="text-muted-foreground">ID da entidade:</span> {selected?.entityId || '-'}</div>
-              <div><span className="text-muted-foreground">Ação:</span> {selected?.action ? getActionLabel(selected.action) : '-'}</div>
-              <div><span className="text-muted-foreground">Usuário:</span> {selected?.userEmail || selected?.userName || selected?.userId || '-'}</div>
-              <div><span className="text-muted-foreground">IP:</span> {selected?.ipAddress || '-'}</div>
-              <div><span className="text-muted-foreground">Quando:</span> {selected?.createdAt ? new Date(selected.createdAt).toLocaleString('pt-BR') : '-'}</div>
+              <div><span className="text-muted-foreground">{t('audit.dialog.entity')}</span> {selected?.entityName ? t(`audit.entities.${selected.entityName}`, { defaultValue: selected.entityName }) : '-'}</div>
+              <div><span className="text-muted-foreground">{t('audit.dialog.entityId')}</span> {selected?.entityId || '-'}</div>
+              <div><span className="text-muted-foreground">{t('audit.dialog.action')}</span> {selected?.action ? getActionLabel(selected.action, t) : '-'}</div>
+              <div><span className="text-muted-foreground">{t('audit.dialog.user')}</span> {selected?.userEmail || selected?.userName || selected?.userId || '-'}</div>
+              <div><span className="text-muted-foreground">{t('audit.dialog.ip')}</span> {selected?.ipAddress || '-'}</div>
+              <div><span className="text-muted-foreground">{t('audit.dialog.when')}</span> {selected?.createdAt ? formatDateTime(selected.createdAt) : '-'}</div>
             </div>
             {selectedDestination ? (
               <div className="flex justify-end">
@@ -855,10 +873,10 @@ export default function AuditoriaList() {
             <div className="rounded-md border bg-muted/30 p-3">
               <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <Search className="h-3.5 w-3.5" />
-                Mudanças registradas
+                {t('audit.dialog.recordedChanges')}
               </div>
-              <pre className="whitespace-pre-wrap text-xs overflow-auto max-h-[380px]">
-                {prettyJson || 'Sem detalhes de mudanças.'}
+              <pre className="max-h-[380px] overflow-auto whitespace-pre-wrap text-xs">
+                {prettyJson || t('audit.dialog.noChangeDetails')}
               </pre>
             </div>
           </div>

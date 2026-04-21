@@ -15,13 +15,14 @@ import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { eventosApi, eventosOcorrenciasApi } from '@/lib/api';
 import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '@/lib/formatters';
 
-function getStatusOcorrenciaLabel(status) {
+function getStatusOcorrenciaLabel(status, t) {
   const value = Number(status);
-  if (value === 1) return 'Confirmado';
-  if (value === 2) return 'Cancelado';
-  if (value === 3) return 'Realizado';
-  return 'Desconhecido';
+  if (value === 1) return t('events.occurrencesStatus.confirmed');
+  if (value === 2) return t('events.occurrencesStatus.canceled');
+  if (value === 3) return t('events.occurrencesStatus.done');
+  return t('events.occurrencesStatus.unknown');
 }
 
 function getRiskClassName(nivelRisco) {
@@ -60,7 +61,7 @@ export default function EscalasList() {
       setEventos(eventosRes.data || []);
     } catch (err) {
       console.error(err);
-      setError('Erro ao carregar eventos');
+      setError(t('volunteer.schedules.errorLoadEvents'));
     }
   };
 
@@ -101,7 +102,7 @@ export default function EscalasList() {
       );
     } catch (err) {
       console.error(err);
-      setError('Erro ao carregar ocorrências para escala');
+      setError(t('volunteer.schedules.errorLoadOccurrences'));
     } finally {
       if (silent) {
         setRefreshing(false);
@@ -123,7 +124,7 @@ export default function EscalasList() {
   const sorted = [...ocorrencias].sort((a, b) => new Date(a.dataHoraInicio) - new Date(b.dataHoraInicio));
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(sorted, 20);
 
-  if (initialLoad) return <LoadingPage text="Carregando escalas..." />;
+  if (initialLoad) return <LoadingPage text={t('volunteer.schedules.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={loadOcorrencias} />;
 
   return (
@@ -132,12 +133,12 @@ export default function EscalasList() {
         <div>
           <h1 className="text-3xl font-bold">{t('volunteer.schedules.title')}</h1>
           <p className="text-muted-foreground">
-            {t('volunteer.schedules.subtitle')}. Para gerar ocorrências use Eventos → Ocorrências.
+            {t('volunteer.schedules.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild>
-            <Link to="/eventos/ocorrencias">Eventos → Ocorrências</Link>
+            <Link to="/eventos/ocorrencias">{t('volunteer.schedules.goToOccurrences')}</Link>
           </Button>
           <PageRefreshButton onClick={() => loadOcorrencias({ silent: true })} refreshing={refreshing} />
         </div>
@@ -145,18 +146,18 @@ export default function EscalasList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('volunteer.schedules.filtersTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label>Evento</Label>
+              <Label>{t('volunteer.schedules.eventLabel')}</Label>
               <Select value={filtroEventoId} onValueChange={setFiltroEventoId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os eventos" />
+                  <SelectValue placeholder={t('volunteer.schedules.allEventsOption')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os eventos</SelectItem>
+                  <SelectItem value="all">{t('volunteer.schedules.allEventsOption')}</SelectItem>
                   {eventos.map((evento) => (
                     <SelectItem key={evento.id} value={String(evento.id)}>
                       {evento.titulo}
@@ -166,11 +167,11 @@ export default function EscalasList() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Data início</Label>
+              <Label>{t('volunteer.schedules.startDateLabel')}</Label>
               <Input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Data fim</Label>
+              <Label>{t('volunteer.schedules.endDateLabel')}</Label>
               <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
             </div>
           </div>
@@ -186,14 +187,14 @@ export default function EscalasList() {
         </CardHeader>
         <CardContent>
           {loadingOcorrencias ? (
-            <div className="text-center py-8 text-muted-foreground">Carregando ocorrências...</div>
+            <div className="text-center py-8 text-muted-foreground">{t('volunteer.schedules.loadingOccurrences')}</div>
           ) : sorted.length === 0 ? (
             <PageEmptyState
-              title="Nenhuma ocorrência encontrada para o período."
-              description="Ajuste os filtros ou gere novas ocorrências a partir do módulo de eventos."
+              title={t('volunteer.schedules.emptyTitle')}
+              description={t('volunteer.schedules.emptyDescription')}
               action={(
                 <Button variant="outline" asChild>
-                  <Link to="/eventos/ocorrencias">Eventos → Ocorrências</Link>
+                  <Link to="/eventos/ocorrencias">{t('volunteer.schedules.goToOccurrences')}</Link>
                 </Button>
               )}
             />
@@ -201,17 +202,17 @@ export default function EscalasList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Evento</TableHead>
-                  <TableHead>Data/Hora</TableHead>
-                  <TableHead>Status da ocorrência</TableHead>
-                  <TableHead>Cobertura</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('volunteer.schedules.table.event')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.table.dateTime')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.table.occurrenceStatus')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.table.coverage')}</TableHead>
+                  <TableHead className="text-right">{t('volunteer.schedules.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedItems.map((item) => {
                   const coverage = coverageByOcorrencia[item.id] || {
-                    rotuloRisco: 'Sem escala',
+                    rotuloRisco: t('volunteer.schedules.coverage.noSchedule'),
                     nivelRisco: 'none',
                     confirmados: 0,
                     pendentes: 0,
@@ -225,10 +226,10 @@ export default function EscalasList() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                          {new Date(item.dataHoraInicio).toLocaleString('pt-BR')}
+                          {formatDateTime(item.dataHoraInicio)}
                         </div>
                       </TableCell>
-                      <TableCell>{getStatusOcorrenciaLabel(item.status)}</TableCell>
+                      <TableCell>{getStatusOcorrenciaLabel(item.status, t)}</TableCell>
                       <TableCell>
                         <div className="space-y-2">
                           <Badge className={getRiskClassName(coverage.nivelRisco)}>
@@ -237,19 +238,19 @@ export default function EscalasList() {
                           <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                             <span className="inline-flex items-center gap-1">
                               <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                              {coverage.confirmados}
+                              {coverage.confirmados} {t('volunteer.schedules.coverage.confirmed')}
                             </span>
                             <span className="inline-flex items-center gap-1">
                               <Clock3 className="h-3.5 w-3.5 text-amber-600" />
-                              {coverage.pendentes}
+                              {coverage.pendentes} {t('volunteer.schedules.coverage.pending')}
                             </span>
                             <span className="inline-flex items-center gap-1">
                               <XCircle className="h-3.5 w-3.5 text-red-600" />
-                              {coverage.recusados}
+                              {coverage.recusados} {t('volunteer.schedules.coverage.declined')}
                             </span>
                             <span className="inline-flex items-center gap-1">
                               <AlertTriangle className="h-3.5 w-3.5 text-slate-600" />
-                              {coverage.substituidos}
+                              {coverage.substituidos} {t('volunteer.schedules.coverage.replaced')}
                             </span>
                           </div>
                         </div>
@@ -265,7 +266,7 @@ export default function EscalasList() {
                             }}
                           >
                             <Settings className="h-4 w-4 mr-2" />
-                            {item.possuiEscala ? 'Editar Escala' : 'Montar Escala'}
+                            {item.possuiEscala ? t('volunteer.schedules.editAction') : t('volunteer.schedules.buildAction')}
                           </Link>
                         </Button>
                       </TableCell>

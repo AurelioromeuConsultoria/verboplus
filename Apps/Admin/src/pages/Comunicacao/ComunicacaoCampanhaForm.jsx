@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,13 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { comunicacaoCampanhasApi, comunicacaoDiagnosticoApi, comunicacaoSegmentosApi, comunicacaoTemplatesApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
-
-const canaisDisponiveis = [
-  { value: 1, label: 'WhatsApp' },
-  { value: 2, label: 'E-mail' },
-  { value: 3, label: 'Push' },
-  { value: 4, label: 'Notificação interna' },
-];
 
 const healthCheckMap = {
   1: 'evolution_api_configuration',
@@ -71,7 +65,14 @@ function getEstimativaPorCanal(estimativa, canal) {
 }
 
 export default function ComunicacaoCampanhaForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
+  const canaisDisponiveis = [
+    { value: 1, label: t('communicationCampaignForm.channels.whatsapp') },
+    { value: 2, label: t('communicationCampaignForm.channels.email') },
+    { value: 3, label: t('communicationCampaignForm.channels.push') },
+    { value: 4, label: t('communicationCampaignForm.channels.internalNotification') },
+  ];
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [segmentos, setSegmentos] = useState([]);
@@ -152,7 +153,7 @@ export default function ComunicacaoCampanhaForm() {
     e.preventDefault();
 
     if (!formData.nome.trim() || !formData.objetivo.trim() || !formData.publicoAlvo.trim() || formData.canais.length === 0) {
-      toast.error('Preencha nome, objetivo, público alvo e selecione pelo menos um canal.');
+      toast.error(t('communicationCampaignForm.validation.requiredFields'));
       return;
     }
 
@@ -169,10 +170,10 @@ export default function ComunicacaoCampanhaForm() {
           prioridade: index + 1,
         })),
       });
-      toast.success('Campanha criada com sucesso.');
+      toast.success(t('communicationCampaignForm.createSuccess'));
       navigate('/comunicacao/campanhas');
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao criar campanha'));
+      toast.error(getApiErrorMessage(err, t('communicationCampaignForm.createError')));
     } finally {
       setLoading(false);
     }
@@ -187,30 +188,30 @@ export default function ComunicacaoCampanhaForm() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Nova Campanha</h1>
-          <p className="text-muted-foreground mt-1">Primeiro fluxo operacional do módulo de comunicação.</p>
+          <h1 className="text-3xl font-bold text-foreground">{t('communicationCampaignForm.title')}</h1>
+          <p className="text-muted-foreground mt-1">{t('communicationCampaignForm.subtitle')}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Dados da campanha</CardTitle>
+          <CardTitle>{t('communicationCampaignForm.cardTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome</Label>
+                <Label htmlFor="nome">{t('communicationCampaignForm.fields.name')}</Label>
                 <Input id="nome" value={formData.nome} onChange={(e) => setFormData((prev) => ({ ...prev, nome: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="objetivo">Objetivo</Label>
-                <Input id="objetivo" value={formData.objetivo} onChange={(e) => setFormData((prev) => ({ ...prev, objetivo: e.target.value }))} placeholder="Ex: boas-vindas, comunicado, lembrete" />
+                <Label htmlFor="objetivo">{t('communicationCampaignForm.fields.objective')}</Label>
+                <Input id="objetivo" value={formData.objetivo} onChange={(e) => setFormData((prev) => ({ ...prev, objetivo: e.target.value }))} placeholder={t('communicationCampaignForm.fields.objectivePlaceholder')} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="segmentoId">Segmento salvo</Label>
+              <Label htmlFor="segmentoId">{t('communicationCampaignForm.fields.savedSegment')}</Label>
               <select
                 id="segmentoId"
                 value={formData.segmentoId}
@@ -225,7 +226,7 @@ export default function ComunicacaoCampanhaForm() {
                 }}
                 className="w-full rounded-md border border-input bg-background px-3 py-2"
               >
-                <option value="">Sem segmento salvo</option>
+                <option value="">{t('communicationCampaignForm.fields.noSavedSegment')}</option>
                 {segmentos.filter((item) => item.ativo).map((segmento) => (
                   <option key={segmento.id} value={segmento.id}>{segmento.nome}</option>
                 ))}
@@ -233,32 +234,32 @@ export default function ComunicacaoCampanhaForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="publicoAlvo">Público alvo</Label>
-              <Input id="publicoAlvo" value={formData.publicoAlvo} onChange={(e) => setFormData((prev) => ({ ...prev, publicoAlvo: e.target.value }))} placeholder="Ex: visitantes, membros, voluntários, responsáveis-kids" />
+              <Label htmlFor="publicoAlvo">{t('communicationCampaignForm.fields.targetAudience')}</Label>
+              <Input id="publicoAlvo" value={formData.publicoAlvo} onChange={(e) => setFormData((prev) => ({ ...prev, publicoAlvo: e.target.value }))} placeholder={t('communicationCampaignForm.fields.targetAudiencePlaceholder')} />
             </div>
 
             {estimativa && (
               <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-                <div className="font-medium">Estimativa de audiência</div>
+                <div className="font-medium">{t('communicationCampaignForm.audienceEstimate.title')}</div>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
                   <div className="rounded-lg border border-border bg-background p-3">
-                    <div className="text-muted-foreground">Total</div>
+                    <div className="text-muted-foreground">{t('communicationCampaignForm.audienceEstimate.total')}</div>
                     <div className="text-xl font-semibold mt-1">{estimativa.totalDestinatarios}</div>
                   </div>
                   <div className="rounded-lg border border-border bg-background p-3">
-                    <div className="text-muted-foreground">WhatsApp</div>
+                    <div className="text-muted-foreground">{t('communicationCampaignForm.channels.whatsapp')}</div>
                     <div className="text-xl font-semibold mt-1">{estimativa.comWhatsApp}</div>
                   </div>
                   <div className="rounded-lg border border-border bg-background p-3">
-                    <div className="text-muted-foreground">E-mail</div>
+                    <div className="text-muted-foreground">{t('communicationCampaignForm.channels.email')}</div>
                     <div className="text-xl font-semibold mt-1">{estimativa.comEmail}</div>
                   </div>
                   <div className="rounded-lg border border-border bg-background p-3">
-                    <div className="text-muted-foreground">Push</div>
+                    <div className="text-muted-foreground">{t('communicationCampaignForm.channels.push')}</div>
                     <div className="text-xl font-semibold mt-1">{estimativa.comPush}</div>
                   </div>
                   <div className="rounded-lg border border-border bg-background p-3">
-                    <div className="text-muted-foreground">Notif. interna</div>
+                    <div className="text-muted-foreground">{t('communicationCampaignForm.channels.internalNotificationShort')}</div>
                     <div className="text-xl font-semibold mt-1">{estimativa.comNotificacaoInterna}</div>
                   </div>
                 </div>
@@ -266,12 +267,12 @@ export default function ComunicacaoCampanhaForm() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="dataAgendamento">Agendamento opcional</Label>
+              <Label htmlFor="dataAgendamento">{t('communicationCampaignForm.fields.scheduling')}</Label>
               <Input type="datetime-local" id="dataAgendamento" value={formData.dataAgendamento} onChange={(e) => setFormData((prev) => ({ ...prev, dataAgendamento: e.target.value }))} />
             </div>
 
             <div className="space-y-3">
-              <Label>Canais</Label>
+              <Label>{t('communicationCampaignForm.fields.channels')}</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {canaisDisponiveis.map((canal) => (
                   <label key={canal.value} className="flex items-center gap-3 rounded-lg border border-border p-3 cursor-pointer">
@@ -284,11 +285,11 @@ export default function ComunicacaoCampanhaForm() {
 
             {formData.canais.length > 0 && (
               <div className="space-y-3">
-                <Label>Template por canal</Label>
+                <Label>{t('communicationCampaignForm.fields.templateByChannel')}</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {formData.canais.map((item) => {
                     const options = templates.filter((template) => Number(template.canal) === item.canal);
-                    const canalLabel = canaisDisponiveis.find((canal) => canal.value === item.canal)?.label || `Canal ${item.canal}`;
+                    const canalLabel = canaisDisponiveis.find((canal) => canal.value === item.canal)?.label || t('communicationCampaignForm.channels.fallback', { canal: item.canal });
 
                     return (
                       <div key={item.canal} className="space-y-2">
@@ -298,7 +299,7 @@ export default function ComunicacaoCampanhaForm() {
                           onChange={(e) => updateCanalTemplate(item.canal, e.target.value)}
                           className="w-full rounded-md border border-input bg-background px-3 py-2"
                         >
-                          <option value="">Sem template</option>
+                          <option value="">{t('communicationCampaignForm.fields.noTemplate')}</option>
                           {options.map((template) => (
                             <option key={template.id} value={template.id}>{template.nome}</option>
                           ))}
@@ -312,10 +313,10 @@ export default function ComunicacaoCampanhaForm() {
 
             {formData.canais.length > 0 && (
               <div className="space-y-3">
-                <Label>Diagnóstico dos canais</Label>
+                <Label>{t('communicationCampaignForm.diagnostics.title')}</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {formData.canais.map((item) => {
-                    const canalLabel = canaisDisponiveis.find((canal) => canal.value === item.canal)?.label || `Canal ${item.canal}`;
+                    const canalLabel = canaisDisponiveis.find((canal) => canal.value === item.canal)?.label || t('communicationCampaignForm.channels.fallback', { canal: item.canal });
                     const health = healthChecks[healthCheckMap[item.canal]];
                     const ok = !health || health.status === 'Healthy';
                     const volumeCanal = getEstimativaPorCanal(estimativa, item.canal);
@@ -326,18 +327,18 @@ export default function ComunicacaoCampanhaForm() {
                         <div className="flex items-center justify-between gap-3">
                           <div className="font-medium">{canalLabel}</div>
                           <div className="flex items-center gap-2">
-                            {semAudiencia && <Badge variant="destructive">Sem audiência válida</Badge>}
+                            {semAudiencia && <Badge variant="destructive">{t('communicationCampaignForm.diagnostics.noAudience')}</Badge>}
                             <Badge variant={ok ? 'secondary' : 'destructive'}>
-                              {ok ? 'Configuração OK' : 'Configuração pendente'}
+                              {ok ? t('communicationCampaignForm.diagnostics.configurationOk') : t('communicationCampaignForm.diagnostics.configurationPending')}
                             </Badge>
                           </div>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {health?.description || 'Sem diagnóstico detalhado. O canal será validado durante o processamento.'}
+                          {health?.description || t('communicationCampaignForm.diagnostics.noDetailedDiagnosis')}
                         </p>
                         {volumeCanal !== null && (
                           <p className="text-xs text-muted-foreground">
-                            Audiência estimada para este canal: {volumeCanal}
+                            {t('communicationCampaignForm.diagnostics.estimatedAudience', { count: volumeCanal })}
                           </p>
                         )}
                       </div>
@@ -350,14 +351,14 @@ export default function ComunicacaoCampanhaForm() {
             {formData.canais.length > 0 && (
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label>Preview por canal</Label>
+                  <Label>{t('communicationCampaignForm.preview.title')}</Label>
                   <p className="text-xs text-muted-foreground">
-                    A visualização abaixo usa dados de exemplo para mostrar como o conteúdo será renderizado por canal.
+                    {t('communicationCampaignForm.preview.description')}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 gap-4">
                   {formData.canais.map((item) => {
-                    const canalLabel = canaisDisponiveis.find((canal) => canal.value === item.canal)?.label || `Canal ${item.canal}`;
+                    const canalLabel = canaisDisponiveis.find((canal) => canal.value === item.canal)?.label || t('communicationCampaignForm.channels.fallback', { canal: item.canal });
                     const template = getSelectedTemplate(item.canal, item.templateId);
                     const preview = renderPreview(template, formData);
 
@@ -366,33 +367,33 @@ export default function ComunicacaoCampanhaForm() {
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <div className="font-medium">{canalLabel}</div>
-                            <div className="text-sm text-muted-foreground">{template?.nome || 'Sem template, usando fallback da campanha'}</div>
+                            <div className="text-sm text-muted-foreground">{template?.nome || t('communicationCampaignForm.preview.noTemplateFallback')}</div>
                           </div>
-                          <Badge variant="outline">{template ? 'Com template' : 'Fallback'}</Badge>
+                          <Badge variant="outline">{template ? t('communicationCampaignForm.preview.withTemplate') : t('communicationCampaignForm.preview.fallback')}</Badge>
                         </div>
 
                         {Number(item.canal) === 2 && (
                           <div className="space-y-1">
-                            <div className="text-xs uppercase tracking-wide text-muted-foreground">Assunto</div>
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('communicationCampaignForm.preview.subject')}</div>
                             <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">{preview.assunto}</div>
                           </div>
                         )}
 
                         {[3, 4].includes(Number(item.canal)) && (
                           <div className="space-y-1">
-                            <div className="text-xs uppercase tracking-wide text-muted-foreground">Título</div>
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('communicationCampaignForm.preview.titleLabel')}</div>
                             <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">{preview.assunto}</div>
                           </div>
                         )}
 
                         <div className="space-y-1">
-                          <div className="text-xs uppercase tracking-wide text-muted-foreground">Mensagem</div>
+                          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('communicationCampaignForm.preview.message')}</div>
                           <div className="rounded-md border border-border bg-muted/30 px-3 py-3 text-sm whitespace-pre-wrap">{preview.corpo}</div>
                         </div>
 
                         {Number(item.canal) === 2 && preview.corpoHtml && (
                           <div className="space-y-1">
-                            <div className="text-xs uppercase tracking-wide text-muted-foreground">HTML</div>
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('communicationCampaignForm.preview.html')}</div>
                             <div className="rounded-md border border-border bg-muted/30 px-3 py-3 text-sm whitespace-pre-wrap">{preview.corpoHtml}</div>
                           </div>
                         )}
@@ -404,17 +405,17 @@ export default function ComunicacaoCampanhaForm() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="observacao">Observação operacional</Label>
+              <Label htmlFor="observacao">{t('communicationCampaignForm.fields.operationalNote')}</Label>
               <Textarea id="observacao" rows={4} value={formData.observacao} onChange={(e) => setFormData((prev) => ({ ...prev, observacao: e.target.value }))} />
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-border">
               <Button type="button" variant="outline" asChild>
-                <Link to="/comunicacao/campanhas">Cancelar</Link>
+                <Link to="/comunicacao/campanhas">{t('actions.cancel')}</Link>
               </Button>
               <Button type="submit" disabled={loading}>
                 <Save className="w-4 h-4 mr-2" />
-                {loading ? 'Salvando...' : 'Criar campanha'}
+                {loading ? t('actions.saving') : t('communicationCampaignForm.actions.create')}
               </Button>
             </div>
           </form>

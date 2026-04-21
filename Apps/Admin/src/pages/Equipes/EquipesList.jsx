@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Filter, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,17 +15,11 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { equipesApi } from '@/lib/api';
-import { formatDateBr } from '@/lib/formatters';
+import { formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
 import { useTranslation } from 'react-i18next';
-
-const AREA_LABEL = {
-  1: 'Verde',
-  2: 'Vermelha',
-  3: 'Laranja',
-};
 
 export default function EquipesList() {
   const [items, setItems] = useState([]);
@@ -37,6 +31,11 @@ export default function EquipesList() {
   const confirmDialog = useConfirmDialog();
   const { can, isAdmin } = useAuth();
   const { t } = useTranslation();
+  const areaLabel = {
+    1: t('volunteer.teams.areas.green'),
+    2: t('volunteer.teams.areas.red'),
+    3: t('volunteer.teams.areas.orange'),
+  };
 
   const load = async ({ silent = false } = {}) => {
     try {
@@ -51,7 +50,7 @@ export default function EquipesList() {
       const res = await equipesApi.getAll();
       setItems(res.data || []);
     } catch (err) {
-      setError('Erro ao carregar equipes');
+      setError(t('volunteer.teams.errorLoad'));
       console.error(err);
     } finally {
       if (silent) {
@@ -69,18 +68,18 @@ export default function EquipesList() {
   const handleDelete = async (id) => {
     const equipe = items.find(e => e.id === id);
     confirmDialog.show({
-      title: 'Excluir Equipe',
-      description: `Tem certeza que deseja excluir "${equipe?.nome || 'esta equipe'}"? Esta ação não pode ser desfeita. Se houver voluntários vinculados, a exclusão será bloqueada.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('volunteer.teams.deleteTitle'),
+      description: t('volunteer.teams.deleteDescription', { name: equipe?.nome || t('volunteer.teams.thisTeam') }),
+      confirmText: t('volunteer.teams.deleteConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await equipesApi.delete(id);
-          toast.success('Equipe excluída com sucesso');
+          toast.success(t('volunteer.teams.deleteSuccess'));
           await load();
         } catch (err) {
-          const errorMsg = err.response?.data?.message || 'Erro ao excluir equipe. Pode haver voluntários vinculados.';
+          const errorMsg = err.response?.data?.message || t('volunteer.teams.deleteError');
           toast.error(errorMsg);
           console.error(err);
           throw err;
@@ -97,7 +96,7 @@ export default function EquipesList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text="Carregando equipes..." />;
+  if (loading) return <LoadingPage text={t('volunteer.teams.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   const canEdit = isAdmin && can(RESOURCES.EQUIPES, ACTIONS.EDIT);
@@ -121,29 +120,29 @@ export default function EquipesList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('volunteer.teams.filtersTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por nome</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('volunteer.teams.searchLabel')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite o nome da equipe"
+                placeholder={t('volunteer.teams.searchPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Área</label>
+              <label className="text-sm font-medium">{t('volunteer.teams.areaLabel')}</label>
               <Select value={area || 'all'} onValueChange={(value) => setArea(value === 'all' ? '' : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todas as áreas" />
+                  <SelectValue placeholder={t('volunteer.teams.allAreas')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas as áreas</SelectItem>
-                  <SelectItem value="1">Verde</SelectItem>
-                  <SelectItem value="2">Vermelha</SelectItem>
-                  <SelectItem value="3">Laranja</SelectItem>
+                  <SelectItem value="all">{t('volunteer.teams.allAreas')}</SelectItem>
+                  <SelectItem value="1">{t('volunteer.teams.areas.green')}</SelectItem>
+                  <SelectItem value="2">{t('volunteer.teams.areas.red')}</SelectItem>
+                  <SelectItem value="3">{t('volunteer.teams.areas.orange')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -161,8 +160,8 @@ export default function EquipesList() {
         <CardContent>
           {filtered.length === 0 ? (
             <PageEmptyState
-              title="Nenhuma equipe encontrada."
-              description="Ajuste os filtros ou cadastre uma nova equipe."
+              title={t('volunteer.teams.emptyTitle')}
+              description={t('volunteer.teams.emptyDescription')}
               action={canEdit ? (
                 <Button asChild>
                   <Link to="/equipes/novo">
@@ -175,18 +174,18 @@ export default function EquipesList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Área</TableHead>
-                  <TableHead>Data de Criação</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('volunteer.teams.table.name')}</TableHead>
+                  <TableHead>{t('volunteer.teams.table.area')}</TableHead>
+                  <TableHead>{t('volunteer.teams.table.createdAt')}</TableHead>
+                  <TableHead className="text-right">{t('volunteer.teams.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedItems.map((equipe) => (
                   <TableRow key={equipe.id}>
                     <TableCell className="font-medium">{equipe.nome}</TableCell>
-                    <TableCell>{AREA_LABEL[equipe.area] || equipe.area}</TableCell>
-                    <TableCell>{formatDateBr(equipe.dataCriacao)}</TableCell>
+                    <TableCell>{areaLabel[equipe.area] || equipe.area}</TableCell>
+                    <TableCell>{formatDate(equipe.dataCriacao)}</TableCell>
                     <TableCell className="text-right">
                       <TableRowActions>
                         {canEdit && (

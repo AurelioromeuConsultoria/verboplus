@@ -13,6 +13,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { patrimonioApi, categoriasPatrimonioApi } from '@/lib/api';
+import { formatCurrency } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
@@ -163,9 +164,7 @@ export default function PatrimoniosList() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">{t('finance.patrimony.summary.totalValue')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-bold">
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(resumo.valorTotal)}
-          </CardContent>
+          <CardContent className="text-2xl font-bold">{formatCurrency(resumo.valorTotal)}</CardContent>
         </Card>
       </div>
 
@@ -211,7 +210,7 @@ export default function PatrimoniosList() {
         <CardContent>
           {filtered.length === 0 ? (
             <PageEmptyState
-              title="Nenhum patrimonio encontrado"
+              title={t('finance.patrimony.emptyTitle', 'Nenhum patrimônio encontrado')}
               description={t('finance.patrimony.emptyMessage')}
               action={canEdit ? (
                 <Button asChild>
@@ -249,11 +248,7 @@ export default function PatrimoniosList() {
                     <TableCell>{item.localizacao || '-'}</TableCell>
                     <TableCell>{item.responsavelNome || '-'}</TableCell>
                     <TableCell>{t(`finance.patrimony.status.${statusKeyMap[item.status] || 'inUse'}`)}</TableCell>
-                    <TableCell>
-                      {item.valorAquisicao
-                        ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.valorAquisicao)
-                        : '-'}
-                    </TableCell>
+                    <TableCell>{item.valorAquisicao ? formatCurrency(item.valorAquisicao) : '-'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
                         {canEdit && (

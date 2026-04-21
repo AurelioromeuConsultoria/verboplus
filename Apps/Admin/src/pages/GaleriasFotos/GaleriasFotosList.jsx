@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
-import { formatDateBr } from '@/lib/formatters';
+import { formatDate } from '@/lib/formatters';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
@@ -236,7 +236,7 @@ export default function GaleriasFotosList() {
                   <div className="space-y-2 mb-4 text-sm">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span>{formatDateBr(galeria.data)}</span>
+                      <span>{formatDate(galeria.data)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Image className="h-4 w-4 text-muted-foreground" />

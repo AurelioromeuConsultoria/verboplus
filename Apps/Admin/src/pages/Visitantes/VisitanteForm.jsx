@@ -50,7 +50,7 @@ export default function VisitanteForm() {
         observacoes: visitante.observacoes || ''
       });
     } catch (err) {
-      setError('Erro ao carregar visitante');
+      setError(t('visitors.form.errorLoad'));
       console.error('Erro ao carregar visitante:', err);
     } finally {
       setLoading(false);
@@ -65,12 +65,12 @@ export default function VisitanteForm() {
     e.preventDefault();
     
     if (!formData.nome || !formData.dataVisita) {
-      toast.error('Nome e Data da Visita são obrigatórios');
+      toast.error(t('visitors.form.validation.nameAndVisitDateRequired'));
       return;
     }
 
     if (formData.email && !/.+@.+\..+/.test(formData.email)) {
-      toast.error('Email inválido');
+      toast.error(t('visitors.form.validation.emailInvalid'));
       return;
     }
 
@@ -95,17 +95,17 @@ export default function VisitanteForm() {
           dataVisita: submitData.dataVisita,
           observacoes: submitData.observacoes
         });
-        toast.success('Visita atualizada com sucesso');
+        toast.success(t('visitors.form.updateSuccess'));
       } else {
         await visitantesApi.create(submitData);
-        toast.success('Visita registrada com sucesso');
+        toast.success(t('visitors.form.createSuccess'));
       }
 
       navigate('/visitantes');
     } catch (err) {
       const errorMessage = err.response?.data?.message || 
                           err.response?.data?.error ||
-                          `Erro ao ${isEditing ? 'atualizar' : 'cadastrar'} visita`;
+                          t(isEditing ? 'visitors.form.updateError' : 'visitors.form.createError');
       toast.error(errorMessage);
       console.error(`Erro ao ${isEditing ? 'atualizar' : 'cadastrar'} visita:`, err);
     } finally {
@@ -127,12 +127,15 @@ export default function VisitanteForm() {
       setRegenerando(true);
       const res = await visitantesApi.regerarMensagens(id);
       toast.success(
-        `Mensagens regeradas: ${res.data?.mensagensCriadas ?? 0} criadas, ${res.data?.mensagensCanceladas ?? 0} canceladas`
+        t('visitors.form.regenerateSuccess', {
+          created: res.data?.mensagensCriadas ?? 0,
+          canceled: res.data?.mensagensCanceladas ?? 0,
+        })
       );
     } catch (err) {
       const msg = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || err.response?.data?.error || 'Erro ao regerar mensagens');
+        : (err.response?.data?.message || err.response?.data?.error || t('visitors.form.regenerateError'));
       toast.error(msg);
       console.error(err);
     } finally {
@@ -145,7 +148,7 @@ export default function VisitanteForm() {
   }, [id]);
 
   if (loading) {
-    return <LoadingPage text="Carregando visitante..." />;
+    return <LoadingPage text={t('visitors.form.loading')} />;
   }
 
   if (error) {
@@ -158,7 +161,7 @@ export default function VisitanteForm() {
         <Button variant="ghost" asChild>
           <Link to="/visitantes">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
+            {t('actions.back')}
           </Link>
         </Button>
         <div>
@@ -166,7 +169,7 @@ export default function VisitanteForm() {
             {isEditing ? t('visitors.edit') : t('visitors.new')}
           </h1>
           <p className="text-muted-foreground">
-            {isEditing ? 'Atualize as informações do visitante' : 'Cadastre um novo visitante'}
+            {isEditing ? t('visitors.form.editSubtitle') : t('visitors.form.createSubtitle')}
           </p>
         </div>
       </div>
@@ -181,57 +184,57 @@ export default function VisitanteForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
+                <Label htmlFor="nome">{t('visitors.form.fields.name')} *</Label>
                 <Input
                   id="nome"
                   name="nome"
                   value={formData.nome}
                   onChange={handleChange}
-                  placeholder="Nome completo"
+                  placeholder={t('visitors.form.placeholders.name')}
                   required
                   disabled={isEditing}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('visitors.form.fields.email')}</Label>
                 <Input
                   id="email"
                   name="email"
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="email@exemplo.com"
+                  placeholder={t('visitors.form.placeholders.email')}
                   disabled={isEditing}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone</Label>
+                <Label htmlFor="telefone">{t('visitors.form.fields.phone')}</Label>
                 <Input
                   id="telefone"
                   name="telefone"
                   value={formData.telefone}
                   onChange={handleChange}
-                  placeholder="11999998888 (apenas números)"
+                  placeholder={t('visitors.form.placeholders.phone')}
                   disabled={isEditing}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="whatsApp">WhatsApp</Label>
+                <Label htmlFor="whatsApp">{t('visitors.form.fields.whatsapp')}</Label>
                 <Input
                   id="whatsApp"
                   name="whatsApp"
                   value={formData.whatsApp}
                   onChange={handleChange}
-                  placeholder="11999998888 (apenas números)"
+                  placeholder={t('visitors.form.placeholders.whatsapp')}
                   disabled={isEditing}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="dataNascimento">Data de Nascimento</Label>
+                <Label htmlFor="dataNascimento">{t('visitors.form.fields.birthDate')}</Label>
                 <Input
                   id="dataNascimento"
                   name="dataNascimento"
@@ -243,7 +246,7 @@ export default function VisitanteForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="dataVisita">Data da Visita *</Label>
+                <Label htmlFor="dataVisita">{t('visitors.form.fields.visitDate')} *</Label>
                 <Input
                   id="dataVisita"
                   name="dataVisita"
@@ -256,13 +259,13 @@ export default function VisitanteForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="observacoes">Observações</Label>
+              <Label htmlFor="observacoes">{t('visitors.form.fields.notes')}</Label>
               <Textarea
                 id="observacoes"
                 name="observacoes"
                 value={formData.observacoes}
                 onChange={handleChange}
-                placeholder="Observações sobre o visitante..."
+                placeholder={t('visitors.form.placeholders.notes')}
                 rows={3}
               />
             </div>
@@ -275,7 +278,7 @@ export default function VisitanteForm() {
               {isEditing && (
                 <Button type="button" variant="outline" onClick={handleRegerarMensagens} disabled={regenerando}>
                   <RefreshCcw className="h-4 w-4 mr-2" />
-                  {regenerando ? 'Regerando...' : 'Regerar Mensagens'}
+                  {regenerando ? t('visitors.form.regenerating') : t('visitors.form.regenerateMessages')}
                 </Button>
               )}
               <Button type="button" variant="outline" asChild>
@@ -288,4 +291,3 @@ export default function VisitanteForm() {
     </div>
   );
 }
-

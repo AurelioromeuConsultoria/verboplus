@@ -1,11 +1,13 @@
 import { useRef, useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Editor de texto rico simples que preserva formatação ao colar
  * Converte quebras de linha em parágrafos HTML
  */
 export function RichTextEditor({ value, onChange, label, placeholder, required = false, name = 'texto' }) {
+  const { t } = useTranslation();
   const textareaRef = useRef(null);
   const [isPasting, setIsPasting] = useState(false);
 
@@ -91,7 +93,7 @@ export function RichTextEditor({ value, onChange, label, placeholder, required =
           style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}
         />
         <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-white px-2 py-1 rounded border">
-          💡 Cole o texto e os espaços entre parágrafos serão preservados automaticamente
+          {t('richTextEditor.pasteHint')}
         </div>
       </div>
     </div>

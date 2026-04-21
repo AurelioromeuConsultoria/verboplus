@@ -11,8 +11,10 @@ import { Switch } from '@/components/ui/switch';
 import api from '../../lib/api';
 import Loading from '../../components/ui/loading';
 import ErrorMessage from '../../components/ui/error-message';
+import { useTranslation } from 'react-i18next';
 
 const ConfiguracaoForm = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
@@ -45,7 +47,7 @@ const ConfiguracaoForm = () => {
         ativo: config.ativo !== undefined ? config.ativo : true
       });
     } catch (err) {
-      setError('Erro ao carregar configuração');
+      setError(t('messageSettings.form.errorLoad'));
       console.error('Erro ao buscar configuração:', err);
     } finally {
       setLoading(false);
@@ -64,7 +66,7 @@ const ConfiguracaoForm = () => {
     e.preventDefault();
     
     if (!formData.textoMensagem.trim()) {
-      setError('O texto da mensagem é obrigatório');
+      setError(t('messageSettings.form.validation.messageRequired'));
       return;
     }
 
@@ -87,7 +89,7 @@ const ConfiguracaoForm = () => {
 
       navigate('/configuracoes-mensagens');
     } catch (err) {
-      setError(isEditing ? 'Erro ao atualizar configuração' : 'Erro ao criar configuração');
+      setError(isEditing ? t('messageSettings.form.updateError') : t('messageSettings.form.createError'));
       console.error('Erro ao salvar configuração:', err);
     } finally {
       setLoading(false);
@@ -99,14 +101,14 @@ const ConfiguracaoForm = () => {
     
     // Substitui variáveis por valores de exemplo
     return formData.textoMensagem
-      .replace(/{Nome}/g, 'João Silva')
-      .replace(/{nome}/g, 'João Silva');
+      .replace(/{Nome}/g, t('messageSettings.form.previewExampleName'))
+      .replace(/{nome}/g, t('messageSettings.form.previewExampleName'));
   };
 
   const getDiasText = () => {
-    if (formData.diasAposVisita === 0) return 'no mesmo dia da visita';
-    if (formData.diasAposVisita === 1) return '1 dia após a visita';
-    return `${formData.diasAposVisita} dias após a visita`;
+    if (Number(formData.diasAposVisita) === 0) return t('messageSettings.form.schedule.sameDay');
+    if (Number(formData.diasAposVisita) === 1) return t('messageSettings.form.schedule.oneDayAfter');
+    return t('messageSettings.form.schedule.daysAfter', { count: formData.diasAposVisita });
   };
 
   if (loading && isEditing) return <Loading />;
@@ -124,10 +126,10 @@ const ConfiguracaoForm = () => {
         </Button>
         <div>
           <h1 className="text-3xl font-bold text-foreground">
-            {isEditing ? 'Editar Configuração' : 'Nova Configuração'}
+            {isEditing ? t('messageSettings.form.editTitle') : t('messageSettings.form.newTitle')}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {isEditing ? 'Altere as informações da configuração de mensagem' : 'Configure uma nova mensagem automática'}
+            {isEditing ? t('messageSettings.form.editSubtitle') : t('messageSettings.form.createSubtitle')}
           </p>
         </div>
       </div>
@@ -142,7 +144,7 @@ const ConfiguracaoForm = () => {
               {/* Texto da Mensagem */}
               <div className="space-y-2">
                 <Label htmlFor="textoMensagem">
-                  Texto da Mensagem *
+                  {t('messageSettings.form.fields.messageText')} *
                 </Label>
                 <Textarea
                   id="textoMensagem"
@@ -150,18 +152,18 @@ const ConfiguracaoForm = () => {
                   value={formData.textoMensagem}
                   onChange={handleInputChange}
                   rows={6}
-                  placeholder="Digite o texto da mensagem... Use {Nome} para incluir o nome do visitante"
+                  placeholder={t('messageSettings.form.placeholders.messageText')}
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  Dica: Use {'{Nome}'} para incluir automaticamente o nome do visitante na mensagem
+                  {t('messageSettings.form.messageTip')}
                 </p>
               </div>
 
               {/* Dias Após Visita */}
               <div className="space-y-2">
                 <Label htmlFor="diasAposVisita">
-                  Enviar quantos dias após a visita?
+                  {t('messageSettings.form.fields.daysAfterVisit')}
                 </Label>
                 <select
                   id="diasAposVisita"
@@ -170,20 +172,20 @@ const ConfiguracaoForm = () => {
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
                 >
-                  <option value={0}>No mesmo dia</option>
-                  <option value={1}>1 dia depois</option>
-                  <option value={2}>2 dias depois</option>
-                  <option value={3}>3 dias depois</option>
-                  <option value={7}>1 semana depois</option>
-                  <option value={14}>2 semanas depois</option>
-                  <option value={30}>1 mês depois</option>
+                  <option value={0}>{t('messageSettings.form.scheduleOptions.sameDay')}</option>
+                  <option value={1}>{t('messageSettings.form.scheduleOptions.day1')}</option>
+                  <option value={2}>{t('messageSettings.form.scheduleOptions.day2')}</option>
+                  <option value={3}>{t('messageSettings.form.scheduleOptions.day3')}</option>
+                  <option value={7}>{t('messageSettings.form.scheduleOptions.week1')}</option>
+                  <option value={14}>{t('messageSettings.form.scheduleOptions.week2')}</option>
+                  <option value={30}>{t('messageSettings.form.scheduleOptions.month1')}</option>
                 </select>
               </div>
 
               {/* Horário de Envio */}
               <div className="space-y-2">
                 <Label htmlFor="horarioEnvio">
-                  Horário de Envio
+                  {t('messageSettings.form.fields.sendTime')}
                 </Label>
                 <Input
                   type="time"
@@ -204,7 +206,7 @@ const ConfiguracaoForm = () => {
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ativo: checked }))}
                 />
                 <Label htmlFor="ativo" className="cursor-pointer">
-                  Configuração ativa
+                  {t('messageSettings.form.fields.active')}
                 </Label>
               </div>
 
@@ -215,14 +217,14 @@ const ConfiguracaoForm = () => {
                   variant="outline"
                   onClick={() => navigate('/configuracoes-mensagens')}
                 >
-                  Cancelar
+                  {t('actions.cancel')}
                 </Button>
                 <Button
                   type="submit"
                   disabled={loading}
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Criar')}
+                  {loading ? t('actions.saving') : (isEditing ? t('actions.update') : t('actions.create'))}
                 </Button>
               </div>
             </form>
@@ -234,7 +236,7 @@ const ConfiguracaoForm = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5" />
-              Preview da Mensagem
+              {t('messageSettings.form.previewTitle')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -242,10 +244,10 @@ const ConfiguracaoForm = () => {
             <div className="bg-blue-500/10 dark:bg-blue-500/20 rounded-lg p-4 mb-4 border border-blue-500/20">
               <div className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 mb-2">
                 <Clock className="w-4 h-4" />
-                <span className="font-medium">Agendamento</span>
+                <span className="font-medium">{t('messageSettings.form.scheduleTitle')}</span>
               </div>
               <p className="text-sm text-blue-700 dark:text-blue-300">
-                Esta mensagem será enviada <strong>{getDiasText()}</strong> às <strong>{formData.horarioEnvio}</strong>
+                {t('messageSettings.form.scheduleDescription', { period: getDiasText(), time: formData.horarioEnvio })}
               </p>
             </div>
 
@@ -253,7 +255,7 @@ const ConfiguracaoForm = () => {
             <div className="border border-border rounded-lg p-4">
               <div className="flex items-center space-x-2 mb-3">
                 <MessageSquare className="w-4 h-4 text-green-500 dark:text-green-400" />
-                <span className="text-sm font-medium text-foreground">WhatsApp</span>
+                <span className="text-sm font-medium text-foreground">{t('messageSettings.form.previewChannel')}</span>
               </div>
             
               {formData.textoMensagem ? (
@@ -290,4 +292,3 @@ const ConfiguracaoForm = () => {
 };
 
 export default ConfiguracaoForm;
-

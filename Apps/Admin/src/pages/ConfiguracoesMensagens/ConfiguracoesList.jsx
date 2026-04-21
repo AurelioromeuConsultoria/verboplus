@@ -13,8 +13,10 @@ import { configuracoesMensagensApi } from '@/lib/api';
 import { formatShortTime } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { useTranslation } from 'react-i18next';
 
 const ConfiguracoesList = () => {
+  const { t } = useTranslation();
   const [configuracoes, setConfiguracoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -38,9 +40,9 @@ const ConfiguracoesList = () => {
       const response = await configuracoesMensagensApi.getAll();
       setConfiguracoes(response.data || []);
     } catch (err) {
-      setError('Erro ao carregar configurações de mensagens');
+      setError(t('messageSettings.errorLoad'));
       console.error('Erro ao buscar configurações:', err);
-      toast.error(getApiErrorMessage(err, 'Erro ao carregar configurações de mensagens'));
+      toast.error(getApiErrorMessage(err, t('messageSettings.errorLoad')));
     } finally {
       if (silent) {
         setRefreshing(false);
@@ -53,20 +55,20 @@ const ConfiguracoesList = () => {
   const handleDelete = async (id) => {
     const config = configuracoes.find((c) => c.id === id);
     confirmDialog.show({
-      title: 'Excluir configuração?',
-      description: `Tem certeza que deseja excluir a configuração da mensagem #${config?.id ?? id}?`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('messageSettings.deleteTitle'),
+      description: t('messageSettings.deleteDescription', { id: config?.id ?? id }),
+      confirmText: t('messageSettings.deleteConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await configuracoesMensagensApi.delete(id);
-          toast.success('Configuração excluída com sucesso');
+          toast.success(t('messageSettings.deleteSuccess'));
           setConfiguracoes((prev) => prev.filter((c) => c.id !== id));
         } catch (err) {
-          setError('Erro ao excluir configuração');
+          setError(t('messageSettings.deleteError'));
           console.error('Erro ao excluir configuração:', err);
-          toast.error(getApiErrorMessage(err, 'Erro ao excluir configuração'));
+          toast.error(getApiErrorMessage(err, t('messageSettings.deleteError')));
           throw err;
         }
       },
@@ -83,15 +85,15 @@ const ConfiguracoesList = () => {
       setConfiguracoes(configuracoes.map(config => 
         config.id === id ? { ...config, ativo: !currentStatus } : config
       ));
-      toast.success(updatedConfig.ativo ? 'Configuração ativada' : 'Configuração desativada');
+      toast.success(updatedConfig.ativo ? t('messageSettings.activated') : t('messageSettings.deactivated'));
     } catch (err) {
-      setError('Erro ao alterar status da configuração');
+      setError(t('messageSettings.statusError'));
       console.error('Erro ao alterar status:', err);
-      toast.error(getApiErrorMessage(err, 'Erro ao alterar status da configuração'));
+      toast.error(getApiErrorMessage(err, t('messageSettings.statusError')));
     }
   };
 
-  if (loading) return <LoadingPage text="Carregando configurações..." />;
+  if (loading) return <LoadingPage text={t('messageSettings.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={fetchConfiguracoes} />;
 
   return (
@@ -99,15 +101,15 @@ const ConfiguracoesList = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Configurações de Mensagens</h1>
-          <p className="text-muted-foreground mt-1">Gerencie as mensagens automáticas enviadas aos visitantes</p>
+          <h1 className="text-3xl font-bold text-foreground">{t('messageSettings.title')}</h1>
+          <p className="text-muted-foreground mt-1">{t('messageSettings.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <PageRefreshButton onClick={() => fetchConfiguracoes({ silent: true })} refreshing={refreshing} />
           <Button asChild>
             <Link to="/configuracoes-mensagens/novo">
               <Plus className="w-4 h-4 mr-2" />
-              Nova Configuração
+              {t('messageSettings.new')}
             </Link>
           </Button>
         </div>
@@ -122,14 +124,14 @@ const ConfiguracoesList = () => {
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center space-x-2">
                   <MessageSquare className="w-5 h-5 text-blue-500 dark:text-blue-400" />
-                  <span className="font-medium text-foreground">Mensagem #{config.id}</span>
+                  <span className="font-medium text-foreground">{t('messageSettings.messageLabel', { id: config.id })}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => toggleStatus(config.id, config.ativo)}
-                    title={config.ativo ? 'Desativar' : 'Ativar'}
+                    title={config.ativo ? t('messageSettings.actions.deactivate') : t('messageSettings.actions.activate')}
                     className={config.ativo ? 'text-green-500 hover:text-green-600' : 'text-muted-foreground'}
                   >
                     {config.ativo ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
@@ -140,9 +142,9 @@ const ConfiguracoesList = () => {
               {/* Status Badge */}
               <div className="mb-3">
                 {config.ativo ? (
-                  <StatusBadge tone="success">Ativa</StatusBadge>
+                  <StatusBadge tone="success">{t('messageSettings.status.active')}</StatusBadge>
                 ) : (
-                  <StatusBadge tone="neutral">Inativa</StatusBadge>
+                  <StatusBadge tone="neutral">{t('messageSettings.status.inactive')}</StatusBadge>
                 )}
               </div>
 
@@ -159,14 +161,14 @@ const ConfiguracoesList = () => {
                   <Clock className="w-4 h-4 mr-2" />
                   <span>
                     {config.diasAposVisita === 0 
-                      ? 'No mesmo dia' 
-                      : `${config.diasAposVisita} dia${config.diasAposVisita > 1 ? 's' : ''} após a visita`
+                      ? t('messageSettings.schedule.sameDay')
+                      : t('messageSettings.schedule.daysAfter', { count: config.diasAposVisita })
                     }
                   </span>
                 </div>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Clock className="w-4 h-4 mr-2" />
-                  <span>As {formatShortTime(config.horarioEnvio)}</span>
+                  <span>{t('messageSettings.schedule.atTime', { time: formatShortTime(config.horarioEnvio) })}</span>
                 </div>
               </div>
 
@@ -175,7 +177,7 @@ const ConfiguracoesList = () => {
                 <Button variant="ghost" size="sm" asChild>
                   <Link to={`/configuracoes-mensagens/editar/${config.id}`}>
                     <Edit className="w-4 h-4 mr-1" />
-                    Editar
+                    {t('actions.edit')}
                   </Link>
                 </Button>
                 <Button
@@ -185,7 +187,7 @@ const ConfiguracoesList = () => {
                   className="text-destructive hover:text-destructive"
                 >
                   <Trash2 className="w-4 h-4 mr-1" />
-                  Excluir
+                  {t('messageSettings.deleteConfirm')}
                 </Button>
               </div>
             </CardContent>
@@ -196,13 +198,13 @@ const ConfiguracoesList = () => {
       {/* Empty State */}
       {configuracoes.length === 0 && !loading && (
         <PageEmptyState
-          title="Nenhuma configuração encontrada"
-          description="Comece criando sua primeira configuração de mensagem automática."
+          title={t('messageSettings.emptyTitle')}
+          description={t('messageSettings.emptyDescription')}
           action={(
             <Button asChild>
               <Link to="/configuracoes-mensagens/novo">
                 <Plus className="w-4 h-4 mr-2" />
-                Nova Configuração
+                {t('messageSettings.new')}
               </Link>
             </Button>
           )}

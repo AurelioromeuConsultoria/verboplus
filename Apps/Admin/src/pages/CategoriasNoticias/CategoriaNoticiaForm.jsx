@@ -10,8 +10,10 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { categoriasNoticiasApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { useTranslation } from 'react-i18next';
 
 export default function CategoriaNoticiaForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
@@ -31,7 +33,7 @@ export default function CategoriaNoticiaForm() {
       const c = res.data;
       setFormData({ nome: c.nome || '' });
     } catch (err) {
-      setError('Erro ao carregar categoria de notícia');
+      setError(t('newsCategories.form.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -48,7 +50,7 @@ export default function CategoriaNoticiaForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      toast.error('Nome é obrigatório');
+      toast.error(t('newsCategories.form.validation.nameRequired'));
       return;
     }
     try {
@@ -56,17 +58,17 @@ export default function CategoriaNoticiaForm() {
       const payload = { nome: formData.nome.trim() };
       if (isEditing) await categoriasNoticiasApi.update(id, payload);
       else await categoriasNoticiasApi.create(payload);
-      toast.success(isEditing ? 'Categoria atualizada com sucesso' : 'Categoria criada com sucesso');
+      toast.success(isEditing ? t('newsCategories.form.updateSuccess') : t('newsCategories.form.createSuccess'));
       navigate('/categorias-noticias');
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao salvar categoria de notícia'));
+      toast.error(getApiErrorMessage(err, t('newsCategories.form.saveError')));
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && isEditing) return <LoadingPage text="Carregando categoria..." />;
+  if (loading && isEditing) return <LoadingPage text={t('newsCategories.form.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -74,34 +76,34 @@ export default function CategoriaNoticiaForm() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" asChild>
           <Link to="/categorias-noticias">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('actions.back')}
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Categoria de Notícia' : 'Nova Categoria de Notícia'}</h1>
-          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações da categoria' : 'Cadastre uma nova categoria de notícia'}</p>
+          <h1 className="text-3xl font-bold">{isEditing ? t('newsCategories.form.editPageTitle') : t('newsCategories.form.createPageTitle')}</h1>
+          <p className="text-muted-foreground">{isEditing ? t('newsCategories.form.editSubtitle') : t('newsCategories.form.createSubtitle')}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isEditing ? 'Editar Categoria de Notícia' : 'Cadastrar Categoria de Notícia'}</CardTitle>
+          <CardTitle>{isEditing ? t('newsCategories.form.editCardTitle') : t('newsCategories.form.createCardTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
-                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder="Nome da categoria" required />
+                <Label htmlFor="nome">{t('newsCategories.table.name')} *</Label>
+                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder={t('newsCategories.form.namePlaceholder')} required />
               </div>
             </div>
 
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={loading}>
-                <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+                <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : (isEditing ? t('actions.update') : t('actions.create'))}
               </Button>
               <Button type="button" variant="outline" asChild>
-                <Link to="/categorias-noticias">Cancelar</Link>
+                <Link to="/categorias-noticias">{t('actions.cancel')}</Link>
               </Button>
             </div>
           </form>
@@ -110,5 +112,4 @@ export default function CategoriaNoticiaForm() {
     </div>
   );
 }
-
 

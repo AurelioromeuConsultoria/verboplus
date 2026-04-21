@@ -9,6 +9,7 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { pessoasApi } from '@/lib/api';
+import { formatDate } from '@/lib/formatters';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
@@ -44,12 +45,6 @@ export default function Aniversariantes() {
 
   if (loading) return <LoadingPage text={t('birthdays.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
-
-  const formatDate = (value) => {
-    if (!value) return '-';
-    const d = new Date(value);
-    return d.toLocaleDateString('pt-BR');
-  };
 
   return (
     <div className="space-y-6">

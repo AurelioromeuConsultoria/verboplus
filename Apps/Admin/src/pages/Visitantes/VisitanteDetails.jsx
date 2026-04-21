@@ -8,10 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { visitantesApi, mensagensAgendadasApi } from '@/lib/api';
+import { formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function VisitanteDetails() {
   const { id } = useParams();
+  const { t } = useTranslation();
   const [visitante, setVisitante] = useState(null);
   const [mensagens, setMensagens] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,10 +40,10 @@ export default function VisitanteDetails() {
         setMensagens(mensagensDoVisitante);
       } catch (err) {
         // Ignorar erro se o endpoint não existir
-        console.log('Mensagens não disponíveis');
+        console.log(t('visitors.details.messagesUnavailableLog'));
       }
     } catch (err) {
-      setError('Erro ao carregar dados do visitante');
+      setError(t('visitors.details.errorLoad'));
       console.error('Erro ao carregar dados:', err);
     } finally {
       setLoading(false);
@@ -49,12 +52,12 @@ export default function VisitanteDetails() {
 
   const getStatusBadge = (status) => {
     const value = Number(status);
-    if (value === 1) return <Badge variant="secondary">Agendada</Badge>;
-    if (value === 2) return <Badge variant="secondary">Pronta</Badge>;
-    if (value === 3) return <Badge variant="default">Enviada</Badge>;
-    if (value === 4) return <Badge variant="destructive">Erro</Badge>;
-    if (value === 5) return <Badge variant="outline">Cancelada</Badge>;
-    if (value === 6) return <Badge variant="secondary">Processando</Badge>;
+    if (value === 1) return <Badge variant="secondary">{t('visitors.details.messageStatus.scheduled')}</Badge>;
+    if (value === 2) return <Badge variant="secondary">{t('visitors.details.messageStatus.ready')}</Badge>;
+    if (value === 3) return <Badge variant="default">{t('visitors.details.messageStatus.sent')}</Badge>;
+    if (value === 4) return <Badge variant="destructive">{t('visitors.details.messageStatus.error')}</Badge>;
+    if (value === 5) return <Badge variant="outline">{t('visitors.details.messageStatus.canceled')}</Badge>;
+    if (value === 6) return <Badge variant="secondary">{t('visitors.details.messageStatus.processing')}</Badge>;
     return <Badge variant="secondary">{String(status)}</Badge>;
   };
 
@@ -63,13 +66,16 @@ export default function VisitanteDetails() {
       setRegenerando(true);
       const res = await visitantesApi.regerarMensagens(id);
       toast.success(
-        `Mensagens regeradas: ${res.data?.mensagensCriadas ?? 0} criadas, ${res.data?.mensagensCanceladas ?? 0} canceladas`
+        t('visitors.form.regenerateSuccess', {
+          created: res.data?.mensagensCriadas ?? 0,
+          canceled: res.data?.mensagensCanceladas ?? 0,
+        })
       );
       await loadData();
     } catch (err) {
       const msg = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || err.response?.data?.error || 'Erro ao regerar mensagens');
+        : (err.response?.data?.message || err.response?.data?.error || t('visitors.form.regenerateError'));
       toast.error(msg);
       console.error(err);
     } finally {
@@ -82,7 +88,7 @@ export default function VisitanteDetails() {
   }, [id]);
 
   if (loading) {
-    return <LoadingPage text="Carregando visitante..." />;
+    return <LoadingPage text={t('visitors.form.loading')} />;
   }
 
   if (error) {
@@ -90,7 +96,7 @@ export default function VisitanteDetails() {
   }
 
   if (!visitante) {
-    return <ErrorPage message="Visitante não encontrado" />;
+    return <ErrorPage message={t('visitors.details.notFound')} />;
   }
 
   return (
@@ -100,27 +106,27 @@ export default function VisitanteDetails() {
           <Button variant="ghost" asChild>
             <Link to="/visitantes">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar
+              {t('actions.back')}
             </Link>
           </Button>
           <div>
             <h1 className="text-3xl font-bold">
-              {visitante.nome || visitante.pessoa?.nome || 'Visitante'}
+              {visitante.nome || visitante.pessoa?.nome || t('visitors.title')}
             </h1>
             <p className="text-muted-foreground">
-              Detalhes da visita
+              {t('visitors.details.subtitle')}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleRegerarMensagens} disabled={regenerando}>
             <RefreshCcw className="h-4 w-4 mr-2" />
-            {regenerando ? 'Regerando...' : 'Regerar Mensagens'}
+            {regenerando ? t('visitors.form.regenerating') : t('visitors.form.regenerateMessages')}
           </Button>
           <Button asChild>
             <Link to={`/visitantes/${id}/editar`}>
               <Edit className="h-4 w-4 mr-2" />
-              Editar
+              {t('visitors.edit')}
             </Link>
           </Button>
         </div>
@@ -129,7 +135,7 @@ export default function VisitanteDetails() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Dados da Visita</CardTitle>
+            <CardTitle>{t('visitors.details.visitData')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-3">
@@ -137,16 +143,16 @@ export default function VisitanteDetails() {
                 <Calendar className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium">Data da Visita</p>
+                <p className="text-sm font-medium">{t('visitors.form.fields.visitDate')}</p>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(visitante.dataVisita).toLocaleDateString('pt-BR')}
+                  {formatDate(visitante.dataVisita)}
                 </p>
               </div>
             </div>
 
             {visitante.observacoes && (
               <div>
-                <p className="text-sm font-medium mb-2">Observações</p>
+                <p className="text-sm font-medium mb-2">{t('visitors.form.fields.notes')}</p>
                 <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
                   {visitante.observacoes}
                 </p>
@@ -157,11 +163,11 @@ export default function VisitanteDetails() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Dados da Pessoa</CardTitle>
+            <CardTitle>{t('visitors.details.personData')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <p className="text-sm font-medium">Nome</p>
+              <p className="text-sm font-medium">{t('visitors.form.fields.name')}</p>
               <p className="text-sm text-muted-foreground">
                 {visitante.nome || visitante.pessoa?.nome || '-'}
               </p>
@@ -170,7 +176,7 @@ export default function VisitanteDetails() {
             {visitante.email && (
               <div className="flex items-center space-x-2">
                 <div>
-                  <p className="text-sm font-medium">Email</p>
+                  <p className="text-sm font-medium">{t('visitors.form.fields.email')}</p>
                   <p className="text-sm text-muted-foreground">{visitante.email}</p>
                 </div>
                 <Button
@@ -185,7 +191,7 @@ export default function VisitanteDetails() {
 
             {visitante.telefone && (
               <div>
-                <p className="text-sm font-medium">Telefone</p>
+                <p className="text-sm font-medium">{t('visitors.form.fields.phone')}</p>
                 <p className="text-sm text-muted-foreground">{visitante.telefone}</p>
               </div>
             )}
@@ -193,7 +199,7 @@ export default function VisitanteDetails() {
             {visitante.whatsApp && (
               <div className="flex items-center space-x-2">
                 <div>
-                  <p className="text-sm font-medium">WhatsApp</p>
+                  <p className="text-sm font-medium">{t('visitors.form.fields.whatsapp')}</p>
                   <p className="text-sm text-muted-foreground">{visitante.whatsApp}</p>
                 </div>
                 <Button
@@ -208,7 +214,7 @@ export default function VisitanteDetails() {
 
             {visitante.perfis && visitante.perfis.length > 0 && (
               <div>
-                <p className="text-sm font-medium mb-2">Perfis</p>
+                <p className="text-sm font-medium mb-2">{t('visitors.details.profiles')}</p>
                 <div className="flex flex-wrap gap-1">
                   {visitante.perfis.map((perfil, idx) => (
                       <Badge key={idx} variant="secondary">
@@ -225,31 +231,31 @@ export default function VisitanteDetails() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <MessageSquare className="h-5 w-5" />
-              <span>Mensagens Agendadas</span>
+              <span>{t('visitors.details.scheduledMessages')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             {mensagens.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
-                Nenhuma mensagem agendada para este visitante.
+                {t('visitors.details.noScheduledMessages')}
               </p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Data de Envio</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{t('visitors.details.table.type')}</TableHead>
+                    <TableHead>{t('visitors.details.table.sendDate')}</TableHead>
+                    <TableHead>{t('visitors.details.table.status')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {mensagens.map((mensagem) => (
                     <TableRow key={mensagem.id}>
                       <TableCell className="font-medium">
-                        {mensagem.configuracaoMensagem?.titulo || 'Mensagem'}
+                        {mensagem.configuracaoMensagem?.titulo || t('visitors.details.messageFallback')}
                       </TableCell>
                       <TableCell>
-                        {new Date(mensagem.dataEnvio).toLocaleDateString('pt-BR')}
+                        {formatDate(mensagem.dataEnvio)}
                       </TableCell>
                       <TableCell>
                         {getStatusBadge(mensagem.status)}
@@ -265,4 +271,3 @@ export default function VisitanteDetails() {
     </div>
   );
 }
-

@@ -11,6 +11,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '@/lib/formatters';
 
 export function ResumoCard({ title, value, description, icon, valueClassName }) {
   return (
@@ -37,6 +39,8 @@ export function IndicadorLinha({ label, value }) {
 }
 
 export function PainelCriancaCard({ crianca, onRegistrarOcorrencia, onVerHistorico }) {
+  const { t } = useTranslation();
+
   return (
     <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -46,46 +50,46 @@ export function PainelCriancaCard({ crianca, onRegistrarOcorrencia, onVerHistori
             {crianca.temAlergia || crianca.temRestricao || crianca.temObservacaoCritica ? (
               <Badge className="bg-red-500 hover:bg-red-600">
                 <AlertTriangle className="mr-1 h-3 w-3" />
-                Atenção
+                {t('kids.panel.attention')}
               </Badge>
             ) : null}
             {crianca.retiradaEmModoExcecao ? (
-              <Badge className="bg-orange-500 hover:bg-orange-600">Exceção</Badge>
+              <Badge className="bg-orange-500 hover:bg-orange-600">{t('kids.panel.exception')}</Badge>
             ) : null}
           </div>
           <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <LogIn className="h-4 w-4" />
-              {new Date(crianca.checkinTime).toLocaleTimeString('pt-BR', {
+              {formatDateTime(crianca.checkinTime, '-', {
                 hour: '2-digit',
                 minute: '2-digit',
               })}
             </span>
             <span className="inline-flex items-center gap-1">
               <Calendar className="h-4 w-4" />
-              {crianca.salaId || 'Sem sala'}
+              {crianca.salaId || t('kids.children.noRoom')}
             </span>
             <span className="inline-flex items-center gap-1">
               <Clock className="h-4 w-4" />
-              {crianca.tokenRetiradaAtivo ? 'Token ativo' : 'Token indisponível'}
+              {crianca.tokenRetiradaAtivo ? t('kids.panel.activeToken') : t('kids.panel.unavailableToken')}
             </span>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {crianca.temAlergia ? <Badge variant="outline">Alergia</Badge> : null}
-          {crianca.temRestricao ? <Badge variant="outline">Restrição</Badge> : null}
-          {crianca.temObservacaoCritica ? <Badge variant="outline">Observação crítica</Badge> : null}
+          {crianca.temAlergia ? <Badge variant="outline">{t('kids.panel.allergy')}</Badge> : null}
+          {crianca.temRestricao ? <Badge variant="outline">{t('kids.panel.restriction')}</Badge> : null}
+          {crianca.temObservacaoCritica ? <Badge variant="outline">{t('kids.panel.criticalNote')}</Badge> : null}
         </div>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Button variant="outline" size="sm" onClick={onRegistrarOcorrencia}>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Registrar ocorrência
+          {t('kids.occurrence.register')}
         </Button>
         <Button variant="ghost" size="sm" onClick={onVerHistorico}>
           <FileClock className="mr-2 h-4 w-4" />
-          Ver histórico
+          {t('kids.history.view')}
         </Button>
       </div>
     </div>

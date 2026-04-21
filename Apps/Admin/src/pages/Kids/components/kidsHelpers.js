@@ -1,28 +1,38 @@
 export const OCORRENCIA_TIPOS = [
-  { value: 'FEBRE', label: 'Febre' },
-  { value: 'QUEDA', label: 'Queda' },
-  { value: 'CHORO', label: 'Choro persistente' },
-  { value: 'TROCA_SALA', label: 'Troca de sala' },
-  { value: 'MEDICACAO', label: 'Medicação' },
-  { value: 'COMPORTAMENTO', label: 'Comportamento' },
-  { value: 'OUTRO', label: 'Outro' },
+  { value: 'FEBRE' },
+  { value: 'QUEDA' },
+  { value: 'CHORO' },
+  { value: 'TROCA_SALA' },
+  { value: 'MEDICACAO' },
+  { value: 'COMPORTAMENTO' },
+  { value: 'OUTRO' },
 ];
 
-export const OCORRENCIA_STATUS = {
-  aberta: { label: 'Aberta', className: 'bg-amber-500 hover:bg-amber-600' },
-  em_andamento: { label: 'Em andamento', className: 'bg-blue-500 hover:bg-blue-600' },
-  encerrada: { label: 'Encerrada', className: 'bg-emerald-600 hover:bg-emerald-700' },
-};
-
-export function formatOcorrenciaTipo(tipo) {
+export function formatOcorrenciaTipo(tipo, t) {
   const item = OCORRENCIA_TIPOS.find((entry) => entry.value === tipo);
-  return item?.label || tipo;
+  return item ? t(`kids.occurrence.types.${item.value}`) : tipo;
 }
 
-export function getOcorrenciaStatusConfig(status) {
+export function getOcorrenciaStatusConfig(status, t) {
   const chave = (status || '').toLowerCase();
-  return OCORRENCIA_STATUS[chave] || {
-    label: status || 'Sem status',
+
+  const statusConfig = {
+    aberta: {
+      label: t('kids.occurrence.status.open'),
+      className: 'bg-amber-500 hover:bg-amber-600',
+    },
+    em_andamento: {
+      label: t('kids.occurrence.status.inProgress'),
+      className: 'bg-blue-500 hover:bg-blue-600',
+    },
+    encerrada: {
+      label: t('kids.occurrence.status.closed'),
+      className: 'bg-emerald-600 hover:bg-emerald-700',
+    },
+  };
+
+  return statusConfig[chave] || {
+    label: status || t('kids.occurrence.status.noStatus'),
     className: 'bg-slate-500 hover:bg-slate-600',
   };
 }

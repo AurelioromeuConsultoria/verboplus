@@ -66,7 +66,7 @@ export default function EquipeForm() {
         setUsuarios(resUsuarios.data || []);
       }
     } catch (err) {
-      setError('Erro ao carregar equipe');
+      setError(t('teamForm.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -82,7 +82,7 @@ export default function EquipeForm() {
 
   const handleVincular = async () => {
     if (!vinculoPessoaId || !vinculoCargoId) {
-      toast.error('Selecione Pessoa e Cargo');
+      toast.error(t('teamForm.links.validation.selectPersonAndRole'));
       return;
     }
     try {
@@ -92,38 +92,38 @@ export default function EquipeForm() {
         equipeId: Number(id),
         cargoId: Number(vinculoCargoId),
       });
-      toast.success('Voluntário vinculado');
+      toast.success(t('teamForm.links.linkSuccess'));
       setVinculoPessoaId('');
       setVinculoCargoId('');
       const res = await voluntariosApi.getByEquipe(id);
       setVoluntarios(res.data || []);
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao vincular'));
+      toast.error(getApiErrorMessage(err, t('teamForm.links.linkError')));
     } finally {
       setLoadingVinculo(false);
     }
   };
 
   const handleRemoverVinculo = async (voluntarioId) => {
-    if (!confirm('Remover este voluntário da equipe?')) return;
+    if (!confirm(t('teamForm.links.removeConfirm'))) return;
     try {
       await voluntariosApi.delete(voluntarioId);
-      toast.success('Voluntário removido');
+      toast.success(t('teamForm.links.removeSuccess'));
       const res = await voluntariosApi.getByEquipe(id);
       setVoluntarios(res.data || []);
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao remover'));
+      toast.error(getApiErrorMessage(err, t('teamForm.links.removeError')));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      toast.error('Nome é obrigatório');
+      toast.error(t('teamForm.validation.nameRequired'));
       return;
     }
     if (!['1', '2', '3'].includes(formData.area)) {
-      toast.error('Área inválida');
+      toast.error(t('teamForm.validation.invalidArea'));
       return;
     }
     try {
@@ -135,17 +135,17 @@ export default function EquipeForm() {
       };
       if (isEditing) await equipesApi.update(id, payload);
       else await equipesApi.create(payload);
-      toast.success(isEditing ? 'Equipe atualizada com sucesso' : 'Equipe criada com sucesso');
+      toast.success(isEditing ? t('teamForm.updateSuccess') : t('teamForm.createSuccess'));
       navigate('/equipes');
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao salvar equipe'));
+      toast.error(getApiErrorMessage(err, t('teamForm.saveError')));
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && isEditing) return <LoadingPage text="Carregando equipe..." />;
+  if (loading && isEditing) return <LoadingPage text={t('teamForm.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -153,12 +153,12 @@ export default function EquipeForm() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" asChild>
           <Link to="/equipes">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('actions.back')}
           </Link>
         </Button>
         <div>
           <h1 className="text-3xl font-bold">{isEditing ? t('volunteer.teams.edit') : t('volunteer.teams.new')}</h1>
-          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações da equipe' : 'Cadastre uma nova equipe'}</p>
+          <p className="text-muted-foreground">{isEditing ? t('teamForm.editSubtitle') : t('teamForm.createSubtitle')}</p>
         </div>
       </div>
 
@@ -170,21 +170,21 @@ export default function EquipeForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
-                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder="Nome da equipe" required />
+                <Label htmlFor="nome">{t('teamForm.fields.name')} *</Label>
+                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder={t('teamForm.placeholders.name')} required />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="area">Área *</Label>
+                <Label htmlFor="area">{t('teamForm.fields.area')} *</Label>
                 <select id="area" name="area" value={formData.area} onChange={handleChange} className="w-full px-3 py-2 border rounded" required>
-                  <option value="1">Verde</option>
-                  <option value="2">Vermelha</option>
-                  <option value="3">Laranja</option>
+                  <option value="1">{t('teamForm.area.green')}</option>
+                  <option value="2">{t('teamForm.area.red')}</option>
+                  <option value="3">{t('teamForm.area.orange')}</option>
                 </select>
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="liderUsuarioId">Líder da equipe</Label>
+                <Label htmlFor="liderUsuarioId">{t('teamForm.fields.teamLeader')}</Label>
                 <select
                   id="liderUsuarioId"
                   name="liderUsuarioId"
@@ -192,7 +192,7 @@ export default function EquipeForm() {
                   onChange={handleChange}
                   className="w-full px-3 py-2 border rounded"
                 >
-                  <option value="">Sem líder definido</option>
+                  <option value="">{t('teamForm.noLeader')}</option>
                   {usuarios.map((usuario) => (
                     <option key={usuario.id} value={usuario.id}>
                       {usuario.nome}{usuario.emailLogin ? ` — ${usuario.emailLogin}` : ''}
@@ -217,41 +217,41 @@ export default function EquipeForm() {
       {isEditing && (
         <Card>
           <CardHeader>
-            <CardTitle>Voluntários desta equipe</CardTitle>
+            <CardTitle>{t('teamForm.links.title')}</CardTitle>
           </CardHeader>
           <CardContent>
               <div className="space-y-4">
                 <div className="flex flex-wrap gap-2 items-end">
                   <div className="space-y-1 min-w-[200px]">
-                    <Label htmlFor="vinculoPessoa">Pessoa</Label>
+                    <Label htmlFor="vinculoPessoa">{t('teamForm.links.person')}</Label>
                     <select
                       id="vinculoPessoa"
                       value={vinculoPessoaId}
                       onChange={(e) => setVinculoPessoaId(e.target.value)}
                       className="w-full px-3 py-2 border rounded"
                     >
-                      <option value="">Selecione</option>
+                      <option value="">{t('actions.select')}</option>
                       {pessoas.map((p) => (
                         <option key={p.id} value={p.id}>{p.nome}{p.email ? ` — ${p.email}` : ''}</option>
                       ))}
                     </select>
                   </div>
                   <div className="space-y-1 min-w-[160px]">
-                    <Label htmlFor="vinculoCargo">Cargo</Label>
+                    <Label htmlFor="vinculoCargo">{t('teamForm.links.role')}</Label>
                     <select
                       id="vinculoCargo"
                       value={vinculoCargoId}
                       onChange={(e) => setVinculoCargoId(e.target.value)}
                       className="w-full px-3 py-2 border rounded"
                     >
-                      <option value="">Selecione</option>
+                      <option value="">{t('actions.select')}</option>
                       {cargos.map((c) => (
                         <option key={c.id} value={c.id}>{c.nome}</option>
                       ))}
                     </select>
                   </div>
                   <Button type="button" onClick={handleVincular} disabled={loadingVinculo}>
-                    <Plus className="h-4 w-4 mr-2" /> Vincular
+                    <Plus className="h-4 w-4 mr-2" /> {t('teamForm.links.link')}
                   </Button>
                 </div>
                 {voluntarios.length > 0 ? (
@@ -259,8 +259,8 @@ export default function EquipeForm() {
                     <table className="w-full text-sm">
                       <thead className="bg-muted/50">
                         <tr>
-                          <th className="text-left p-2">Nome</th>
-                          <th className="text-left p-2">Cargo</th>
+                          <th className="text-left p-2">{t('teamForm.links.table.name')}</th>
+                          <th className="text-left p-2">{t('teamForm.links.table.role')}</th>
                           <th className="w-20 p-2"></th>
                         </tr>
                       </thead>
@@ -280,7 +280,7 @@ export default function EquipeForm() {
                     </table>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground text-sm">Nenhum voluntário vinculado ainda.</p>
+                  <p className="text-muted-foreground text-sm">{t('teamForm.links.empty')}</p>
                 )}
               </div>
           </CardContent>
@@ -289,4 +289,3 @@ export default function EquipeForm() {
     </div>
   );
 }
-

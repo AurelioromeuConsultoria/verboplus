@@ -15,10 +15,19 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { pessoasApi, pessoasPerfisApi, visitantesApi } from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatDate, formatDateTime } from '@/lib/formatters';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCES, ACTIONS } from '@/utils/permissions';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+
+const PERFIL_OPTIONS = [
+  { value: 'Visitante', labelKey: 'visitor' },
+  { value: 'Membro', labelKey: 'member' },
+  { value: 'Voluntario', labelKey: 'volunteer' },
+  { value: 'Lider', labelKey: 'leader' },
+  { value: 'Pastor', labelKey: 'pastor' },
+];
 
 export default function PessoaDetails() {
   const { id } = useParams();
@@ -44,6 +53,11 @@ export default function PessoaDetails() {
     observacoes: '',
   });
 
+  const perfilOptions = PERFIL_OPTIONS.map((option) => ({
+    value: option.value,
+    label: t(`people.details.profileOptions.${option.labelKey}`),
+  }));
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -51,9 +65,9 @@ export default function PessoaDetails() {
       const response = await pessoasApi.get360(id);
       setDados360(response.data);
     } catch (err) {
-      setError('Erro ao carregar dados da pessoa');
+      setError(t('people.details.errorLoad'));
       console.error('Erro ao carregar dados:', err);
-      toast.error('Erro ao carregar dados da pessoa');
+      toast.error(t('people.details.errorLoad'));
     } finally {
       setLoading(false);
     }
@@ -65,7 +79,7 @@ export default function PessoaDetails() {
 
   const handleAddPerfil = async () => {
     if (!perfilForm.perfil) {
-      toast.error('Selecione um perfil');
+      toast.error(t('people.details.selectProfile'));
       return;
     }
 
@@ -76,12 +90,12 @@ export default function PessoaDetails() {
         perfil: perfilForm.perfil,
         dataInicio: new Date(perfilForm.dataInicio + 'T00:00:00').toISOString(),
       });
-      toast.success('Perfil adicionado com sucesso');
+      toast.success(t('people.details.profileAdded'));
       setShowAddPerfil(false);
       setPerfilForm({ perfil: '', dataInicio: new Date().toISOString().split('T')[0] });
       await loadData();
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao adicionar perfil'));
+      toast.error(getApiErrorMessage(err, t('people.details.profileAddError')));
       console.error('Erro ao adicionar perfil:', err);
     } finally {
       setSaving(false);
@@ -92,20 +106,22 @@ export default function PessoaDetails() {
     const perfis = dados360?.pessoa?.perfis ?? [];
     const perfil = perfis.find((p) => p.id === perfilId);
     confirmDialog.show({
-      title: 'Encerrar perfil?',
-      description: `Deseja encerrar o perfil "${perfil?.perfil || 'este perfil'}" agora?`,
-      confirmText: 'Encerrar',
-      cancelText: 'Cancelar',
+      title: t('people.details.endProfileTitle'),
+      description: t('people.details.endProfileDescription', {
+        profile: perfil?.perfil || t('people.details.fallbackProfile'),
+      }),
+      confirmText: t('people.details.endProfileConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'default',
       onConfirm: async () => {
         try {
           await pessoasPerfisApi.update(perfilId, {
             dataFim: new Date().toISOString(),
           });
-          toast.success('Perfil encerrado com sucesso');
+          toast.success(t('people.details.endProfileSuccess'));
           await loadData();
         } catch (err) {
-          toast.error(getApiErrorMessage(err, 'Erro ao encerrar perfil'));
+          toast.error(getApiErrorMessage(err, t('people.details.endProfileError')));
           console.error('Erro ao encerrar perfil:', err);
           throw err;
         }
@@ -117,18 +133,20 @@ export default function PessoaDetails() {
     const perfis = dados360?.pessoa?.perfis ?? [];
     const perfil = perfis.find((p) => p.id === perfilId);
     confirmDialog.show({
-      title: 'Remover perfil?',
-      description: `Tem certeza que deseja remover o perfil "${perfil?.perfil || 'este perfil'}"? Essa ação não pode ser desfeita.`,
-      confirmText: 'Remover',
-      cancelText: 'Cancelar',
+      title: t('people.details.removeProfileTitle'),
+      description: t('people.details.removeProfileDescription', {
+        profile: perfil?.perfil || t('people.details.fallbackProfile'),
+      }),
+      confirmText: t('people.details.removeProfileConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await pessoasPerfisApi.delete(perfilId);
-          toast.success('Perfil removido com sucesso');
+          toast.success(t('people.details.removeProfileSuccess'));
           await loadData();
         } catch (err) {
-          toast.error(getApiErrorMessage(err, 'Erro ao remover perfil'));
+          toast.error(getApiErrorMessage(err, t('people.details.removeProfileError')));
           console.error('Erro ao remover perfil:', err);
           throw err;
         }
@@ -138,7 +156,7 @@ export default function PessoaDetails() {
 
   const handleAddVisita = async () => {
     if (!visitaForm.dataVisita || !dados360?.pessoa) {
-      toast.error('Data da visita é obrigatória');
+      toast.error(t('people.details.visitDateRequired'));
       return;
     }
 
@@ -153,12 +171,12 @@ export default function PessoaDetails() {
         dataVisita: new Date(visitaForm.dataVisita + 'T00:00:00').toISOString(),
         observacoes: visitaForm.observacoes || null,
       });
-      toast.success('Visita registrada com sucesso');
+      toast.success(t('people.details.visitAdded'));
       setShowAddVisita(false);
       setVisitaForm({ dataVisita: new Date().toISOString().split('T')[0], observacoes: '' });
       await loadData();
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao registrar visita'));
+      toast.error(getApiErrorMessage(err, t('people.details.visitAddError')));
       console.error('Erro ao registrar visita:', err);
     } finally {
       setSaving(false);
@@ -166,7 +184,7 @@ export default function PessoaDetails() {
   };
 
   if (loading) {
-    return <LoadingPage text="Carregando pessoa..." />;
+    return <LoadingPage text={t('people.form.loading')} />;
   }
 
   if (error) {
@@ -174,7 +192,7 @@ export default function PessoaDetails() {
   }
 
   if (!dados360?.pessoa) {
-    return <ErrorPage message="Pessoa não encontrada" />;
+    return <ErrorPage message={t('people.details.notFound')} />;
   }
 
   const pessoa = dados360.pessoa;
@@ -193,13 +211,13 @@ export default function PessoaDetails() {
           <Button variant="ghost" asChild>
             <Link to="/pessoas">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar
+              {t('actions.back')}
             </Link>
           </Button>
           <div>
             <h1 className="text-3xl font-bold">{pessoa.nome}</h1>
             <p className="text-muted-foreground">
-              Visão 360° — perfis, visitas, voluntariado e acesso
+              {t('people.details.subtitle')}
             </p>
           </div>
         </div>
@@ -208,7 +226,7 @@ export default function PessoaDetails() {
             <Button variant="outline" asChild>
               <Link to={`/usuarios?pessoaId=${id}`}>
                 <UserPlus className="h-4 w-4 mr-2" />
-                Criar Acesso
+                {t('people.details.createAccess')}
               </Link>
             </Button>
           )}
@@ -216,16 +234,16 @@ export default function PessoaDetails() {
             <DialogTrigger asChild>
               <Button variant="outline">
                 <UserPlus className="h-4 w-4 mr-2" />
-                Adicionar Visita
+                {t('people.details.addVisit')}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Adicionar Visita (Visitante)</DialogTitle>
+                <DialogTitle>{t('people.details.addVisitDialogTitle')}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="dataVisita">Data da Visita *</Label>
+                  <Label htmlFor="dataVisita">{t('visitors.form.fields.visitDate')} *</Label>
                   <Input
                     id="dataVisita"
                     type="date"
@@ -234,20 +252,20 @@ export default function PessoaDetails() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="observacoes">Observações</Label>
+                  <Label htmlFor="observacoes">{t('visitors.form.fields.notes')}</Label>
                   <Input
                     id="observacoes"
                     value={visitaForm.observacoes}
                     onChange={(e) => setVisitaForm(prev => ({ ...prev, observacoes: e.target.value }))}
-                    placeholder="Observações sobre a visita..."
+                    placeholder={t('visitors.form.placeholders.notes')}
                   />
                 </div>
                 <div className="flex justify-end space-x-2">
                   <Button variant="outline" onClick={() => setShowAddVisita(false)}>
-                    Cancelar
+                    {t('actions.cancel')}
                   </Button>
                   <Button onClick={handleAddVisita} disabled={saving}>
-                    {saving ? 'Salvando...' : 'Registrar Visita'}
+                    {saving ? t('actions.saving') : t('people.details.registerVisit')}
                   </Button>
                 </div>
               </div>
@@ -256,7 +274,7 @@ export default function PessoaDetails() {
           <Button asChild>
             <Link to={`/pessoas/${id}/editar`}>
               <Edit className="h-4 w-4 mr-2" />
-              Editar
+              {t('actions.edit')}
             </Link>
           </Button>
         </div>
@@ -265,17 +283,17 @@ export default function PessoaDetails() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Informações Pessoais</CardTitle>
+            <CardTitle>{t('people.details.personalInfo')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <p className="text-sm font-medium">Nome</p>
+              <p className="text-sm font-medium">{t('people.form.fields.name')}</p>
               <p className="text-sm text-muted-foreground">{pessoa.nome}</p>
             </div>
             {pessoa.email && (
               <div className="flex items-center space-x-2">
                 <div>
-                  <p className="text-sm font-medium">Email</p>
+                  <p className="text-sm font-medium">{t('people.form.fields.email')}</p>
                   <p className="text-sm text-muted-foreground">{pessoa.email}</p>
                 </div>
                 <Button
@@ -289,14 +307,14 @@ export default function PessoaDetails() {
             )}
             {pessoa.telefone && (
               <div>
-                <p className="text-sm font-medium">Telefone</p>
+                <p className="text-sm font-medium">{t('people.form.fields.phone')}</p>
                 <p className="text-sm text-muted-foreground">{pessoa.telefone}</p>
               </div>
             )}
             {pessoa.whatsApp && (
               <div className="flex items-center space-x-2">
                 <div>
-                  <p className="text-sm font-medium">WhatsApp</p>
+                  <p className="text-sm font-medium">{t('people.form.fields.whatsapp')}</p>
                   <p className="text-sm text-muted-foreground">{pessoa.whatsApp}</p>
                 </div>
                 <Button
@@ -310,20 +328,20 @@ export default function PessoaDetails() {
             )}
             {pessoa.dataNascimento && (
               <div>
-                <p className="text-sm font-medium">Data de Nascimento</p>
+                <p className="text-sm font-medium">{t('people.form.fields.birthDate')}</p>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(pessoa.dataNascimento).toLocaleDateString('pt-BR')}
+                  {formatDate(pessoa.dataNascimento)}
                 </p>
               </div>
             )}
             <div>
-              <p className="text-sm font-medium">Tipo de Pessoa</p>
+              <p className="text-sm font-medium">{t('people.form.fields.personType')}</p>
               <Badge variant="outline">{pessoa.tipoPessoa || '-'}</Badge>
             </div>
             <div>
-              <p className="text-sm font-medium">Status</p>
+              <p className="text-sm font-medium">{t('people.details.status')}</p>
               <Badge variant={pessoa.ativo ? 'default' : 'secondary'}>
-                {pessoa.ativo ? 'Ativo' : 'Inativo'}
+                {pessoa.ativo ? t('people.status.active') : t('people.status.inactive')}
               </Badge>
             </div>
           </CardContent>
@@ -332,39 +350,37 @@ export default function PessoaDetails() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Perfis</span>
+              <span>{t('people.details.profiles')}</span>
               <Dialog open={showAddPerfil} onOpenChange={setShowAddPerfil}>
                 <DialogTrigger asChild>
                   <Button size="sm">
                     <Plus className="h-4 w-4 mr-2" />
-                    Adicionar Perfil
+                    {t('people.details.addProfile')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Adicionar Perfil</DialogTitle>
+                    <DialogTitle>{t('people.details.addProfileTitle')}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="perfil">Perfil *</Label>
+                      <Label htmlFor="perfil">{t('people.filters.profile')} *</Label>
                       <Select
                         value={perfilForm.perfil}
                         onValueChange={(value) => setPerfilForm(prev => ({ ...prev, perfil: value }))}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione um perfil" />
+                          <SelectValue placeholder={t('people.details.selectProfilePlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Visitante">Visitante</SelectItem>
-                          <SelectItem value="Membro">Membro</SelectItem>
-                          <SelectItem value="Voluntario">Voluntário</SelectItem>
-                          <SelectItem value="Lider">Líder</SelectItem>
-                          <SelectItem value="Pastor">Pastor</SelectItem>
+                          {perfilOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="dataInicio">Data de Início</Label>
+                      <Label htmlFor="dataInicio">{t('people.details.startDate')}</Label>
                       <Input
                         id="dataInicio"
                         type="date"
@@ -374,10 +390,10 @@ export default function PessoaDetails() {
                     </div>
                     <div className="flex justify-end space-x-2">
                       <Button variant="outline" onClick={() => setShowAddPerfil(false)}>
-                        Cancelar
+                        {t('actions.cancel')}
                       </Button>
                       <Button onClick={handleAddPerfil} disabled={saving}>
-                        {saving ? 'Salvando...' : 'Adicionar'}
+                        {saving ? t('actions.saving') : t('people.details.add')}
                       </Button>
                     </div>
                   </div>
@@ -389,14 +405,14 @@ export default function PessoaDetails() {
             {perfisAtivos.length > 0 && (
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium mb-2">Perfis Ativos</p>
+                  <p className="text-sm font-medium mb-2">{t('people.details.activeProfiles')}</p>
                   <div className="space-y-2">
                     {perfisAtivos.map((perfil) => (
                       <div key={perfil.id} className="flex items-center justify-between p-2 border rounded">
                         <div>
                           <Badge variant="default">{perfil.perfil}</Badge>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Desde {new Date(perfil.dataInicio).toLocaleDateString('pt-BR')}
+                            {t('people.details.since', { date: formatDate(perfil.dataInicio) })}
                           </p>
                         </div>
                         <div className="flex space-x-1">
@@ -417,14 +433,14 @@ export default function PessoaDetails() {
 
             {perfisHistorico.length > 0 && (
               <div className="mt-4">
-                <p className="text-sm font-medium mb-2">Histórico de Perfis</p>
+                <p className="text-sm font-medium mb-2">{t('people.details.profileHistory')}</p>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Perfil</TableHead>
-                      <TableHead>Início</TableHead>
-                      <TableHead>Fim</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
+                      <TableHead>{t('people.filters.profile')}</TableHead>
+                      <TableHead>{t('people.details.startDate')}</TableHead>
+                      <TableHead>{t('people.details.endDate')}</TableHead>
+                      <TableHead className="text-right">{t('people.table.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -434,11 +450,11 @@ export default function PessoaDetails() {
                           <Badge variant="secondary">{perfil.perfil}</Badge>
                         </TableCell>
                         <TableCell>
-                          {new Date(perfil.dataInicio).toLocaleDateString('pt-BR')}
+                          {formatDate(perfil.dataInicio)}
                         </TableCell>
                         <TableCell>
                           {perfil.dataFim 
-                            ? new Date(perfil.dataFim).toLocaleDateString('pt-BR')
+                            ? formatDate(perfil.dataFim)
                             : '-'}
                         </TableCell>
                         <TableCell className="text-right">
@@ -459,7 +475,7 @@ export default function PessoaDetails() {
 
             {perfis.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">
-                Nenhum perfil cadastrado.
+                {t('people.details.noProfiles')}
               </p>
             )}
           </CardContent>
@@ -471,35 +487,35 @@ export default function PessoaDetails() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CalendarClock className="h-5 w-5" />
-            Histórico de Visitas ({visitantes.length})
+            {t('people.details.visitHistory', { count: visitantes.length })}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {visitantes.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhuma visita registrada.
+              {t('people.details.noVisits')}
             </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Observações</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('people.details.date')}</TableHead>
+                  <TableHead>{t('visitors.form.fields.notes')}</TableHead>
+                  <TableHead className="text-right">{t('people.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {visitantes.map((v) => (
                   <TableRow key={v.id}>
                     <TableCell>
-                      {v.dataVisita ? new Date(v.dataVisita).toLocaleDateString('pt-BR') : '-'}
+                      {v.dataVisita ? formatDate(v.dataVisita) : '-'}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {v.observacoes ? (v.observacoes.length > 60 ? v.observacoes.slice(0, 60) + '...' : v.observacoes) : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" asChild>
-                        <Link to={`/visitantes/${v.id}`}>Ver</Link>
+                        <Link to={`/visitantes/${v.id}`}>{t('actions.see')}</Link>
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -515,13 +531,13 @@ export default function PessoaDetails() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Voluntariado ({voluntarios.length})
+            {t('people.details.volunteering', { count: voluntarios.length })}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {voluntarios.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhum vínculo de voluntariado.
+              {t('people.details.noVolunteerLinks')}
             </p>
           ) : (
             <div className="space-y-2">
@@ -533,7 +549,7 @@ export default function PessoaDetails() {
                     <span>{v.nomeCargo}</span>
                   </div>
                   <Button variant="ghost" size="sm" asChild>
-                    <Link to={`/voluntarios/${v.id}/editar`}>Editar</Link>
+                    <Link to={`/voluntarios/${v.id}/editar`}>{t('actions.edit')}</Link>
                   </Button>
                 </div>
               ))}
@@ -548,7 +564,7 @@ export default function PessoaDetails() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <LogIn className="h-5 w-5" />
-              Acesso ao Sistema
+              {t('people.details.systemAccess')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -558,17 +574,17 @@ export default function PessoaDetails() {
                 <p className="text-xs text-muted-foreground">
                   {usuario.tipoUsuarioDescricao}
                   {usuario.perfilAcessoNome && ` • ${usuario.perfilAcessoNome}`}
-                  {usuario.ultimoAcesso && ` • Último acesso: ${new Date(usuario.ultimoAcesso).toLocaleString('pt-BR')}`}
+                  {usuario.ultimoAcesso && ` • ${t('people.details.lastAccess')}: ${formatDateTime(usuario.ultimoAcesso)}`}
                 </p>
               </div>
               <Badge variant={usuario.ativo ? 'default' : 'secondary'}>
-                {usuario.ativo ? 'Ativo' : 'Inativo'}
+                {usuario.ativo ? t('people.status.active') : t('people.status.inactive')}
               </Badge>
             </div>
             {canCreateUsuario && (
               <Button variant="outline" size="sm" asChild>
                 <Link to={`/usuarios?pessoaId=${id}`}>
-                  Gerenciar usuário
+                  {t('people.details.manageUser')}
                 </Link>
               </Button>
             )}
@@ -592,7 +608,5 @@ export default function PessoaDetails() {
     </div>
   );
 }
-
-
 
 

@@ -34,7 +34,8 @@ import {
   Cog,
   Shield,
   Package,
-  Activity
+  Activity,
+  Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -75,6 +76,12 @@ const menuItems = [
     icon: Activity,
     permission: RESOURCES.AUDITORIA,
     adminOnly: true,
+  },
+  {
+    title: 'Tenants',
+    href: '/plataforma/tenants',
+    icon: Building2,
+    platformOnly: true,
   },
   {
     titleKey: 'menu.accessProfiles',
@@ -143,6 +150,12 @@ const menuGroups = [
         titleKey: 'menu.communicationSegments',
         href: '/comunicacao/segmentos',
         icon: Users,
+        permission: RESOURCES.COMUNICACAO,
+      },
+      {
+        titleKey: 'menu.communicationPreferences',
+        href: '/comunicacao/preferencias',
+        icon: Shield,
         permission: RESOURCES.COMUNICACAO,
       },
     ],
@@ -432,10 +445,14 @@ const menuGroups = [
 
 export function Sidebar() {
   const location = useLocation();
-  const { can, isAdmin } = useAuth();
+  const { can, isAdmin, isPlatformAdmin, currentTenant, homeTenant, operandoTenantRemoto } = useAuth();
   const { t } = useTranslation();
 
   const canSeeMenuItem = (item) => {
+    if (item.platformOnly) {
+      return isPlatformAdmin;
+    }
+
     if (item.adminOnly) {
       return isAdmin;
     }
@@ -530,7 +547,7 @@ export function Sidebar() {
               )}
             >
               <Icon className="h-5 w-5" />
-              <span>{t(item.titleKey)}</span>
+              <span>{item.title ?? t(item.titleKey)}</span>
             </Link>
           );
         })}
@@ -599,8 +616,32 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="p-4 border-t border-sidebar-border">
+        {isPlatformAdmin && (
+          <div className={`mb-3 rounded-lg border px-3 py-3 text-xs ${operandoTenantRemoto ? 'border-amber-500/30 bg-amber-500/10 text-sidebar-foreground' : 'border-emerald-500/30 bg-emerald-500/10 text-sidebar-foreground'}`}>
+            <div className="flex items-center gap-2 font-semibold">
+              <Shield className="h-4 w-4" />
+              <span>Modo plataforma</span>
+            </div>
+            <div className="mt-2 space-y-1 text-sidebar-foreground/80">
+              <div>
+                Origem: <span className="font-medium text-sidebar-foreground">{homeTenant?.slug || 'tenant-indefinido'}</span>
+              </div>
+              <div>
+                Operando: <span className="font-medium text-sidebar-foreground">{currentTenant?.slug || 'tenant-indefinido'}</span>
+              </div>
+              <div className="pt-1 text-[11px] uppercase tracking-wide">
+                {operandoTenantRemoto ? 'Tenant remoto ativo' : 'Tenant de origem ativo'}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="text-xs text-sidebar-foreground/60">
           {t('app.tagline')}
+        </div>
+        <div className="mt-3 rounded-lg border border-sidebar-border/70 bg-sidebar-accent/40 px-3 py-2 text-xs text-sidebar-foreground/80">
+          <div className="font-medium">{currentTenant?.slug || 'tenant-indefinido'}</div>
+          <div>{isPlatformAdmin ? 'Backoffice da plataforma' : 'Contexto da igreja atual'}</div>
         </div>
         <a
           href="https://malachdigital.com.br/"

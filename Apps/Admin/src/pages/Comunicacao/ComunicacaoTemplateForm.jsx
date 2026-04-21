@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,17 +33,17 @@ function interpolateTemplate(text) {
     .replaceAll('{Link}', sampleData.Link);
 }
 
-const canalOptions = [
-  { value: 1, label: 'WhatsApp' },
-  { value: 2, label: 'E-mail' },
-  { value: 3, label: 'Push' },
-  { value: 4, label: 'Notificação interna' },
-];
-
 export default function ComunicacaoTemplateForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
+  const canalOptions = [
+    { value: 1, label: t('communicationTemplateForm.channels.whatsapp') },
+    { value: 2, label: t('communicationTemplateForm.channels.email') },
+    { value: 3, label: t('communicationTemplateForm.channels.push') },
+    { value: 4, label: t('communicationTemplateForm.channels.internalNotification') },
+  ];
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(isEditing);
   const [error, setError] = useState(null);
@@ -76,25 +77,25 @@ export default function ComunicacaoTemplateForm() {
           status: Number(data.status || 1),
         });
       } catch (err) {
-        setError(getApiErrorMessage(err, 'Erro ao carregar template'));
+        setError(getApiErrorMessage(err, t('communicationTemplateForm.errorLoad')));
       } finally {
         setPageLoading(false);
       }
     };
 
     load();
-  }, [id, isEditing]);
+  }, [id, isEditing, t]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.nome.trim() || !formData.objetivo.trim() || !formData.corpo.trim()) {
-      toast.error('Preencha nome, objetivo e corpo do template.');
+      toast.error(t('communicationTemplateForm.validation.requiredFields'));
       return;
     }
 
     if ([2, 3, 4].includes(Number(formData.canal)) && !formData.assunto.trim()) {
-      toast.error('Para este canal, informe o assunto ou título do template.');
+      toast.error(t('communicationTemplateForm.validation.subjectRequired'));
       return;
     }
 
@@ -116,16 +117,16 @@ export default function ComunicacaoTemplateForm() {
       if (isEditing) await comunicacaoTemplatesApi.update(id, payload);
       else await comunicacaoTemplatesApi.create(payload);
 
-      toast.success(isEditing ? 'Template atualizado com sucesso.' : 'Template criado com sucesso.');
+      toast.success(isEditing ? t('communicationTemplateForm.saveSuccessEdit') : t('communicationTemplateForm.saveSuccessCreate'));
       navigate('/comunicacao/templates');
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao salvar template'));
+      toast.error(getApiErrorMessage(err, t('communicationTemplateForm.saveError')));
     } finally {
       setLoading(false);
     }
   };
 
-  if (pageLoading) return <LoadingPage text="Carregando template..." />;
+  if (pageLoading) return <LoadingPage text={t('communicationTemplateForm.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={() => window.location.reload()} />;
 
   const previewAssunto = interpolateTemplate(formData.assunto) || sampleData.Campanha;
@@ -133,8 +134,8 @@ export default function ComunicacaoTemplateForm() {
   const previewHtml = interpolateTemplate(formData.corpoHtml);
   const isEmail = Number(formData.canal) === 2;
   const isContextual = [3, 4].includes(Number(formData.canal));
-  const canalBadge = canalOptions.find((item) => item.value === Number(formData.canal))?.label || 'Canal';
-  const assuntoLabel = isEmail ? 'Assunto' : isContextual ? 'Título' : 'Assunto';
+  const canalBadge = canalOptions.find((item) => item.value === Number(formData.canal))?.label || t('communicationTemplateForm.channels.fallback');
+  const assuntoLabel = isEmail ? t('communicationTemplateForm.fields.subject') : isContextual ? t('communicationTemplateForm.fields.titleLabel') : t('communicationTemplateForm.fields.subject');
 
   return (
     <div className="space-y-6">
@@ -145,31 +146,31 @@ export default function ComunicacaoTemplateForm() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold text-foreground">{isEditing ? 'Editar Template' : 'Novo Template'}</h1>
-          <p className="text-muted-foreground mt-1">Base reutilizável para campanhas e automações.</p>
+          <h1 className="text-3xl font-bold text-foreground">{isEditing ? t('communicationTemplateForm.editTitle') : t('communicationTemplateForm.newTitle')}</h1>
+          <p className="text-muted-foreground mt-1">{t('communicationTemplateForm.subtitle')}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Dados do template</CardTitle>
+          <CardTitle>{t('communicationTemplateForm.cardTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome</Label>
+                <Label htmlFor="nome">{t('communicationTemplateForm.fields.name')}</Label>
                 <Input id="nome" value={formData.nome} onChange={(e) => setFormData((prev) => ({ ...prev, nome: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="objetivo">Objetivo</Label>
+                <Label htmlFor="objetivo">{t('communicationTemplateForm.fields.objective')}</Label>
                 <Input id="objetivo" value={formData.objetivo} onChange={(e) => setFormData((prev) => ({ ...prev, objetivo: e.target.value }))} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="canal">Canal</Label>
+                <Label htmlFor="canal">{t('communicationTemplateForm.fields.channel')}</Label>
                 <select id="canal" value={formData.canal} onChange={(e) => setFormData((prev) => ({ ...prev, canal: Number(e.target.value) }))} className="w-full rounded-md border border-input bg-background px-3 py-2">
                   {canalOptions.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -178,11 +179,11 @@ export default function ComunicacaoTemplateForm() {
               </div>
               {isEditing && (
                 <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
+                  <Label htmlFor="status">{t('communicationTemplateForm.fields.status')}</Label>
                   <select id="status" value={formData.status} onChange={(e) => setFormData((prev) => ({ ...prev, status: Number(e.target.value) }))} className="w-full rounded-md border border-input bg-background px-3 py-2">
-                    <option value={1}>Rascunho</option>
-                    <option value={2}>Ativo</option>
-                    <option value={3}>Arquivado</option>
+                    <option value={1}>{t('communicationTemplateForm.status.draft')}</option>
+                    <option value={2}>{t('communicationTemplateForm.status.active')}</option>
+                    <option value={3}>{t('communicationTemplateForm.status.archived')}</option>
                   </select>
                 </div>
               )}
@@ -190,33 +191,33 @@ export default function ComunicacaoTemplateForm() {
 
             <div className="space-y-2">
               <Label htmlFor="assunto">{assuntoLabel}</Label>
-              <Input id="assunto" value={formData.assunto} onChange={(e) => setFormData((prev) => ({ ...prev, assunto: e.target.value }))} placeholder={isEmail || isContextual ? 'Obrigatório para este canal' : 'Opcional para este canal'} />
+              <Input id="assunto" value={formData.assunto} onChange={(e) => setFormData((prev) => ({ ...prev, assunto: e.target.value }))} placeholder={isEmail || isContextual ? t('communicationTemplateForm.fields.requiredForChannel') : t('communicationTemplateForm.fields.optionalForChannel')} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="corpo">{isEmail ? 'Corpo texto' : 'Mensagem'}</Label>
+              <Label htmlFor="corpo">{isEmail ? t('communicationTemplateForm.fields.textBody') : t('communicationTemplateForm.fields.message')}</Label>
               <Textarea id="corpo" rows={6} value={formData.corpo} onChange={(e) => setFormData((prev) => ({ ...prev, corpo: e.target.value }))} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="corpoHtml">Corpo HTML opcional</Label>
+              <Label htmlFor="corpoHtml">{t('communicationTemplateForm.fields.htmlBodyOptional')}</Label>
               <Textarea id="corpoHtml" rows={6} value={formData.corpoHtml} onChange={(e) => setFormData((prev) => ({ ...prev, corpoHtml: e.target.value }))} />
               <p className="text-xs text-muted-foreground">
-                {isEmail ? 'Use HTML quando quiser uma versão mais rica do e-mail.' : isContextual ? 'Para canais contextuais, o HTML normalmente não será usado no primeiro momento.' : 'Para WhatsApp, normalmente só o corpo texto será usado.'}
+                {isEmail ? t('communicationTemplateForm.fields.htmlHelpEmail') : isContextual ? t('communicationTemplateForm.fields.htmlHelpContextual') : t('communicationTemplateForm.fields.htmlHelpWhatsapp')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="variaveisPermitidas">Variáveis permitidas</Label>
+              <Label htmlFor="variaveisPermitidas">{t('communicationTemplateForm.fields.allowedVariables')}</Label>
               <Input id="variaveisPermitidas" value={formData.variaveisPermitidas} onChange={(e) => setFormData((prev) => ({ ...prev, variaveisPermitidas: e.target.value }))} />
             </div>
 
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="space-y-1">
-                  <Label>Preview do template</Label>
+                  <Label>{t('communicationTemplateForm.preview.title')}</Label>
                   <p className="text-xs text-muted-foreground">
-                    A pré-visualização usa valores de exemplo para facilitar a revisão do conteúdo antes do uso em campanha.
+                    {t('communicationTemplateForm.preview.description')}
                   </p>
                 </div>
                 <Badge variant="outline">{canalBadge}</Badge>
@@ -231,13 +232,13 @@ export default function ComunicacaoTemplateForm() {
                 )}
 
                 <div className="space-y-1">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{isEmail ? 'Corpo texto' : 'Mensagem'}</div>
-                  <div className="rounded-md border border-border bg-background px-3 py-3 text-sm whitespace-pre-wrap">{previewCorpo || 'Sem conteúdo para pré-visualizar.'}</div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{isEmail ? t('communicationTemplateForm.fields.textBody') : t('communicationTemplateForm.fields.message')}</div>
+                  <div className="rounded-md border border-border bg-background px-3 py-3 text-sm whitespace-pre-wrap">{previewCorpo || t('communicationTemplateForm.preview.noContent')}</div>
                 </div>
 
                 {isEmail && previewHtml && (
                   <div className="space-y-1">
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Corpo HTML</div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('communicationTemplateForm.fields.htmlBody')}</div>
                     <div className="rounded-md border border-border bg-background px-3 py-3 text-sm whitespace-pre-wrap">{previewHtml}</div>
                   </div>
                 )}
@@ -246,11 +247,11 @@ export default function ComunicacaoTemplateForm() {
 
             <div className="flex justify-end gap-3 pt-4 border-t border-border">
               <Button type="button" variant="outline" asChild>
-                <Link to="/comunicacao/templates">Cancelar</Link>
+                <Link to="/comunicacao/templates">{t('actions.cancel')}</Link>
               </Button>
               <Button type="submit" disabled={loading}>
                 <Save className="w-4 h-4 mr-2" />
-                {loading ? 'Salvando...' : 'Salvar'}
+                {loading ? t('actions.saving') : t('actions.save')}
               </Button>
             </div>
           </form>

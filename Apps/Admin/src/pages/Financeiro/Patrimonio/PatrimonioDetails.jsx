@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { patrimonioApi, patrimonioMovimentacoesApi } from '@/lib/api';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/formatters';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -81,9 +82,6 @@ export default function PatrimonioDetails() {
     load();
   }, [id]);
 
-  const formatDate = (value) => (value ? new Date(value).toLocaleDateString('pt-BR') : '-');
-  const formatDateTime = (value) => (value ? new Date(value).toLocaleString('pt-BR') : '-');
-  const formatCurrency = (value) => (value ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value) : '-');
   const filteredMovimentacoes = movimentacoes.filter((movimentacao) => {
     if (filtroTipo && movimentacao.tipoMovimentacao !== filtroTipo) return false;
 
@@ -160,7 +158,7 @@ export default function PatrimonioDetails() {
         <Button asChild>
           <Link to={`/financeiro/patrimonio/${item.id}/editar`}>
             <Edit className="h-4 w-4 mr-2" />
-            Editar
+            {t('actions.edit', 'Editar')}
           </Link>
         </Button>
       </div>

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Componente de busca avançada reutilizável
@@ -27,6 +28,7 @@ export function AdvancedSearch({
   onReset = () => {},
   defaultOpen = false,
 }) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const valuesRef = useRef(values);
 
@@ -104,7 +106,7 @@ export function AdvancedSearch({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
             <Search className="h-4 w-4" />
-            Busca e Filtros
+            {t('advancedSearch.title')}
             {activeFiltersCount > 0 && (
               <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
                 {activeFiltersCount}
@@ -120,7 +122,7 @@ export function AdvancedSearch({
                 className="h-8 text-xs"
               >
                 <X className="h-3 w-3 mr-1" />
-                Limpar
+                {t('advancedSearch.clear')}
               </Button>
             )}
             {filterFields.length > 0 && (
@@ -130,12 +132,12 @@ export function AdvancedSearch({
                     {isOpen ? (
                       <>
                         <ChevronUp className="h-4 w-4 mr-1" />
-                        Ocultar
+                        {t('advancedSearch.hide')}
                       </>
                     ) : (
                       <>
                         <ChevronDown className="h-4 w-4 mr-1" />
-                        Filtros
+                        {t('advancedSearch.filters')}
                       </>
                     )}
                   </Button>
@@ -163,7 +165,7 @@ export function AdvancedSearch({
                       setLocalSearch((prev) => ({ ...prev, [field.key]: v }));
                       debouncedApplySearchChange(field.key, v);
                     }}
-                    placeholder={field.placeholder || `Buscar por ${field.label.toLowerCase()}...`}
+                    placeholder={field.placeholder || t('advancedSearch.searchPlaceholder', { field: String(field.label).toLowerCase() })}
                     className="w-full"
                   />
                 ) : field.type === 'date' ? (
@@ -179,7 +181,7 @@ export function AdvancedSearch({
                     onValueChange={(value) => handleSearchChange(field.key, value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={field.placeholder || `Selecione ${field.label.toLowerCase()}`} />
+                      <SelectValue placeholder={field.placeholder || t('advancedSearch.selectPlaceholder', { field: String(field.label).toLowerCase() })} />
                     </SelectTrigger>
                     <SelectContent>
                       {field.options && field.options.map((option) => (
@@ -202,7 +204,7 @@ export function AdvancedSearch({
               <div className="pt-4 border-t space-y-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Filter className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">Filtros Avançados</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t('advancedSearch.advancedFilters')}</span>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {filterFields.map((field) => (
@@ -214,10 +216,10 @@ export function AdvancedSearch({
                           onValueChange={(value) => handleFilterChange(field.key, value)}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder={field.placeholder || `Todos`} />
+                            <SelectValue placeholder={field.placeholder || t('advancedSearch.all')} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="all">Todos</SelectItem>
+                            <SelectItem value="all">{t('advancedSearch.all')}</SelectItem>
                             {field.options && field.options.map((option) => (
                               <SelectItem key={option.value} value={String(option.value)}>
                                 {option.label}
@@ -228,7 +230,7 @@ export function AdvancedSearch({
                       ) : field.type === 'date-range' ? (
                         <div className="grid grid-cols-2 gap-2">
                           <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">De</Label>
+                            <Label className="text-xs text-muted-foreground">{t('advancedSearch.from')}</Label>
                             <Input
                               type="date"
                               value={values[`${field.key}_from`] || ''}
@@ -237,7 +239,7 @@ export function AdvancedSearch({
                             />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Até</Label>
+                            <Label className="text-xs text-muted-foreground">{t('advancedSearch.to')}</Label>
                             <Input
                               type="date"
                               value={values[`${field.key}_to`] || ''}
@@ -252,12 +254,12 @@ export function AdvancedSearch({
                           onValueChange={(value) => handleFilterChange(field.key, value)}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Todos" />
+                            <SelectValue placeholder={t('advancedSearch.all')} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="all">Todos</SelectItem>
-                            <SelectItem value="true">{field.trueLabel || 'Sim'}</SelectItem>
-                            <SelectItem value="false">{field.falseLabel || 'Não'}</SelectItem>
+                            <SelectItem value="all">{t('advancedSearch.all')}</SelectItem>
+                            <SelectItem value="true">{field.trueLabel || t('advancedSearch.yes')}</SelectItem>
+                            <SelectItem value="false">{field.falseLabel || t('advancedSearch.no')}</SelectItem>
                           </SelectContent>
                         </Select>
                       ) : null}

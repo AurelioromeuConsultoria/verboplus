@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from 'react-i18next';
 import { EstadoVazio } from './KidsShared';
 import { OCORRENCIA_TIPOS, formatOcorrenciaTipo, getOcorrenciaStatusConfig, isOcorrenciaEncerrada } from './kidsHelpers';
 
@@ -22,39 +23,40 @@ export function CriancaDialog({
   salas,
   turmas,
 }) {
+  const { t } = useTranslation();
   const turmasDaSala = form.salaId ? turmas.filter((item) => item.salaId === form.salaId) : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Nova criança</DialogTitle>
+          <DialogTitle>{t('kids.children.new')}</DialogTitle>
           <DialogDescription>
-            Cadastre a criança já usando a estrutura formal de sala e turma do Kids.
+            {t('kids.children.dialogDescription')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="criancaNome">Nome</Label>
-              <Input id="criancaNome" value={form.nome} onChange={(e) => onChange('nome', e.target.value)} placeholder="Nome da criança" maxLength={100} />
+              <Label htmlFor="criancaNome">{t('kids.common.name')}</Label>
+              <Input id="criancaNome" value={form.nome} onChange={(e) => onChange('nome', e.target.value)} placeholder={t('kids.children.namePlaceholder')} maxLength={100} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="criancaNascimento">Data de nascimento</Label>
+              <Label htmlFor="criancaNascimento">{t('kids.children.birthDate')}</Label>
               <Input id="criancaNascimento" type="date" value={form.dataNascimento} onChange={(e) => onChange('dataNascimento', e.target.value)} />
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="criancaSala">Sala</Label>
+              <Label htmlFor="criancaSala">{t('kids.common.room')}</Label>
               <Select value={form.salaId || 'selecionar'} onValueChange={(value) => onChange('salaId', value === 'selecionar' ? '' : value)}>
                 <SelectTrigger id="criancaSala">
-                  <SelectValue placeholder="Selecione a sala" />
+                  <SelectValue placeholder={t('kids.common.selectRoom')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="selecionar">Selecione a sala</SelectItem>
+                  <SelectItem value="selecionar">{t('kids.common.selectRoom')}</SelectItem>
                   {salas.map((sala) => (
                     <SelectItem key={sala.id} value={sala.id}>
                       {sala.nome}
@@ -65,13 +67,13 @@ export function CriancaDialog({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="criancaTurma">Turma</Label>
+              <Label htmlFor="criancaTurma">{t('kids.common.class')}</Label>
               <Select value={form.turmaId || 'selecionar'} onValueChange={(value) => onChange('turmaId', value === 'selecionar' ? '' : value)}>
                 <SelectTrigger id="criancaTurma">
-                  <SelectValue placeholder="Selecione a turma" />
+                  <SelectValue placeholder={t('kids.common.selectClass')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="selecionar">Selecione a turma</SelectItem>
+                  <SelectItem value="selecionar">{t('kids.common.selectClass')}</SelectItem>
                   {turmasDaSala.map((turma) => (
                     <SelectItem key={turma.id} value={turma.id}>
                       {turma.nome}
@@ -84,27 +86,27 @@ export function CriancaDialog({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="criancaAlergias">Alergias</Label>
+              <Label htmlFor="criancaAlergias">{t('kids.children.allergies')}</Label>
               <Textarea id="criancaAlergias" value={form.alergias} onChange={(e) => onChange('alergias', e.target.value)} rows={3} maxLength={500} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="criancaRestricoes">Restrições alimentares</Label>
+              <Label htmlFor="criancaRestricoes">{t('kids.children.foodRestrictions')}</Label>
               <Textarea id="criancaRestricoes" value={form.restricoesAlimentares} onChange={(e) => onChange('restricoesAlimentares', e.target.value)} rows={3} maxLength={500} />
             </div>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="criancaObservacoes">Observações</Label>
+            <Label htmlFor="criancaObservacoes">{t('kids.common.notes')}</Label>
             <Textarea id="criancaObservacoes" value={form.observacoes} onChange={(e) => onChange('observacoes', e.target.value)} rows={4} maxLength={1000} />
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Cancelar
+            {t('actions.cancel')}
           </Button>
           <Button onClick={onSave} disabled={saving}>
-            {saving ? 'Salvando...' : 'Cadastrar criança'}
+            {saving ? t('actions.saving') : t('kids.children.create')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -121,25 +123,26 @@ export function OcorrenciaDialog({
   saving,
   criancasPresentes,
 }) {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Registrar ocorrência</DialogTitle>
+          <DialogTitle>{t('kids.occurrence.register')}</DialogTitle>
           <DialogDescription>
-            Registre fatos relevantes do culto para manter a operação segura e rastreável.
+            {t('kids.occurrence.dialogDescription')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
-            <Label htmlFor="criancaPessoaId">Criança</Label>
+            <Label htmlFor="criancaPessoaId">{t('kids.child')}</Label>
             <Select value={form.criancaPessoaId || 'selecionar'} onValueChange={(value) => onChange('criancaPessoaId', value === 'selecionar' ? '' : value)}>
               <SelectTrigger id="criancaPessoaId">
-                <SelectValue placeholder="Selecione a criança" />
+                <SelectValue placeholder={t('kids.occurrence.selectChild')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="selecionar">Selecione a criança</SelectItem>
+                <SelectItem value="selecionar">{t('kids.occurrence.selectChild')}</SelectItem>
                 {criancasPresentes.map((crianca) => (
                   <SelectItem key={crianca.criancaPessoaId} value={String(crianca.criancaPessoaId)}>
                     {crianca.nome}
@@ -151,15 +154,15 @@ export function OcorrenciaDialog({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="tipoOcorrencia">Tipo</Label>
+              <Label htmlFor="tipoOcorrencia">{t('kids.occurrence.type')}</Label>
               <Select value={form.tipo} onValueChange={(value) => onChange('tipo', value)}>
                 <SelectTrigger id="tipoOcorrencia">
-                  <SelectValue placeholder="Selecione o tipo" />
+                  <SelectValue placeholder={t('kids.occurrence.selectType')} />
                 </SelectTrigger>
                 <SelectContent>
                   {OCORRENCIA_TIPOS.map((tipo) => (
                     <SelectItem key={tipo.value} value={tipo.value}>
-                      {tipo.label}
+                      {formatOcorrenciaTipo(tipo.value, t)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -167,29 +170,29 @@ export function OcorrenciaDialog({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="tituloOcorrencia">Título</Label>
-              <Input id="tituloOcorrencia" value={form.titulo} onChange={(e) => onChange('titulo', e.target.value)} placeholder="Resumo curto da ocorrência" maxLength={200} />
+              <Label htmlFor="tituloOcorrencia">{t('kids.occurrence.title')}</Label>
+              <Input id="tituloOcorrencia" value={form.titulo} onChange={(e) => onChange('titulo', e.target.value)} placeholder={t('kids.occurrence.titlePlaceholder')} maxLength={200} />
             </div>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="descricaoOcorrencia">Descrição</Label>
-            <Textarea id="descricaoOcorrencia" value={form.descricao} onChange={(e) => onChange('descricao', e.target.value)} placeholder="Descreva o que aconteceu, ações tomadas e contexto relevante." rows={5} maxLength={2000} />
+            <Label htmlFor="descricaoOcorrencia">{t('kids.common.description')}</Label>
+            <Textarea id="descricaoOcorrencia" value={form.descricao} onChange={(e) => onChange('descricao', e.target.value)} placeholder={t('kids.occurrence.descriptionPlaceholder')} rows={5} maxLength={2000} />
           </div>
 
           <div className="grid gap-3 rounded-xl border border-border p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-foreground">Requer contato com responsável</p>
-                <p className="text-sm text-muted-foreground">Marque quando a equipe precisar avisar o responsável ainda durante o culto.</p>
+                <p className="text-sm font-medium text-foreground">{t('kids.occurrence.requiresGuardianContact')}</p>
+                <p className="text-sm text-muted-foreground">{t('kids.occurrence.requiresGuardianContactHint')}</p>
               </div>
               <Switch checked={form.requerContatoResponsavel} onCheckedChange={(checked) => onChange('requerContatoResponsavel', checked)} />
             </div>
 
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-foreground">Visível ao responsável</p>
-                <p className="text-sm text-muted-foreground">Use apenas quando a informação fizer sentido no histórico do responsável.</p>
+                <p className="text-sm font-medium text-foreground">{t('kids.occurrence.visibleToGuardian')}</p>
+                <p className="text-sm text-muted-foreground">{t('kids.occurrence.visibleToGuardianHint')}</p>
               </div>
               <Switch checked={form.visivelAoResponsavel} onCheckedChange={(checked) => onChange('visivelAoResponsavel', checked)} />
             </div>
@@ -198,10 +201,10 @@ export function OcorrenciaDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Cancelar
+            {t('actions.cancel')}
           </Button>
           <Button onClick={onSave} disabled={saving}>
-            {saving ? 'Salvando...' : 'Registrar ocorrência'}
+            {saving ? t('actions.saving') : t('kids.occurrence.register')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -210,33 +213,34 @@ export function OcorrenciaDialog({
 }
 
 export function SalaDialog({ open, onOpenChange, form, onChange, onSave, saving }) {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Nova sala</DialogTitle>
+          <DialogTitle>{t('kids.structure.newRoom')}</DialogTitle>
           <DialogDescription>
-            Cadastre uma sala formal para organizar capacidade e distribuição do Kids.
+            {t('kids.structure.roomDialogDescription')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
-            <Label htmlFor="salaId">Identificador</Label>
-            <Input id="salaId" value={form.id} onChange={(e) => onChange('id', e.target.value)} placeholder="Ex.: SALA_BERCARIO" maxLength={50} />
+            <Label htmlFor="salaId">{t('kids.common.identifier')}</Label>
+            <Input id="salaId" value={form.id} onChange={(e) => onChange('id', e.target.value)} placeholder={t('kids.structure.roomIdentifierPlaceholder')} maxLength={50} />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="salaNome">Nome</Label>
-            <Input id="salaNome" value={form.nome} onChange={(e) => onChange('nome', e.target.value)} placeholder="Ex.: Berçário" maxLength={120} />
+            <Label htmlFor="salaNome">{t('kids.common.name')}</Label>
+            <Input id="salaNome" value={form.nome} onChange={(e) => onChange('nome', e.target.value)} placeholder={t('kids.structure.roomNamePlaceholder')} maxLength={120} />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="salaCapacidade">Capacidade máxima</Label>
-            <Input id="salaCapacidade" type="number" min="0" value={form.capacidadeMaxima} onChange={(e) => onChange('capacidadeMaxima', e.target.value)} placeholder="Ex.: 12" />
+            <Label htmlFor="salaCapacidade">{t('kids.structure.maxCapacity')}</Label>
+            <Input id="salaCapacidade" type="number" min="0" value={form.capacidadeMaxima} onChange={(e) => onChange('capacidadeMaxima', e.target.value)} placeholder={t('kids.structure.capacityPlaceholder.room')} />
           </div>
           <div className="flex items-center justify-between gap-3 rounded-xl border border-border p-4">
             <div>
-              <p className="text-sm font-medium text-foreground">Sala ativa</p>
-              <p className="text-sm text-muted-foreground">Salas inativas não entram no fluxo operacional padrão.</p>
+              <p className="text-sm font-medium text-foreground">{t('kids.structure.roomActive')}</p>
+              <p className="text-sm text-muted-foreground">{t('kids.structure.roomActiveHint')}</p>
             </div>
             <Switch checked={form.ativo} onCheckedChange={(checked) => onChange('ativo', checked)} />
           </div>
@@ -244,10 +248,10 @@ export function SalaDialog({ open, onOpenChange, form, onChange, onSave, saving 
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Cancelar
+            {t('actions.cancel')}
           </Button>
           <Button onClick={onSave} disabled={saving}>
-            {saving ? 'Salvando...' : 'Cadastrar sala'}
+            {saving ? t('actions.saving') : t('kids.structure.createRoom')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -256,29 +260,30 @@ export function SalaDialog({ open, onOpenChange, form, onChange, onSave, saving 
 }
 
 export function TurmaDialog({ open, onOpenChange, form, onChange, onSave, saving, salas }) {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Nova turma</DialogTitle>
+          <DialogTitle>{t('kids.structure.newClass')}</DialogTitle>
           <DialogDescription>
-            Vincule a turma a uma sala para preparar capacidade e organização por culto.
+            {t('kids.structure.classDialogDescription')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
-            <Label htmlFor="turmaId">Identificador</Label>
-            <Input id="turmaId" value={form.id} onChange={(e) => onChange('id', e.target.value)} placeholder="Ex.: MATERNAL_A" maxLength={50} />
+            <Label htmlFor="turmaId">{t('kids.common.identifier')}</Label>
+            <Input id="turmaId" value={form.id} onChange={(e) => onChange('id', e.target.value)} placeholder={t('kids.structure.classIdentifierPlaceholder')} maxLength={50} />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="turmaSala">Sala</Label>
+            <Label htmlFor="turmaSala">{t('kids.common.room')}</Label>
             <Select value={form.salaId || 'selecionar'} onValueChange={(value) => onChange('salaId', value === 'selecionar' ? '' : value)}>
               <SelectTrigger id="turmaSala">
-                <SelectValue placeholder="Selecione a sala" />
+                <SelectValue placeholder={t('kids.common.selectRoom')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="selecionar">Selecione a sala</SelectItem>
+                <SelectItem value="selecionar">{t('kids.common.selectRoom')}</SelectItem>
                 {salas.map((sala) => (
                   <SelectItem key={sala.id} value={sala.id}>
                     {sala.nome}
@@ -288,17 +293,17 @@ export function TurmaDialog({ open, onOpenChange, form, onChange, onSave, saving
             </Select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="turmaNome">Nome</Label>
-            <Input id="turmaNome" value={form.nome} onChange={(e) => onChange('nome', e.target.value)} placeholder="Ex.: Maternal A" maxLength={120} />
+            <Label htmlFor="turmaNome">{t('kids.common.name')}</Label>
+            <Input id="turmaNome" value={form.nome} onChange={(e) => onChange('nome', e.target.value)} placeholder={t('kids.structure.classNamePlaceholder')} maxLength={120} />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="turmaCapacidade">Capacidade máxima</Label>
-            <Input id="turmaCapacidade" type="number" min="0" value={form.capacidadeMaxima} onChange={(e) => onChange('capacidadeMaxima', e.target.value)} placeholder="Ex.: 8" />
+            <Label htmlFor="turmaCapacidade">{t('kids.structure.maxCapacity')}</Label>
+            <Input id="turmaCapacidade" type="number" min="0" value={form.capacidadeMaxima} onChange={(e) => onChange('capacidadeMaxima', e.target.value)} placeholder={t('kids.structure.capacityPlaceholder.class')} />
           </div>
           <div className="flex items-center justify-between gap-3 rounded-xl border border-border p-4">
             <div>
-              <p className="text-sm font-medium text-foreground">Turma ativa</p>
-              <p className="text-sm text-muted-foreground">Turmas inativas ficam fora da estrutura principal.</p>
+              <p className="text-sm font-medium text-foreground">{t('kids.structure.classActive')}</p>
+              <p className="text-sm text-muted-foreground">{t('kids.structure.classActiveHint')}</p>
             </div>
             <Switch checked={form.ativo} onCheckedChange={(checked) => onChange('ativo', checked)} />
           </div>
@@ -306,10 +311,10 @@ export function TurmaDialog({ open, onOpenChange, form, onChange, onSave, saving
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Cancelar
+            {t('actions.cancel')}
           </Button>
           <Button onClick={onSave} disabled={saving}>
-            {saving ? 'Salvando...' : 'Cadastrar turma'}
+            {saving ? t('actions.saving') : t('kids.structure.createClass')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -327,25 +332,26 @@ export function HistoricoDialog({
   onAtualizarOcorrencia,
   formatDate,
 }) {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>
-            Histórico de ocorrências
+            {t('kids.history.occurrenceHistory')}
             {criancaHistorico?.nome ? ` • ${criancaHistorico.nome}` : ''}
           </DialogTitle>
           <DialogDescription>
-            Acompanhe o que foi registrado, se houve contato com responsável e o encerramento de cada item.
+            {t('kids.history.dialogDescription')}
           </DialogDescription>
         </DialogHeader>
 
         {historicoLoading ? (
-          <Loading text="Carregando ocorrências..." />
+          <Loading text={t('kids.history.loadingOccurrences')} />
         ) : ocorrenciasHistorico.length ? (
           <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
             {ocorrenciasHistorico.map((ocorrencia) => {
-              const statusConfig = getOcorrenciaStatusConfig(ocorrencia.status);
+              const statusConfig = getOcorrenciaStatusConfig(ocorrencia.status, t);
               const podeMarcarContato = ocorrencia.requerContatoResponsavel && !ocorrencia.contatoResponsavelRealizadoEm;
               const podeEncerrar = !isOcorrenciaEncerrada(ocorrencia.status);
 
@@ -355,15 +361,15 @@ export function HistoricoDialog({
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge className={statusConfig.className}>{statusConfig.label}</Badge>
-                        <Badge variant="outline">{formatOcorrenciaTipo(ocorrencia.tipo)}</Badge>
-                        {ocorrencia.visivelAoResponsavel ? <Badge variant="outline">Visível ao responsável</Badge> : null}
+                        <Badge variant="outline">{formatOcorrenciaTipo(ocorrencia.tipo, t)}</Badge>
+                        {ocorrencia.visivelAoResponsavel ? <Badge variant="outline">{t('kids.occurrence.visibleToGuardian')}</Badge> : null}
                       </div>
                       <h3 className="font-semibold text-foreground">{ocorrencia.titulo}</h3>
                       <p className="text-sm text-muted-foreground">{ocorrencia.descricao}</p>
                       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                        <span>Registrado por {ocorrencia.registradoPorNome}</span>
+                        <span>{t('kids.history.recordedBy', { name: ocorrencia.registradoPorNome })}</span>
                         <span>{formatDate(ocorrencia.dataCriacao)}</span>
-                        {ocorrencia.salaId ? <span>Sala {ocorrencia.salaId}</span> : null}
+                        {ocorrencia.salaId ? <span>{t('kids.history.roomLabel', { room: ocorrencia.salaId })}</span> : null}
                       </div>
                     </div>
 
@@ -376,7 +382,7 @@ export function HistoricoDialog({
                           onClick={() => onAtualizarOcorrencia(ocorrencia.id, { contatoResponsavelRealizado: true })}
                         >
                           <PhoneCall className="mr-2 h-4 w-4" />
-                          Marcar contato
+                          {t('kids.history.markContact')}
                         </Button>
                       ) : null}
                       {podeEncerrar ? (
@@ -386,7 +392,7 @@ export function HistoricoDialog({
                           onClick={() => onAtualizarOcorrencia(ocorrencia.id, { status: 'Encerrada' })}
                         >
                           <CheckCircle2 className="mr-2 h-4 w-4" />
-                          Encerrar
+                          {t('kids.history.close')}
                         </Button>
                       ) : null}
                     </div>
@@ -398,14 +404,14 @@ export function HistoricoDialog({
                       {ocorrencia.requerContatoResponsavel ? (
                         ocorrencia.contatoResponsavelRealizadoEm ? (
                           <span>
-                            Contato com responsável realizado em {formatDate(ocorrencia.contatoResponsavelRealizadoEm)}
-                            {ocorrencia.contatoResponsavelPorNome ? ` por ${ocorrencia.contatoResponsavelPorNome}` : ''}
+                            {t('kids.history.contactDoneOn', { date: formatDate(ocorrencia.contatoResponsavelRealizadoEm) })}
+                            {ocorrencia.contatoResponsavelPorNome ? ` ${t('kids.history.by', { name: ocorrencia.contatoResponsavelPorNome })}` : ''}
                           </span>
                         ) : (
-                          <span>Contato com responsável ainda pendente.</span>
+                          <span>{t('kids.history.contactPending')}</span>
                         )
                       ) : (
-                        <span>Esta ocorrência não exige contato com responsável.</span>
+                        <span>{t('kids.history.contactNotRequired')}</span>
                       )}
                     </div>
 
@@ -413,8 +419,8 @@ export function HistoricoDialog({
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <CheckCircle2 className="h-4 w-4" />
                         <span>
-                          Encerrada em {formatDate(ocorrencia.encerradoEm)}
-                          {ocorrencia.encerradoPorNome ? ` por ${ocorrencia.encerradoPorNome}` : ''}
+                          {t('kids.history.closedOn', { date: formatDate(ocorrencia.encerradoEm) })}
+                          {ocorrencia.encerradoPorNome ? ` ${t('kids.history.by', { name: ocorrencia.encerradoPorNome })}` : ''}
                         </span>
                       </div>
                     ) : null}
@@ -424,7 +430,7 @@ export function HistoricoDialog({
             })}
           </div>
         ) : (
-          <EstadoVazio texto="Nenhuma ocorrência registrada para esta criança." />
+          <EstadoVazio texto={t('kids.history.noOccurrencesForChild')} />
         )}
       </DialogContent>
     </Dialog>

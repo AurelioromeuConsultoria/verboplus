@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, CheckCheck, Clock3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -9,21 +9,24 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { notificacoesApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '@/lib/formatters';
 
-function getTipoLabel(tipo) {
+function getTipoLabel(tipo, t) {
   const value = Number(tipo);
-  if (value === 2) return 'Escala';
-  if (value === 3) return 'Troca';
-  return 'Geral';
+  if (value === 2) return t('notifications.types.schedule');
+  if (value === 3) return t('notifications.types.swap');
+  return t('notifications.types.general');
 }
 
 export default function NotificacoesList() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [notificacoes, setNotificacoes] = useState([]);
 
-  const load = async (options = {}) => {
+  const load = useCallback(async (options = {}) => {
     const silent = options.silent ?? false;
     try {
       if (silent) setRefreshing(true);
@@ -33,16 +36,16 @@ export default function NotificacoesList() {
       setNotificacoes(res.data || []);
     } catch (err) {
       console.error(err);
-      setError('Erro ao carregar notificações');
+      setError(t('notifications.errorLoad'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const marcarComoLida = async (id) => {
     try {
@@ -52,7 +55,7 @@ export default function NotificacoesList() {
       );
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao marcar notificação como lida');
+      toast.error(t('notifications.markReadError'));
     }
   };
 
@@ -60,30 +63,30 @@ export default function NotificacoesList() {
     try {
       await notificacoesApi.marcarTodasComoLidas();
       setNotificacoes((current) => current.map((item) => ({ ...item, dataLeitura: item.dataLeitura || new Date().toISOString() })));
-      toast.success('Notificações marcadas como lidas');
+      toast.success(t('notifications.markAllSuccess'));
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao atualizar notificações');
+      toast.error(t('notifications.markAllError'));
     }
   };
 
-  if (loading) return <LoadingPage text="Carregando notificações..." />;
+  if (loading) return <LoadingPage text={t('notifications.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Notificações</h1>
+          <h1 className="text-3xl font-bold">{t('notifications.title')}</h1>
           <p className="text-muted-foreground">
-            Central de avisos operacionais do sistema, com foco em escalas e trocas.
+            {t('notifications.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
           <Button variant="outline" onClick={marcarTodas}>
             <CheckCheck className="h-4 w-4 mr-2" />
-            Marcar todas como lidas
+            {t('notifications.readAll')}
           </Button>
         </div>
       </div>
@@ -92,8 +95,8 @@ export default function NotificacoesList() {
         <Card>
           <CardContent>
             <PageEmptyState
-              title="Nenhuma notificacao encontrada"
-              description="Sua central esta limpa no momento. Novos avisos operacionais vao aparecer aqui."
+              title={t('notifications.emptyTitle')}
+              description={t('notifications.emptyDescription')}
             />
           </CardContent>
         </Card>
@@ -109,9 +112,9 @@ export default function NotificacoesList() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={item.dataLeitura ? 'secondary' : 'default'}>
-                      {item.dataLeitura ? 'Lida' : 'Nova'}
+                      {item.dataLeitura ? t('notifications.status.read') : t('notifications.status.new')}
                     </Badge>
-                    <Badge variant="outline">{getTipoLabel(item.tipo)}</Badge>
+                    <Badge variant="outline">{getTipoLabel(item.tipo, t)}</Badge>
                   </div>
                 </CardTitle>
               </CardHeader>
@@ -120,18 +123,18 @@ export default function NotificacoesList() {
                 <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Clock3 className="h-4 w-4" />
-                    {new Date(item.dataCriacao).toLocaleString('pt-BR')}
+                    {formatDateTime(item.dataCriacao)}
                   </div>
                   {!item.dataLeitura && (
                     <Button variant="outline" size="sm" onClick={() => marcarComoLida(item.id)}>
-                      Marcar como lida
+                      {t('notifications.markAsRead')}
                     </Button>
                   )}
                 </div>
                 {item.link && (
                   <div>
                     <Button size="sm" asChild>
-                      <Link to={item.link}>Abrir</Link>
+                      <Link to={item.link}>{t('notifications.open')}</Link>
                     </Button>
                   </div>
                 )}

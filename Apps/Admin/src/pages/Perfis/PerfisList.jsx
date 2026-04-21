@@ -14,7 +14,9 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { pessoasPerfisApi } from '@/lib/api';
+import { formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 const perfilLabels = {
   1: 'Visitante',
@@ -31,12 +33,13 @@ const perfilLabels = {
   Admin: 'Admin',
 };
 
-function getPerfilLabel(value) {
-  if (value == null || value === '') return 'Não informado';
+function getPerfilLabel(value, t) {
+  if (value == null || value === '') return t('peopleProfiles.notInformed');
   return perfilLabels[value] || String(value);
 }
 
 export default function PerfisList() {
+  const { t } = useTranslation();
   const [perfis, setPerfis] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,9 +57,9 @@ export default function PerfisList() {
       const response = await pessoasPerfisApi.getAll();
       setPerfis(response.data || []);
     } catch (err) {
-      setError('Erro ao carregar perfis');
+      setError(t('peopleProfiles.errorLoad'));
       console.error('Erro ao carregar perfis:', err);
-      toast.error('Erro ao carregar perfis');
+      toast.error(t('peopleProfiles.errorLoad'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -66,20 +69,23 @@ export default function PerfisList() {
   const handleEncerrarPerfil = async (id) => {
     const perfil = perfis.find(p => p.id === id);
     confirmDialog.show({
-      title: 'Encerrar Perfil',
-      description: `Tem certeza que deseja encerrar o perfil "${perfil?.perfil || 'este perfil'}" de "${perfil?.pessoa?.nome || 'esta pessoa'}"?`,
-      confirmText: 'Encerrar',
-      cancelText: 'Cancelar',
+      title: t('peopleProfiles.endTitle'),
+      description: t('peopleProfiles.endDescription', {
+        profile: perfil?.perfil || t('peopleProfiles.fallbackProfile'),
+        person: perfil?.pessoa?.nome || t('peopleProfiles.fallbackPerson'),
+      }),
+      confirmText: t('peopleProfiles.endConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'default',
       onConfirm: async () => {
         try {
           await pessoasPerfisApi.update(id, {
             dataFim: new Date().toISOString(),
           });
-          toast.success('Perfil encerrado com sucesso');
+          toast.success(t('peopleProfiles.endSuccess'));
           await loadPerfis();
         } catch (err) {
-          toast.error('Erro ao encerrar perfil');
+          toast.error(t('peopleProfiles.endError'));
           console.error('Erro ao encerrar perfil:', err);
           throw err;
         }
@@ -90,18 +96,21 @@ export default function PerfisList() {
   const handleDelete = async (id) => {
     const perfil = perfis.find(p => p.id === id);
     confirmDialog.show({
-      title: 'Excluir Perfil',
-      description: `Tem certeza que deseja excluir o perfil "${perfil?.perfil || 'este perfil'}" de "${perfil?.pessoa?.nome || 'esta pessoa'}"? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('peopleProfiles.deleteTitle'),
+      description: t('peopleProfiles.deleteDescription', {
+        profile: perfil?.perfil || t('peopleProfiles.fallbackProfile'),
+        person: perfil?.pessoa?.nome || t('peopleProfiles.fallbackPerson'),
+      }),
+      confirmText: t('peopleProfiles.deleteConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await pessoasPerfisApi.delete(id);
-          toast.success('Perfil excluído com sucesso');
+          toast.success(t('peopleProfiles.deleteSuccess'));
           await loadPerfis();
         } catch (err) {
-          toast.error('Erro ao excluir perfil');
+          toast.error(t('peopleProfiles.deleteError'));
           console.error('Erro ao excluir perfil:', err);
           throw err;
         }
@@ -116,7 +125,7 @@ export default function PerfisList() {
   // Obter lista única de perfis para filtro
   const perfisUnicos = [...new Set(
     perfis
-      .map(p => getPerfilLabel(p.perfil))
+      .map(p => getPerfilLabel(p.perfil, t))
       .filter(perfil => typeof perfil === 'string')
       .map(perfil => perfil.trim())
       .filter(perfil => perfil !== '')
@@ -124,7 +133,7 @@ export default function PerfisList() {
 
   // Filtrar perfis
   const perfisFiltrados = perfis.filter((perfil) => {
-    const matchPerfil = !filtroPerfil || getPerfilLabel(perfil.perfil) === filtroPerfil;
+    const matchPerfil = !filtroPerfil || getPerfilLabel(perfil.perfil, t) === filtroPerfil;
     
     const isAtivo = !perfil.dataFim;
     const matchStatus = !filtroStatus || 
@@ -137,7 +146,7 @@ export default function PerfisList() {
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(perfisFiltrados, 20);
 
   if (loading) {
-    return <LoadingPage text="Carregando perfis..." />;
+    return <LoadingPage text={t('peopleProfiles.loading')} />;
   }
 
   if (error) {
@@ -148,9 +157,9 @@ export default function PerfisList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Perfis</h1>
+          <h1 className="text-3xl font-bold">{t('peopleProfiles.title')}</h1>
           <p className="text-muted-foreground">
-            Gerencie os perfis das pessoas
+            {t('peopleProfiles.subtitle')}
           </p>
         </div>
         <PageRefreshButton onClick={() => loadPerfis({ silent: true })} refreshing={refreshing} />
@@ -160,19 +169,19 @@ export default function PerfisList() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
-            Filtros
+            {t('peopleProfiles.filters.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Perfil</label>
+              <label className="text-sm font-medium">{t('peopleProfiles.filters.profile')}</label>
               <Select value={filtroPerfil || "all"} onValueChange={(value) => setFiltroPerfil(value === "all" ? "" : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os perfis" />
+                  <SelectValue placeholder={t('peopleProfiles.filters.allProfiles')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os perfis</SelectItem>
+                  <SelectItem value="all">{t('peopleProfiles.filters.allProfiles')}</SelectItem>
                   {perfisUnicos.map((perfil) => (
                     <SelectItem key={perfil} value={perfil}>
                       {perfil}
@@ -182,15 +191,15 @@ export default function PerfisList() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium">{t('peopleProfiles.filters.status')}</label>
               <Select value={filtroStatus || "all"} onValueChange={(value) => setFiltroStatus(value === "all" ? "" : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os status" />
+                  <SelectValue placeholder={t('peopleProfiles.filters.allStatuses')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="inativo">Inativo</SelectItem>
+                  <SelectItem value="all">{t('peopleProfiles.filters.allStatuses')}</SelectItem>
+                  <SelectItem value="ativo">{t('peopleProfiles.status.active')}</SelectItem>
+                  <SelectItem value="inativo">{t('peopleProfiles.status.inactive')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -200,26 +209,26 @@ export default function PerfisList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Perfis ({total})</CardTitle>
+          <CardTitle>{t('peopleProfiles.listTitle', { total })}</CardTitle>
         </CardHeader>
         <CardContent>
           {perfisFiltrados.length === 0 ? (
             <PageEmptyState
-              title={perfis.length === 0 ? 'Nenhum perfil cadastrado' : 'Nenhum perfil encontrado'}
+              title={perfis.length === 0 ? t('peopleProfiles.emptyNoneTitle') : t('peopleProfiles.emptyFilteredTitle')}
               description={perfis.length === 0
-                ? 'Ainda nao ha perfis vinculados para exibicao nesta area.'
-                : 'Os filtros atuais nao retornaram perfis. Ajuste perfil ou status para ampliar a busca.'}
+                ? t('peopleProfiles.emptyNoneDescription')
+                : t('peopleProfiles.emptyFilteredDescription')}
             />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Pessoa</TableHead>
-                  <TableHead>Perfil</TableHead>
-                  <TableHead>Data Início</TableHead>
-                  <TableHead>Data Fim</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('peopleProfiles.table.person')}</TableHead>
+                  <TableHead>{t('peopleProfiles.table.profile')}</TableHead>
+                  <TableHead>{t('peopleProfiles.table.startDate')}</TableHead>
+                  <TableHead>{t('peopleProfiles.table.endDate')}</TableHead>
+                  <TableHead>{t('peopleProfiles.table.status')}</TableHead>
+                  <TableHead className="text-right">{t('peopleProfiles.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -236,19 +245,19 @@ export default function PerfisList() {
                         </Link>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{getPerfilLabel(perfil.perfil)}</Badge>
+                        <Badge variant="secondary">{getPerfilLabel(perfil.perfil, t)}</Badge>
                       </TableCell>
                       <TableCell>
-                        {new Date(perfil.dataInicio).toLocaleDateString('pt-BR')}
+                        {formatDate(perfil.dataInicio)}
                       </TableCell>
                       <TableCell>
                         {perfil.dataFim 
-                          ? new Date(perfil.dataFim).toLocaleDateString('pt-BR')
+                          ? formatDate(perfil.dataFim)
                           : '-'}
                       </TableCell>
                       <TableCell>
                         <Badge variant={isAtivo ? 'default' : 'secondary'}>
-                          {isAtivo ? 'Ativo' : 'Inativo'}
+                          {isAtivo ? t('peopleProfiles.status.active') : t('peopleProfiles.status.inactive')}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -258,7 +267,7 @@ export default function PerfisList() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEncerrarPerfil(perfil.id)}
-                              title="Encerrar perfil"
+                              title={t('peopleProfiles.endTitle')}
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -267,7 +276,7 @@ export default function PerfisList() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(perfil.id)}
-                            title="Excluir perfil"
+                            title={t('peopleProfiles.deleteTitle')}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -305,4 +314,3 @@ export default function PerfisList() {
     </div>
   );
 }
-

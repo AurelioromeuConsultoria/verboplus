@@ -25,9 +25,19 @@ export const comunicacaoSegmentosApi = {
   update: (id, payload) => api.put(`/comunicacaosegmentos/${id}`, payload),
 };
 
+export const comunicacaoPreferenciasApi = {
+  getByPessoaId: (pessoaId) => api.get(`/comunicacaopreferencias/pessoa/${pessoaId}`),
+  update: (pessoaId, canal, payload) => api.put(`/comunicacaopreferencias/pessoa/${pessoaId}/canal/${canal}`, payload),
+};
+
 export const comunicacaoEntregasApi = {
   getPaged: (params) => api.get('/comunicacaoentregas/paged', { params }),
   processarPendentes: (limit = 50) => api.post('/comunicacaoentregas/processar', null, { params: { limit } }),
+  reprocessar: (id) => api.post(`/comunicacaoentregas/reprocessar/${id}`),
+};
+
+export const comunicacaoAutomacoesApi = {
+  getHistorico: (params) => api.get('/comunicacaoautomacoes/historico', { params }),
 };
 
 export const comunicacaoDiagnosticoApi = {

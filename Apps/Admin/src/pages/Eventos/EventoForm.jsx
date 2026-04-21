@@ -15,43 +15,16 @@ import { eventosApi, eventosRecorrenciasApi, normalizeEvento } from '@/lib/api';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
-const TIPOS_EVENTO = [
-  { value: 1, label: 'Evento' },
-  { value: 2, label: 'Culto' },
-  { value: 3, label: 'Reunião' },
-  { value: 4, label: 'Outro' },
-];
-
-const DIAS_SEMANA = [
-  { value: 0, label: 'Domingo' },
-  { value: 1, label: 'Segunda-feira' },
-  { value: 2, label: 'Terça-feira' },
-  { value: 3, label: 'Quarta-feira' },
-  { value: 4, label: 'Quinta-feira' },
-  { value: 5, label: 'Sexta-feira' },
-  { value: 6, label: 'Sábado' },
-];
-
-const PERIODICIDADE = [
-  { value: 1, label: 'Semanal' },
-  { value: 2, label: 'Quinzenal' },
-  { value: 3, label: 'Mensal' },
-];
-
-/** Colunas fixas: nome, whatsApp, email, observacoes. Outros campos ficam em DadosInscricao. */
+const TIPOS_EVENTO = [1, 2, 3, 4];
+const DIAS_SEMANA = [0, 1, 2, 3, 4, 5, 6];
+const PERIODICIDADE = [1, 2, 3];
 const CAMPOS_FORMULARIO_PADRAO = [
-  { slug: 'nome', label: 'Nome', tipo: 'texto', obrigatorio: true },
-  { slug: 'whatsApp', label: 'WhatsApp', tipo: 'texto', obrigatorio: true },
-  { slug: 'email', label: 'Email', tipo: 'texto', obrigatorio: false },
-  { slug: 'observacoes', label: 'Observações', tipo: 'texto', obrigatorio: false },
+  { slug: 'nome', labelKey: 'name', tipo: 'texto', obrigatorio: true },
+  { slug: 'whatsApp', labelKey: 'whatsapp', tipo: 'texto', obrigatorio: true },
+  { slug: 'email', labelKey: 'email', tipo: 'texto', obrigatorio: false },
+  { slug: 'observacoes', labelKey: 'notes', tipo: 'texto', obrigatorio: false },
 ];
-
-const TIPOS_CAMPO = [
-  { value: 'texto', label: 'Texto' },
-  { value: 'numero', label: 'Número' },
-  { value: 'email', label: 'Email' },
-  { value: 'tel', label: 'Telefone' },
-];
+const TIPOS_CAMPO = ['texto', 'numero', 'email', 'tel'];
 
 export default function EventoForm() {
   const navigate = useNavigate();
@@ -90,6 +63,30 @@ export default function EventoForm() {
     ativo: true,
   });
 
+  const tiposEvento = TIPOS_EVENTO.map((value) => ({
+    value,
+    label: t(`events.type.${value === 1 ? 'event' : value === 2 ? 'service' : value === 3 ? 'meeting' : 'other'}`),
+  }));
+  const diasSemana = DIAS_SEMANA.map((value) => ({
+    value,
+    label: t(`events.form.recurrence.days.${value}`),
+  }));
+  const periodicidades = PERIODICIDADE.map((value) => ({
+    value,
+    label: t(`events.form.recurrence.frequency.${value === 1 ? 'weekly' : value === 2 ? 'biweekly' : 'monthly'}`),
+  }));
+  const tiposCampo = TIPOS_CAMPO.map((value) => ({
+    value,
+    label: t(`events.form.registration.fieldTypes.${value}`),
+  }));
+
+  const getCamposPadrao = () => CAMPOS_FORMULARIO_PADRAO.map((c) => ({
+    slug: c.slug,
+    label: t(`events.form.registration.defaultFields.${c.labelKey}`),
+    tipo: c.tipo,
+    obrigatorio: c.obrigatorio,
+  }));
+
   // Considera data vazia se for null/undefined ou data default do backend (ex: 0001-01-01)
   const toDateTimeLocal = (value) => {
     if (!value) return '';
@@ -106,7 +103,7 @@ export default function EventoForm() {
       const res = await eventosApi.getById(id);
       const e = normalizeEvento(res.data);
       if (!e) {
-        setError('Evento não encontrado');
+        setError(t('events.form.notFound'));
         return;
       }
       setFormData({
@@ -122,7 +119,7 @@ export default function EventoForm() {
         aceitaInscricoes: e.aceitaInscricoes ?? false,
       });
       // Campos do formulário de inscrição (JSON)
-      let campos = CAMPOS_FORMULARIO_PADRAO;
+      let campos = getCamposPadrao();
       if (e.configuracaoFormularioInscricao && typeof e.configuracaoFormularioInscricao === 'string') {
         try {
           const parsed = JSON.parse(e.configuracaoFormularioInscricao);
@@ -136,7 +133,7 @@ export default function EventoForm() {
         obrigatorio: Boolean(c.obrigatorio),
       })));
     } catch (err) {
-      setError('Erro ao carregar evento');
+      setError(t('events.form.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -173,7 +170,7 @@ export default function EventoForm() {
   };
 
   const usarCamposPadrao = () => {
-    setCamposFormulario(CAMPOS_FORMULARIO_PADRAO.map((c) => ({ ...c })));
+    setCamposFormulario(getCamposPadrao());
   };
 
   const addCampoFormulario = () => {
@@ -250,26 +247,26 @@ export default function EventoForm() {
     try {
       if (editingRecorrenciaId) {
         await eventosRecorrenciasApi.update(id, editingRecorrenciaId, base);
-        toast.success('Recorrência atualizada.');
+        toast.success(t('events.form.recurrence.updated'));
       } else {
         await eventosRecorrenciasApi.create(id, { ...base, eventoId: Number(id) });
-        toast.success('Recorrência adicionada.');
+        toast.success(t('events.form.recurrence.created'));
       }
       cancelRecorrenciaForm();
       await loadRecorrencias();
     } catch (err) {
-      toast.error(err.response?.data || 'Erro ao salvar recorrência');
+      toast.error(err.response?.data || t('events.form.recurrence.errorSave'));
     }
   };
 
   const deleteRecorrencia = async (recId) => {
-    if (!window.confirm('Excluir esta recorrência?')) return;
+    if (!window.confirm(t('events.form.recurrence.confirmDelete'))) return;
     try {
       await eventosRecorrenciasApi.delete(id, recId);
-      toast.success('Recorrência excluída.');
+      toast.success(t('events.form.recurrence.deleted'));
       await loadRecorrencias();
     } catch (err) {
-      toast.error(err.response?.data || 'Erro ao excluir');
+      toast.error(err.response?.data || t('events.form.recurrence.errorDelete'));
     }
   };
 
@@ -321,10 +318,10 @@ export default function EventoForm() {
       // Backend espera o body direto (não dentro de "dto"); DataFim obrigatório → usa dataInicio quando vazio
       if (isEditing) await eventosApi.update(id, payload);
       else await eventosApi.create(payload);
-      toast.success(isEditing ? 'Evento atualizado com sucesso!' : 'Evento criado com sucesso!');
+      toast.success(isEditing ? t('events.form.updated') : t('events.form.created'));
       navigate('/eventos');
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Erro ao salvar evento';
+      const errorMessage = err.response?.data?.message || t('events.form.errorSave');
       toast.error(errorMessage);
       console.error(err);
     } finally {
@@ -332,7 +329,7 @@ export default function EventoForm() {
     }
   };
 
-  if (loading && isEditing) return <LoadingPage text="Carregando evento..." />;
+  if (loading && isEditing) return <LoadingPage text={t('events.form.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -340,52 +337,52 @@ export default function EventoForm() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" asChild>
           <Link to="/eventos">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('actions.back')}
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Evento' : 'Novo Evento'}</h1>
-          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações do evento' : 'Cadastre um novo evento'}</p>
+          <h1 className="text-3xl font-bold">{isEditing ? t('events.edit') : t('events.new')}</h1>
+          <p className="text-muted-foreground">{isEditing ? t('events.form.editSubtitle') : t('events.form.createSubtitle')}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isEditing ? 'Editar Evento' : 'Cadastrar Evento'}</CardTitle>
+          <CardTitle>{isEditing ? t('events.edit') : t('events.create')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="titulo">Título *</Label>
-                <Input id="titulo" name="titulo" value={formData.titulo} onChange={handleChange} placeholder="Título do evento" required />
+                <Label htmlFor="titulo">{t('events.fields.title')} *</Label>
+                <Input id="titulo" name="titulo" value={formData.titulo} onChange={handleChange} placeholder={t('events.form.placeholders.title')} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="url">URL</Label>
+                <Label htmlFor="url">{t('events.fields.url')}</Label>
                 <Input 
                   id="url" 
                   name="url" 
                   type="text" 
                   value={formData.url} 
                   onChange={handleChange} 
-                  placeholder="exemplo.com ou https://exemplo.com" 
+                  placeholder={t('events.form.placeholders.url')} 
                 />
                 {formData.url && !formData.url.match(/^https?:\/\//i) && (
                   <p className="text-xs text-muted-foreground">
-                    Será adicionado https:// automaticamente
+                    {t('events.form.urlHint')}
                   </p>
                 )}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição</Label>
-              <Textarea id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder="Descrição do evento" rows={4} />
+              <Label htmlFor="descricao">{t('events.fields.description')}</Label>
+              <Textarea id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder={t('events.form.placeholders.description')} rows={4} />
             </div>
 
             <div className="space-y-2">
               <ImageUpload
-                label="Imagem de Destaque"
+                label={t('events.form.featuredImage')}
                 value={formData.imagemDestaque}
                 onChange={(url) => setFormData((prev) => ({ ...prev, imagemDestaque: url }))}
                 accept="image/*"
@@ -395,24 +392,24 @@ export default function EventoForm() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="dataInicio">Data e Hora de Início *</Label>
+                <Label htmlFor="dataInicio">{t('events.fields.startDate')} *</Label>
                 <Input id="dataInicio" name="dataInicio" type="datetime-local" value={formData.dataInicio} onChange={handleChange} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dataFim">Data e Hora de Fim</Label>
+                <Label htmlFor="dataFim">{t('events.fields.endDate')}</Label>
                 <Input id="dataFim" name="dataFim" type="datetime-local" value={formData.dataFim} onChange={handleChange} />
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label>Tipo de evento</Label>
+                <Label>{t('events.fields.type')}</Label>
                 <Select value={String(formData.tipo)} onValueChange={(v) => setFormData((p) => ({ ...p, tipo: Number(v) }))}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {TIPOS_EVENTO.map((opt) => (
+                    {tiposEvento.map((opt) => (
                       <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -420,15 +417,15 @@ export default function EventoForm() {
               </div>
               <div className="flex items-center gap-2 pt-8">
                 <input type="checkbox" id="ehRecorrente" name="ehRecorrente" checked={formData.ehRecorrente} onChange={handleChange} className="rounded border-input" />
-                <Label htmlFor="ehRecorrente" className="cursor-pointer">É recorrente (ex.: culto dominical)</Label>
+                <Label htmlFor="ehRecorrente" className="cursor-pointer">{t('events.form.recurringToggle')}</Label>
               </div>
               <div className="flex items-center gap-2 pt-8">
                 <input type="checkbox" id="ativo" name="ativo" checked={formData.ativo} onChange={handleChange} className="rounded border-input" />
-                <Label htmlFor="ativo" className="cursor-pointer">Ativo</Label>
+                <Label htmlFor="ativo" className="cursor-pointer">{t('events.form.activeToggle')}</Label>
               </div>
               <div className="flex items-center gap-2 pt-8">
                 <input type="checkbox" id="aceitaInscricoes" name="aceitaInscricoes" checked={formData.aceitaInscricoes} onChange={handleChange} className="rounded border-input" />
-                <Label htmlFor="aceitaInscricoes" className="cursor-pointer">Aceitar inscrições (exibir formulário no portal)</Label>
+                <Label htmlFor="aceitaInscricoes" className="cursor-pointer">{t('events.form.acceptRegistrations')}</Label>
               </div>
             </div>
 
@@ -436,32 +433,32 @@ export default function EventoForm() {
               <div className="rounded-lg border p-4 space-y-3 bg-muted/20">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h4 className="font-medium">Campos do formulário de inscrição</h4>
+                    <h4 className="font-medium">{t('events.form.registration.title')}</h4>
                     <p className="text-sm text-muted-foreground">
-                      Colunas fixas: Nome, WhatsApp, Email, Observações. Adicione outros campos (ex.: RG, CPF) ou use o padrão.
+                      {t('events.form.registration.description')}
                     </p>
                   </div>
                   <div className="flex gap-2">
                     <Button type="button" variant="outline" size="sm" onClick={usarCamposPadrao}>
-                      Usar campos padrão
+                      {t('events.form.registration.useDefaults')}
                     </Button>
                     <Button type="button" variant="outline" size="sm" onClick={addCampoFormulario}>
-                      <PlusCircle className="h-4 w-4 mr-1" /> Adicionar campo
+                      <PlusCircle className="h-4 w-4 mr-1" /> {t('events.form.registration.addField')}
                     </Button>
                   </div>
                 </div>
                 {camposFormulario.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhum campo definido. Clique em &quot;Usar campos padrão&quot; ou &quot;Adicionar campo&quot;.</p>
+                  <p className="text-sm text-muted-foreground">{t('events.form.registration.empty')}</p>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-10" />
-                        <TableHead>Slug (identificador)</TableHead>
-                        <TableHead>Rótulo</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead className="w-24">Obrigatório</TableHead>
-                        <TableHead className="w-20">Ações</TableHead>
+                        <TableHead>{t('events.form.registration.table.slug')}</TableHead>
+                        <TableHead>{t('events.form.registration.table.label')}</TableHead>
+                        <TableHead>{t('events.form.registration.table.type')}</TableHead>
+                        <TableHead className="w-24">{t('events.form.registration.table.required')}</TableHead>
+                        <TableHead className="w-20">{t('events.form.registration.table.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -469,10 +466,10 @@ export default function EventoForm() {
                         <TableRow key={idx}>
                           <TableCell className="p-1">
                             <div className="flex flex-col gap-0">
-                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveCampoFormulario(idx, -1)} disabled={idx === 0} title="Subir">
+                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveCampoFormulario(idx, -1)} disabled={idx === 0} title={t('events.form.registration.moveUp')}>
                                 <ChevronUp className="h-4 w-4" />
                               </Button>
-                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveCampoFormulario(idx, 1)} disabled={idx === camposFormulario.length - 1} title="Descer">
+                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveCampoFormulario(idx, 1)} disabled={idx === camposFormulario.length - 1} title={t('events.form.registration.moveDown')}>
                                 <ChevronDown className="h-4 w-4" />
                               </Button>
                             </div>
@@ -480,7 +477,7 @@ export default function EventoForm() {
                           <TableCell>
                             <Input
                               className="h-8 font-mono text-sm"
-                              placeholder="ex: nome, rg"
+                              placeholder={t('events.form.registration.slugPlaceholder')}
                               value={campo.slug}
                               onChange={(e) => updateCampoFormulario(idx, 'slug', e.target.value)}
                             />
@@ -488,7 +485,7 @@ export default function EventoForm() {
                           <TableCell>
                             <Input
                               className="h-8"
-                              placeholder="Ex.: Nome completo"
+                              placeholder={t('events.form.registration.labelPlaceholder')}
                               value={campo.label}
                               onChange={(e) => updateCampoFormulario(idx, 'label', e.target.value)}
                             />
@@ -497,8 +494,8 @@ export default function EventoForm() {
                             <Select value={campo.tipo} onValueChange={(v) => updateCampoFormulario(idx, 'tipo', v)}>
                               <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                {TIPOS_CAMPO.map((t) => (
-                                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                {tiposCampo.map((fieldType) => (
+                                  <SelectItem key={fieldType.value} value={fieldType.value}>{fieldType.label}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
@@ -512,7 +509,7 @@ export default function EventoForm() {
                             />
                           </TableCell>
                           <TableCell>
-                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeCampoFormulario(idx)} title="Remover">
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeCampoFormulario(idx)} title={t('events.form.registration.remove')}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
@@ -526,7 +523,7 @@ export default function EventoForm() {
 
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={loading}>
-                <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : (isEditing ? 'Atualizar' : 'Cadastrar')}
+                <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : (isEditing ? t('actions.update') : t('actions.create'))}
               </Button>
               <Button type="button" variant="outline" asChild>
                 <Link to="/eventos">{t('actions.cancel')}</Link>
@@ -539,62 +536,62 @@ export default function EventoForm() {
       {isEditing && formData.ehRecorrente && (
         <Card>
           <CardHeader>
-            <CardTitle>Recorrências</CardTitle>
+            <CardTitle>{t('events.form.recurrence.sectionTitle')}</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Defina os dias e horários em que este evento se repete (ex.: todo domingo às 10h). Depois use &quot;Gerar Ocorrências&quot; em Voluntariado → Escalas.
+              {t('events.form.recurrence.sectionDescription')}
             </p>
             <div className="pt-2">
               <Button type="button" variant="outline" size="sm" onClick={openNovaRecorrencia}>
-                <PlusCircle className="h-4 w-4 mr-2" /> Nova recorrência
+                <PlusCircle className="h-4 w-4 mr-2" /> {t('events.form.recurrence.new')}
               </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {showRecorrenciaForm && (
               <div className="rounded-lg border p-4 space-y-4 bg-muted/30">
-                <h4 className="font-medium">{editingRecorrenciaId ? 'Editar recorrência' : 'Nova recorrência'}</h4>
+                <h4 className="font-medium">{editingRecorrenciaId ? t('events.form.recurrence.editTitle') : t('events.form.recurrence.newTitle')}</h4>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-2">
-                    <Label>Dia da semana</Label>
+                    <Label>{t('events.form.recurrence.dayOfWeek')}</Label>
                     <Select value={String(recorrenciaForm.diaSemana)} onValueChange={(v) => setRecorrenciaForm((p) => ({ ...p, diaSemana: Number(v) }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {DIAS_SEMANA.map((d) => (
+                        {diasSemana.map((d) => (
                           <SelectItem key={d.value} value={String(d.value)}>{d.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Hora início</Label>
+                    <Label>{t('events.form.recurrence.startTime')}</Label>
                     <Input type="time" value={recorrenciaForm.horaInicio} onChange={(e) => setRecorrenciaForm((p) => ({ ...p, horaInicio: e.target.value }))} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Hora fim (opcional)</Label>
+                    <Label>{t('events.form.recurrence.endTime')}</Label>
                     <Input type="time" value={recorrenciaForm.horaFim} onChange={(e) => setRecorrenciaForm((p) => ({ ...p, horaFim: e.target.value }))} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Periodicidade</Label>
+                    <Label>{t('events.form.recurrence.frequencyLabel')}</Label>
                     <Select value={String(recorrenciaForm.periodicidade)} onValueChange={(v) => setRecorrenciaForm((p) => ({ ...p, periodicidade: Number(v) }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {PERIODICIDADE.map((p) => (
-                          <SelectItem key={p.value} value={String(p.value)}>{p.label}</SelectItem>
+                        {periodicidades.map((frequency) => (
+                          <SelectItem key={frequency.value} value={String(frequency.value)}>{frequency.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Vigência desde</Label>
+                    <Label>{t('events.form.recurrence.validFrom')}</Label>
                     <Input type="date" value={recorrenciaForm.dataInicioVigencia} onChange={(e) => setRecorrenciaForm((p) => ({ ...p, dataInicioVigencia: e.target.value }))} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Vigência até (opcional)</Label>
+                    <Label>{t('events.form.recurrence.validUntil')}</Label>
                     <Input type="date" value={recorrenciaForm.dataFimVigencia} onChange={(e) => setRecorrenciaForm((p) => ({ ...p, dataFimVigencia: e.target.value }))} />
                   </div>
                   <div className="flex items-center gap-2 pt-8">
                     <input type="checkbox" checked={recorrenciaForm.ativo} onChange={(e) => setRecorrenciaForm((p) => ({ ...p, ativo: e.target.checked }))} className="rounded border-input" />
-                    <Label>Ativo</Label>
+                    <Label>{t('events.form.activeToggle')}</Label>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -605,39 +602,39 @@ export default function EventoForm() {
             )}
 
             {loadingRecorrencias ? (
-              <p className="text-sm text-muted-foreground">Carregando recorrências...</p>
+              <p className="text-sm text-muted-foreground">{t('events.form.recurrence.loading')}</p>
             ) : recorrencias.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma recorrência cadastrada. Clique em &quot;Nova recorrência&quot; para definir dias e horários.</p>
+              <p className="text-sm text-muted-foreground">{t('events.form.recurrence.empty')}</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Dia</TableHead>
-                    <TableHead>Hora início</TableHead>
-                    <TableHead>Hora fim</TableHead>
-                    <TableHead>Periodicidade</TableHead>
-                    <TableHead>Vigência</TableHead>
-                    <TableHead>Ativo</TableHead>
-                    <TableHead className="w-[100px]">Ações</TableHead>
+                    <TableHead>{t('events.form.recurrence.table.day')}</TableHead>
+                    <TableHead>{t('events.form.recurrence.table.startTime')}</TableHead>
+                    <TableHead>{t('events.form.recurrence.table.endTime')}</TableHead>
+                    <TableHead>{t('events.form.recurrence.table.frequency')}</TableHead>
+                    <TableHead>{t('events.form.recurrence.table.validity')}</TableHead>
+                    <TableHead>{t('events.form.recurrence.table.active')}</TableHead>
+                    <TableHead className="w-[100px]">{t('events.form.recurrence.table.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {recorrencias.map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell>{r.diaSemanaDescricao ?? DIAS_SEMANA.find((d) => d.value === r.diaSemana)?.label}</TableCell>
+                      <TableCell>{r.diaSemanaDescricao ?? diasSemana.find((d) => d.value === r.diaSemana)?.label}</TableCell>
                       <TableCell>{r.horaInicio}</TableCell>
-                      <TableCell>{r.horaFim || '—'}</TableCell>
-                      <TableCell>{r.periodicidadeDescricao ?? PERIODICIDADE.find((p) => p.value === r.periodicidade)?.label}</TableCell>
+                      <TableCell>{r.horaFim || t('events.form.recurrence.noEndTime')}</TableCell>
+                      <TableCell>{r.periodicidadeDescricao ?? periodicidades.find((p) => p.value === r.periodicidade)?.label}</TableCell>
                       <TableCell>
-                        {r.dataInicioVigencia?.slice(0, 10)} {r.dataFimVigencia ? `até ${r.dataFimVigencia.slice(0, 10)}` : '(sem fim)'}
+                        {r.dataInicioVigencia?.slice(0, 10)} {r.dataFimVigencia ? t('events.form.recurrence.validityUntil', { date: r.dataFimVigencia.slice(0, 10) }) : t('events.form.recurrence.noEndDate')}
                       </TableCell>
-                      <TableCell>{r.ativo ? 'Sim' : 'Não'}</TableCell>
+                      <TableCell>{r.ativo ? t('events.form.recurrence.yes') : t('events.form.recurrence.no')}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button type="button" variant="ghost" size="icon" onClick={() => openEditRecorrencia(r)} title="Editar">
+                          <Button type="button" variant="ghost" size="icon" onClick={() => openEditRecorrencia(r)} title={t('actions.edit')}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button type="button" variant="ghost" size="icon" onClick={() => deleteRecorrencia(r.id)} title="Excluir">
+                          <Button type="button" variant="ghost" size="icon" onClick={() => deleteRecorrencia(r.id)} title={t('events.deleteConfirm')}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
@@ -653,5 +650,4 @@ export default function EventoForm() {
     </div>
   );
 }
-
 

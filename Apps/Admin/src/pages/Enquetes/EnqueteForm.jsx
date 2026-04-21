@@ -11,8 +11,10 @@ import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { enquetesApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function EnqueteForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
@@ -50,9 +52,9 @@ export default function EnqueteForm() {
           : [{ texto: '', ordem: 0 }],
       });
     } catch (err) {
-      setError('Erro ao carregar enquete');
+      setError(t('pollsManagement.form.errorLoad'));
       console.error(err);
-      toast.error('Erro ao carregar enquete');
+      toast.error(t('pollsManagement.form.errorLoad'));
     } finally {
       setLoading(false);
     }
@@ -86,7 +88,7 @@ export default function EnqueteForm() {
 
   const removeOpcao = (index) => {
     if (formData.opcoes.length <= 1) {
-      toast.error('A enquete deve ter pelo menos uma opção');
+      toast.error(t('pollsManagement.form.validation.minOneOption'));
       return;
     }
     setFormData((prev) => ({
@@ -109,18 +111,18 @@ export default function EnqueteForm() {
 
     // Validações
     if (!formData.titulo.trim()) {
-      toast.error('O título é obrigatório');
+      toast.error(t('pollsManagement.form.validation.titleRequired'));
       return;
     }
 
     if (formData.opcoes.length < 2) {
-      toast.error('A enquete deve ter pelo menos 2 opções');
+      toast.error(t('pollsManagement.form.validation.minTwoOptions'));
       return;
     }
 
     const opcoesValidas = formData.opcoes.filter((op) => op.texto.trim());
     if (opcoesValidas.length < 2) {
-      toast.error('Todas as opções devem ter texto');
+      toast.error(t('pollsManagement.form.validation.optionsTextRequired'));
       return;
     }
 
@@ -143,14 +145,14 @@ export default function EnqueteForm() {
 
       if (isEditing) {
         await enquetesApi.update(id, payload);
-        toast.success('Enquete atualizada com sucesso!');
+        toast.success(t('pollsManagement.form.updateSuccess'));
       } else {
         await enquetesApi.create(payload);
-        toast.success('Enquete criada com sucesso!');
+        toast.success(t('pollsManagement.form.createSuccess'));
       }
       navigate('/enquetes');
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Erro ao salvar enquete';
+      const errorMessage = err.response?.data?.message || t('pollsManagement.form.saveError');
       toast.error(errorMessage);
       console.error(err);
     } finally {
@@ -158,7 +160,7 @@ export default function EnqueteForm() {
     }
   };
 
-  if (loading && isEditing) return <LoadingPage text="Carregando enquete..." />;
+  if (loading && isEditing) return <LoadingPage text={t('pollsManagement.form.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -166,15 +168,15 @@ export default function EnqueteForm() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" asChild>
           <Link to="/enquetes">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('actions.back')}
           </Link>
         </Button>
         <div>
           <h1 className="text-3xl font-bold text-foreground">
-            {isEditing ? 'Editar Enquete' : 'Nova Enquete'}
+            {isEditing ? t('pollsManagement.form.editPageTitle') : t('pollsManagement.form.createPageTitle')}
           </h1>
           <p className="text-muted-foreground">
-            {isEditing ? 'Atualize as informações da enquete' : 'Cadastre uma nova enquete'}
+            {isEditing ? t('pollsManagement.form.editSubtitle') : t('pollsManagement.form.createSubtitle')}
           </p>
         </div>
       </div>
@@ -182,36 +184,36 @@ export default function EnqueteForm() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Informações Básicas</CardTitle>
+            <CardTitle>{t('pollsManagement.form.sections.basic')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="titulo">Título *</Label>
+              <Label htmlFor="titulo">{t('pollsManagement.table.title')} *</Label>
               <Input
                 id="titulo"
                 name="titulo"
                 value={formData.titulo}
                 onChange={handleChange}
-                placeholder="Ex: Qual sua opinião sobre..."
+                placeholder={t('pollsManagement.form.placeholders.title')}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição</Label>
+              <Label htmlFor="descricao">{t('pollsManagement.table.description')}</Label>
               <Textarea
                 id="descricao"
                 name="descricao"
                 value={formData.descricao}
                 onChange={handleChange}
-                placeholder="Descrição da enquete (opcional)"
+                placeholder={t('pollsManagement.form.placeholders.description')}
                 rows={3}
               />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="dataInicio">Data e Hora de Início *</Label>
+                <Label htmlFor="dataInicio">{t('pollsManagement.form.fields.startDate')} *</Label>
                 <Input
                   id="dataInicio"
                   name="dataInicio"
@@ -222,7 +224,7 @@ export default function EnqueteForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dataFim">Data e Hora de Fim *</Label>
+                <Label htmlFor="dataFim">{t('pollsManagement.form.fields.endDate')} *</Label>
                 <Input
                   id="dataFim"
                   name="dataFim"
@@ -238,7 +240,7 @@ export default function EnqueteForm() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Opções da Enquete</CardTitle>
+            <CardTitle>{t('pollsManagement.form.sections.options')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {formData.opcoes.map((opcao, index) => (
@@ -247,11 +249,11 @@ export default function EnqueteForm() {
                   <GripVertical className="h-5 w-5" />
                 </div>
                 <div className="flex-1 space-y-2">
-                  <Label>Opção {index + 1}</Label>
+                  <Label>{t('pollsManagement.form.optionLabel', { index: index + 1 })}</Label>
                   <Input
                     value={opcao.texto}
                     onChange={(e) => updateOpcao(index, 'texto', e.target.value)}
-                    placeholder={`Digite a opção ${index + 1}`}
+                    placeholder={t('pollsManagement.form.optionPlaceholder', { index: index + 1 })}
                     required
                   />
                 </div>
@@ -270,24 +272,24 @@ export default function EnqueteForm() {
             ))}
             <Button type="button" variant="outline" onClick={addOpcao} className="w-full">
               <Plus className="h-4 w-4 mr-2" />
-              Adicionar Opção
+              {t('pollsManagement.form.addOption')}
             </Button>
             <p className="text-sm text-muted-foreground">
-              A enquete deve ter pelo menos 2 opções
+              {t('pollsManagement.form.minOptionsHint')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Configurações</CardTitle>
+            <CardTitle>{t('pollsManagement.form.sections.settings')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="ativo">Enquete Ativa</Label>
+                <Label htmlFor="ativo">{t('pollsManagement.form.settings.active')}</Label>
                 <p className="text-sm text-muted-foreground">
-                  Enquetes inativas não aparecerão no portal
+                  {t('pollsManagement.form.settings.activeHint')}
                 </p>
               </div>
               <Switch
@@ -299,9 +301,9 @@ export default function EnqueteForm() {
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="permitirMultiplaEscolha">Permitir Múltipla Escolha</Label>
+                <Label htmlFor="permitirMultiplaEscolha">{t('pollsManagement.form.settings.multipleChoice')}</Label>
                 <p className="text-sm text-muted-foreground">
-                  Permite que o usuário vote em mais de uma opção
+                  {t('pollsManagement.form.settings.multipleChoiceHint')}
                 </p>
               </div>
               <Switch
@@ -313,9 +315,9 @@ export default function EnqueteForm() {
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="permitirVotoAnonimo">Permitir Voto Anônimo</Label>
+                <Label htmlFor="permitirVotoAnonimo">{t('pollsManagement.form.settings.anonymousVote')}</Label>
                 <p className="text-sm text-muted-foreground">
-                  Permite que usuários não logados votem
+                  {t('pollsManagement.form.settings.anonymousVoteHint')}
                 </p>
               </div>
               <Switch
@@ -330,10 +332,10 @@ export default function EnqueteForm() {
         <div className="flex items-center space-x-4">
           <Button type="submit" disabled={loading}>
             <Save className="h-4 w-4 mr-2" />
-            {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Criar')}
+            {loading ? t('actions.saving') : (isEditing ? t('actions.update') : t('actions.create'))}
           </Button>
           <Button type="button" variant="outline" asChild>
-            <Link to="/enquetes">Cancelar</Link>
+            <Link to="/enquetes">{t('actions.cancel')}</Link>
           </Button>
         </div>
       </form>

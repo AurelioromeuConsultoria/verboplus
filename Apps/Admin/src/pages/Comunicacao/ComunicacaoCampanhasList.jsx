@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Plus, Radio, Send, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,21 +10,23 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { comunicacaoCampanhasApi } from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatDateTime } from '@/lib/formatters';
 import { toast } from 'sonner';
 
-const getStatusLabel = (status) => {
+const getStatusLabel = (status, t) => {
   switch (Number(status)) {
-    case 1: return 'Rascunho';
-    case 2: return 'Agendada';
-    case 3: return 'Processando';
-    case 4: return 'Concluída';
-    case 5: return 'Com falhas';
-    case 6: return 'Cancelada';
-    default: return `Status ${status}`;
+    case 1: return t('communicationCampaigns.status.draft');
+    case 2: return t('communicationCampaigns.status.scheduled');
+    case 3: return t('communicationCampaigns.status.processing');
+    case 4: return t('communicationCampaigns.status.completed');
+    case 5: return t('communicationCampaigns.status.withFailures');
+    case 6: return t('communicationCampaigns.status.canceled');
+    default: return t('communicationCampaigns.status.fallback', { status });
   }
 };
 
 export default function ComunicacaoCampanhasList() {
+  const { t } = useTranslation();
   const [campanhas, setCampanhas] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -44,58 +47,58 @@ export default function ComunicacaoCampanhasList() {
       setCampanhas(campanhasResponse.data?.items || []);
       setStats(statsResponse.data || null);
     } catch (err) {
-      const msg = getApiErrorMessage(err, 'Erro ao carregar campanhas de comunicação');
+      const msg = getApiErrorMessage(err, t('communicationCampaigns.errorLoad'));
       setError(msg);
       toast.error(msg);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  if (loading) return <LoadingPage text="Carregando campanhas de comunicação..." />;
+  if (loading) return <LoadingPage text={t('communicationCampaigns.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Campanhas de Comunicação</h1>
-          <p className="text-muted-foreground mt-1">Gerencie campanhas omnichannel e acompanhe o status do núcleo de entregas.</p>
+          <h1 className="text-3xl font-bold text-foreground">{t('communicationCampaigns.title')}</h1>
+          <p className="text-muted-foreground mt-1">{t('communicationCampaigns.subtitle')}</p>
         </div>
 
         <div className="flex items-center gap-2">
           <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
           <Button variant="outline" asChild>
-            <Link to="/comunicacao/templates">Templates</Link>
+            <Link to="/comunicacao/templates">{t('communicationCampaigns.actions.templates')}</Link>
           </Button>
           <Button asChild>
             <Link to="/comunicacao/campanhas/nova">
               <Plus className="w-4 h-4 mr-2" />
-              Nova Campanha
+              {t('communicationCampaigns.actions.new')}
             </Link>
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">Total</div><div className="text-2xl font-bold">{stats?.totalCampanhas ?? 0}</div></CardContent></Card>
-        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">Rascunhos</div><div className="text-2xl font-bold">{stats?.campanhasRascunho ?? 0}</div></CardContent></Card>
-        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">Pendentes</div><div className="text-2xl font-bold">{stats?.entregasPendentes ?? 0}</div></CardContent></Card>
-        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">Falhas</div><div className="text-2xl font-bold">{stats?.entregasComFalha ?? 0}</div></CardContent></Card>
+        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">{t('communicationCampaigns.stats.total')}</div><div className="text-2xl font-bold">{stats?.totalCampanhas ?? 0}</div></CardContent></Card>
+        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">{t('communicationCampaigns.stats.drafts')}</div><div className="text-2xl font-bold">{stats?.campanhasRascunho ?? 0}</div></CardContent></Card>
+        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">{t('communicationCampaigns.stats.pending')}</div><div className="text-2xl font-bold">{stats?.entregasPendentes ?? 0}</div></CardContent></Card>
+        <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">{t('communicationCampaigns.stats.failures')}</div><div className="text-2xl font-bold">{stats?.entregasComFalha ?? 0}</div></CardContent></Card>
       </div>
 
       {campanhas.length === 0 ? (
         <PageEmptyState
-          title="Nenhuma campanha cadastrada"
-          description="Comece criando a primeira campanha do módulo de comunicação."
+          title={t('communicationCampaigns.emptyTitle')}
+          description={t('communicationCampaigns.emptyDescription')}
           action={(
             <Button asChild>
-              <Link to="/comunicacao/campanhas/nova">Criar campanha</Link>
+              <Link to="/comunicacao/campanhas/nova">{t('communicationCampaigns.actions.createFirst')}</Link>
             </Button>
           )}
         />
@@ -111,27 +114,27 @@ export default function ComunicacaoCampanhasList() {
                     </Link>
                     <p className="text-sm text-muted-foreground">{campanha.objetivo} • {campanha.publicoAlvo}</p>
                   </div>
-                  <Badge variant="secondary">{getStatusLabel(campanha.status)}</Badge>
+                  <Badge variant="secondary">{getStatusLabel(campanha.status, t)}</Badge>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 text-sm">
                   <div className="rounded-lg border border-border p-3">
-                    <div className="flex items-center gap-2 text-muted-foreground"><Radio className="w-4 h-4" /> Entregas</div>
+                    <div className="flex items-center gap-2 text-muted-foreground"><Radio className="w-4 h-4" /> {t('communicationCampaigns.cards.deliveries')}</div>
                     <div className="text-xl font-semibold mt-1">{campanha.totalEntregas}</div>
                   </div>
                   <div className="rounded-lg border border-border p-3">
-                    <div className="flex items-center gap-2 text-muted-foreground"><Send className="w-4 h-4" /> Agendamento</div>
-                    <div className="text-sm font-medium mt-1">{campanha.dataAgendamento ? new Date(campanha.dataAgendamento).toLocaleString('pt-BR') : 'Imediato / rascunho'}</div>
+                    <div className="flex items-center gap-2 text-muted-foreground"><Send className="w-4 h-4" /> {t('communicationCampaigns.cards.scheduling')}</div>
+                    <div className="text-sm font-medium mt-1">{campanha.dataAgendamento ? formatDateTime(campanha.dataAgendamento) : t('communicationCampaigns.cards.immediateDraft')}</div>
                   </div>
                   <div className="rounded-lg border border-border p-3">
-                    <div className="flex items-center gap-2 text-muted-foreground"><AlertTriangle className="w-4 h-4" /> Falhas</div>
+                    <div className="flex items-center gap-2 text-muted-foreground"><AlertTriangle className="w-4 h-4" /> {t('communicationCampaigns.cards.failures')}</div>
                     <div className="text-xl font-semibold mt-1">{campanha.totalFalhas}</div>
                   </div>
                 </div>
 
                 <div className="flex justify-end">
                   <Button variant="outline" size="sm" asChild>
-                    <Link to={`/comunicacao/campanhas/${campanha.id}`}>Abrir detalhes</Link>
+                    <Link to={`/comunicacao/campanhas/${campanha.id}`}>{t('communicationCampaigns.actions.openDetails')}</Link>
                   </Button>
                 </div>
               </CardContent>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Filter, Phone, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Phone, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -48,7 +48,7 @@ export default function VoluntariosList() {
       setEquipes(e.data || []);
       setCargos(c.data || []);
     } catch (err) {
-      setError('Erro ao carregar voluntários');
+      setError(t('volunteer.volunteers.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -63,18 +63,18 @@ export default function VoluntariosList() {
   const handleDelete = async (id) => {
     const voluntario = items.find(v => v.id === id);
     confirmDialog.show({
-      title: 'Excluir Voluntário',
-      description: `Tem certeza que deseja excluir "${voluntario?.nome || 'este voluntário'}"? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('volunteer.volunteers.deleteTitle'),
+      description: t('volunteer.volunteers.deleteDescription', { name: voluntario?.nome || t('volunteer.volunteers.thisVolunteer') }),
+      confirmText: t('volunteer.volunteers.deleteConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await voluntariosApi.delete(id);
-          toast.success('Voluntário excluído com sucesso');
+          toast.success(t('volunteer.volunteers.deleteSuccess'));
           await load();
         } catch (err) {
-          toast.error('Erro ao excluir voluntário');
+          toast.error(t('volunteer.volunteers.deleteError'));
           console.error(err);
           throw err;
         }
@@ -91,7 +91,7 @@ export default function VoluntariosList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text="Carregando voluntários..." />;
+  if (loading) return <LoadingPage text={t('volunteer.volunteers.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   const canEdit = isAdmin && can(RESOURCES.VOLUNTARIOS, ACTIONS.EDIT);
@@ -118,26 +118,26 @@ export default function VoluntariosList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('volunteer.volunteers.filtersTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar por nome</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('volunteer.volunteers.searchLabel')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite o nome"
+                placeholder={t('volunteer.volunteers.searchPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Equipe</label>
+              <label className="text-sm font-medium">{t('volunteer.volunteers.teamLabel')}</label>
               <Select value={equipeId || 'all'} onValueChange={(value) => setEquipeId(value === 'all' ? '' : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todas as equipes" />
+                  <SelectValue placeholder={t('volunteer.volunteers.allTeams')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas as equipes</SelectItem>
+                  <SelectItem value="all">{t('volunteer.volunteers.allTeams')}</SelectItem>
                   {equipes.map((e) => (
                     <SelectItem key={e.id} value={String(e.id)}>{e.nome}</SelectItem>
                   ))}
@@ -145,13 +145,13 @@ export default function VoluntariosList() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Cargo</label>
+              <label className="text-sm font-medium">{t('volunteer.volunteers.roleLabel')}</label>
               <Select value={cargoId || 'all'} onValueChange={(value) => setCargoId(value === 'all' ? '' : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os cargos" />
+                  <SelectValue placeholder={t('volunteer.volunteers.allRoles')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os cargos</SelectItem>
+                  <SelectItem value="all">{t('volunteer.volunteers.allRoles')}</SelectItem>
                   {cargos.map((c) => (
                     <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>
                   ))}
@@ -169,8 +169,8 @@ export default function VoluntariosList() {
         <CardContent>
           {filtered.length === 0 ? (
             <PageEmptyState
-              title="Nenhum voluntario encontrado"
-              description="Nao ha voluntarios para os filtros atuais. Ajuste equipe, cargo ou busca para ampliar a lista."
+              title={t('volunteer.volunteers.emptyTitle')}
+              description={t('volunteer.volunteers.emptyDescription')}
               action={canEdit ? (
                 <Button asChild>
                   <Link to="/voluntarios/novo">
@@ -184,11 +184,11 @@ export default function VoluntariosList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>WhatsApp</TableHead>
-                  <TableHead>Equipe</TableHead>
-                  <TableHead>Cargo</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('volunteer.volunteers.table.name')}</TableHead>
+                  <TableHead>{t('volunteer.volunteers.table.whatsApp')}</TableHead>
+                  <TableHead>{t('volunteer.volunteers.table.team')}</TableHead>
+                  <TableHead>{t('volunteer.volunteers.table.role')}</TableHead>
+                  <TableHead className="text-right">{t('volunteer.volunteers.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

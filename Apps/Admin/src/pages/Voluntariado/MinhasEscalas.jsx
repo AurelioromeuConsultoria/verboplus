@@ -9,29 +9,31 @@ import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { escalasApi, solicitacoesTrocasEscalasApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { formatDateTime } from '@/lib/formatters';
+import { useTranslation } from 'react-i18next';
 
-function getEscalaItemStatusLabel(status) {
+function getEscalaItemStatusLabel(status, t) {
   const value = Number(status);
-  if (value === 1) return 'Pendente';
-  if (value === 2) return 'Confirmado';
-  if (value === 3) return 'Recusado';
-  if (value === 4) return 'Substituído';
-  if (value === 5) return 'Serviu';
-  if (value === 6) return 'Faltou';
-  return 'Desconhecido';
+  if (value === 1) return t('volunteer.mySchedules.status.pending');
+  if (value === 2) return t('volunteer.mySchedules.status.confirmed');
+  if (value === 3) return t('volunteer.mySchedules.status.declined');
+  if (value === 4) return t('volunteer.mySchedules.status.replaced');
+  if (value === 5) return t('volunteer.mySchedules.status.served');
+  if (value === 6) return t('volunteer.mySchedules.status.missed');
+  return t('volunteer.mySchedules.status.unknown');
 }
 
-function getActionButtonProps(item, action) {
+function getActionButtonProps(item, action, t) {
   const status = Number(item.status);
 
   if (action === 'confirmar') {
     return status === 2
       ? {
-          label: 'Confirmado',
+          label: t('volunteer.mySchedules.confirmedButton'),
           className: '!border-emerald-600 !bg-emerald-600 !text-white hover:!bg-emerald-700 hover:!text-white',
         }
       : {
-          label: 'Confirmar',
+          label: t('volunteer.mySchedules.confirmAction'),
           className: '',
         };
   }
@@ -39,11 +41,11 @@ function getActionButtonProps(item, action) {
   if (action === 'recusar') {
     return status === 3
       ? {
-          label: 'Recusado',
+          label: t('volunteer.mySchedules.declinedButton'),
           className: '!border-rose-600 !bg-rose-600 !text-white hover:!bg-rose-700 hover:!text-white',
         }
       : {
-          label: 'Recusar',
+          label: t('volunteer.mySchedules.declineAction'),
           className: '',
         };
   }
@@ -55,6 +57,7 @@ function getActionButtonProps(item, action) {
 }
 
 export default function MinhasEscalas() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [somenteFuturas, setSomenteFuturas] = useState('true');
@@ -76,7 +79,7 @@ export default function MinhasEscalas() {
       setSolicitacoes(solicitacoesRes.data || []);
     } catch (err) {
       console.error(err);
-      setError('Erro ao carregar suas escalas');
+      setError(t('volunteer.mySchedules.errorLoad'));
     } finally {
       setLoading(false);
     }
@@ -89,30 +92,33 @@ export default function MinhasEscalas() {
   const handleConfirmar = async (escalaId, itemId) => {
     try {
       await escalasApi.confirmarItem(escalaId, itemId);
-      toast.success('Escala confirmada');
+      toast.success(t('volunteer.mySchedules.confirmSuccess'));
       await load();
     } catch (err) {
       console.error(err);
       const message = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || 'Erro ao confirmar escala');
+        : (err.response?.data?.message || t('volunteer.mySchedules.errorConfirm'));
       toast.error(message);
     }
   };
 
   const handleRecusar = async (escalaId, item) => {
-    const motivoRecusa = window.prompt(`Motivo da recusa para ${item.equipeNome}:`, item.motivoRecusa || '');
+    const motivoRecusa = window.prompt(
+      t('volunteer.mySchedules.declinePrompt', { team: item.equipeNome }),
+      item.motivoRecusa || ''
+    );
     if (motivoRecusa === null) return;
 
     try {
       await escalasApi.recusarItem(escalaId, item.id, { motivoRecusa });
-      toast.success('Recusa registrada');
+      toast.success(t('volunteer.mySchedules.declineSuccess'));
       await load();
     } catch (err) {
       console.error(err);
       const message = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || 'Erro ao recusar escala');
+        : (err.response?.data?.message || t('volunteer.mySchedules.errorDecline'));
       toast.error(message);
     }
   };
@@ -127,7 +133,7 @@ export default function MinhasEscalas() {
     if (!trocaItem) return;
     try {
       await solicitacoesTrocasEscalasApi.create(trocaItem.escalaId, trocaItem.item.id, { motivo: trocaMotivo });
-      toast.success('Solicitação de troca enviada');
+      toast.success(t('volunteer.mySchedules.swapRequestSuccess'));
       setTrocaModalOpen(false);
       setTrocaItem(null);
       setTrocaMotivo('');
@@ -136,22 +142,20 @@ export default function MinhasEscalas() {
       console.error(err);
       const message = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || 'Erro ao solicitar troca');
+        : (err.response?.data?.message || t('volunteer.mySchedules.errorSwapRequest'));
       toast.error(message);
     }
   };
 
-  if (loading) return <LoadingPage text="Carregando suas escalas..." />;
+  if (loading) return <LoadingPage text={t('volunteer.mySchedules.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={() => load()} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Minhas Escalas</h1>
-          <p className="text-muted-foreground">
-            Consulte suas escalas e confirme ou recuse sua participação.
-          </p>
+          <h1 className="text-3xl font-bold">{t('volunteer.mySchedules.title')}</h1>
+          <p className="text-muted-foreground">{t('volunteer.mySchedules.subtitle')}</p>
         </div>
 
         <div className="w-[220px]">
@@ -160,8 +164,8 @@ export default function MinhasEscalas() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="true">Somente futuras</SelectItem>
-              <SelectItem value="false">Todas</SelectItem>
+              <SelectItem value="true">{t('volunteer.mySchedules.futureOnly')}</SelectItem>
+              <SelectItem value="false">{t('volunteer.mySchedules.allSchedules')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -170,7 +174,7 @@ export default function MinhasEscalas() {
       {escalas.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
-            Nenhuma escala encontrada.
+            {t('volunteer.mySchedules.empty')}
           </CardContent>
         </Card>
       ) : (
@@ -184,25 +188,25 @@ export default function MinhasEscalas() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-sm text-muted-foreground">
-                {new Date(escala.eventoDataHoraInicio).toLocaleString('pt-BR')}
+                {formatDateTime(escala.eventoDataHoraInicio)}
               </div>
 
               {escala.itens.map((item) => (
                 <div key={item.id} className="flex items-center justify-between rounded-lg border p-4 gap-4">
                   {(() => {
-                    const confirmarButton = getActionButtonProps(item, 'confirmar');
-                    const recusarButton = getActionButtonProps(item, 'recusar');
+                    const confirmarButton = getActionButtonProps(item, 'confirmar', t);
+                    const recusarButton = getActionButtonProps(item, 'recusar', t);
 
                     return (
                       <>
                   <div className="space-y-1">
-                    <div className="font-medium">{item.cargoNome || 'Sem cargo definido'}</div>
+                    <div className="font-medium">{item.cargoNome || t('volunteer.mySchedules.undefinedRole')}</div>
                     <div className="text-sm text-muted-foreground">
-                      Status: {getEscalaItemStatusLabel(item.status)}
+                      {t('volunteer.mySchedules.labels.status')}: {getEscalaItemStatusLabel(item.status, t)}
                     </div>
                     {item.motivoRecusa && (
                       <div className="text-sm text-red-600">
-                        Motivo da recusa: {item.motivoRecusa}
+                        {t('volunteer.mySchedules.labels.declineReason')}: {item.motivoRecusa}
                       </div>
                     )}
                   </div>
@@ -225,12 +229,12 @@ export default function MinhasEscalas() {
                       {recusarButton.label}
                     </Button>
                     <Button variant="outline" onClick={() => openSolicitarTroca(escala.id, item)}>
-                      Solicitar troca
+                      {t('volunteer.mySchedules.swapRequestAction')}
                     </Button>
                     {Number(item.status) === 1 && (
                       <span className="inline-flex items-center text-sm text-amber-600">
                         <Clock3 className="h-4 w-4 mr-1" />
-                        Pendente
+                        {t('volunteer.mySchedules.status.pending')}
                       </span>
                     )}
                   </div>
@@ -246,25 +250,29 @@ export default function MinhasEscalas() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Minhas solicitações de troca</CardTitle>
+          <CardTitle>{t('volunteer.mySchedules.swapRequestsTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           {solicitacoes.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Nenhuma solicitação registrada.</div>
+            <div className="text-sm text-muted-foreground">{t('volunteer.mySchedules.noSwapRequests')}</div>
           ) : (
             <div className="space-y-3">
               {solicitacoes.map((solicitacao) => (
                 <div key={solicitacao.id} className="rounded-lg border p-4">
                   <div className="font-medium">{solicitacao.equipeNome}</div>
                   <div className="text-sm text-muted-foreground">
-                    Status: {solicitacao.status === 1 ? 'Pendente' : solicitacao.status === 2 ? 'Aprovada' : 'Rejeitada'}
+                    {t('volunteer.mySchedules.labels.status')}: {solicitacao.status === 1
+                      ? t('volunteer.mySchedules.requestStatus.pending')
+                      : solicitacao.status === 2
+                        ? t('volunteer.mySchedules.requestStatus.approved')
+                        : t('volunteer.mySchedules.requestStatus.rejected')}
                   </div>
-                  <div className="text-sm">Motivo: {solicitacao.motivo || '-'}</div>
+                  <div className="text-sm">{t('volunteer.mySchedules.labels.reason')}: {solicitacao.motivo || '-'}</div>
                   {solicitacao.voluntarioSubstitutoNome && (
-                    <div className="text-sm">Substituto: {solicitacao.voluntarioSubstitutoNome}</div>
+                    <div className="text-sm">{t('volunteer.mySchedules.labels.substitute')}: {solicitacao.voluntarioSubstitutoNome}</div>
                   )}
                   {solicitacao.observacaoResposta && (
-                    <div className="text-sm">Resposta: {solicitacao.observacaoResposta}</div>
+                    <div className="text-sm">{t('volunteer.mySchedules.labels.response')}: {solicitacao.observacaoResposta}</div>
                   )}
                 </div>
               ))}
@@ -276,22 +284,20 @@ export default function MinhasEscalas() {
       <Dialog open={trocaModalOpen} onOpenChange={setTrocaModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Solicitar troca</DialogTitle>
-            <DialogDescription>
-              Descreva o motivo da troca para ajudar o líder a tomar a decisão.
-            </DialogDescription>
+            <DialogTitle>{t('volunteer.mySchedules.swapDialog.title')}</DialogTitle>
+            <DialogDescription>{t('volunteer.mySchedules.swapDialog.description')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <Textarea
               value={trocaMotivo}
               onChange={(e) => setTrocaMotivo(e.target.value)}
-              placeholder="Ex.: estarei viajando / estou indisponível nesse horário"
+              placeholder={t('volunteer.mySchedules.swapDialog.placeholder')}
               rows={4}
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setTrocaModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSolicitarTroca}>Enviar solicitação</Button>
+            <Button variant="outline" onClick={() => setTrocaModalOpen(false)}>{t('volunteer.mySchedules.cancelAction')}</Button>
+            <Button onClick={handleSolicitarTroca}>{t('volunteer.mySchedules.swapDialog.submit')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

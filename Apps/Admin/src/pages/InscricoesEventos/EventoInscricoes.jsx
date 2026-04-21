@@ -16,14 +16,15 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { formatDateBr } from '@/lib/formatters';
+import { formatDate } from '@/lib/formatters';
+import { useTranslation } from 'react-i18next';
 
-const STATUS_LABELS = {
-  1: 'Pendente',
-  2: 'Confirmada',
-  3: 'Cancelada',
-  4: 'Presente',
-};
+const STATUS_LABELS = (t) => ({
+  1: t('eventRegistrations.status.pending'),
+  2: t('eventRegistrations.status.confirmed'),
+  3: t('eventRegistrations.status.canceled'),
+  4: t('eventRegistrations.status.present'),
+});
 
 const STATUS_TONES = {
   1: 'warning',
@@ -33,6 +34,7 @@ const STATUS_TONES = {
 };
 
 export default function EventoInscricoes() {
+  const { t } = useTranslation();
   const { eventoId } = useParams();
   const [inscricoes, setInscricoes] = useState([]);
   const [evento, setEvento] = useState(null);
@@ -56,7 +58,7 @@ export default function EventoInscricoes() {
       setEvento(eventoRes.data);
       setEstatisticas(statsRes.data);
     } catch (err) {
-      setError('Erro ao carregar dados');
+      setError(t('eventRegistrations.errorLoadEvent'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -69,18 +71,18 @@ export default function EventoInscricoes() {
 
   const handleDelete = async (id) => {
     confirmDialog.show({
-      title: 'Excluir inscrição?',
-      description: 'Essa ação não pode ser desfeita.',
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('eventRegistrations.confirmDialog.deleteTitle'),
+      description: t('eventRegistrations.confirmDialog.deleteDescription'),
+      confirmText: t('eventRegistrations.confirmDialog.confirmDelete'),
+      cancelText: t('common.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await inscricoesEventosApi.delete(id);
-          toast.success('Inscrição excluída');
+          toast.success(t('eventRegistrations.deleteSuccess'));
           await load();
         } catch (err) {
-          toast.error(getApiErrorMessage(err, 'Erro ao excluir inscrição'));
+          toast.error(getApiErrorMessage(err, t('eventRegistrations.errorDelete')));
           console.error(err);
           throw err;
         }
@@ -91,28 +93,28 @@ export default function EventoInscricoes() {
   const handleConfirmar = async (id) => {
     try {
       await inscricoesEventosApi.confirmar(id);
-      toast.success('Inscrição confirmada');
+      toast.success(t('eventRegistrations.confirmSuccess'));
       await load();
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao confirmar inscrição'));
+      toast.error(getApiErrorMessage(err, t('eventRegistrations.errorConfirm')));
       console.error(err);
     }
   };
 
   const handleCancelar = async (id) => {
     confirmDialog.show({
-      title: 'Cancelar inscrição?',
-      description: 'A inscrição ficará com status cancelada.',
-      confirmText: 'Cancelar',
-      cancelText: 'Voltar',
+      title: t('eventRegistrations.confirmDialog.cancelTitle'),
+      description: t('eventRegistrations.confirmDialog.cancelDescription'),
+      confirmText: t('eventRegistrations.confirmDialog.confirmCancel'),
+      cancelText: t('common.back'),
       variant: 'default',
       onConfirm: async () => {
         try {
           await inscricoesEventosApi.cancelar(id);
-          toast.success('Inscrição cancelada');
+          toast.success(t('eventRegistrations.cancelSuccess'));
           await load();
         } catch (err) {
-          toast.error(getApiErrorMessage(err, 'Erro ao cancelar inscrição'));
+          toast.error(getApiErrorMessage(err, t('eventRegistrations.errorCancel')));
           console.error(err);
           throw err;
         }
@@ -123,10 +125,10 @@ export default function EventoInscricoes() {
   const handleMarcaPresente = async (id) => {
     try {
       await inscricoesEventosApi.update(id, { status: 4 });
-      toast.success('Presença marcada');
+      toast.success(t('eventRegistrations.markPresentSuccess'));
       await load();
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao marcar presença'));
+      toast.error(getApiErrorMessage(err, t('eventRegistrations.errorMarkPresent')));
       console.error(err);
     }
   };
@@ -138,7 +140,7 @@ export default function EventoInscricoes() {
 
   const podeInscrever = evento && new Date(evento.dataInicio) > new Date();
 
-  if (loading) return <LoadingPage text="Carregando inscrições..." />;
+  if (loading) return <LoadingPage text={t('eventRegistrations.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -147,17 +149,21 @@ export default function EventoInscricoes() {
         <div className="flex items-center space-x-4">
           <Button variant="ghost" asChild>
             <Link to="/eventos">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Voltar para Eventos
+              <ArrowLeft className="h-4 w-4 mr-2" /> {t('eventRegistrations.backToEvents')}
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Inscrições - {evento?.titulo || 'Evento'}</h1>
-            <p className="text-muted-foreground">Gerencie as inscrições deste evento</p>
+            <h1 className="text-3xl font-bold">
+              {t('eventRegistrations.titleWithEvent', {
+                event: evento?.titulo || t('eventRegistrations.eventFallback'),
+              })}
+            </h1>
+            <p className="text-muted-foreground">{t('eventRegistrations.manageEventSubtitle')}</p>
           </div>
         </div>
         {podeInscrever && (
           <Button onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-2" /> Nova Inscrição
+            <Plus className="h-4 w-4 mr-2" /> {t('eventRegistrations.new')}
           </Button>
         )}
       </div>
@@ -169,7 +175,7 @@ export default function EventoInscricoes() {
               <div className="flex items-center space-x-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Total</p>
+                  <p className="text-sm text-muted-foreground">{t('eventRegistrations.stats.total')}</p>
                   <p className="text-2xl font-bold">{estatisticas.totalInscricoes}</p>
                 </div>
               </div>
@@ -180,7 +186,7 @@ export default function EventoInscricoes() {
               <div className="flex items-center space-x-2">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Confirmadas</p>
+                  <p className="text-sm text-muted-foreground">{t('eventRegistrations.stats.confirmed')}</p>
                   <p className="text-2xl font-bold">{estatisticas.inscricoesConfirmadas}</p>
                 </div>
               </div>
@@ -191,7 +197,7 @@ export default function EventoInscricoes() {
               <div className="flex items-center space-x-2">
                 <Clock className="h-4 w-4 text-yellow-600" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Pendentes</p>
+                  <p className="text-sm text-muted-foreground">{t('eventRegistrations.stats.pending')}</p>
                   <p className="text-2xl font-bold">{estatisticas.inscricoesPendentes}</p>
                 </div>
               </div>
@@ -202,7 +208,7 @@ export default function EventoInscricoes() {
               <div className="flex items-center space-x-2">
                 <XCircle className="h-4 w-4 text-red-600" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Canceladas</p>
+                  <p className="text-sm text-muted-foreground">{t('eventRegistrations.stats.canceled')}</p>
                   <p className="text-2xl font-bold">{estatisticas.inscricoesCanceladas}</p>
                 </div>
               </div>
@@ -213,7 +219,7 @@ export default function EventoInscricoes() {
               <div className="flex items-center space-x-2">
                 <Users className="h-4 w-4 text-blue-600" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Participantes</p>
+                  <p className="text-sm text-muted-foreground">{t('eventRegistrations.stats.participants')}</p>
                   <p className="text-2xl font-bold">{estatisticas.totalParticipantes}</p>
                 </div>
               </div>
@@ -225,15 +231,15 @@ export default function EventoInscricoes() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Lista de Inscrições ({filtered.length})</CardTitle>
+            <CardTitle>{t('eventRegistrations.listTitle')} ({filtered.length})</CardTitle>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Filtrar por Status</label>
+              <label className="text-sm font-medium">{t('eventRegistrations.filterByStatusLabel')}</label>
               <select className="px-3 py-2 border rounded" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="">Todos</option>
-                <option value="1">Pendente</option>
-                <option value="2">Confirmada</option>
-                <option value="3">Cancelada</option>
-                <option value="4">Presente</option>
+                <option value="">{t('eventRegistrations.statusAllOption')}</option>
+                <option value="1">{t('eventRegistrations.status.pending')}</option>
+                <option value="2">{t('eventRegistrations.status.confirmed')}</option>
+                <option value="3">{t('eventRegistrations.status.canceled')}</option>
+                <option value="4">{t('eventRegistrations.status.present')}</option>
               </select>
             </div>
           </div>
@@ -241,20 +247,20 @@ export default function EventoInscricoes() {
         <CardContent>
           {filtered.length === 0 ? (
             <PageEmptyState
-              title="Nenhuma inscrição encontrada."
-              description="Novas inscrições aparecerão aqui conforme o evento receber respostas."
+              title={t('eventRegistrations.emptyMessage')}
+              description={t('eventRegistrations.eventEmptyDescription')}
             />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>WhatsApp</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Acompanhantes</TableHead>
-                  <TableHead>Data Inscrição</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('eventRegistrations.table.name')}</TableHead>
+                  <TableHead>{t('eventRegistrations.table.whatsapp')}</TableHead>
+                  <TableHead>{t('eventRegistrations.table.email')}</TableHead>
+                  <TableHead>{t('eventRegistrations.table.status')}</TableHead>
+                  <TableHead>{t('eventRegistrations.table.companions')}</TableHead>
+                  <TableHead>{t('eventRegistrations.table.registrationDate')}</TableHead>
+                  <TableHead className="text-right">{t('eventRegistrations.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -291,11 +297,11 @@ export default function EventoInscricoes() {
                     </TableCell>
                     <TableCell>
                       <StatusBadge tone={STATUS_TONES[inscricao.status] || 'neutral'}>
-                        {STATUS_LABELS[inscricao.status] || inscricao.statusDescricao}
+                        {STATUS_LABELS(t)[inscricao.status] || inscricao.statusDescricao}
                       </StatusBadge>
                     </TableCell>
                     <TableCell>{inscricao.quantidadeAcompanhantes || 0}</TableCell>
-                    <TableCell>{formatDateBr(inscricao.dataInscricao)}</TableCell>
+                    <TableCell>{formatDate(inscricao.dataInscricao)}</TableCell>
                     <TableCell className="text-right">
                       <TableRowActions className="space-x-1">
                         <RowIconLinkAction>
@@ -304,17 +310,17 @@ export default function EventoInscricoes() {
                           </Link>
                         </RowIconLinkAction>
                         {inscricao.status === 1 && (
-                          <RowIconButtonAction onClick={() => handleConfirmar(inscricao.id)} title="Confirmar">
+                          <RowIconButtonAction onClick={() => handleConfirmar(inscricao.id)} title={t('eventRegistrations.confirmAction')}>
                             <CheckCircle className="h-4 w-4 text-green-600" />
                           </RowIconButtonAction>
                         )}
                         {(inscricao.status === 1 || inscricao.status === 2) && (
-                          <RowIconButtonAction onClick={() => handleCancelar(inscricao.id)} title="Cancelar">
+                          <RowIconButtonAction onClick={() => handleCancelar(inscricao.id)} title={t('eventRegistrations.cancelAction')}>
                             <XCircle className="h-4 w-4 text-red-600" />
                           </RowIconButtonAction>
                         )}
                         {inscricao.status === 2 && (
-                          <RowIconButtonAction onClick={() => handleMarcaPresente(inscricao.id)} title="Marcar Presenca">
+                          <RowIconButtonAction onClick={() => handleMarcaPresente(inscricao.id)} title={t('eventRegistrations.markPresentAction')}>
                             <UserCheck className="h-4 w-4 text-blue-600" />
                           </RowIconButtonAction>
                         )}
@@ -339,7 +345,7 @@ export default function EventoInscricoes() {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Nova Inscrição</DialogTitle>
+            <DialogTitle>{t('eventRegistrations.newInlineTitle')}</DialogTitle>
           </DialogHeader>
           <InscricaoEventoPublicForm
             eventoId={eventoId}
@@ -368,9 +374,6 @@ export default function EventoInscricoes() {
     </div>
   );
 }
-
-
-
 
 
 

@@ -12,8 +12,10 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { contatosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { useTranslation } from 'react-i18next';
 
 export default function ContatoForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
@@ -43,7 +45,7 @@ export default function ContatoForm() {
         mensagem: c.mensagem || '',
       });
     } catch (err) {
-      setError('Erro ao carregar contato');
+      setError(t('contactsForm.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -64,7 +66,7 @@ export default function ContatoForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      toast.error('Nome é obrigatório');
+      toast.error(t('contactsForm.validation.nameRequired'));
       return;
     }
     try {
@@ -78,17 +80,17 @@ export default function ContatoForm() {
       };
       if (isEditing) await contatosApi.update(id, payload);
       else await contatosApi.create(payload);
-      toast.success(isEditing ? 'Contato atualizado com sucesso' : 'Contato criado com sucesso');
+      toast.success(isEditing ? t('contactsForm.updateSuccess') : t('contactsForm.createSuccess'));
       navigate('/contatos');
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Erro ao salvar contato'));
+      toast.error(getApiErrorMessage(err, t('contactsForm.saveError')));
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && isEditing) return <LoadingPage text="Carregando contato..." />;
+  if (loading && isEditing) return <LoadingPage text={t('contactsForm.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -96,51 +98,51 @@ export default function ContatoForm() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" asChild>
           <Link to="/contatos">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('actions.back')}
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Contato' : 'Novo Contato'}</h1>
-          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações do contato' : 'Cadastre um novo contato'}</p>
+          <h1 className="text-3xl font-bold">{isEditing ? t('contactsForm.editTitle') : t('contactsForm.newTitle')}</h1>
+          <p className="text-muted-foreground">{isEditing ? t('contactsForm.editSubtitle') : t('contactsForm.createSubtitle')}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isEditing ? 'Editar Contato' : 'Cadastrar Contato'}</CardTitle>
+          <CardTitle>{isEditing ? t('contactsForm.editCardTitle') : t('contactsForm.createCardTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
-                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder="Nome completo" required />
+                <Label htmlFor="nome">{t('contactsForm.fields.name')} *</Label>
+                <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder={t('contactsForm.placeholders.name')} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="whatsApp">WhatsApp</Label>
-                <Input id="whatsApp" name="whatsApp" value={formData.whatsApp} onChange={handleChange} placeholder="(11) 99999-9999" />
+                <Label htmlFor="whatsApp">{t('contactsForm.fields.whatsapp')}</Label>
+                <Input id="whatsApp" name="whatsApp" value={formData.whatsApp} onChange={handleChange} placeholder={t('contactsForm.placeholders.whatsapp')} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} placeholder="email@exemplo.com" />
+                <Label htmlFor="email">{t('contactsForm.fields.email')}</Label>
+                <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} placeholder={t('contactsForm.placeholders.email')} />
               </div>
               <div className="space-y-2 flex items-center space-x-3 pt-6">
                 <Switch id="membro" checked={formData.membro} onCheckedChange={handleSwitchChange} />
-                <Label htmlFor="membro" className="cursor-pointer">É membro da igreja?</Label>
+                <Label htmlFor="membro" className="cursor-pointer">{t('contactsForm.fields.isMember')}</Label>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="mensagem">Mensagem</Label>
-              <Textarea id="mensagem" name="mensagem" value={formData.mensagem} onChange={handleChange} placeholder="Mensagem do contato" rows={4} />
+              <Label htmlFor="mensagem">{t('contactsForm.fields.message')}</Label>
+              <Textarea id="mensagem" name="mensagem" value={formData.mensagem} onChange={handleChange} placeholder={t('contactsForm.placeholders.message')} rows={4} />
             </div>
 
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={loading}>
-                <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+                <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : (isEditing ? t('actions.update') : t('actions.create'))}
               </Button>
               <Button type="button" variant="outline" asChild>
-                <Link to="/contatos">Cancelar</Link>
+                <Link to="/contatos">{t('actions.cancel')}</Link>
               </Button>
             </div>
           </form>
@@ -149,7 +151,6 @@ export default function ContatoForm() {
     </div>
   );
 }
-
 
 
 

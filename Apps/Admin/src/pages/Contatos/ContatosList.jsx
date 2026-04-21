@@ -16,10 +16,12 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { contatosApi } from '@/lib/api';
-import { formatDateBr } from '@/lib/formatters';
+import { formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function ContatosList() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -41,7 +43,7 @@ export default function ContatosList() {
       const res = await contatosApi.getAll();
       setItems(res.data || []);
     } catch (err) {
-      setError('Erro ao carregar contatos');
+      setError(t('contactsList.errorLoad'));
       console.error(err);
     } finally {
       if (silent) {
@@ -59,18 +61,20 @@ export default function ContatosList() {
   const handleDelete = async (id) => {
     const contato = items.find(c => c.id === id);
     confirmDialog.show({
-      title: 'Excluir Contato',
-      description: `Tem certeza que deseja excluir o contato de "${contato?.nome || 'este contato'}"? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
+      title: t('contactsList.deleteTitle'),
+      description: t('contactsList.deleteDescription', {
+        name: contato?.nome || t('contactsList.deleteFallbackName'),
+      }),
+      confirmText: t('contactsList.deleteConfirm'),
+      cancelText: t('actions.cancel'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
           await contatosApi.delete(id);
-          toast.success('Contato excluído com sucesso');
+          toast.success(t('contactsList.deleteSuccess'));
           await load();
         } catch (err) {
-          toast.error('Erro ao excluir contato');
+          toast.error(t('contactsList.deleteError'));
           console.error(err);
           throw err;
         }
@@ -86,47 +90,47 @@ export default function ContatosList() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
 
-  if (loading) return <LoadingPage text="Carregando contatos..." />;
+  if (loading) return <LoadingPage text={t('contactsList.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Contatos</h1>
-          <p className="text-muted-foreground">Gerencie os contatos recebidos</p>
+          <h1 className="text-3xl font-bold">{t('contactsList.title')}</h1>
+          <p className="text-muted-foreground">{t('contactsList.subtitle')}</p>
         </div>
         <Button asChild>
           <Link to="/contatos/novo">
-            <Plus className="h-4 w-4 mr-2" /> Novo Contato
+            <Plus className="h-4 w-4 mr-2" /> {t('contactsList.new')}
           </Link>
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('contactsList.filters.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />Buscar</label>
+              <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('contactsList.filters.search')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite o nome ou email"
+                placeholder={t('contactsList.filters.searchPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Membro</label>
+              <label className="text-sm font-medium">{t('contactsList.filters.member')}</label>
               <Select value={membroFilter || 'all'} onValueChange={(value) => setMembroFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
+                  <SelectValue placeholder={t('contactsList.filters.all')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="true">Membro</SelectItem>
-                  <SelectItem value="false">Não Membro</SelectItem>
+                  <SelectItem value="all">{t('contactsList.filters.all')}</SelectItem>
+                  <SelectItem value="true">{t('contactsList.filters.memberOnly')}</SelectItem>
+                  <SelectItem value="false">{t('contactsList.filters.nonMember')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -137,19 +141,19 @@ export default function ContatosList() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
-            <CardTitle>Lista de Contatos ({total})</CardTitle>
+            <CardTitle>{t('contactsList.listTitle', { total })}</CardTitle>
             <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
           </div>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
             <PageEmptyState
-              title="Nenhum contato encontrado."
-              description="Ajuste os filtros ou cadastre um novo contato."
+              title={t('contactsList.emptyTitle')}
+              description={t('contactsList.emptyDescription')}
               action={(
                 <Button asChild>
                   <Link to="/contatos/novo">
-                    <Plus className="h-4 w-4 mr-2" /> Novo Contato
+                    <Plus className="h-4 w-4 mr-2" /> {t('contactsList.new')}
                   </Link>
                 </Button>
               )}
@@ -158,13 +162,13 @@ export default function ContatosList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>WhatsApp</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Membro</TableHead>
-                  <TableHead>Mensagem</TableHead>
-                  <TableHead>Data de Criação</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>{t('contactsList.table.name')}</TableHead>
+                  <TableHead>{t('contactsList.table.whatsapp')}</TableHead>
+                  <TableHead>{t('contactsList.table.email')}</TableHead>
+                  <TableHead>{t('contactsList.table.member')}</TableHead>
+                  <TableHead>{t('contactsList.table.message')}</TableHead>
+                  <TableHead>{t('contactsList.table.createdAt')}</TableHead>
+                  <TableHead className="text-right">{t('contactsList.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -200,10 +204,10 @@ export default function ContatosList() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <BooleanStatusBadge value={contato.membro} trueLabel="Sim" falseLabel="Nao" trueTone="info" />
+                      <BooleanStatusBadge value={contato.membro} trueLabel={t('contactsList.boolean.yes')} falseLabel={t('contactsList.boolean.no')} trueTone="info" />
                     </TableCell>
                     <TableCell>{contato.mensagem ? (contato.mensagem.length > 50 ? `${contato.mensagem.substring(0, 50)}...` : contato.mensagem) : '-'}</TableCell>
-                    <TableCell>{formatDateBr(contato.dataCriacao)}</TableCell>
+                    <TableCell>{formatDate(contato.dataCriacao)}</TableCell>
                     <TableCell className="text-right">
                       <TableRowActions>
                         <RowIconLinkAction>
@@ -247,7 +251,6 @@ export default function ContatosList() {
     </div>
   );
 }
-
 
 
 

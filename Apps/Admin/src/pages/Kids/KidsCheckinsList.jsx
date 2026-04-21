@@ -28,6 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CriancaDialog, HistoricoDialog, OcorrenciaDialog, SalaDialog, TurmaDialog } from './components/KidsDialogs';
 import { CheckPanelIcon, EstadoVazio, IndicadorLinha, PainelCriancaCard, ResumoCard } from './components/KidsShared';
 import { buildCriticalDescription, formatOcorrenciaTipo, getOcorrenciaStatusConfig } from './components/kidsHelpers';
+import { formatDateTime } from '@/lib/formatters';
 
 const FORMULARIO_INICIAL = {
   criancaPessoaId: '',
@@ -62,29 +63,6 @@ const CRIANCA_FORM_INICIAL = {
   alergias: '',
   restricoesAlimentares: '',
   observacoes: '',
-};
-
-const SECTION_CONFIG = {
-  overview: {
-    title: 'Painel Kids',
-    subtitle: 'Operação do culto em tempo real com presentes, pendências e alertas críticos.',
-  },
-  painel: {
-    title: 'Painel operacional',
-    subtitle: 'Visão ao vivo do culto com presença, retirada, alertas e ocorrências.',
-  },
-  criancas: {
-    title: 'Crianças',
-    subtitle: 'Cadastro e acompanhamento da base de crianças e responsáveis do módulo.',
-  },
-  estrutura: {
-    title: 'Estrutura',
-    subtitle: 'Organize salas e turmas para sustentar capacidade e operação do Kids.',
-  },
-  historico: {
-    title: 'Histórico e ocorrências',
-    subtitle: 'Consulte check-ins, retiradas e situações registradas pela equipe.',
-  },
 };
 
 const KidsCheckinsList = ({ section = 'overview' }) => {
@@ -125,7 +103,10 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
   const [turmaSaving, setTurmaSaving] = useState(false);
   const [criancaSaving, setCriancaSaving] = useState(false);
 
-  const sectionConfig = SECTION_CONFIG[section] || SECTION_CONFIG.overview;
+  const sectionConfig = {
+    title: t(`kids.sections.${section}.title`, { defaultValue: t('kids.sections.overview.title') }),
+    subtitle: t(`kids.sections.${section}.subtitle`, { defaultValue: t('kids.sections.overview.subtitle') }),
+  };
   const isOverview = section === 'overview';
   const showPainel = isOverview || section === 'painel';
   const showCriancas = isOverview || section === 'criancas';
@@ -259,8 +240,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
   }, [criancas]);
 
   const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString('pt-BR', {
+    return formatDateTime(dateString, '-', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -324,8 +304,8 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
       const response = await kidsApi.getOcorrenciasByCrianca(crianca.criancaPessoaId);
       setOcorrenciasHistorico(response.data || []);
     } catch (err) {
-      console.error('Erro ao carregar histórico de ocorrências:', err);
-      toast.error('Não foi possível carregar o histórico de ocorrências.');
+      console.error('Error loading occurrence history:', err);
+      toast.error(t('kids.history.loadError'));
     } finally {
       setHistoricoLoading(false);
     }
@@ -373,7 +353,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
 
   const handleCriarOcorrencia = async () => {
     if (!ocorrenciaForm.criancaPessoaId || !ocorrenciaForm.titulo.trim() || !ocorrenciaForm.descricao.trim()) {
-      toast.error('Preencha criança, título e descrição para registrar a ocorrência.');
+      toast.error(t('kids.occurrence.validationRequired'));
       return;
     }
 
@@ -389,7 +369,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
         visivelAoResponsavel: ocorrenciaForm.visivelAoResponsavel,
       });
 
-      toast.success('Ocorrência registrada com sucesso.');
+      toast.success(t('kids.occurrence.createSuccess'));
       setOcorrenciaDialogOpen(false);
       setOcorrenciaForm(FORMULARIO_INICIAL);
       await fetchData();
@@ -398,8 +378,8 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
         await carregarHistoricoCrianca(criancaHistorico);
       }
     } catch (err) {
-      console.error('Erro ao criar ocorrência:', err);
-      toast.error('Não foi possível registrar a ocorrência.');
+      console.error('Error creating occurrence:', err);
+      toast.error(t('kids.occurrence.createError'));
     } finally {
       setOcorrenciaSaving(false);
     }
@@ -409,15 +389,15 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
     try {
       setHistoricoUpdatingId(ocorrenciaId);
       await kidsApi.updateOcorrencia(ocorrenciaId, payload);
-      toast.success('Ocorrência atualizada.');
+      toast.success(t('kids.occurrence.updateSuccess'));
 
       if (criancaHistorico) {
         await carregarHistoricoCrianca(criancaHistorico);
       }
       await fetchData();
     } catch (err) {
-      console.error('Erro ao atualizar ocorrência:', err);
-      toast.error('Não foi possível atualizar a ocorrência.');
+      console.error('Error updating occurrence:', err);
+      toast.error(t('kids.occurrence.updateError'));
     } finally {
       setHistoricoUpdatingId(null);
     }
@@ -425,7 +405,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
 
   const handleCriarSala = async () => {
     if (!salaForm.id.trim() || !salaForm.nome.trim()) {
-      toast.error('Preencha identificador e nome da sala.');
+      toast.error(t('kids.structure.roomValidation'));
       return;
     }
 
@@ -437,13 +417,13 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
         capacidadeMaxima: salaForm.capacidadeMaxima ? Number(salaForm.capacidadeMaxima) : null,
         ativo: salaForm.ativo,
       });
-      toast.success('Sala cadastrada com sucesso.');
+      toast.success(t('kids.structure.roomCreateSuccess'));
       setSalaDialogOpen(false);
       setSalaForm(SALA_FORM_INICIAL);
       await fetchData();
     } catch (err) {
-      console.error('Erro ao criar sala:', err);
-      toast.error('Não foi possível cadastrar a sala.');
+      console.error('Error creating room:', err);
+      toast.error(t('kids.structure.roomCreateError'));
     } finally {
       setSalaSaving(false);
     }
@@ -451,7 +431,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
 
   const handleCriarTurma = async () => {
     if (!turmaForm.id.trim() || !turmaForm.nome.trim() || !turmaForm.salaId) {
-      toast.error('Preencha identificador, sala e nome da turma.');
+      toast.error(t('kids.structure.classValidation'));
       return;
     }
 
@@ -464,13 +444,13 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
         capacidadeMaxima: turmaForm.capacidadeMaxima ? Number(turmaForm.capacidadeMaxima) : null,
         ativo: turmaForm.ativo,
       });
-      toast.success('Turma cadastrada com sucesso.');
+      toast.success(t('kids.structure.classCreateSuccess'));
       setTurmaDialogOpen(false);
       setTurmaForm(TURMA_FORM_INICIAL);
       await fetchData();
     } catch (err) {
-      console.error('Erro ao criar turma:', err);
-      toast.error('Não foi possível cadastrar a turma.');
+      console.error('Error creating class:', err);
+      toast.error(t('kids.structure.classCreateError'));
     } finally {
       setTurmaSaving(false);
     }
@@ -478,7 +458,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
 
   const handleCriarCrianca = async () => {
     if (!criancaForm.nome.trim() || !criancaForm.dataNascimento || !criancaForm.salaId) {
-      toast.error('Preencha nome, data de nascimento e sala da criança.');
+      toast.error(t('kids.children.validationRequired'));
       return;
     }
 
@@ -493,13 +473,13 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
         restricoesAlimentares: criancaForm.restricoesAlimentares.trim() || null,
         observacoes: criancaForm.observacoes.trim() || null,
       });
-      toast.success('Criança cadastrada com sucesso.');
+      toast.success(t('kids.children.createSuccess'));
       setCriancaDialogOpen(false);
       setCriancaForm(CRIANCA_FORM_INICIAL);
       await fetchData();
     } catch (err) {
-      console.error('Erro ao cadastrar criança:', err);
-      toast.error('Não foi possível cadastrar a criança.');
+      console.error('Error creating child:', err);
+      toast.error(t('kids.children.createError'));
     } finally {
       setCriancaSaving(false);
     }
@@ -519,28 +499,28 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
         <ResumoCard
           title={t('kids.panel.presentNow', 'Presentes agora')}
           value={painel?.totalPresentes ?? 0}
-          description={t('kids.panel.presentNowHint', 'Crianças atualmente em check-in')}
+          description={t('kids.panel.presentNowHint')}
           icon={Users}
           valueClassName="text-blue-600"
         />
         <ResumoCard
           title={t('kids.panel.pendingPickup', 'Pendentes de retirada')}
           value={painel?.totalPendentesRetirada ?? 0}
-          description={t('kids.panel.pendingPickupHint', 'Crianças ainda aguardando saída')}
+          description={t('kids.panel.pendingPickupHint')}
           icon={LogOut}
           valueClassName="text-amber-600"
         />
         <ResumoCard
           title={t('kids.panel.completedToday', 'Retiradas hoje')}
           value={painel?.totalRetiradasHoje ?? 0}
-          description={t('kids.panel.completedTodayHint', 'Saídas concluídas no dia')}
+          description={t('kids.panel.completedTodayHint')}
           icon={CheckPanelIcon}
           valueClassName="text-emerald-600"
         />
         <ResumoCard
-          title="Ocorrências abertas"
+          title={t('kids.occurrence.openTitle')}
           value={ocorrenciasAbertas.length}
-          description="Situações em acompanhamento pela equipe"
+          description={t('kids.occurrence.openDescription')}
           icon={MessageSquareWarning}
           valueClassName="text-rose-600"
         />
@@ -549,34 +529,34 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
       <div className="grid gap-4 xl:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Indicadores de 30 dias</CardTitle>
+            <CardTitle className="text-base">{t('kids.panel.indicators30Days')}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
-            <IndicadorLinha label="Check-ins no período" value={indicadores?.totalCheckinsPeriodo ?? 0} />
-            <IndicadorLinha label="Média por dia" value={indicadores?.mediaCheckinsPorDia ?? 0} />
-            <IndicadorLinha label="Presentes agora" value={indicadores?.totalCriancasPresentesAgora ?? 0} />
+            <IndicadorLinha label={t('kids.panel.checkinsInPeriod')} value={indicadores?.totalCheckinsPeriodo ?? 0} />
+            <IndicadorLinha label={t('kids.panel.dailyAverage')} value={indicadores?.mediaCheckinsPorDia ?? 0} />
+            <IndicadorLinha label={t('kids.panel.presentNow')} value={indicadores?.totalCriancasPresentesAgora ?? 0} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Métodos de retirada</CardTitle>
+            <CardTitle className="text-base">{t('kids.panel.pickupMethods')}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             <IndicadorLinha label="QR" value={indicadores?.totalRetiradasQr ?? 0} />
             <IndicadorLinha label="PIN" value={indicadores?.totalRetiradasPin ?? 0} />
-            <IndicadorLinha label="Exceção" value={indicadores?.totalRetiradasExcecao ?? 0} />
+            <IndicadorLinha label={t('kids.panel.exception')} value={indicadores?.totalRetiradasExcecao ?? 0} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Base cadastrada</CardTitle>
+            <CardTitle className="text-base">{t('kids.panel.registeredBase')}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
-            <IndicadorLinha label="Crianças ativas" value={indicadores?.totalCriancasAtivas ?? 0} />
-            <IndicadorLinha label="Responsáveis ativos" value={indicadores?.totalResponsaveisAtivos ?? 0} />
-            <IndicadorLinha label="Salas / turmas" value={`${indicadores?.totalSalasAtivas ?? 0} / ${indicadores?.totalTurmasAtivas ?? 0}`} />
+            <IndicadorLinha label={t('kids.panel.activeChildren')} value={indicadores?.totalCriancasAtivas ?? 0} />
+            <IndicadorLinha label={t('kids.panel.activeGuardians')} value={indicadores?.totalResponsaveisAtivos ?? 0} />
+            <IndicadorLinha label={t('kids.panel.roomsClasses')} value={`${indicadores?.totalSalasAtivas ?? 0} / ${indicadores?.totalTurmasAtivas ?? 0}`} />
           </CardContent>
         </Card>
       </div>
@@ -584,7 +564,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Card>
           <CardHeader>
-            <CardTitle>{t('kids.panel.presentList', 'Presentes agora')}</CardTitle>
+            <CardTitle>{t('kids.panel.presentList')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {painel?.criancasPresentes?.length ? (
@@ -597,7 +577,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
                 />
               ))
             ) : (
-              <EstadoVazio texto={t('kids.panel.noChildrenPresent', 'Nenhuma criança presente neste momento.')} />
+              <EstadoVazio texto={t('kids.panel.noChildrenPresent')} />
             )}
           </CardContent>
         </Card>
@@ -605,7 +585,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>{t('kids.panel.byRoom', 'Distribuição por sala')}</CardTitle>
+              <CardTitle>{t('kids.panel.byRoom')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {painel?.salas?.length ? (
@@ -637,14 +617,14 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
                   </div>
                 ))
               ) : (
-                <EstadoVazio texto={t('kids.panel.noRooms', 'Nenhuma sala com presença no momento.')} />
+                <EstadoVazio texto={t('kids.panel.noRooms')} />
               )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>{t('kids.panel.criticalList', 'Alertas críticos')}</CardTitle>
+              <CardTitle>{t('kids.panel.criticalList')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {painel?.alertasCriticos?.length ? (
@@ -663,14 +643,14 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
                   </div>
                 ))
               ) : (
-                <EstadoVazio texto={t('kids.panel.noCriticalAlerts', 'Nenhum alerta crítico entre as crianças presentes.')} />
+                <EstadoVazio texto={t('kids.panel.noCriticalAlerts')} />
               )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Ocorrências abertas</CardTitle>
+              <CardTitle>{t('kids.occurrence.openTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {ocorrenciasAbertas.length ? (
@@ -679,13 +659,13 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <Badge className={getOcorrenciaStatusConfig(ocorrencia.status).className}>
-                            {getOcorrenciaStatusConfig(ocorrencia.status).label}
+                          <Badge className={getOcorrenciaStatusConfig(ocorrencia.status, t).className}>
+                            {getOcorrenciaStatusConfig(ocorrencia.status, t).label}
                           </Badge>
                           <span className="font-semibold text-foreground">{ocorrencia.criancaNome}</span>
                         </div>
                         <p className="mt-2 text-sm text-muted-foreground">
-                          {formatOcorrenciaTipo(ocorrencia.tipo)} • {formatDate(ocorrencia.dataCriacao)}
+                          {formatOcorrenciaTipo(ocorrencia.tipo, t)} • {formatDate(ocorrencia.dataCriacao)}
                         </p>
                       </div>
                       <Button
@@ -697,13 +677,13 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
                         })}
                       >
                         <Eye className="mr-2 h-4 w-4" />
-                        Ver
+                        {t('actions.see')}
                       </Button>
                     </div>
                   </div>
                 ))
               ) : (
-                <EstadoVazio texto="Nenhuma ocorrência aberta neste momento." />
+                <EstadoVazio texto={t('kids.occurrence.noneOpen')} />
               )}
             </CardContent>
           </Card>
@@ -716,23 +696,23 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
         <ResumoCard
-          title="Crianças cadastradas"
+          title={t('kids.children.registeredTitle')}
           value={criancas.length}
-          description="Base ativa disponível para operação"
+          description={t('kids.children.registeredDescription')}
           icon={Users}
           valueClassName="text-blue-600"
         />
         <ResumoCard
-          title="Em check-in agora"
+          title={t('kids.children.checkedInNowTitle')}
           value={criancas.filter((crianca) => crianca.estaCheckedIn).length}
-          description="Crianças com presença ativa neste momento"
+          description={t('kids.children.checkedInNowDescription')}
           icon={ShieldAlert}
           valueClassName="text-amber-600"
         />
         <ResumoCard
-          title="Com alerta crítico"
+          title={t('kids.children.withCriticalAlertTitle')}
           value={criancas.filter((crianca) => crianca.alergias || crianca.restricoesAlimentares || crianca.observacoes).length}
-          description="Crianças com dados sensíveis para atenção da equipe"
+          description={t('kids.children.withCriticalAlertDescription')}
           icon={TriangleAlert}
           valueClassName="text-rose-600"
         />
@@ -741,14 +721,14 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
       <Card>
         <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <CardTitle>Base de crianças</CardTitle>
+            <CardTitle>{t('kids.children.baseTitle')}</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Cadastro administrativo com sala, turma, responsáveis e alertas de cuidado.
+              {t('kids.children.baseSubtitle')}
             </p>
           </div>
           <Button onClick={() => setCriancaDialogOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Nova criança
+            {t('kids.children.new')}
           </Button>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -760,31 +740,31 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold text-foreground">{crianca.nome}</span>
                       {crianca.estaCheckedIn ? (
-                        <Badge className="bg-blue-600 hover:bg-blue-700">Em check-in</Badge>
+                        <Badge className="bg-blue-600 hover:bg-blue-700">{t('kids.children.checkedIn')}</Badge>
                       ) : (
-                        <Badge variant="outline">Fora da sala</Badge>
+                        <Badge variant="outline">{t('kids.children.outOfRoom')}</Badge>
                       )}
-                      {crianca.alergias && <Badge variant="destructive">Alergia</Badge>}
-                      {crianca.restricoesAlimentares && <Badge className="bg-amber-600 hover:bg-amber-700">Restrição</Badge>}
-                      {crianca.observacoes && <Badge className="bg-rose-600 hover:bg-rose-700">Observação</Badge>}
+                      {crianca.alergias && <Badge variant="destructive">{t('kids.panel.allergy')}</Badge>}
+                      {crianca.restricoesAlimentares && <Badge className="bg-amber-600 hover:bg-amber-700">{t('kids.panel.restriction')}</Badge>}
+                      {crianca.observacoes && <Badge className="bg-rose-600 hover:bg-rose-700">{t('kids.children.noteBadge')}</Badge>}
                     </div>
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      <span>Sala: {crianca.salaId || 'Sem sala'}</span>
-                      <span>Turma: {crianca.turmaId || 'Sem turma'}</span>
-                      <span>Responsáveis: {crianca.responsaveis?.length || 0}</span>
+                      <span>{t('kids.children.roomLabel', { value: crianca.salaId || t('kids.children.noRoom') })}</span>
+                      <span>{t('kids.children.classLabel', { value: crianca.turmaId || t('kids.children.noClass') })}</span>
+                      <span>{t('kids.children.guardiansLabel', { count: crianca.responsaveis?.length || 0 })}</span>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button variant="outline" size="sm" onClick={() => carregarHistoricoCrianca({ criancaPessoaId: crianca.pessoaId, nome: crianca.nome })}>
                       <Eye className="mr-2 h-4 w-4" />
-                      Ver histórico
+                      {t('kids.history.view')}
                     </Button>
                   </div>
                 </div>
               </div>
             ))
           ) : (
-            <EstadoVazio texto="Nenhuma criança cadastrada no módulo Kids." />
+            <EstadoVazio texto={t('kids.children.empty')} />
           )}
         </CardContent>
       </Card>
@@ -795,23 +775,23 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
         <ResumoCard
-          title="Salas ativas"
+          title={t('kids.structure.activeRoomsTitle')}
           value={salas.filter((sala) => sala.ativo).length}
-          description="Salas disponíveis para operação"
+          description={t('kids.structure.activeRoomsDescription')}
           icon={Building2}
           valueClassName="text-blue-600"
         />
         <ResumoCard
-          title="Turmas ativas"
+          title={t('kids.structure.activeClassesTitle')}
           value={turmas.filter((turma) => turma.ativo).length}
-          description="Turmas vinculadas à estrutura formal"
+          description={t('kids.structure.activeClassesDescription')}
           icon={Layers3}
           valueClassName="text-emerald-600"
         />
         <ResumoCard
-          title="Capacidade monitorada"
+          title={t('kids.structure.capacityMonitoredTitle')}
           value={salas.filter((sala) => sala.capacidadeMaxima).length}
-          description="Salas com limite configurado"
+          description={t('kids.structure.capacityMonitoredDescription')}
           icon={ShieldAlert}
           valueClassName="text-amber-600"
         />
@@ -820,19 +800,19 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
       <Card>
         <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <CardTitle>Estrutura atual</CardTitle>
+            <CardTitle>{t('kids.structure.currentTitle')}</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Cadastre salas e turmas formais para organizar capacidade, distribuição e segurança.
+              {t('kids.structure.currentSubtitle')}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setSalaDialogOpen(true)}>
               <Building2 className="mr-2 h-4 w-4" />
-              Nova sala
+              {t('kids.structure.newRoom')}
             </Button>
             <Button onClick={() => setTurmaDialogOpen(true)}>
               <Layers3 className="mr-2 h-4 w-4" />
-              Nova turma
+              {t('kids.structure.newClass')}
             </Button>
           </div>
         </CardHeader>
@@ -847,11 +827,11 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
                       <Badge variant="outline">{sala.id}</Badge>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Capacidade {sala.capacidadeMaxima || 'não definida'}
+                      {t('kids.structure.capacityLabel', { value: sala.capacidadeMaxima || t('kids.structure.notDefined') })}
                     </p>
                   </div>
                   <Badge className={sala.ativo ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-500 hover:bg-slate-600'}>
-                    {sala.ativo ? 'Ativa' : 'Inativa'}
+                    {sala.ativo ? t('kids.structure.active') : t('kids.structure.inactive')}
                   </Badge>
                 </div>
 
@@ -865,18 +845,18 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
                           <span className="text-muted-foreground">({turma.id})</span>
                         </div>
                         <span className="text-muted-foreground">
-                          Cap. {turma.capacidadeMaxima || '-'}
+                          {t('kids.structure.shortCapacity', { value: turma.capacidadeMaxima || '-' })}
                         </span>
                       </div>
                     ))
                   ) : (
-                    <EstadoVazio texto="Nenhuma turma cadastrada para esta sala." />
+                    <EstadoVazio texto={t('kids.structure.noClassesForRoom')} />
                   )}
                 </div>
               </div>
             ))
           ) : (
-            <EstadoVazio texto="Nenhuma sala cadastrada na estrutura do Kids." />
+            <EstadoVazio texto={t('kids.structure.empty')} />
           )}
         </CardContent>
       </Card>
@@ -888,14 +868,14 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
       <Card>
         <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <CardTitle>Ocorrências abertas</CardTitle>
+            <CardTitle>{t('kids.occurrence.openTitle')}</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Acompanhe registros ativos e abra o histórico da criança quando precisar aprofundar.
+              {t('kids.occurrence.historySubtitle')}
             </p>
           </div>
           <Button variant="outline" onClick={() => setOcorrenciaDialogOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Registrar ocorrência
+            {t('kids.occurrence.register')}
           </Button>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -905,13 +885,13 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <Badge className={getOcorrenciaStatusConfig(ocorrencia.status).className}>
-                        {getOcorrenciaStatusConfig(ocorrencia.status).label}
+                      <Badge className={getOcorrenciaStatusConfig(ocorrencia.status, t).className}>
+                        {getOcorrenciaStatusConfig(ocorrencia.status, t).label}
                       </Badge>
                       <span className="font-semibold text-foreground">{ocorrencia.criancaNome}</span>
                     </div>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      {formatOcorrenciaTipo(ocorrencia.tipo)} • {formatDate(ocorrencia.dataCriacao)}
+                      {formatOcorrenciaTipo(ocorrencia.tipo, t)} • {formatDate(ocorrencia.dataCriacao)}
                     </p>
                   </div>
                   <Button
@@ -923,13 +903,13 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
                     })}
                   >
                     <Eye className="mr-2 h-4 w-4" />
-                    Ver
+                    {t('actions.see')}
                   </Button>
                 </div>
               </div>
             ))
           ) : (
-            <EstadoVazio texto="Nenhuma ocorrência aberta neste momento." />
+            <EstadoVazio texto={t('kids.occurrence.noneOpen')} />
           )}
         </CardContent>
       </Card>
@@ -938,32 +918,32 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-4 w-4" />
-            {t('kids.filters', 'Filtros')}
+            {t('kids.filters')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t('kids.search', 'Buscar')}</label>
+              <label className="text-sm font-medium">{t('kids.search')}</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={filtros.busca}
                   onChange={(e) => handleFiltroChange('busca', e.target.value)}
-                  placeholder={t('kids.searchPlaceholder', 'Nome da criança...')}
+                  placeholder={t('kids.searchPlaceholder')}
                   className="pl-9"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t('kids.child', 'Criança')}</label>
+              <label className="text-sm font-medium">{t('kids.child')}</label>
               <Select value={filtros.criancaPessoaId || 'todas'} onValueChange={(value) => handleFiltroChange('criancaPessoaId', value === 'todas' ? '' : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder={t('kids.allChildren', 'Todas as crianças')} />
+                  <SelectValue placeholder={t('kids.allChildren')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todas">{t('kids.allChildren', 'Todas as crianças')}</SelectItem>
+                  <SelectItem value="todas">{t('kids.allChildren')}</SelectItem>
                   {criancas.map((crianca) => (
                     <SelectItem key={crianca.pessoaId} value={String(crianca.pessoaId)}>
                       {crianca.nome}
@@ -974,21 +954,21 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t('kids.status', 'Status')}</label>
+              <label className="text-sm font-medium">{t('kids.status')}</label>
               <Select value={filtros.status || 'todos'} onValueChange={(value) => handleFiltroChange('status', value === 'todos' ? '' : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder={t('kids.allStatus', 'Todos os status')} />
+                  <SelectValue placeholder={t('kids.allStatus')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">{t('kids.allStatus', 'Todos os status')}</SelectItem>
-                  <SelectItem value="ativo">{t('kids.active', 'Ativo')}</SelectItem>
-                  <SelectItem value="finalizado">{t('kids.finished', 'Finalizado')}</SelectItem>
+                  <SelectItem value="todos">{t('kids.allStatus')}</SelectItem>
+                  <SelectItem value="ativo">{t('kids.active')}</SelectItem>
+                  <SelectItem value="finalizado">{t('kids.finished')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t('kids.dateStart', 'Data Início')}</label>
+              <label className="text-sm font-medium">{t('kids.dateStart')}</label>
               <Input
                 type="date"
                 value={filtros.dataInicio}
@@ -997,7 +977,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t('kids.dateEnd', 'Data Fim')}</label>
+              <label className="text-sm font-medium">{t('kids.dateEnd')}</label>
               <Input
                 type="date"
                 value={filtros.dataFim}
@@ -1008,7 +988,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
 
           <div className="mt-4 flex justify-end">
             <Button variant="outline" onClick={limparFiltros}>
-              {t('kids.clearFilters', 'Limpar Filtros')}
+              {t('kids.clearFilters')}
             </Button>
           </div>
         </CardContent>
@@ -1016,21 +996,21 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('kids.historyTitle', 'Histórico de Check-ins')}</CardTitle>
+          <CardTitle>{t('kids.historyTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           {checkinsFiltrados.length ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('kids.table.child', 'Criança')}</TableHead>
-                  <TableHead>{t('kids.table.checkin', 'Check-in')}</TableHead>
-                  <TableHead>{t('kids.table.checkout', 'Check-out')}</TableHead>
-                  <TableHead>{t('kids.table.duration', 'Duração')}</TableHead>
-                  <TableHead>{t('kids.table.method', 'Método')}</TableHead>
-                  <TableHead>{t('kids.table.status', 'Status')}</TableHead>
-                  <TableHead>{t('kids.table.checkinBy', 'Check-in por')}</TableHead>
-                  <TableHead>{t('kids.table.checkoutBy', 'Check-out por')}</TableHead>
+                  <TableHead>{t('kids.table.child')}</TableHead>
+                  <TableHead>{t('kids.table.checkin')}</TableHead>
+                  <TableHead>{t('kids.table.checkout')}</TableHead>
+                  <TableHead>{t('kids.table.duration')}</TableHead>
+                  <TableHead>{t('kids.table.method')}</TableHead>
+                  <TableHead>{t('kids.table.status')}</TableHead>
+                  <TableHead>{t('kids.table.checkinBy')}</TableHead>
+                  <TableHead>{t('kids.table.checkoutBy')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1049,7 +1029,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
               </TableBody>
             </Table>
           ) : (
-            <EstadoVazio texto={t('kids.emptyMessage', 'Nenhum check-in encontrado com os filtros aplicados.')} />
+            <EstadoVazio texto={t('kids.emptyMessage')} />
           )}
         </CardContent>
       </Card>
@@ -1072,10 +1052,10 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
             {showPainel && (
               <Select value={filtros.salaId} onValueChange={(value) => handleFiltroChange('salaId', value)}>
                 <SelectTrigger className="w-[220px]">
-                  <SelectValue placeholder={t('kids.panel.selectRoom', 'Filtrar por sala')} />
+                  <SelectValue placeholder={t('kids.panel.selectRoom')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todas">{t('kids.panel.allRooms', 'Todas as salas')}</SelectItem>
+                  <SelectItem value="todas">{t('kids.panel.allRooms')}</SelectItem>
                   {salasDisponiveis.map((sala) => (
                     <SelectItem key={sala} value={sala}>
                       {sala}
@@ -1088,22 +1068,22 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
               <>
                 <Button variant="outline" onClick={() => setSalaDialogOpen(true)}>
                   <Building2 className="mr-2 h-4 w-4" />
-                  Nova sala
+                  {t('kids.structure.newRoom')}
                 </Button>
                 <Button variant="outline" onClick={() => setTurmaDialogOpen(true)}>
                   <Layers3 className="mr-2 h-4 w-4" />
-                  Nova turma
+                  {t('kids.structure.newClass')}
                 </Button>
               </>
             )}
             {showCriancas && (
               <Button onClick={() => setCriancaDialogOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Nova criança
+                {t('kids.children.new')}
               </Button>
             )}
             <Button variant="outline" onClick={fetchData}>
-              {t('kids.panel.refresh', 'Atualizar painel')}
+              {t('kids.panel.refresh')}
             </Button>
           </div>
         </div>
@@ -1111,8 +1091,8 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
         {isOverview ? (
           <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-4">
             <TabsList>
-              <TabsTrigger value="painel">{t('kids.panel.currentTab', 'Painel atual')}</TabsTrigger>
-              <TabsTrigger value="historico">{t('kids.panel.historyTab', 'Histórico')}</TabsTrigger>
+              <TabsTrigger value="painel">{t('kids.panel.currentTab')}</TabsTrigger>
+              <TabsTrigger value="historico">{t('kids.panel.historyTab')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="painel" className="space-y-6">

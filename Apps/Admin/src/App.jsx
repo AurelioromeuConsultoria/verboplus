@@ -27,6 +27,7 @@ const ComunicacaoTemplatesList = lazy(() => import('./pages/Comunicacao/Comunica
 const ComunicacaoTemplateForm = lazy(() => import('./pages/Comunicacao/ComunicacaoTemplateForm'));
 const ComunicacaoSegmentosList = lazy(() => import('./pages/Comunicacao/ComunicacaoSegmentosList'));
 const ComunicacaoSegmentoForm = lazy(() => import('./pages/Comunicacao/ComunicacaoSegmentoForm'));
+const ComunicacaoPreferenciasList = lazy(() => import('./pages/Comunicacao/ComunicacaoPreferenciasList'));
 const EquipesList = lazy(() => import('./pages/Equipes/EquipesList'));
 const EquipeForm = lazy(() => import('./pages/Equipes/EquipeForm'));
 const CargosList = lazy(() => import('./pages/Cargos/CargosList'));
@@ -101,15 +102,18 @@ const DashboardFinanceiro = lazy(() => import('./pages/Financeiro/DashboardFinan
 const RelatoriosFinanceiros = lazy(() => import('./pages/Financeiro/RelatoriosFinanceiros'));
 const PerfisAcessoList = lazy(() => import('./pages/PerfisAcesso/PerfisAcessoList'));
 const PerfilAcessoForm = lazy(() => import('./pages/PerfisAcesso/PerfilAcessoForm'));
+const TenantsPage = lazy(() => import('./pages/Platform/TenantsPage'));
+const TenantDetailsPage = lazy(() => import('./pages/Platform/TenantDetailsPage'));
 import { RESOURCES, ACTIONS } from './utils/permissions';
 import './App.css';
+import i18n from './i18n';
 
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <Router>
-        <Suspense fallback={<div className="p-6 text-muted-foreground">Carregando...</div>}>
+        <Suspense fallback={<div className="p-6 text-muted-foreground">{i18n.t('common.loading')}</div>}>
         <Routes>
           {/* Rota pública de login */}
           <Route path="/login" element={<Login />} />
@@ -256,6 +260,11 @@ function App() {
           <Route path="comunicacao/segmentos/:id/editar" element={
             <RequirePermission resource={RESOURCES.COMUNICACAO} action={ACTIONS.EDIT}>
               <ComunicacaoSegmentoForm />
+            </RequirePermission>
+          } />
+          <Route path="comunicacao/preferencias" element={
+            <RequirePermission resource={RESOURCES.COMUNICACAO} action={ACTIONS.EDIT}>
+              <ComunicacaoPreferenciasList />
             </RequirePermission>
           } />
 
@@ -500,6 +509,8 @@ function App() {
               <OperacaoDashboard />
             </RequirePermission>
           } />
+          <Route path="plataforma/tenants" element={<TenantsPage />} />
+          <Route path="plataforma/tenants/:id" element={<TenantDetailsPage />} />
           <Route path="perfis-acesso" element={
             <RequirePermission resource={RESOURCES.PERFIS_ACESSO} requireAdmin>
               <PerfisAcessoList />

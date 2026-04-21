@@ -11,15 +11,17 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { pessoasApi, usuariosApi, voluntariosApi } from '@/lib/api';
 import { usePagination } from '@/hooks/usePagination';
+import { useTranslation } from 'react-i18next';
 
 function getStatusVinculo(temUsuario, qtdVoluntario) {
-  if (temUsuario && qtdVoluntario > 0) return 'Usuário + Voluntário';
-  if (temUsuario && qtdVoluntario === 0) return 'Usuário sem vínculo de voluntário';
-  if (!temUsuario && qtdVoluntario > 0) return 'Voluntário sem usuário';
-  return 'Somente pessoa';
+  if (temUsuario && qtdVoluntario > 0) return 'userAndVolunteer';
+  if (temUsuario && qtdVoluntario === 0) return 'userWithoutVolunteer';
+  if (!temUsuario && qtdVoluntario > 0) return 'volunteerWithoutUser';
+  return 'personOnly';
 }
 
 export default function RelatorioVinculosVoluntariado() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busca, setBusca] = useState('');
@@ -72,7 +74,7 @@ export default function RelatorioVinculosVoluntariado() {
       setLinhas(resultado);
     } catch (err) {
       console.error(err);
-      setError('Erro ao carregar relatório de vínculos');
+      setError(t('volunteer.schedules.linksReport.errorLoad'));
     } finally {
       setLoading(false);
     }
@@ -111,70 +113,70 @@ export default function RelatorioVinculosVoluntariado() {
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtradas, 20);
 
-  if (loading) return <LoadingPage text="Carregando relatório..." />;
+  if (loading) return <LoadingPage text={t('volunteer.schedules.linksReport.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Relatório Usuários x Pessoas x Voluntários</h1>
+          <h1 className="text-3xl font-bold">{t('volunteer.schedules.linksReport.title')}</h1>
           <p className="text-muted-foreground">
-            Visão consolidada dos vínculos entre pessoa, acesso ao sistema e voluntariado
+            {t('volunteer.schedules.linksReport.subtitle')}
           </p>
         </div>
         <Button variant="outline" onClick={load}>
           <RefreshCcw className="h-4 w-4 mr-2" />
-          Atualizar
+          {t('actions.refresh')}
         </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
-          <CardHeader><CardTitle>Total de Pessoas</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('volunteer.schedules.linksReport.summary.totalPeople')}</CardTitle></CardHeader>
           <CardContent className="text-2xl font-bold">{resumo.total}</CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Com Usuário</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('volunteer.schedules.linksReport.summary.withUser')}</CardTitle></CardHeader>
           <CardContent className="text-2xl font-bold">{resumo.comUsuario}</CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Com Voluntário</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('volunteer.schedules.linksReport.summary.withVolunteer')}</CardTitle></CardHeader>
           <CardContent className="text-2xl font-bold">{resumo.comVoluntario}</CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Com Ambos</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('volunteer.schedules.linksReport.summary.withBoth')}</CardTitle></CardHeader>
           <CardContent className="text-2xl font-bold">{resumo.comAmbos}</CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>{t('volunteer.schedules.filtersTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Buscar</label>
+              <label className="text-sm font-medium">{t('volunteer.schedules.linksReport.searchLabel')}</label>
               <Input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Nome, email da pessoa ou email de login"
+                placeholder={t('volunteer.schedules.linksReport.searchPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium">{t('volunteer.schedules.linksReport.statusLabel')}</label>
               <Select value={filtroStatus} onValueChange={setFiltroStatus}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="com-usuario">Com usuário</SelectItem>
-                  <SelectItem value="sem-usuario">Sem usuário</SelectItem>
-                  <SelectItem value="com-voluntario">Com voluntário</SelectItem>
-                  <SelectItem value="sem-voluntario">Sem voluntário</SelectItem>
-                  <SelectItem value="com-ambos">Com usuário e voluntário</SelectItem>
+                  <SelectItem value="all">{t('volunteer.schedules.linksReport.filters.all')}</SelectItem>
+                  <SelectItem value="com-usuario">{t('volunteer.schedules.linksReport.filters.withUser')}</SelectItem>
+                  <SelectItem value="sem-usuario">{t('volunteer.schedules.linksReport.filters.withoutUser')}</SelectItem>
+                  <SelectItem value="com-voluntario">{t('volunteer.schedules.linksReport.filters.withVolunteer')}</SelectItem>
+                  <SelectItem value="sem-voluntario">{t('volunteer.schedules.linksReport.filters.withoutVolunteer')}</SelectItem>
+                  <SelectItem value="com-ambos">{t('volunteer.schedules.linksReport.filters.withBoth')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -184,24 +186,24 @@ export default function RelatorioVinculosVoluntariado() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Vínculos ({total})</CardTitle>
+          <CardTitle>{t('volunteer.schedules.linksReport.listTitle', { total })}</CardTitle>
         </CardHeader>
         <CardContent>
           {filtradas.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhum registro encontrado.</div>
+            <div className="text-center py-8 text-muted-foreground">{t('volunteer.schedules.linksReport.empty')}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Pessoa</TableHead>
-                  <TableHead>Email Pessoa</TableHead>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Email Login</TableHead>
-                  <TableHead>Tipo Usuário</TableHead>
-                  <TableHead>Vínculos Voluntário</TableHead>
-                  <TableHead>Equipes</TableHead>
-                  <TableHead>Cargos</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{t('volunteer.schedules.linksReport.table.person')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.linksReport.table.personEmail')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.linksReport.table.user')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.linksReport.table.loginEmail')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.linksReport.table.userType')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.linksReport.table.volunteerLinks')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.linksReport.table.teams')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.linksReport.table.roles')}</TableHead>
+                  <TableHead>{t('volunteer.schedules.linksReport.table.status')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -213,7 +215,7 @@ export default function RelatorioVinculosVoluntariado() {
                       </Link>
                     </TableCell>
                     <TableCell>{linha.emailPessoa}</TableCell>
-                    <TableCell>{linha.temUsuario ? 'Sim' : 'Não'}</TableCell>
+                    <TableCell>{linha.temUsuario ? t('volunteer.schedules.linksReport.yes') : t('volunteer.schedules.linksReport.no')}</TableCell>
                     <TableCell>{linha.emailLogin}</TableCell>
                     <TableCell>{linha.tipoUsuario}</TableCell>
                     <TableCell>{linha.qtdVinculosVoluntario}</TableCell>
@@ -222,7 +224,7 @@ export default function RelatorioVinculosVoluntariado() {
                     <TableCell>
                       <div className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs bg-muted">
                         <ArrowRightLeft className="h-3 w-3" />
-                        {linha.statusVinculo}
+                        {t(`volunteer.schedules.linksReport.status.${linha.statusVinculo}`)}
                       </div>
                     </TableCell>
                   </TableRow>

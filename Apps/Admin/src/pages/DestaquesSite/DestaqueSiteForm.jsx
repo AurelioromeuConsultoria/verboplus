@@ -11,8 +11,10 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { ImageUpload } from '@/components/ImageUpload';
 import { destaquesSiteApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function DestaqueSiteForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
@@ -40,7 +42,7 @@ export default function DestaqueSiteForm() {
         imagem: d.imagem || '',
       });
     } catch (err) {
-      setError('Erro ao carregar destaque do site');
+      setError(t('siteHighlightsManagement.form.errorLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -82,10 +84,12 @@ export default function DestaqueSiteForm() {
       };
       if (isEditing) await destaquesSiteApi.update(id, payload);
       else await destaquesSiteApi.create(payload);
-      toast.success(isEditing ? 'Destaque atualizado com sucesso!' : 'Destaque criado com sucesso!');
+      toast.success(isEditing
+        ? t('siteHighlightsManagement.form.updateSuccess')
+        : t('siteHighlightsManagement.form.createSuccess'));
       navigate('/destaques-site');
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Erro ao salvar destaque do site';
+      const errorMessage = err.response?.data?.message || t('siteHighlightsManagement.form.errorSave');
       toast.error(errorMessage);
       console.error(err);
     } finally {
@@ -93,7 +97,7 @@ export default function DestaqueSiteForm() {
     }
   };
 
-  if (loading && isEditing) return <LoadingPage text="Carregando destaque..." />;
+  if (loading && isEditing) return <LoadingPage text={t('siteHighlightsManagement.form.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={load} />;
 
   return (
@@ -101,25 +105,25 @@ export default function DestaqueSiteForm() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" asChild>
           <Link to="/destaques-site">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('actions.back')}
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{isEditing ? 'Editar Destaque do Site' : 'Novo Destaque do Site'}</h1>
-          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações do destaque' : 'Cadastre um novo destaque do site'}</p>
+          <h1 className="text-3xl font-bold">{isEditing ? t('siteHighlightsManagement.form.editTitle') : t('siteHighlightsManagement.form.newTitle')}</h1>
+          <p className="text-muted-foreground">{isEditing ? t('siteHighlightsManagement.form.editSubtitle') : t('siteHighlightsManagement.form.newSubtitle')}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isEditing ? 'Editar Destaque do Site' : 'Cadastrar Destaque do Site'}</CardTitle>
+          <CardTitle>{isEditing ? t('siteHighlightsManagement.form.editTitle') : t('siteHighlightsManagement.form.cardTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="texto">Texto</Label>
-                <Input id="texto" name="texto" value={formData.texto} onChange={handleChange} placeholder="Texto do destaque" />
+                <Label htmlFor="texto">{t('siteHighlightsManagement.form.fields.text')}</Label>
+                <Input id="texto" name="texto" value={formData.texto} onChange={handleChange} placeholder={t('siteHighlightsManagement.form.fields.textPlaceholder')} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="url">URL</Label>
@@ -129,24 +133,24 @@ export default function DestaqueSiteForm() {
                   type="text" 
                   value={formData.url} 
                   onChange={handleChange} 
-                  placeholder="exemplo.com ou https://exemplo.com" 
+                  placeholder={t('siteHighlightsManagement.form.fields.urlPlaceholder')} 
                 />
                 {formData.url && !formData.url.match(/^https?:\/\//i) && (
                   <p className="text-xs text-muted-foreground">
-                    Será adicionado https:// automaticamente
+                    {t('siteHighlightsManagement.form.fields.urlHint')}
                   </p>
                 )}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição</Label>
-              <Textarea id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder="Descrição do destaque" rows={3} />
+              <Label htmlFor="descricao">{t('siteHighlightsManagement.form.fields.description')}</Label>
+              <Textarea id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} placeholder={t('siteHighlightsManagement.form.fields.descriptionPlaceholder')} rows={3} />
             </div>
 
             <div className="space-y-2">
               <ImageUpload
-                label="Imagem"
+                label={t('siteHighlightsManagement.form.fields.image')}
                 value={formData.imagem}
                 onChange={(url) => setFormData((prev) => ({ ...prev, imagem: url }))}
                 accept="image/*"
@@ -156,10 +160,10 @@ export default function DestaqueSiteForm() {
 
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={loading}>
-                <Save className="h-4 w-4 mr-2" /> {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
+                <Save className="h-4 w-4 mr-2" /> {loading ? t('actions.saving') : (isEditing ? t('actions.update') : t('actions.create'))}
               </Button>
               <Button type="button" variant="outline" asChild>
-                <Link to="/destaques-site">Cancelar</Link>
+                <Link to="/destaques-site">{t('actions.cancel')}</Link>
               </Button>
             </div>
           </form>
@@ -168,5 +172,4 @@ export default function DestaqueSiteForm() {
     </div>
   );
 }
-
 

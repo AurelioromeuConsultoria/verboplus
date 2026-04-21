@@ -6,8 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { inscricoesEventosApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function InscricaoEventoPublicForm({ eventoId, onSuccess, onCancel }) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     nome: '',
     whatsApp: '',
@@ -41,23 +43,23 @@ export default function InscricaoEventoPublicForm({ eventoId, onSuccess, onCance
     e.preventDefault();
     
     if (!formData.nome.trim()) {
-      toast.error('Nome é obrigatório');
+      toast.error(t('eventRegistrations.publicForm.validation.nameRequired'));
       return;
     }
 
     if (!formData.whatsApp.trim()) {
-      toast.error('WhatsApp é obrigatório');
+      toast.error(t('eventRegistrations.publicForm.validation.whatsAppRequired'));
       return;
     }
 
     const whatsAppNumbers = formData.whatsApp.replace(/\D/g, '');
     if (whatsAppNumbers.length < 10 || whatsAppNumbers.length > 13) {
-      toast.error('WhatsApp inválido. Use o formato (11) 99999-9999');
+      toast.error(t('eventRegistrations.publicForm.validation.whatsAppInvalid'));
       return;
     }
 
     if (formData.email && !/.+@.+\..+/.test(formData.email)) {
-      toast.error('Email inválido');
+      toast.error(t('eventRegistrations.publicForm.validation.emailInvalid'));
       return;
     }
 
@@ -73,21 +75,21 @@ export default function InscricaoEventoPublicForm({ eventoId, onSuccess, onCance
       };
 
       await inscricoesEventosApi.create(payload);
-      toast.success('Inscrição realizada com sucesso! Aguarde a confirmação.');
+      toast.success(t('eventRegistrations.publicForm.success'));
       
       if (onSuccess) {
         onSuccess();
       }
     } catch (err) {
-      let errorMessage = 'Erro ao realizar inscrição';
+      let errorMessage = t('eventRegistrations.publicForm.errorDefault');
       if (err.response?.data?.message) {
         const msg = err.response.data.message;
         if (msg.includes('já iniciou')) {
-          errorMessage = 'Este evento já iniciou e não aceita mais inscrições';
+          errorMessage = t('eventRegistrations.publicForm.errors.alreadyStarted');
         } else if (msg.includes('já existe') || msg.includes('duplicada')) {
-          errorMessage = 'Você já está inscrito neste evento';
+          errorMessage = t('eventRegistrations.publicForm.errors.duplicate');
         } else if (msg.includes('não encontrado')) {
-          errorMessage = 'Evento não encontrado';
+          errorMessage = t('eventRegistrations.publicForm.errors.notFound');
         } else {
           errorMessage = msg;
         }
@@ -101,24 +103,24 @@ export default function InscricaoEventoPublicForm({ eventoId, onSuccess, onCance
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Inscrever-se no Evento</CardTitle>
+        <CardTitle>{t('eventRegistrations.publicForm.title')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="nome">Nome Completo *</Label>
+            <Label htmlFor="nome">{t('eventRegistrations.publicForm.fields.name')} *</Label>
             <Input
               id="nome"
               name="nome"
               value={formData.nome}
               onChange={handleChange}
-              placeholder="Seu nome completo"
+              placeholder={t('eventRegistrations.publicForm.placeholders.name')}
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="whatsApp">WhatsApp *</Label>
+            <Label htmlFor="whatsApp">{t('eventRegistrations.publicForm.fields.whatsApp')} *</Label>
             <Input
               id="whatsApp"
               name="whatsApp"
@@ -130,19 +132,19 @@ export default function InscricaoEventoPublicForm({ eventoId, onSuccess, onCance
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('eventRegistrations.publicForm.fields.email')}</Label>
             <Input
               id="email"
               name="email"
               type="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="seu@email.com"
+              placeholder={t('eventRegistrations.publicForm.placeholders.email')}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="quantidadeAcompanhantes">Quantidade de Acompanhantes</Label>
+            <Label htmlFor="quantidadeAcompanhantes">{t('eventRegistrations.publicForm.fields.companions')}</Label>
             <Input
               id="quantidadeAcompanhantes"
               name="quantidadeAcompanhantes"
@@ -152,28 +154,28 @@ export default function InscricaoEventoPublicForm({ eventoId, onSuccess, onCance
               onChange={handleChange}
               placeholder="0"
             />
-            <p className="text-xs text-muted-foreground">Número de pessoas que virão junto com você</p>
+            <p className="text-xs text-muted-foreground">{t('eventRegistrations.publicForm.fields.companionsHint')}</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="observacoes">Observações</Label>
+            <Label htmlFor="observacoes">{t('eventRegistrations.publicForm.fields.notes')}</Label>
             <Textarea
               id="observacoes"
               name="observacoes"
               value={formData.observacoes}
               onChange={handleChange}
-              placeholder="Alguma informação adicional que gostaria de compartilhar?"
+              placeholder={t('eventRegistrations.publicForm.placeholders.notes')}
               rows={3}
             />
           </div>
 
           <div className="flex items-center space-x-4">
             <Button type="submit" disabled={loading}>
-              {loading ? 'Enviando...' : 'Inscrever-se'}
+              {loading ? t('eventRegistrations.publicForm.submitting') : t('eventRegistrations.publicForm.submit')}
             </Button>
             {onCancel && (
               <Button type="button" variant="outline" onClick={onCancel}>
-                Cancelar
+                {t('actions.cancel')}
               </Button>
             )}
           </div>
@@ -182,7 +184,6 @@ export default function InscricaoEventoPublicForm({ eventoId, onSuccess, onCance
     </Card>
   );
 }
-
 
 
 

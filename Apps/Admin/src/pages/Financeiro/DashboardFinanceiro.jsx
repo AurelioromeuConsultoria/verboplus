@@ -7,6 +7,7 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useTranslation } from 'react-i18next';
+import { formatCurrency, formatDate } from '@/lib/formatters';
 
 export default function DashboardFinanceiro() {
   const { t } = useTranslation();
@@ -31,9 +32,6 @@ export default function DashboardFinanceiro() {
       setLoading(false);
     }
   };
-
-  const formatCurrency = (value) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
   if (loading) {
     return (
@@ -224,7 +222,7 @@ export default function DashboardFinanceiro() {
                 <TableBody>
                   {data.receitasPorCategoria.map((item, idx) => (
                     <TableRow key={idx}>
-                      <TableCell className="font-medium">{item.categoriaNome || 'Sem categoria'}</TableCell>
+                      <TableCell className="font-medium">{item.categoriaNome || t('finance.common.notCategorized')}</TableCell>
                       <TableCell className="text-right text-green-600">{formatCurrency(item.total)}</TableCell>
                       <TableCell className="text-right">{item.percentual.toFixed(1)}%</TableCell>
                     </TableRow>
@@ -264,7 +262,7 @@ export default function DashboardFinanceiro() {
                 <TableBody>
                   {data.despesasPorCategoria.map((item, idx) => (
                     <TableRow key={idx}>
-                      <TableCell className="font-medium">{item.categoriaNome || 'Sem categoria'}</TableCell>
+                      <TableCell className="font-medium">{item.categoriaNome || t('finance.common.notCategorized')}</TableCell>
                       <TableCell className="text-right text-red-600">{formatCurrency(item.total)}</TableCell>
                       <TableCell className="text-right">{item.percentual.toFixed(1)}%</TableCell>
                     </TableRow>
@@ -310,7 +308,7 @@ export default function DashboardFinanceiro() {
                       </span>
                     </TableCell>
                     <TableCell className="font-medium">{item.descricao}</TableCell>
-                    <TableCell>{new Date(item.data).toLocaleDateString('pt-BR')}</TableCell>
+                    <TableCell>{formatDate(item.data)}</TableCell>
                     <TableCell>
                       <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">{item.status}</span>
                     </TableCell>

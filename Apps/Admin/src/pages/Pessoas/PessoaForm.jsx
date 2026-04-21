@@ -26,14 +26,14 @@ export default function PessoaForm() {
   const validationRules = {
     nome: {
       required: true,
-      requiredMessage: 'Nome é obrigatório',
+      requiredMessage: t('people.form.validation.nameRequired'),
       minLength: 2,
-      minLengthMessage: 'Nome deve ter pelo menos 2 caracteres',
+      minLengthMessage: t('people.form.validation.nameMin'),
       maxLength: 100,
     },
     email: {
       email: true,
-      emailMessage: 'Email inválido',
+      emailMessage: t('people.form.validation.emailInvalid'),
     },
     telefone: {
       maxLength: 20,
@@ -85,9 +85,9 @@ export default function PessoaForm() {
       setFormData(loadedData);
       resetValidation(loadedData);
     } catch (err) {
-      setError('Erro ao carregar pessoa');
+      setError(t('people.form.errorLoad'));
       console.error('Erro ao carregar pessoa:', err);
-      toast.error('Erro ao carregar pessoa');
+      toast.error(t('people.form.errorLoad'));
     } finally {
       setLoading(false);
     }
@@ -140,17 +140,17 @@ export default function PessoaForm() {
 
       if (isEditing) {
         await pessoasApi.update(id, payload);
-        toast.success('Pessoa atualizada com sucesso');
+        toast.success(t('people.form.updateSuccess'));
       } else {
         await pessoasApi.create(payload);
-        toast.success('Pessoa cadastrada com sucesso');
+        toast.success(t('people.form.createSuccess'));
       }
 
       navigate('/pessoas');
     } catch (err) {
       const errorMessage = err.response?.data?.message || 
                           err.response?.data?.error ||
-                          'Erro ao salvar pessoa';
+                          t('people.form.saveError');
       toast.error(errorMessage);
       console.error('Erro ao salvar pessoa:', err);
     } finally {
@@ -159,7 +159,7 @@ export default function PessoaForm() {
   };
 
   if (loading && isEditing) {
-    return <LoadingPage text="Carregando pessoa..." />;
+    return <LoadingPage text={t('people.form.loading')} />;
   }
 
   if (error) {
@@ -172,7 +172,7 @@ export default function PessoaForm() {
         <Button variant="ghost" asChild>
           <Link to="/pessoas">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
+            {t('actions.back')}
           </Link>
         </Button>
         <div>
@@ -180,7 +180,7 @@ export default function PessoaForm() {
             {isEditing ? t('people.edit') : t('people.new')}
           </h1>
           <p className="text-muted-foreground">
-            {isEditing ? 'Atualize as informações da pessoa' : 'Cadastre uma nova pessoa'}
+            {isEditing ? t('people.form.editSubtitle') : t('people.form.createSubtitle')}
           </p>
         </div>
       </div>
@@ -195,14 +195,14 @@ export default function PessoaForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
+                <Label htmlFor="nome">{t('people.form.fields.name')} *</Label>
                 <Input
                   id="nome"
                   name="nome"
                   value={formData.nome}
                   onChange={handleChange}
                   onBlur={() => handleBlur('nome')}
-                  placeholder="Nome completo"
+                  placeholder={t('people.form.placeholders.name')}
                   className={touched.nome && errors.nome ? 'border-destructive' : ''}
                 />
                 {touched.nome && errors.nome && (
@@ -211,7 +211,7 @@ export default function PessoaForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('people.form.fields.email')}</Label>
                 <Input
                   id="email"
                   name="email"
@@ -219,7 +219,7 @@ export default function PessoaForm() {
                   value={formData.email}
                   onChange={handleChange}
                   onBlur={() => handleBlur('email')}
-                  placeholder="email@exemplo.com"
+                  placeholder={t('people.form.placeholders.email')}
                   className={touched.email && errors.email ? 'border-destructive' : ''}
                 />
                 {touched.email && errors.email && (
@@ -228,14 +228,14 @@ export default function PessoaForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone</Label>
+                <Label htmlFor="telefone">{t('people.form.fields.phone')}</Label>
                 <Input
                   id="telefone"
                   name="telefone"
                   value={formData.telefone}
                   onChange={(e) => handlePhoneChange('telefone', e.target.value)}
                   onBlur={() => handleBlur('telefone')}
-                  placeholder="11999998888 (apenas números)"
+                  placeholder={t('people.form.placeholders.phone')}
                   className={touched.telefone && errors.telefone ? 'border-destructive' : ''}
                 />
                 {touched.telefone && errors.telefone && (
@@ -244,14 +244,14 @@ export default function PessoaForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="whatsApp">WhatsApp</Label>
+                <Label htmlFor="whatsApp">{t('people.form.fields.whatsapp')}</Label>
                 <Input
                   id="whatsApp"
                   name="whatsApp"
                   value={formData.whatsApp}
                   onChange={(e) => handlePhoneChange('whatsApp', e.target.value)}
                   onBlur={() => handleBlur('whatsApp')}
-                  placeholder="11999998888 (apenas números)"
+                  placeholder={t('people.form.placeholders.whatsapp')}
                   className={touched.whatsApp && errors.whatsApp ? 'border-destructive' : ''}
                 />
                 {touched.whatsApp && errors.whatsApp && (
@@ -260,7 +260,7 @@ export default function PessoaForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="dataNascimento">Data de Nascimento</Label>
+                <Label htmlFor="dataNascimento">{t('people.form.fields.birthDate')}</Label>
                 <Input
                   id="dataNascimento"
                   name="dataNascimento"
@@ -271,7 +271,7 @@ export default function PessoaForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tipoPessoa">Tipo de Pessoa</Label>
+                <Label htmlFor="tipoPessoa">{t('people.form.fields.personType')}</Label>
                 <Select
                   value={formData.tipoPessoa}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, tipoPessoa: value }))}
@@ -280,8 +280,8 @@ export default function PessoaForm() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Adulto">Adulto</SelectItem>
-                    <SelectItem value="Crianca">Criança</SelectItem>
+                    <SelectItem value="Adulto">{t('people.form.personType.adult')}</SelectItem>
+                    <SelectItem value="Crianca">{t('people.form.personType.child')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -295,7 +295,7 @@ export default function PessoaForm() {
                   }
                 />
                 <Label htmlFor="ativo" className="cursor-pointer">
-                  Pessoa ativa
+                  {t('people.form.fields.active')}
                 </Label>
               </div>
             </div>
@@ -315,7 +315,6 @@ export default function PessoaForm() {
     </div>
   );
 }
-
 
 
 

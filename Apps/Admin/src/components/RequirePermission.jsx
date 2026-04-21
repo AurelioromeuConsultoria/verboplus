@@ -1,16 +1,18 @@
 import { Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 
 export function RequirePermission({ resource, action = 'view', requireAdmin = false, children }) {
+  const { t } = useTranslation();
   const { loading, isAuthenticated, isAdmin, can } = useAuth();
 
-  if (loading) return <LoadingPage text="Verificando permissões..." />;
+  if (loading) return <LoadingPage text={t('permissions.checking')} />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   if (requireAdmin && !isAdmin) {
-    return <ErrorPage message="Esta área é restrita a administradores." />;
+    return <ErrorPage message={t('permissions.adminOnly')} />;
   }
 
   if (requireAdmin && isAdmin) {
@@ -18,7 +20,7 @@ export function RequirePermission({ resource, action = 'view', requireAdmin = fa
   }
 
   if (!can(resource, action)) {
-    return <ErrorPage message="Você não tem permissão para acessar esta seção." />;
+    return <ErrorPage message={t('permissions.noAccess')} />;
   }
 
   return children;
