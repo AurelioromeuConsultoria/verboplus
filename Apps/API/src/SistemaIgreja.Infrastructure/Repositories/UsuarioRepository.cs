@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,15 +9,23 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class UsuarioRepository : IUsuarioRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
     public UsuarioRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
+    }
+
+    public UsuarioRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<Usuario>> GetAllAsync()
     {
         return await _context.Set<Usuario>()
+            .Include(u => u.Tenant)
             .Include(u => u.Pessoa)
             .Include(u => u.PerfilAcesso)
                 .ThenInclude(p => p!.Permissoes)
@@ -27,24 +36,35 @@ public class UsuarioRepository : IUsuarioRepository
     public async Task<Usuario?> GetByIdAsync(int id)
     {
         return await _context.Set<Usuario>()
+            .Include(u => u.Tenant)
             .Include(u => u.Pessoa)
             .Include(u => u.PerfilAcesso)
                 .ThenInclude(p => p!.Permissoes)
             .FirstOrDefaultAsync(u => u.Id == id);
     }
 
-    public async Task<Usuario?> GetByEmailAsync(string email)
+    public async Task<Usuario?> GetByEmailAsync(string email, string? tenantSlug = null)
     {
-        return await _context.Set<Usuario>()
+        var query = _context.Set<Usuario>()
+            .Include(u => u.Tenant)
             .Include(u => u.Pessoa)
             .Include(u => u.PerfilAcesso)
                 .ThenInclude(p => p!.Permissoes)
-            .FirstOrDefaultAsync(u => u.EmailLogin.ToLower() == email.ToLower());
+            .Where(u => u.EmailLogin.ToLower() == email.ToLower());
+
+        if (!string.IsNullOrWhiteSpace(tenantSlug))
+        {
+            var normalizedSlug = tenantSlug.Trim().ToLowerInvariant();
+            query = query.Where(u => u.Tenant.Slug.ToLower() == normalizedSlug);
+        }
+
+        return await query.FirstOrDefaultAsync();
     }
 
     public async Task<Usuario?> GetByPessoaIdAsync(int pessoaId)
     {
         return await _context.Set<Usuario>()
+            .Include(u => u.Tenant)
             .Include(u => u.Pessoa)
             .Include(u => u.PerfilAcesso)
                 .ThenInclude(p => p!.Permissoes)
@@ -75,8 +95,23 @@ public class UsuarioRepository : IUsuarioRepository
         }
     }
 
-    public async Task<bool> ExisteAlgumUsuarioAsync()
+    public async Task<bool> ExisteAlgumUsuarioAsync(string? tenantSlug = null)
     {
-        return await _context.Set<Usuario>().AnyAsync();
+        var query = _context.Set<Usuario>().AsQueryable();
+
+        if (_tenantContext.TenantId.HasValue)
+        {
+            query = query.Where(u => u.TenantId == _tenantContext.TenantId.Value);
+        }
+        else
+        {
+            var normalizedSlug = string.IsNullOrWhiteSpace(tenantSlug)
+                ? Tenant.InitialTenantSlug
+                : tenantSlug.Trim().ToLowerInvariant();
+
+            query = query.Where(u => u.Tenant.Slug.ToLower() == normalizedSlug);
+        }
+
+        return await query.AnyAsync();
     }
 }

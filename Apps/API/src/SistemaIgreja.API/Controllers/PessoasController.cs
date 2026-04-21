@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.DTOs.Pessoas;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Domain.Entities;
 using System.Security.Claims;
 
@@ -14,10 +15,16 @@ namespace SistemaIgreja.API.Controllers;
 public class PessoasController : ControllerBase
 {
     private readonly IPessoaService _service;
+    private readonly ICurrentUserContext _currentUser;
+    private readonly IUsuarioRepository _usuarioRepository;
+    private readonly ILogger<PessoasController> _logger;
 
-    public PessoasController(IPessoaService service)
+    public PessoasController(IPessoaService service, ICurrentUserContext currentUser, IUsuarioRepository usuarioRepository, ILogger<PessoasController> logger)
     {
         _service = service;
+        _currentUser = currentUser;
+        _usuarioRepository = usuarioRepository;
+        _logger = logger;
     }
 
     /// <summary>
@@ -65,6 +72,23 @@ public class PessoasController : ControllerBase
         if (pessoa == null)
             return NotFound();
 
+        return Ok(pessoa);
+    }
+
+    [HttpGet("me")]
+    public async Task<ActionResult<PessoaDto>> GetMe()
+    {
+        var pessoaId = await GetCurrentPessoaIdAsync();
+        if (!pessoaId.HasValue)
+        {
+            _logger.LogWarning("Pessoas/me negado: usuario {UsuarioId} sem pessoa vinculada.", _currentUser.UserId);
+            return Unauthorized();
+        }
+
+        var pessoa = await _service.GetByIdAsync(pessoaId.Value);
+        if (pessoa == null) return NotFound();
+
+        _logger.LogInformation("Pessoas/me carregado para usuario {UsuarioId} e pessoa {PessoaId}.", _currentUser.UserId, pessoaId.Value);
         return Ok(pessoa);
     }
 
@@ -133,6 +157,34 @@ public class PessoasController : ControllerBase
         }
     }
 
+    [HttpPut("me")]
+    public async Task<ActionResult<PessoaDto>> UpdateMe(AtualizarMinhaPessoaDto dto)
+    {
+        var pessoaId = await GetCurrentPessoaIdAsync();
+        if (!pessoaId.HasValue)
+        {
+            _logger.LogWarning("Pessoas/me update negado: usuario {UsuarioId} sem pessoa vinculada.", _currentUser.UserId);
+            return Unauthorized();
+        }
+
+        try
+        {
+            var pessoa = await _service.UpdateMinhaPessoaAsync(pessoaId.Value, dto);
+            _logger.LogInformation("Pessoas/me atualizado para usuario {UsuarioId} e pessoa {PessoaId}.", _currentUser.UserId, pessoaId.Value);
+            return Ok(pessoa);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Pessoas/me update invalido para usuario {UsuarioId} e pessoa {PessoaId}.", _currentUser.UserId, pessoaId.Value);
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro inesperado ao atualizar Pessoas/me para usuario {UsuarioId} e pessoa {PessoaId}.", _currentUser.UserId, pessoaId.Value);
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     /// <summary>
     /// Remove uma pessoa
     /// </summary>
@@ -161,5 +213,11 @@ public class PessoasController : ControllerBase
         return tipoUsuarioId == ((int)TipoUsuario.Admin).ToString() ||
                tipoUsuarioId == ((int)TipoUsuario.Ambos).ToString();
     }
-}
 
+    private async Task<int?> GetCurrentPessoaIdAsync()
+    {
+        if (!_currentUser.UserId.HasValue) return null;
+        var usuario = await _usuarioRepository.GetByIdAsync(_currentUser.UserId.Value);
+        return usuario?.PessoaId;
+    }
+}

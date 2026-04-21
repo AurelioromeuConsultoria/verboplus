@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class ContatoRepository : IContatoRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
     public ContatoRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
+    }
+
+    public ContatoRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<Contato>> GetAllAsync()
@@ -29,6 +37,7 @@ public class ContatoRepository : IContatoRepository
 
     public async Task<Contato> CreateAsync(Contato contato)
     {
+        contato.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<Contato>().Add(contato);
         await _context.SaveChangesAsync();
         return contato;
@@ -51,7 +60,6 @@ public class ContatoRepository : IContatoRepository
         }
     }
 }
-
 
 
 

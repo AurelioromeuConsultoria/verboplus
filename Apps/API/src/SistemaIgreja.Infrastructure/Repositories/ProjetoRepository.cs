@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class ProjetoRepository : IProjetoRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public ProjetoRepository(SistemaIgrejaDbContext context)
+    public ProjetoRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public ProjetoRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<Projeto>> GetAllAsync()
@@ -29,6 +37,7 @@ public class ProjetoRepository : IProjetoRepository
 
     public async Task<Projeto> CreateAsync(Projeto projeto)
     {
+        projeto.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<Projeto>().Add(projeto);
         await _context.SaveChangesAsync();
         return projeto;

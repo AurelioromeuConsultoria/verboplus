@@ -16,10 +16,17 @@ public interface ICategoriaNoticiaService
 public class CategoriaNoticiaService : ICategoriaNoticiaService
 {
     private readonly ICategoriaNoticiaRepository _repository;
+    private readonly ITenantContext _tenantContext;
 
     public CategoriaNoticiaService(ICategoriaNoticiaRepository repository)
+        : this(repository, new DefaultTenantContext())
+    {
+    }
+
+    public CategoriaNoticiaService(ICategoriaNoticiaRepository repository, ITenantContext tenantContext)
     {
         _repository = repository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<CategoriaNoticiaDto>> GetAllAsync()
@@ -38,6 +45,7 @@ public class CategoriaNoticiaService : ICategoriaNoticiaService
     {
         var entity = new CategoriaNoticia
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             Nome = dto.Nome,
             DataCriacao = DateTime.Now
         };
@@ -72,6 +80,5 @@ public class CategoriaNoticiaService : ICategoriaNoticiaService
         };
     }
 }
-
 
 

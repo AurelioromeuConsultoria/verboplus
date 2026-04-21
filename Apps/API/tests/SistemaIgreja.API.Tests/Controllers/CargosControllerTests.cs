@@ -59,4 +59,51 @@ public class CargosControllerTests
         var result = await _controller.Delete(3);
         result.Should().BeOfType<NoContentResult>();
     }
+
+    [Fact]
+    public async Task GetById_ReturnsOk_WhenItemExists()
+    {
+        var dto = new CargoDto { Id = 2, Nome = "Líder", DataCriacao = DateTime.UtcNow };
+        _serviceMock.Setup(s => s.GetByIdAsync(2)).ReturnsAsync(dto);
+
+        var result = await _controller.GetById(2);
+
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        ok.Value.Should().Be(dto);
+    }
+
+    [Fact]
+    public async Task Create_ReturnsBadRequest_WhenServiceThrows()
+    {
+        _serviceMock.Setup(s => s.CreateAsync(It.IsAny<CriarCargoDto>()))
+            .ThrowsAsync(new InvalidOperationException("erro"));
+
+        var result = await _controller.Create(new CriarCargoDto());
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task Update_ReturnsOk_WhenServiceSucceeds()
+    {
+        var dto = new AtualizarCargoDto { Nome = "Atualizado" };
+        var updated = new CargoDto { Id = 9, Nome = "Atualizado", DataCriacao = DateTime.UtcNow };
+        _serviceMock.Setup(s => s.UpdateAsync(9, dto)).ReturnsAsync(updated);
+
+        var result = await _controller.Update(9, dto);
+
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        ok.Value.Should().Be(updated);
+    }
+
+    [Fact]
+    public async Task Update_ReturnsBadRequest_WhenServiceThrowsGenericException()
+    {
+        _serviceMock.Setup(s => s.UpdateAsync(9, It.IsAny<AtualizarCargoDto>()))
+            .ThrowsAsync(new InvalidOperationException("erro"));
+
+        var result = await _controller.Update(9, new AtualizarCargoDto());
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
 }

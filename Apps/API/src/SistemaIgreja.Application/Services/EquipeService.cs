@@ -17,11 +17,18 @@ public class EquipeService : IEquipeService
 {
     private readonly IEquipeRepository _repository;
     private readonly IUsuarioRepository _usuarioRepository;
+    private readonly ITenantContext _tenantContext;
 
     public EquipeService(IEquipeRepository repository, IUsuarioRepository usuarioRepository)
+        : this(repository, usuarioRepository, new DefaultTenantContext())
+    {
+    }
+
+    public EquipeService(IEquipeRepository repository, IUsuarioRepository usuarioRepository, ITenantContext tenantContext)
     {
         _repository = repository;
         _usuarioRepository = usuarioRepository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<EquipeDto>> GetAllAsync()
@@ -42,6 +49,7 @@ public class EquipeService : IEquipeService
 
         var equipe = new Equipe
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             Nome = dto.Nome,
             Area = (AreaEquipe)dto.Area,
             LiderUsuarioId = dto.LiderUsuarioId,

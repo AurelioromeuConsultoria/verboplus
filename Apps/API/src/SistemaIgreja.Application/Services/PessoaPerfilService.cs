@@ -19,12 +19,19 @@ public class PessoaPerfilService : IPessoaPerfilService
 {
     private readonly IPessoaPerfilRepository _repository;
     private readonly IPessoaRepository _pessoaRepository;
+    private readonly ITenantContext _tenantContext;
     private readonly ILogger<PessoaPerfilService> _logger;
 
     public PessoaPerfilService(IPessoaPerfilRepository repository, IPessoaRepository pessoaRepository, ILogger<PessoaPerfilService> logger)
+        : this(repository, pessoaRepository, new DefaultTenantContext(), logger)
+    {
+    }
+
+    public PessoaPerfilService(IPessoaPerfilRepository repository, IPessoaRepository pessoaRepository, ITenantContext tenantContext, ILogger<PessoaPerfilService> logger)
     {
         _repository = repository;
         _pessoaRepository = pessoaRepository;
+        _tenantContext = tenantContext;
         _logger = logger;
     }
 
@@ -60,6 +67,7 @@ public class PessoaPerfilService : IPessoaPerfilService
 
         var perfil = new PessoaPerfil
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             PessoaId = dto.PessoaId,
             Perfil = dto.Perfil,
             DataInicio = dto.DataInicio ?? DateTime.UtcNow,
@@ -133,5 +141,3 @@ public class PessoaPerfilService : IPessoaPerfilService
         };
     }
 }
-
-

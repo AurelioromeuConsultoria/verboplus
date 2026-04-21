@@ -43,6 +43,9 @@ var host = Host.CreateDefaultBuilder(args)
             }
         });
 
+        services.AddScoped<TenantScopeOverride>();
+        services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantScopeOverride>());
+
         services.AddScoped<IPessoaRepository, PessoaRepository>();
         services.AddScoped<IPessoaPerfilRepository, PessoaPerfilRepository>();
         services.AddScoped<IVisitanteRepository, VisitanteRepository>();

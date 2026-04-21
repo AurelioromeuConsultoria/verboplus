@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.DTOs.Pessoas;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -9,15 +10,24 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class PessoaRepository : IPessoaRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
     public PessoaRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
+    }
+
+    public PessoaRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<Pessoa>> GetAllAsync()
     {
+        var tenantId = await ResolveTenantIdAsync();
         return await _context.Set<Pessoa>()
+            .Where(p => p.TenantId == tenantId)
             .OrderBy(p => p.Nome)
             .ToListAsync();
     }
@@ -26,9 +36,11 @@ public class PessoaRepository : IPessoaRepository
     {
         var page = query.Page <= 0 ? 1 : query.Page;
         var pageSize = query.PageSize <= 0 ? 20 : Math.Min(query.PageSize, 200);
+        var tenantId = await ResolveTenantIdAsync();
 
         var q = _context.Set<Pessoa>()
             .AsNoTracking()
+            .Where(p => p.TenantId == tenantId)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(query.Nome))
@@ -101,24 +113,27 @@ public class PessoaRepository : IPessoaRepository
 
     public async Task<Pessoa?> GetByIdAsync(int id)
     {
+        var tenantId = await ResolveTenantIdAsync();
         return await _context.Set<Pessoa>()
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId);
     }
 
     public async Task<Pessoa?> GetByEmailAsync(string email)
     {
+        var tenantId = await ResolveTenantIdAsync();
         return await _context.Set<Pessoa>()
-            .FirstOrDefaultAsync(p => p.Email != null && p.Email.ToLower() == email.ToLower());
+            .FirstOrDefaultAsync(p => p.TenantId == tenantId && p.Email != null && p.Email.ToLower() == email.ToLower());
     }
 
     public async Task<Pessoa?> GetByWhatsAppAsync(string whatsApp)
     {
+        var tenantId = await ResolveTenantIdAsync();
         var whatsAppNormalizado = NormalizarTelefone(whatsApp);
         if (string.IsNullOrWhiteSpace(whatsAppNormalizado))
             return null;
 
         var pessoas = await _context.Set<Pessoa>()
-            .Where(p => p.WhatsApp != null)
+            .Where(p => p.TenantId == tenantId && p.WhatsApp != null)
             .ToListAsync();
 
         return pessoas.FirstOrDefault(p => NormalizarTelefone(p.WhatsApp!) == whatsAppNormalizado);
@@ -126,12 +141,13 @@ public class PessoaRepository : IPessoaRepository
 
     public async Task<Pessoa?> GetByTelefoneAsync(string telefone)
     {
+        var tenantId = await ResolveTenantIdAsync();
         var telefoneNormalizado = NormalizarTelefone(telefone);
         if (string.IsNullOrWhiteSpace(telefoneNormalizado))
             return null;
 
         var pessoas = await _context.Set<Pessoa>()
-            .Where(p => p.Telefone != null)
+            .Where(p => p.TenantId == tenantId && p.Telefone != null)
             .ToListAsync();
 
         return pessoas.FirstOrDefault(p => NormalizarTelefone(p.Telefone!) == telefoneNormalizado);
@@ -148,15 +164,17 @@ public class PessoaRepository : IPessoaRepository
 
     public async Task<Pessoa> CreateAsync(Pessoa pessoa)
     {
+        pessoa.TenantId = await ResolveTenantIdAsync();
         _context.Set<Pessoa>().Add(pessoa);
         await _context.SaveChangesAsync();
         return pessoa;
     }
 
-    public Task<Pessoa> CreateWithoutSaveAsync(Pessoa pessoa)
+    public async Task<Pessoa> CreateWithoutSaveAsync(Pessoa pessoa)
     {
+        pessoa.TenantId = await ResolveTenantIdAsync();
         _context.Set<Pessoa>().Add(pessoa);
-        return Task.FromResult(pessoa);
+        return pessoa;
     }
 
     public async Task<Pessoa> UpdateAsync(Pessoa pessoa)
@@ -174,13 +192,31 @@ public class PessoaRepository : IPessoaRepository
 
     public async Task DeleteAsync(int id)
     {
-        var entity = await _context.Set<Pessoa>().FindAsync(id);
+        var tenantId = await ResolveTenantIdAsync();
+        var entity = await _context.Set<Pessoa>().FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId);
         if (entity != null)
         {
             _context.Set<Pessoa>().Remove(entity);
             await _context.SaveChangesAsync();
         }
     }
-}
 
+    public async Task<int> ResolveTenantIdAsync(string? tenantSlug = null)
+    {
+        if (_tenantContext.TenantId.HasValue)
+        {
+            return _tenantContext.TenantId.Value;
+        }
+
+        var normalizedSlug = string.IsNullOrWhiteSpace(tenantSlug)
+            ? Tenant.InitialTenantSlug
+            : tenantSlug.Trim().ToLowerInvariant();
+
+        var tenant = await _context.Tenants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Slug.ToLower() == normalizedSlug);
+
+        return tenant?.Id ?? Tenant.InitialTenantId;
+    }
+}
 

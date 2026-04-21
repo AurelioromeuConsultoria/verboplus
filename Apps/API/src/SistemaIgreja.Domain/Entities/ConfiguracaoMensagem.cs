@@ -2,9 +2,14 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class ConfiguracaoMensagem
+public class ConfiguracaoMensagem : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+
+    public virtual Tenant Tenant { get; set; } = null!;
     
     [Required]
     [MaxLength(200)]
@@ -25,4 +30,3 @@ public class ConfiguracaoMensagem
     // Relacionamento com mensagens agendadas
     public virtual ICollection<MensagemAgendada> MensagensAgendadas { get; set; } = new List<MensagemAgendada>();
 }
-

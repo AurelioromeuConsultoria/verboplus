@@ -42,6 +42,35 @@ public class EscalaService : IEscalaService
     private readonly IComunicacaoAutomacaoService _comunicacaoAutomacaoService;
     private readonly ILogger<EscalaService> _logger;
     private readonly IAuditLogService _auditLogService;
+    private readonly ITenantContext _tenantContext;
+
+    public EscalaService(
+        IEscalaRepository repository,
+        IEventoOcorrenciaRepository eventoOcorrenciaRepository,
+        IVoluntarioRepository voluntarioRepository,
+        IEscalaModeloRepository escalaModeloRepository,
+        IIndisponibilidadeVoluntarioRepository indisponibilidadeRepository,
+        IEquipeRepository equipeRepository,
+        IUsuarioRepository usuarioRepository,
+        INotificacaoUsuarioService notificacaoUsuarioService,
+        IComunicacaoAutomacaoService comunicacaoAutomacaoService,
+        ILogger<EscalaService> logger,
+        IAuditLogService auditLogService,
+        ITenantContext tenantContext)
+    {
+        _repository = repository;
+        _eventoOcorrenciaRepository = eventoOcorrenciaRepository;
+        _voluntarioRepository = voluntarioRepository;
+        _escalaModeloRepository = escalaModeloRepository;
+        _indisponibilidadeRepository = indisponibilidadeRepository;
+        _equipeRepository = equipeRepository;
+        _usuarioRepository = usuarioRepository;
+        _notificacaoUsuarioService = notificacaoUsuarioService;
+        _comunicacaoAutomacaoService = comunicacaoAutomacaoService;
+        _logger = logger;
+        _auditLogService = auditLogService;
+        _tenantContext = tenantContext;
+    }
 
     public EscalaService(
         IEscalaRepository repository,
@@ -55,18 +84,8 @@ public class EscalaService : IEscalaService
         IComunicacaoAutomacaoService comunicacaoAutomacaoService,
         ILogger<EscalaService> logger,
         IAuditLogService auditLogService)
+        : this(repository, eventoOcorrenciaRepository, voluntarioRepository, escalaModeloRepository, indisponibilidadeRepository, equipeRepository, usuarioRepository, notificacaoUsuarioService, comunicacaoAutomacaoService, logger, auditLogService, new DefaultTenantContext())
     {
-        _repository = repository;
-        _eventoOcorrenciaRepository = eventoOcorrenciaRepository;
-        _voluntarioRepository = voluntarioRepository;
-        _escalaModeloRepository = escalaModeloRepository;
-        _indisponibilidadeRepository = indisponibilidadeRepository;
-        _equipeRepository = equipeRepository;
-        _usuarioRepository = usuarioRepository;
-        _notificacaoUsuarioService = notificacaoUsuarioService;
-        _comunicacaoAutomacaoService = comunicacaoAutomacaoService;
-        _logger = logger;
-        _auditLogService = auditLogService;
     }
 
     public async Task<EscalaDto?> GetByIdAsync(int id, int usuarioId, bool isAdmin)
@@ -175,6 +194,7 @@ public class EscalaService : IEscalaService
 
         var escala = new Escala
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             EventoOcorrenciaId = dto.EventoOcorrenciaId,
             EquipeId = dto.EquipeId,
             Status = StatusEscala.Rascunho,
@@ -251,6 +271,7 @@ public class EscalaService : IEscalaService
 
         var item = new EscalaItem
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             EscalaId = escalaId,
             EquipeId = escala.EquipeId,
             CargoId = dto.CargoId,
@@ -400,6 +421,7 @@ public class EscalaService : IEscalaService
         {
             escala = new Escala
             {
+                TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                 EventoOcorrenciaId = eventoOcorrenciaId,
                 EquipeId = equipeId,
                 Status = StatusEscala.Rascunho,
@@ -453,6 +475,7 @@ public class EscalaService : IEscalaService
             {
                 var escalaItem = new EscalaItem
                 {
+                    TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                     EscalaId = escala.Id,
                     EquipeId = equipeId,
                     CargoId = vol.CargoId,

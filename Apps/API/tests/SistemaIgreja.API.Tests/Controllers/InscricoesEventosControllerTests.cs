@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using SistemaIgreja.API.Controllers;
@@ -11,11 +12,13 @@ namespace SistemaIgreja.API.Tests.Controllers;
 public class InscricoesEventosControllerTests
 {
     private readonly Mock<IInscricaoEventoService> _serviceMock = new();
+    private readonly Mock<ICurrentUserContext> _currentUserMock = new();
+    private readonly Mock<ILogger<InscricoesEventosController>> _loggerMock = new();
     private readonly InscricoesEventosController _controller;
 
     public InscricoesEventosControllerTests()
     {
-        _controller = new InscricoesEventosController(_serviceMock.Object);
+        _controller = new InscricoesEventosController(_serviceMock.Object, _currentUserMock.Object, _loggerMock.Object);
     }
 
     [Fact]
@@ -59,5 +62,32 @@ public class InscricoesEventosControllerTests
         var result = await _controller.Delete(12);
 
         result.Should().BeOfType<NoContentResult>();
+    }
+
+    [Fact]
+    public async Task GetMinhas_ReturnsOk_WhenCurrentUserEmailExists()
+    {
+        var inscricoes = new[]
+        {
+            new InscricaoEventoDto { Id = 1, EventoId = 3, Email = "membro@igreja.com" }
+        };
+
+        _currentUserMock.SetupGet(x => x.UserEmail).Returns("membro@igreja.com");
+        _serviceMock.Setup(s => s.GetByEmailAsync("membro@igreja.com")).ReturnsAsync(inscricoes);
+
+        var result = await _controller.GetMinhas();
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeEquivalentTo(inscricoes);
+    }
+
+    [Fact]
+    public async Task GetMinhas_ReturnsUnauthorized_WhenCurrentUserEmailIsMissing()
+    {
+        _currentUserMock.SetupGet(x => x.UserEmail).Returns((string?)null);
+
+        var result = await _controller.GetMinhas();
+
+        result.Result.Should().BeOfType<UnauthorizedResult>();
     }
 }

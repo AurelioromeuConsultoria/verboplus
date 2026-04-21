@@ -1,14 +1,29 @@
 using Microsoft.EntityFrameworkCore;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
+using System.Linq.Expressions;
+using System.Reflection;
 
 namespace SistemaIgreja.Infrastructure.Data;
 
 public class SistemaIgrejaDbContext : DbContext
 {
-    public SistemaIgrejaDbContext(DbContextOptions<SistemaIgrejaDbContext> options) : base(options)
+    private readonly ITenantContext _tenantContext;
+
+    public SistemaIgrejaDbContext(DbContextOptions<SistemaIgrejaDbContext> options) : this(options, new DefaultTenantContext())
     {
     }
 
+    public SistemaIgrejaDbContext(DbContextOptions<SistemaIgrejaDbContext> options, ITenantContext tenantContext) : base(options)
+    {
+        _tenantContext = tenantContext;
+    }
+
+    public int CurrentTenantId => _tenantContext.TenantId ?? Tenant.InitialTenantId;
+    public bool IgnoreTenantFilters { get; set; }
+
+    public DbSet<Tenant> Tenants { get; set; }
+    public DbSet<TenantDomain> TenantDomains { get; set; }
     public DbSet<Pessoa> Pessoas { get; set; }
     public DbSet<PessoaPerfil> PessoasPerfis { get; set; }
     public DbSet<Visitante> Visitantes { get; set; }
@@ -79,10 +94,56 @@ public class SistemaIgrejaDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<Tenant>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.NomeExibicao).HasMaxLength(150);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(120);
+            entity.Property(e => e.LogoUrl).HasMaxLength(500);
+            entity.Property(e => e.FaviconUrl).HasMaxLength(500);
+            entity.Property(e => e.CorPrimaria).HasMaxLength(20);
+            entity.Property(e => e.CorSecundaria).HasMaxLength(20);
+            entity.Property(e => e.IsRootTenant).IsRequired();
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+            entity.HasIndex(e => e.Slug).IsUnique();
+
+            entity.HasData(new Tenant
+            {
+                Id = Tenant.InitialTenantId,
+                Nome = Tenant.InitialTenantName,
+                NomeExibicao = Tenant.InitialTenantName,
+                Slug = Tenant.InitialTenantSlug,
+                LogoUrl = null,
+                FaviconUrl = null,
+                CorPrimaria = "#111827",
+                CorSecundaria = "#374151",
+                IsRootTenant = true,
+                Ativo = true,
+                DataCriacao = new DateTime(2026, 4, 9, 0, 0, 0, DateTimeKind.Utc)
+            });
+        });
+
+        modelBuilder.Entity<TenantDomain>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Domain).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.IsPrimary).IsRequired();
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.HasIndex(e => e.Domain).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany(t => t.Domains)
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         // Configuração da entidade Pessoa
         modelBuilder.Entity<Pessoa>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Email).HasMaxLength(100);
             entity.Property(e => e.Telefone).HasMaxLength(20);
@@ -90,16 +151,19 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.TipoPessoa).IsRequired();
             entity.Property(e => e.Ativo).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
+            entity.HasIndex(e => new { e.TenantId, e.Email }).IsUnique();
 
-            // Índice único para email (quando não nulo)
-            // Usar sintaxe compatível com ambos SQL Server e PostgreSQL
-            entity.HasIndex(e => e.Email).IsUnique();
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade PessoaPerfil
         modelBuilder.Entity<PessoaPerfil>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.PessoaId).IsRequired();
             entity.Property(e => e.Perfil).IsRequired();
             entity.Property(e => e.DataInicio).IsRequired();
@@ -108,12 +172,18 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithMany(p => p.Perfis)
                   .HasForeignKey(p => p.PessoaId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(p => p.Tenant)
+                .WithMany()
+                .HasForeignKey(p => p.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade Visitante
         modelBuilder.Entity<Visitante>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.PessoaId).IsRequired();
             entity.Property(e => e.Observacoes).HasMaxLength(500);
             entity.Property(e => e.DataVisita).IsRequired();
@@ -123,11 +193,17 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithMany(p => p.Visitantes)
                   .HasForeignKey(v => v.PessoaId)
                   .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(v => v.Tenant)
+                .WithMany()
+                .HasForeignKey(v => v.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<AuditLog>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.EntityName).IsRequired().HasMaxLength(200);
             entity.Property(e => e.EntityId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Action).IsRequired().HasMaxLength(30);
@@ -136,35 +212,55 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.IpAddress).HasMaxLength(60);
             entity.Property(e => e.CreatedAt).IsRequired();
 
-            entity.HasIndex(e => e.CreatedAt);
-            entity.HasIndex(e => new { e.EntityName, e.EntityId });
+            entity.HasIndex(e => new { e.TenantId, e.CreatedAt });
+            entity.HasIndex(e => new { e.TenantId, e.EntityName, e.EntityId });
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade ConfiguracaoMensagem
         modelBuilder.Entity<ConfiguracaoMensagem>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(200);
             entity.Property(e => e.TextoMensagem).IsRequired().HasMaxLength(1000);
             entity.Property(e => e.DiasAposVisita).IsRequired();
             entity.Property(e => e.HorarioEnvio).IsRequired();
             entity.Property(e => e.Ativo).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
+            entity.HasIndex(e => new { e.TenantId, e.Nome });
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ConfiguracaoCampanhaAniversario>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Ativo).IsRequired();
             entity.Property(e => e.ImagemUrl).HasMaxLength(500);
             entity.Property(e => e.MensagemTemplate).IsRequired().HasMaxLength(4000);
             entity.Property(e => e.HorarioEnvio).IsRequired();
             entity.Property(e => e.DataAtualizacao).IsRequired();
+            entity.HasIndex(e => e.TenantId).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<EnvioCampanhaAniversario>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.AnoReferencia).IsRequired();
             entity.Property(e => e.DataAniversario).IsRequired();
             entity.Property(e => e.Status).IsRequired();
@@ -175,18 +271,24 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.LogErro).HasMaxLength(1000);
             entity.Property(e => e.DataCriacao).IsRequired();
 
-            entity.HasIndex(e => new { e.PessoaId, e.AnoReferencia }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.PessoaId, e.AnoReferencia }).IsUnique();
 
             entity.HasOne(e => e.Pessoa)
                 .WithMany()
                 .HasForeignKey(e => e.PessoaId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade MensagemAgendada
         modelBuilder.Entity<MensagemAgendada>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.DataAgendamento).IsRequired();
             entity.Property(e => e.DataEnvio).IsRequired();
             entity.Property(e => e.Status).IsRequired();
@@ -203,6 +305,14 @@ public class SistemaIgrejaDbContext : DbContext
             entity.HasOne(e => e.ConfiguracaoMensagem)
                   .WithMany(c => c.MensagensAgendadas)
                   .HasForeignKey(e => e.ConfiguracaoMensagemId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => new { e.TenantId, e.Status, e.DataEnvio });
+            entity.HasIndex(e => new { e.TenantId, e.VisitanteId, e.DataEnvio });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -337,24 +447,33 @@ public class SistemaIgrejaDbContext : DbContext
         modelBuilder.Entity<Equipe>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Area).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
+            entity.HasIndex(e => new { e.TenantId, e.Nome }).IsUnique();
 
             entity.HasOne(e => e.LiderUsuario)
                   .WithMany()
                   .HasForeignKey(e => e.LiderUsuarioId)
                   .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade HubCasa
         modelBuilder.Entity<HubCasa>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.EnderecoCompleto).IsRequired().HasMaxLength(300);
             entity.Property(e => e.Anfitriao).IsRequired().HasMaxLength(100);
             entity.Property(e => e.DataCriacao).IsRequired();
+            entity.HasIndex(e => new { e.TenantId, e.Nome }).IsUnique();
 
             entity.HasOne(e => e.AbertoPor)
                   .WithMany()
@@ -370,12 +489,18 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.TimoteoId)
                   .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade Fornecedor
         modelBuilder.Entity<Fornecedor>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(150);
             entity.Property(e => e.RazaoSocial).HasMaxLength(200);
             entity.Property(e => e.CnpjCpf).HasMaxLength(20);
@@ -388,42 +513,56 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.ContatoWhatsApp).HasMaxLength(30);
             entity.Property(e => e.ContatoEmail).HasMaxLength(150);
             entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasIndex(e => new { e.TenantId, e.Nome });
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade CategoriaDespesa
         modelBuilder.Entity<CategoriaDespesa>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Descricao).HasMaxLength(300);
             entity.Property(e => e.Ativo).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasIndex(e => new { e.TenantId, e.Nome }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade CategoriaReceita
         modelBuilder.Entity<CategoriaReceita>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Descricao).HasMaxLength(300);
             entity.Property(e => e.Ativo).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
-        });
 
-        // Configuração da entidade CategoriaReceita
-        modelBuilder.Entity<CategoriaReceita>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.Descricao).HasMaxLength(300);
-            entity.Property(e => e.Ativo).IsRequired();
-            entity.Property(e => e.DataCriacao).IsRequired();
+            entity.HasIndex(e => new { e.TenantId, e.Nome }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade ContaBancaria
         modelBuilder.Entity<ContaBancaria>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Banco).HasMaxLength(100);
             entity.Property(e => e.Agencia).HasMaxLength(20);
@@ -432,57 +571,87 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.SaldoInicial).IsRequired().HasColumnType("decimal(18,2)");
             entity.Property(e => e.Ativo).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasIndex(e => new { e.TenantId, e.Nome }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade CentroCusto
         modelBuilder.Entity<CentroCusto>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Descricao).HasMaxLength(300);
             entity.Property(e => e.Ativo).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasIndex(e => new { e.TenantId, e.Nome }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade Projeto
         modelBuilder.Entity<Projeto>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(150);
             entity.Property(e => e.Descricao).HasMaxLength(500);
             entity.Property(e => e.Orcamento).HasColumnType("decimal(18,2)");
             entity.Property(e => e.Ativo).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasIndex(e => new { e.TenantId, e.Nome }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CategoriaPatrimonio>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Descricao).HasMaxLength(300);
             entity.Property(e => e.Ativo).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
-            entity.HasIndex(e => e.Nome).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.Nome }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasData(
-                new CategoriaPatrimonio { Id = 1, Nome = "Moveis", Descricao = "Moveis em geral", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
-                new CategoriaPatrimonio { Id = 2, Nome = "Cadeiras e mesas", Descricao = "Cadeiras, mesas e similares", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
-                new CategoriaPatrimonio { Id = 3, Nome = "Instrumentos musicais", Descricao = "Instrumentos e acessorios musicais", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
-                new CategoriaPatrimonio { Id = 4, Nome = "Equipamentos de audio", Descricao = "Caixas, mesas, microfones e audio", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
-                new CategoriaPatrimonio { Id = 5, Nome = "Equipamentos de video", Descricao = "Projetores, TVs, cameras e video", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
-                new CategoriaPatrimonio { Id = 6, Nome = "Iluminacao", Descricao = "Refletores, spots e iluminacao", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
-                new CategoriaPatrimonio { Id = 7, Nome = "Informatica", Descricao = "Notebooks, computadores e perifericos", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
-                new CategoriaPatrimonio { Id = 8, Nome = "Eletrodomesticos", Descricao = "Geladeiras, micro-ondas e afins", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
-                new CategoriaPatrimonio { Id = 9, Nome = "Veiculos", Descricao = "Carros, vans e motos", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
-                new CategoriaPatrimonio { Id = 10, Nome = "Material infantil", Descricao = "Brinquedos, mobiliario e itens infantis", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
-                new CategoriaPatrimonio { Id = 11, Nome = "Equipamentos de limpeza", Descricao = "Aspiradores, enceradeiras e afins", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
-                new CategoriaPatrimonio { Id = 12, Nome = "Utensilios gerais", Descricao = "Itens de apoio e uso geral", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
-                new CategoriaPatrimonio { Id = 13, Nome = "Patrimonio administrativo", Descricao = "Bens de escritorio e administracao", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) }
+                new CategoriaPatrimonio { Id = 1, TenantId = Tenant.InitialTenantId, Nome = "Moveis", Descricao = "Moveis em geral", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
+                new CategoriaPatrimonio { Id = 2, TenantId = Tenant.InitialTenantId, Nome = "Cadeiras e mesas", Descricao = "Cadeiras, mesas e similares", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
+                new CategoriaPatrimonio { Id = 3, TenantId = Tenant.InitialTenantId, Nome = "Instrumentos musicais", Descricao = "Instrumentos e acessorios musicais", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
+                new CategoriaPatrimonio { Id = 4, TenantId = Tenant.InitialTenantId, Nome = "Equipamentos de audio", Descricao = "Caixas, mesas, microfones e audio", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
+                new CategoriaPatrimonio { Id = 5, TenantId = Tenant.InitialTenantId, Nome = "Equipamentos de video", Descricao = "Projetores, TVs, cameras e video", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
+                new CategoriaPatrimonio { Id = 6, TenantId = Tenant.InitialTenantId, Nome = "Iluminacao", Descricao = "Refletores, spots e iluminacao", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
+                new CategoriaPatrimonio { Id = 7, TenantId = Tenant.InitialTenantId, Nome = "Informatica", Descricao = "Notebooks, computadores e perifericos", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
+                new CategoriaPatrimonio { Id = 8, TenantId = Tenant.InitialTenantId, Nome = "Eletrodomesticos", Descricao = "Geladeiras, micro-ondas e afins", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
+                new CategoriaPatrimonio { Id = 9, TenantId = Tenant.InitialTenantId, Nome = "Veiculos", Descricao = "Carros, vans e motos", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
+                new CategoriaPatrimonio { Id = 10, TenantId = Tenant.InitialTenantId, Nome = "Material infantil", Descricao = "Brinquedos, mobiliario e itens infantis", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
+                new CategoriaPatrimonio { Id = 11, TenantId = Tenant.InitialTenantId, Nome = "Equipamentos de limpeza", Descricao = "Aspiradores, enceradeiras e afins", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
+                new CategoriaPatrimonio { Id = 12, TenantId = Tenant.InitialTenantId, Nome = "Utensilios gerais", Descricao = "Itens de apoio e uso geral", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
+                new CategoriaPatrimonio { Id = 13, TenantId = Tenant.InitialTenantId, Nome = "Patrimonio administrativo", Descricao = "Bens de escritorio e administracao", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) }
             );
         });
 
         modelBuilder.Entity<PatrimonioItem>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Codigo).IsRequired().HasMaxLength(50);
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(150);
             entity.Property(e => e.Descricao).HasMaxLength(500);
@@ -503,7 +672,7 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.Ativo).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
 
-            entity.HasIndex(e => e.Codigo).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.Codigo }).IsUnique();
 
             entity.HasOne(e => e.CategoriaPatrimonio)
                 .WithMany(c => c.Itens)
@@ -534,11 +703,17 @@ public class SistemaIgrejaDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.ProjetoId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<PatrimonioMovimentacao>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.TipoMovimentacao).IsRequired().HasMaxLength(40);
             entity.Property(e => e.DataMovimentacao).IsRequired();
             entity.Property(e => e.Origem).HasMaxLength(150);
@@ -558,12 +733,20 @@ public class SistemaIgrejaDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.UsuarioId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => new { e.TenantId, e.PatrimonioItemId, e.DataMovimentacao });
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade Despesa
         modelBuilder.Entity<Despesa>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Descricao).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Valor).IsRequired().HasColumnType("decimal(18,2)");
             entity.Property(e => e.DataVencimento).IsRequired();
@@ -601,12 +784,20 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.UsuarioId)
                   .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => new { e.TenantId, e.DataVencimento, e.Status });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade Receita
         modelBuilder.Entity<Receita>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Descricao).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Valor).IsRequired().HasColumnType("decimal(18,2)");
             entity.Property(e => e.DataRecebimento).IsRequired();
@@ -639,22 +830,38 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.UsuarioId)
                   .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => new { e.TenantId, e.DataRecebimento, e.Status });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade Cargo
         modelBuilder.Entity<Cargo>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.DataCriacao).IsRequired();
+            entity.HasIndex(e => new { e.TenantId, e.Nome }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade Voluntario
         modelBuilder.Entity<Voluntario>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.PessoaId).IsRequired();
             entity.Property(e => e.DataCadastro).IsRequired();
+            entity.HasIndex(e => new { e.TenantId, e.PessoaId, e.EquipeId, e.CargoId }).IsUnique();
 
             entity.HasOne(v => v.Pessoa)
                   .WithMany(p => p.Voluntarios)
@@ -670,15 +877,27 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithMany(c => c.Voluntarios)
                   .HasForeignKey(v => v.CargoId)
                   .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(v => v.Tenant)
+                .WithMany()
+                .HasForeignKey(v => v.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade PerfilAcesso
         modelBuilder.Entity<PerfilAcesso>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Descricao).HasMaxLength(300);
             entity.Property(e => e.DataCriacao).IsRequired();
+            entity.HasIndex(e => new { e.TenantId, e.Nome }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade PerfilAcessoPermissao
@@ -686,63 +905,20 @@ public class SistemaIgrejaDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Recurso).IsRequired().HasMaxLength(80);
+            entity.HasIndex(e => new { e.TenantId, e.PerfilAcessoId, e.Recurso }).IsUnique();
 
             entity.HasOne(e => e.PerfilAcesso)
                   .WithMany(p => p.Permissoes)
                   .HasForeignKey(e => e.PerfilAcessoId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
-
-        // Seed perfil Administrador
-        modelBuilder.Entity<PerfilAcesso>().HasData(new PerfilAcesso
-        {
-            Id = 1,
-            Nome = "Administrador",
-            Descricao = "Acesso total ao sistema",
-            DataCriacao = new DateTime(2026, 2, 6, 0, 0, 0)
-        });
-
-        var recursos = new[]
-        {
-            "dashboard",
-            "usuarios",
-            "perfis-acesso",
-            "pessoas",
-            "perfis",
-            "visitantes",
-            "configuracoes-mensagens",
-            "mensagens-agendadas",
-            "equipes",
-            "cargos",
-            "voluntarios",
-            "eventos",
-            "inscricoes-eventos",
-            "portal",
-            "noticias",
-            "categorias-noticias",
-            "contatos",
-            "destaques-site",
-            "categorias-midias",
-            "galerias-fotos",
-            "enquetes",
-            "kids",
-            "hub",
-            "financeiro",
-            "fornecedores"
-        };
-
-        var permissoes = recursos.Select((recurso, index) => new PerfilAcessoPermissao
-        {
-            Id = 1000 + index,
-            PerfilAcessoId = 1,
-            Recurso = recurso,
-            PodeVer = true,
-            PodeEditar = true,
-            PodeExcluir = true
-        });
-
-        modelBuilder.Entity<PerfilAcessoPermissao>().HasData(permissoes);
 
         // Relacionamento Usuario -> PerfilAcesso
         modelBuilder.Entity<Usuario>(entity =>
@@ -757,6 +933,7 @@ public class SistemaIgrejaDbContext : DbContext
         modelBuilder.Entity<Evento>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Titulo).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Descricao).HasMaxLength(1000);
             entity.Property(e => e.ImagemDestaque).HasMaxLength(500);
@@ -769,12 +946,19 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.AceitaInscricoes).IsRequired().HasDefaultValue(false);
             entity.Property(e => e.ConfiguracaoFormularioInscricao).HasMaxLength(4000);
             entity.Property(e => e.DataCriacao).IsRequired();
+            entity.HasIndex(e => new { e.TenantId, e.Titulo, e.DataInicio });
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade EventoRecorrencia
         modelBuilder.Entity<EventoRecorrencia>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.DiaSemana).IsRequired();
             entity.Property(e => e.HoraInicio).IsRequired();
             entity.Property(e => e.Periodicidade).IsRequired();
@@ -787,13 +971,19 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(e => e.EventoId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasIndex(e => new { e.EventoId, e.Ativo });
+            entity.HasIndex(e => new { e.TenantId, e.EventoId, e.Ativo });
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade EventoOcorrencia
         modelBuilder.Entity<EventoOcorrencia>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.DataHoraInicio).IsRequired();
             entity.Property(e => e.Status).IsRequired();
             entity.Property(e => e.GeradaAutomaticamente).IsRequired();
@@ -809,13 +999,19 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(e => e.EventoRecorrenciaId)
                   .OnDelete(DeleteBehavior.SetNull);
 
-            entity.HasIndex(e => new { e.EventoId, e.DataHoraInicio });
+            entity.HasIndex(e => new { e.TenantId, e.EventoId, e.DataHoraInicio });
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade Escala (uma por EventoOcorrencia + Equipe)
         modelBuilder.Entity<Escala>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Status).IsRequired();
             entity.Property(e => e.Observacoes).HasMaxLength(500);
             entity.Property(e => e.DataCriacao).IsRequired();
@@ -835,13 +1031,19 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(e => e.CriadoPorUsuarioId)
                   .OnDelete(DeleteBehavior.SetNull);
 
-            entity.HasIndex(e => new { e.EventoOcorrenciaId, e.EquipeId }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.EventoOcorrenciaId, e.EquipeId }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade EscalaItem
         modelBuilder.Entity<EscalaItem>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Ordem).IsRequired();
             entity.Property(e => e.ConflitoAprovado).IsRequired();
             entity.Property(e => e.Status).IsRequired().HasDefaultValue(StatusEscalaItem.Pendente);
@@ -880,14 +1082,20 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(e => e.RespondidoPorUsuarioId)
                   .OnDelete(DeleteBehavior.SetNull);
 
-            entity.HasIndex(e => new { e.EscalaId, e.VoluntarioId });
-            entity.HasIndex(e => new { e.EscalaId, e.EquipeId });
+            entity.HasIndex(e => new { e.TenantId, e.EscalaId, e.VoluntarioId });
+            entity.HasIndex(e => new { e.TenantId, e.EscalaId, e.EquipeId });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // EscalaModelo (modelo de escala por evento + equipe)
         modelBuilder.Entity<EscalaModelo>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).HasMaxLength(200);
             entity.Property(e => e.Ativo).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
@@ -902,12 +1110,18 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(e => e.EquipeId)
                   .OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasIndex(e => new { e.EventoId, e.EquipeId }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.EventoId, e.EquipeId }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<EscalaModeloItem>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Quantidade).IsRequired();
             entity.Property(e => e.Ordem).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
@@ -921,11 +1135,19 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.CargoId)
                   .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => new { e.TenantId, e.EscalaModeloId, e.Ordem });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<IndisponibilidadeVoluntario>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Data).IsRequired();
             entity.Property(e => e.Motivo).HasMaxLength(500);
             entity.Property(e => e.DataCriacao).IsRequired();
@@ -935,12 +1157,18 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(e => e.VoluntarioId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasIndex(e => new { e.VoluntarioId, e.Data }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.VoluntarioId, e.Data }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<SolicitacaoTrocaEscala>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Status).IsRequired();
             entity.Property(e => e.Motivo).HasMaxLength(500);
             entity.Property(e => e.ObservacaoResposta).HasMaxLength(500);
@@ -966,47 +1194,68 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(e => e.RespondidoPorUsuarioId)
                   .OnDelete(DeleteBehavior.SetNull);
 
-            entity.HasIndex(e => new { e.EscalaItemId, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.EscalaItemId, e.Status });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade DestaqueSite
         modelBuilder.Entity<DestaqueSite>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Texto).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Descricao).HasMaxLength(1000);
             entity.Property(e => e.Url).HasMaxLength(500);
             entity.Property(e => e.Imagem).HasMaxLength(500);
             entity.Property(e => e.DataCriacao).IsRequired();
+            entity.HasIndex(e => new { e.TenantId, e.Texto });
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade ConfiguracaoPortal (singleton)
         modelBuilder.Entity<ConfiguracaoPortal>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.TempoTransicaoCarrossel).IsRequired().HasDefaultValue(5);
             entity.Property(e => e.DataAtualizacao).IsRequired();
-            // Garantir que sempre haverá apenas um registro
-            entity.HasData(new ConfiguracaoPortal
-            {
-                Id = 1,
-                TempoTransicaoCarrossel = 5,
-                DataAtualizacao = new DateTime(2026, 2, 4, 0, 0, 0) // Data fixa para migration
-            });
+            entity.HasIndex(e => e.TenantId).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
         });
 
         // Configuração da entidade CategoriaNoticia
         modelBuilder.Entity<CategoriaNoticia>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.DataCriacao).IsRequired();
+            entity.HasIndex(e => new { e.TenantId, e.Nome }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade Noticia
         modelBuilder.Entity<Noticia>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Titulo).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Descricao).HasMaxLength(1000);
             entity.Property(e => e.Texto).HasMaxLength(5000);
@@ -1019,24 +1268,36 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithMany(c => c.Noticias)
                   .HasForeignKey(n => n.CategoriaNoticiaId)
                   .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade Contato
         modelBuilder.Entity<Contato>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.WhatsApp).IsRequired().HasMaxLength(20);
             entity.Property(e => e.Email).HasMaxLength(100);
             entity.Property(e => e.Membro).IsRequired();
             entity.Property(e => e.Mensagem).IsRequired().HasMaxLength(2000);
             entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade InscricaoEvento
         modelBuilder.Entity<InscricaoEvento>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.WhatsApp).IsRequired().HasMaxLength(20);
             entity.Property(e => e.Email).HasMaxLength(100);
@@ -1053,18 +1314,25 @@ public class SistemaIgrejaDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
 
             // Índice para busca rápida
-            entity.HasIndex(i => new { i.EventoId, i.WhatsApp });
+            entity.HasIndex(i => new { i.TenantId, i.EventoId, i.WhatsApp }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade Usuario
         modelBuilder.Entity<Usuario>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.PessoaId).IsRequired();
             entity.Property(e => e.EmailLogin).IsRequired().HasMaxLength(100);
             entity.Property(e => e.SenhaHash).IsRequired().HasMaxLength(255);
             entity.Property(e => e.TipoUsuario).IsRequired();
             entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.IsPlatformAdmin).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
 
             entity.HasOne(u => u.Pessoa)
@@ -1072,8 +1340,12 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey<Usuario>(u => u.PessoaId)
                   .OnDelete(DeleteBehavior.Restrict);
 
-            // Índice único para EmailLogin
-            entity.HasIndex(e => e.EmailLogin).IsUnique();
+            entity.HasOne(u => u.Tenant)
+                .WithMany()
+                .HasForeignKey(u => u.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => new { e.TenantId, e.EmailLogin }).IsUnique();
         });
 
         modelBuilder.Entity<NotificacaoUsuario>(entity =>
@@ -1097,15 +1369,24 @@ public class SistemaIgrejaDbContext : DbContext
         modelBuilder.Entity<CategoriaMidia>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Descricao).HasMaxLength(500);
             entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasIndex(e => new { e.TenantId, e.Nome }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade GaleriaFoto
         modelBuilder.Entity<GaleriaFoto>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Descricao).HasMaxLength(1000);
             entity.Property(e => e.Data).IsRequired();
@@ -1124,23 +1405,39 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithMany(c => c.Galerias)
                   .HasForeignKey(g => g.CategoriaMidiaId)
                   .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(g => new { g.TenantId, g.Nome, g.Data });
+
+            entity.HasOne(g => g.Tenant)
+                  .WithMany()
+                  .HasForeignKey(g => g.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade GaleriaFotoItem (fotos listadas a partir do banco para funcionar com mesmo DB em dev)
         modelBuilder.Entity<GaleriaFotoItem>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.NomeArquivo).IsRequired().HasMaxLength(260);
             entity.HasOne(e => e.GaleriaFoto)
                   .WithMany(g => g.Itens)
                   .HasForeignKey(e => e.GaleriaFotoId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.TenantId, e.GaleriaFotoId, e.NomeArquivo }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade CriancaDetalhe
         modelBuilder.Entity<CriancaDetalhe>(entity =>
         {
             entity.HasKey(e => e.PessoaId);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Alergias).HasMaxLength(500);
             entity.Property(e => e.RestricoesAlimentares).HasMaxLength(500);
             entity.Property(e => e.Observacoes).HasMaxLength(1000);
@@ -1152,21 +1449,35 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithOne(p => p.CriancaDetalhe)
                   .HasForeignKey<CriancaDetalhe>(c => c.PessoaId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.TenantId, e.PessoaId });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<KidsSala>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasMaxLength(50);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(120);
             entity.Property(e => e.DataCriacao).IsRequired();
-            entity.HasIndex(e => e.Nome);
+            entity.HasIndex(e => new { e.TenantId, e.Nome }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<KidsTurma>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasMaxLength(50);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.SalaId).IsRequired().HasMaxLength(50);
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(120);
             entity.Property(e => e.DataCriacao).IsRequired();
@@ -1176,13 +1487,19 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(e => e.SalaId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasIndex(e => new { e.SalaId, e.Nome }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.SalaId, e.Nome }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade ResponsavelCrianca
         modelBuilder.Entity<ResponsavelCrianca>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.CriancaPessoaId).IsRequired();
             entity.Property(e => e.ResponsavelPessoaId).IsRequired();
             entity.Property(e => e.PodeRetirar).IsRequired();
@@ -1200,14 +1517,19 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(r => r.ResponsavelPessoaId)
                   .OnDelete(DeleteBehavior.Restrict);
 
-            // Índice para busca rápida
-            entity.HasIndex(r => new { r.CriancaPessoaId, r.ResponsavelPessoaId });
+            entity.HasIndex(r => new { r.TenantId, r.CriancaPessoaId, r.ResponsavelPessoaId }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade KidsCheckin
         modelBuilder.Entity<KidsCheckin>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.CriancaPessoaId).IsRequired();
             entity.Property(e => e.CheckinTime).IsRequired();
             entity.Property(e => e.Metodo).IsRequired().HasMaxLength(20);
@@ -1236,16 +1558,22 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(c => c.CheckoutByPessoaId)
                   .OnDelete(DeleteBehavior.NoAction);
 
-            // Índices
-            entity.HasIndex(c => c.CodigoSessao);
-            entity.HasIndex(c => c.TokenRetirada);
-            entity.HasIndex(c => new { c.CriancaPessoaId, c.Status });
+            entity.HasIndex(c => new { c.TenantId, c.CodigoSessao }).IsUnique();
+            entity.HasIndex(c => new { c.TenantId, c.TokenRetirada });
+            entity.HasIndex(c => new { c.TenantId, c.PinRetirada });
+            entity.HasIndex(c => new { c.TenantId, c.CriancaPessoaId, c.Status });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade KidsNotificacao
         modelBuilder.Entity<KidsNotificacao>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.ResponsavelPessoaId).IsRequired();
             entity.Property(e => e.Titulo).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Tipo).IsRequired().HasMaxLength(20);
@@ -1264,15 +1592,20 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(n => n.ResponsavelPessoaId)
                   .OnDelete(DeleteBehavior.Restrict);
 
-            // Índices
-            entity.HasIndex(n => new { n.CriancaPessoaId, n.Status });
-            entity.HasIndex(n => new { n.ResponsavelPessoaId, n.Status });
-            entity.HasIndex(n => new { n.ResponsavelPessoaId, n.LidoEm });
+            entity.HasIndex(n => new { n.TenantId, n.CriancaPessoaId, n.Status });
+            entity.HasIndex(n => new { n.TenantId, n.ResponsavelPessoaId, n.Status });
+            entity.HasIndex(n => new { n.TenantId, n.ResponsavelPessoaId, n.LidoEm });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<KidsOcorrencia>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.CriancaPessoaId).IsRequired();
             entity.Property(e => e.Tipo).IsRequired().HasMaxLength(40);
             entity.Property(e => e.Titulo).IsRequired().HasMaxLength(200);
@@ -1307,14 +1640,20 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(o => o.EncerradoPorPessoaId)
                   .OnDelete(DeleteBehavior.SetNull);
 
-            entity.HasIndex(o => new { o.CriancaPessoaId, o.DataCriacao });
-            entity.HasIndex(o => new { o.Status, o.DataCriacao });
+            entity.HasIndex(o => new { o.TenantId, o.CriancaPessoaId, o.DataCriacao });
+            entity.HasIndex(o => new { o.TenantId, o.Status, o.DataCriacao });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade KidsDeviceToken
         modelBuilder.Entity<KidsDeviceToken>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.PessoaId).IsRequired();
             entity.Property(e => e.FcmToken).IsRequired().HasMaxLength(500);
             entity.Property(e => e.Platform).IsRequired().HasMaxLength(20);
@@ -1325,7 +1664,12 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(d => d.PessoaId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasIndex(d => new { d.PessoaId, d.FcmToken }).IsUnique();
+            entity.HasIndex(d => new { d.TenantId, d.PessoaId, d.FcmToken }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Dados iniciais para ConfiguracaoMensagem (datas fixas para evitar warnings de migração)
@@ -1334,6 +1678,7 @@ public class SistemaIgrejaDbContext : DbContext
             new ConfiguracaoMensagem
             {
                 Id = 1,
+                TenantId = Tenant.InitialTenantId,
                 Nome = "Boas-vindas",
                 TextoMensagem = "Olá {Nome}! Que alegria ter você conosco na igreja! Esperamos vê-lo novamente em breve. Deus abençoe!",
                 DiasAposVisita = 1,
@@ -1344,6 +1689,7 @@ public class SistemaIgrejaDbContext : DbContext
             new ConfiguracaoMensagem
             {
                 Id = 2,
+                TenantId = Tenant.InitialTenantId,
                 Nome = "Convite para retorno",
                 TextoMensagem = "Oi {Nome}! Sentimos sua falta na igreja. Que tal nos visitar novamente neste domingo? Será um prazer recebê-lo!",
                 DiasAposVisita = 7,
@@ -1357,6 +1703,7 @@ public class SistemaIgrejaDbContext : DbContext
         modelBuilder.Entity<Enquete>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.Titulo).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Descricao).HasMaxLength(1000);
             entity.Property(e => e.DataInicio).IsRequired();
@@ -1365,12 +1712,20 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.PermitirMultiplaEscolha).IsRequired();
             entity.Property(e => e.PermitirVotoAnonimo).IsRequired();
             entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasIndex(e => new { e.TenantId, e.DataCriacao });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade EnqueteOpcao
         modelBuilder.Entity<EnqueteOpcao>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.EnqueteId).IsRequired();
             entity.Property(e => e.Texto).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Ordem).IsRequired();
@@ -1380,12 +1735,20 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithMany(e => e.Opcoes)
                   .HasForeignKey(e => e.EnqueteId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.TenantId, e.EnqueteId, e.Ordem }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuração da entidade EnqueteVoto
         modelBuilder.Entity<EnqueteVoto>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
             entity.Property(e => e.EnqueteId).IsRequired();
             entity.Property(e => e.EnqueteOpcaoId).IsRequired();
             entity.Property(e => e.NomeAnonimo).HasMaxLength(100);
@@ -1405,6 +1768,42 @@ public class SistemaIgrejaDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.UsuarioId)
                   .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => new { e.TenantId, e.EnqueteId, e.UsuarioId });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
+
+        ApplyTenantQueryFilters(modelBuilder);
+    }
+
+    private void ApplyTenantQueryFilters(ModelBuilder modelBuilder)
+    {
+        var tenantEntityTypes = modelBuilder.Model
+            .GetEntityTypes()
+            .Where(entityType => typeof(ITenantEntity).IsAssignableFrom(entityType.ClrType))
+            .Select(entityType => entityType.ClrType)
+            .ToList();
+
+        foreach (var entityType in tenantEntityTypes)
+        {
+            var method = typeof(SistemaIgrejaDbContext)
+                .GetMethod(nameof(ApplyTenantQueryFilter), BindingFlags.Instance | BindingFlags.NonPublic)!
+                .MakeGenericMethod(entityType);
+
+            method.Invoke(this, [modelBuilder]);
+        }
+    }
+
+    private void ApplyTenantQueryFilter<TEntity>(ModelBuilder modelBuilder)
+        where TEntity : class, ITenantEntity
+    {
+        Expression<Func<TEntity, bool>> filter = entity =>
+            IgnoreTenantFilters || entity.TenantId == CurrentTenantId;
+
+        modelBuilder.Entity<TEntity>().HasQueryFilter(filter);
     }
 }

@@ -43,6 +43,28 @@ public class PerfisAcessoControllerTests
     }
 
     [Fact]
+    public async Task GetById_ReturnsForbidden_WhenUserIsNotAdmin()
+    {
+        SetUser((int)TipoUsuario.Portal);
+
+        var result = await _controller.GetById(1);
+
+        result.Result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(403);
+    }
+
+    [Fact]
+    public async Task GetById_ReturnsOk_WhenUserIsAdmin()
+    {
+        SetUser((int)TipoUsuario.Admin);
+        _serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(new PerfilAcessoDto { Id = 1, Nome = "Admin" });
+
+        var result = await _controller.GetById(1);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
     public async Task Create_ReturnsForbidden_WhenUserIsNotAdmin()
     {
         SetUser((int)TipoUsuario.Portal);
@@ -54,6 +76,39 @@ public class PerfisAcessoControllerTests
     }
 
     [Fact]
+    public async Task Create_ReturnsCreated_WhenUserIsAdmin()
+    {
+        SetUser((int)TipoUsuario.Admin);
+        _serviceMock.Setup(s => s.CreateAsync(It.IsAny<CriarPerfilAcessoDto>())).ReturnsAsync(new PerfilAcessoDto { Id = 1, Nome = "Admin" });
+
+        var result = await _controller.Create(new CriarPerfilAcessoDto());
+
+        result.Result.Should().BeOfType<CreatedAtActionResult>();
+    }
+
+    [Fact]
+    public async Task Update_ReturnsForbidden_WhenUserIsNotAdmin()
+    {
+        SetUser((int)TipoUsuario.Portal);
+
+        var result = await _controller.Update(1, new AtualizarPerfilAcessoDto());
+
+        result.Result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(403);
+    }
+
+    [Fact]
+    public async Task Update_ReturnsOk_WhenUserIsAdmin()
+    {
+        SetUser((int)TipoUsuario.Admin);
+        _serviceMock.Setup(s => s.UpdateAsync(1, It.IsAny<AtualizarPerfilAcessoDto>())).ReturnsAsync(new PerfilAcessoDto { Id = 1, Nome = "Admin" });
+
+        var result = await _controller.Update(1, new AtualizarPerfilAcessoDto());
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
     public async Task Delete_ReturnsForbidden_WhenUserIsNotAdmin()
     {
         SetUser((int)TipoUsuario.Portal);
@@ -62,6 +117,16 @@ public class PerfisAcessoControllerTests
 
         result.Should().BeOfType<ObjectResult>()
             .Which.StatusCode.Should().Be(403);
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsNoContent_WhenUserIsAdmin()
+    {
+        SetUser((int)TipoUsuario.Admin);
+
+        var result = await _controller.Delete(1);
+
+        result.Should().BeOfType<NoContentResult>();
     }
 
     private void SetUser(int tipoUsuarioId)

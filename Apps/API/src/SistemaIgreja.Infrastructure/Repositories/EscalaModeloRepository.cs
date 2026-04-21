@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class EscalaModeloRepository : IEscalaModeloRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public EscalaModeloRepository(SistemaIgrejaDbContext context)
+    public EscalaModeloRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public EscalaModeloRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<EscalaModelo?> GetByIdAsync(int id)
@@ -72,6 +80,11 @@ public class EscalaModeloRepository : IEscalaModeloRepository
 
     public async Task<EscalaModelo> CreateAsync(EscalaModelo modelo)
     {
+        modelo.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
+        foreach (var item in modelo.Itens)
+        {
+            item.TenantId = modelo.TenantId;
+        }
         _context.EscalasModelos.Add(modelo);
         await _context.SaveChangesAsync();
         return modelo;
@@ -79,6 +92,13 @@ public class EscalaModeloRepository : IEscalaModeloRepository
 
     public async Task<EscalaModelo> UpdateAsync(EscalaModelo modelo)
     {
+        modelo.TenantId = modelo.TenantId == 0
+            ? _tenantContext.TenantId ?? Tenant.InitialTenantId
+            : modelo.TenantId;
+        foreach (var item in modelo.Itens)
+        {
+            item.TenantId = modelo.TenantId;
+        }
         _context.EscalasModelos.Update(modelo);
         await _context.SaveChangesAsync();
         return modelo;

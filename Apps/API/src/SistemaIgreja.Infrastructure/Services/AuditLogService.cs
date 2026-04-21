@@ -14,11 +14,18 @@ public class AuditLogService : IAuditLogService
     private static readonly string[] FailureActions = ["Delete", "ErroEnvio", "Recusar", "Rejeitar"];
     private readonly SistemaIgrejaDbContext _db;
     private readonly ICurrentUserContext _currentUser;
+    private readonly ITenantContext _tenantContext;
 
     public AuditLogService(SistemaIgrejaDbContext db, ICurrentUserContext currentUser)
+        : this(db, currentUser, new DefaultTenantContext())
+    {
+    }
+
+    public AuditLogService(SistemaIgrejaDbContext db, ICurrentUserContext currentUser, ITenantContext tenantContext)
     {
         _db = db;
         _currentUser = currentUser;
+        _tenantContext = tenantContext;
     }
 
     public async Task<PagedResultDto<AuditLogDto>> GetPagedAsync(AuditLogPagedQueryDto query)
@@ -109,6 +116,7 @@ public class AuditLogService : IAuditLogService
     {
         var log = new AuditLog
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             EntityName = entityName,
             EntityId = entityId,
             Action = action,
@@ -127,6 +135,11 @@ public class AuditLogService : IAuditLogService
     private IQueryable<AuditLog> BuildFilteredQuery(AuditLogPagedQueryDto query)
     {
         var q = _db.AuditLogs.AsNoTracking().AsQueryable();
+
+        if (_tenantContext.TenantId.HasValue)
+        {
+            q = q.Where(a => a.TenantId == _tenantContext.TenantId.Value);
+        }
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {

@@ -21,13 +21,20 @@ public class VoluntarioService : IVoluntarioService
     private readonly IEquipeRepository _equipeRepository;
     private readonly ICargoRepository _cargoRepository;
     private readonly IPessoaRepository _pessoaRepository;
+    private readonly ITenantContext _tenantContext;
 
     public VoluntarioService(IVoluntarioRepository repository, IEquipeRepository equipeRepository, ICargoRepository cargoRepository, IPessoaRepository pessoaRepository)
+        : this(repository, equipeRepository, cargoRepository, pessoaRepository, new DefaultTenantContext())
+    {
+    }
+
+    public VoluntarioService(IVoluntarioRepository repository, IEquipeRepository equipeRepository, ICargoRepository cargoRepository, IPessoaRepository pessoaRepository, ITenantContext tenantContext)
     {
         _repository = repository;
         _equipeRepository = equipeRepository;
         _cargoRepository = cargoRepository;
         _pessoaRepository = pessoaRepository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<VoluntarioDto>> GetAllAsync()
@@ -72,6 +79,7 @@ public class VoluntarioService : IVoluntarioService
 
         var entity = new Voluntario
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             PessoaId = pessoa.Id,
             EquipeId = dto.EquipeId,
             CargoId = dto.CargoId,

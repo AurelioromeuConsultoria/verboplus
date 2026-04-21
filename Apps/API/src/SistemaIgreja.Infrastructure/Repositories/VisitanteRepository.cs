@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.DTOs.Visitantes;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -9,17 +10,26 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class VisitanteRepository : IVisitanteRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
     public VisitanteRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
+    }
+
+    public VisitanteRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<Visitante>> GetAllAsync()
     {
+        var tenantId = await ResolveTenantIdAsync();
         return await _context.Visitantes
             .Include(v => v.Pessoa)
                 .ThenInclude(p => p.Perfis)
+            .Where(v => v.TenantId == tenantId)
             .OrderByDescending(v => v.DataCadastro)
             .ToListAsync();
     }
@@ -28,11 +38,13 @@ public class VisitanteRepository : IVisitanteRepository
     {
         var page = query.Page <= 0 ? 1 : query.Page;
         var pageSize = query.PageSize <= 0 ? 20 : Math.Min(query.PageSize, 200);
+        var tenantId = await ResolveTenantIdAsync();
 
         var q = _context.Visitantes
             .AsNoTracking()
             .Include(v => v.Pessoa)
                 .ThenInclude(p => p.Perfis)
+            .Where(v => v.TenantId == tenantId)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(query.Nome))
@@ -88,24 +100,27 @@ public class VisitanteRepository : IVisitanteRepository
 
     public async Task<Visitante?> GetByIdAsync(int id)
     {
+        var tenantId = await ResolveTenantIdAsync();
         return await _context.Visitantes
             .Include(v => v.Pessoa)
                 .ThenInclude(p => p.Perfis)
             .Include(v => v.MensagensAgendadas)
-            .FirstOrDefaultAsync(v => v.Id == id);
+            .FirstOrDefaultAsync(v => v.Id == id && v.TenantId == tenantId);
     }
 
     public async Task<Visitante> CreateAsync(Visitante visitante)
     {
+        visitante.TenantId = await ResolveTenantIdAsync();
         _context.Visitantes.Add(visitante);
         await _context.SaveChangesAsync();
         return visitante;
     }
 
-    public Task<Visitante> CreateWithoutSaveAsync(Visitante visitante)
+    public async Task<Visitante> CreateWithoutSaveAsync(Visitante visitante)
     {
+        visitante.TenantId = await ResolveTenantIdAsync();
         _context.Visitantes.Add(visitante);
-        return Task.FromResult(visitante);
+        return visitante;
     }
 
     public async Task<Visitante> UpdateAsync(Visitante visitante)
@@ -117,7 +132,9 @@ public class VisitanteRepository : IVisitanteRepository
 
     public async Task DeleteAsync(int id)
     {
-        var visitante = await _context.Visitantes.FindAsync(id);
+        var tenantId = await ResolveTenantIdAsync();
+        var visitante = await _context.Visitantes
+            .FirstOrDefaultAsync(v => v.Id == id && v.TenantId == tenantId);
         if (visitante != null)
         {
             _context.Visitantes.Remove(visitante);
@@ -127,20 +144,26 @@ public class VisitanteRepository : IVisitanteRepository
 
     public async Task<IEnumerable<Visitante>> GetVisitantesPorPeriodoAsync(DateTime dataInicio, DateTime dataFim)
     {
+        var tenantId = await ResolveTenantIdAsync();
         return await _context.Visitantes
             .Include(v => v.Pessoa)
-            .Where(v => v.DataVisita >= dataInicio && v.DataVisita <= dataFim)
+            .Where(v => v.TenantId == tenantId && v.DataVisita >= dataInicio && v.DataVisita <= dataFim)
             .OrderByDescending(v => v.DataVisita)
             .ToListAsync();
     }
 
     public async Task<IEnumerable<Visitante>> GetVisitantesPorPessoaAsync(int pessoaId)
     {
+        var tenantId = await ResolveTenantIdAsync();
         return await _context.Visitantes
             .Include(v => v.Pessoa)
-            .Where(v => v.PessoaId == pessoaId)
+            .Where(v => v.PessoaId == pessoaId && v.TenantId == tenantId)
             .OrderByDescending(v => v.DataVisita)
             .ToListAsync();
     }
-}
 
+    private Task<int> ResolveTenantIdAsync()
+    {
+        return Task.FromResult(_tenantContext.TenantId ?? Tenant.InitialTenantId);
+    }
+}

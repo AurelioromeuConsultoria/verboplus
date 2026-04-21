@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class KidsDeviceTokenRepository : IKidsDeviceTokenRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public KidsDeviceTokenRepository(SistemaIgrejaDbContext context)
+    public KidsDeviceTokenRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public KidsDeviceTokenRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task UpsertAsync(int pessoaId, string fcmToken, string platform)
@@ -32,6 +40,7 @@ public class KidsDeviceTokenRepository : IKidsDeviceTokenRepository
 
         _context.Set<KidsDeviceToken>().Add(new KidsDeviceToken
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             PessoaId = pessoaId,
             FcmToken = fcmToken,
             Platform = normalized,

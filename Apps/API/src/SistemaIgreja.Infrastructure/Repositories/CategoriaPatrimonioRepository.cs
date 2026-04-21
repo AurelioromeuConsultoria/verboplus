@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class CategoriaPatrimonioRepository : ICategoriaPatrimonioRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public CategoriaPatrimonioRepository(SistemaIgrejaDbContext context)
+    public CategoriaPatrimonioRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public CategoriaPatrimonioRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<CategoriaPatrimonio>> GetAllAsync()
@@ -35,6 +43,7 @@ public class CategoriaPatrimonioRepository : ICategoriaPatrimonioRepository
 
     public async Task<CategoriaPatrimonio> CreateAsync(CategoriaPatrimonio categoria)
     {
+        categoria.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<CategoriaPatrimonio>().Add(categoria);
         await _context.SaveChangesAsync();
         return categoria;

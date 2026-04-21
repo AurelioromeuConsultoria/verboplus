@@ -96,6 +96,93 @@ public class PessoaRepositoryTests
         result.Items[0].Nome.Should().Be("Zeca");
     }
 
+    [Fact]
+    public async Task GetPagedAsync_FiltersByEmailTelefoneWhatsAppTipoAtivoAndSorts()
+    {
+        await using var context = await CreateContextAsync();
+        context.Pessoas.AddRange(
+            new Pessoa
+            {
+                Nome = "Marco",
+                Email = "marco@example.com",
+                Telefone = "1133334444",
+                WhatsApp = "11999999999",
+                TipoPessoa = TipoPessoa.Adulto,
+                Ativo = true,
+                DataCriacao = new DateTime(2026, 4, 1)
+            },
+            new Pessoa
+            {
+                Nome = "Aline",
+                Email = "aline@example.com",
+                Telefone = "1144445555",
+                WhatsApp = "11888888888",
+                TipoPessoa = TipoPessoa.Crianca,
+                Ativo = false,
+                DataCriacao = new DateTime(2026, 4, 2)
+            });
+        await context.SaveChangesAsync();
+
+        var repository = new PessoaRepository(context);
+
+        var result = await repository.GetPagedAsync(new PessoaPagedQuery
+        {
+            Email = "marco",
+            Telefone = "3333",
+            WhatsApp = "9999",
+            TipoPessoa = TipoPessoa.Adulto,
+            Ativo = true,
+            Sort = "datacriacao",
+            Direction = "desc"
+        });
+
+        result.Total.Should().Be(1);
+        result.Items.Should().ContainSingle();
+        result.Items[0].Nome.Should().Be("Marco");
+    }
+
+    [Fact]
+    public async Task GetByEmailCreateUpdateDeleteAndWithoutSave_WorkAsExpected()
+    {
+        await using var context = await CreateContextAsync();
+        var repository = new PessoaRepository(context);
+
+        var semSalvar = await repository.CreateWithoutSaveAsync(new Pessoa
+        {
+            Nome = "Temporaria",
+            Email = "temp@example.com",
+            TipoPessoa = TipoPessoa.Adulto,
+            Ativo = true,
+            DataCriacao = DateTime.UtcNow
+        });
+        semSalvar.Id.Should().Be(0);
+
+        var created = await repository.CreateAsync(new Pessoa
+        {
+            Nome = "Marco",
+            Email = "MARCO@example.com",
+            Telefone = "1133334444",
+            TipoPessoa = TipoPessoa.Adulto,
+            Ativo = true,
+            DataCriacao = DateTime.UtcNow
+        });
+
+        (await repository.GetByEmailAsync("marco@example.com"))!.Id.Should().Be(created.Id);
+        (await repository.GetByTelefoneAsync("(11)3333-4444"))!.Id.Should().Be(created.Id);
+
+        created.Nome = "Marco Atualizado";
+        await repository.UpdateWithoutSaveAsync(created);
+        await context.SaveChangesAsync();
+        (await repository.GetByIdAsync(created.Id))!.Nome.Should().Be("Marco Atualizado");
+
+        created.Nome = "Marco Final";
+        await repository.UpdateAsync(created);
+        (await repository.GetByIdAsync(created.Id))!.Nome.Should().Be("Marco Final");
+
+        await repository.DeleteAsync(created.Id);
+        (await repository.GetByIdAsync(created.Id)).Should().BeNull();
+    }
+
     private static async Task<SistemaIgrejaDbContext> CreateContextAsync()
     {
         var connection = new SqliteConnection("Data Source=:memory:");

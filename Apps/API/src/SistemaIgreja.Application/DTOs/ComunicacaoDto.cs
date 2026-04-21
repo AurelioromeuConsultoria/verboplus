@@ -63,6 +63,7 @@ public class ComunicacaoEntregaResumoDto
     public DateTime? EntregueEm { get; set; }
     public string? Erro { get; set; }
     public string? MidiaUrl { get; set; }
+    public bool PodeReprocessar { get; set; }
 }
 
 public class ComunicacaoAutomacaoExecucaoResumoDto

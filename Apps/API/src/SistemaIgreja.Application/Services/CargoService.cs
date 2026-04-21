@@ -16,10 +16,17 @@ public interface ICargoService
 public class CargoService : ICargoService
 {
     private readonly ICargoRepository _repository;
+    private readonly ITenantContext _tenantContext;
 
     public CargoService(ICargoRepository repository)
+        : this(repository, new DefaultTenantContext())
+    {
+    }
+
+    public CargoService(ICargoRepository repository, ITenantContext tenantContext)
     {
         _repository = repository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<CargoDto>> GetAllAsync()
@@ -38,6 +45,7 @@ public class CargoService : ICargoService
     {
         var entity = new Cargo
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             Nome = dto.Nome,
             DataCriacao = DateTime.Now
         };

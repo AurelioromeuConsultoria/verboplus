@@ -53,4 +53,41 @@ public class ComunicacaoTemplatesControllerTests
 
         result.Result.Should().BeOfType<Microsoft.AspNetCore.Mvc.NotFoundResult>();
     }
+
+    [Fact]
+    public async Task GetAll_ReturnsOkWithItems()
+    {
+        var items = new List<ComunicacaoTemplateResumoDto> { new() { Id = 2, Nome = "Boas-vindas" } };
+        _serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(items);
+
+        var result = await _controller.GetAll();
+
+        var ok = result.Result.Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>().Subject;
+        ok.Value.Should().BeSameAs(items);
+    }
+
+    [Fact]
+    public async Task GetById_ReturnsOk_WhenTemplateExists()
+    {
+        var dto = new ComunicacaoTemplateDetalheDto { Id = 3, Nome = "Template", Canal = CanalComunicacao.Email };
+        _serviceMock.Setup(s => s.GetByIdAsync(3)).ReturnsAsync(dto);
+
+        var result = await _controller.GetById(3);
+
+        var ok = result.Result.Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>().Subject;
+        ok.Value.Should().Be(dto);
+    }
+
+    [Fact]
+    public async Task Update_ReturnsOk_WhenServiceSucceeds()
+    {
+        var dto = new AtualizarComunicacaoTemplateDto { Nome = "Atualizado", Corpo = "Texto", Objetivo = "Boas-vindas" };
+        var updated = new ComunicacaoTemplateDetalheDto { Id = 4, Nome = "Atualizado", Canal = CanalComunicacao.Email };
+        _serviceMock.Setup(s => s.UpdateAsync(4, dto)).ReturnsAsync(updated);
+
+        var result = await _controller.Update(4, dto);
+
+        var ok = result.Result.Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>().Subject;
+        ok.Value.Should().Be(updated);
+    }
 }

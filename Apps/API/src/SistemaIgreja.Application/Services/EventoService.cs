@@ -17,10 +17,17 @@ public interface IEventoService
 public class EventoService : IEventoService
 {
     private readonly IEventoRepository _repository;
+    private readonly ITenantContext _tenantContext;
 
     public EventoService(IEventoRepository repository)
+        : this(repository, new DefaultTenantContext())
+    {
+    }
+
+    public EventoService(IEventoRepository repository, ITenantContext tenantContext)
     {
         _repository = repository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<EventoDto>> GetAllAsync()
@@ -46,6 +53,7 @@ public class EventoService : IEventoService
         var tipo = Enum.IsDefined(typeof(TipoEvento), dto.Tipo) ? (TipoEvento)dto.Tipo : TipoEvento.Evento;
         var entity = new Evento
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             Titulo = dto.Titulo,
             Descricao = dto.Descricao,
             ImagemDestaque = dto.ImagemDestaque,
@@ -70,6 +78,7 @@ public class EventoService : IEventoService
         if (entity == null) throw new ArgumentException("Evento não encontrado");
 
         entity.Titulo = dto.Titulo;
+        entity.TenantId = _tenantContext.TenantId ?? entity.TenantId;
         entity.Descricao = dto.Descricao;
         entity.ImagemDestaque = dto.ImagemDestaque;
         entity.Url = dto.Url;
@@ -123,6 +132,5 @@ public class EventoService : IEventoService
         };
     }
 }
-
 
 

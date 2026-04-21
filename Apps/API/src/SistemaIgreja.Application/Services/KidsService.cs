@@ -39,6 +39,7 @@ public class KidsService : IKidsService
     private readonly ICurrentUserContext _currentUserContext;
     private readonly IKidsAuthorizationService _authorizationService;
     private readonly IComunicacaoAutomacaoService _comunicacaoAutomacaoService;
+    private readonly ITenantContext _tenantContext;
     private readonly IKidsPushNotificationService? _pushService;
     private readonly ILogger<KidsService> _logger;
 
@@ -55,6 +56,7 @@ public class KidsService : IKidsService
         ICurrentUserContext currentUserContext,
         IKidsAuthorizationService authorizationService,
         IComunicacaoAutomacaoService comunicacaoAutomacaoService,
+        ITenantContext tenantContext,
         ILogger<KidsService> logger,
         IKidsPushNotificationService? pushService = null)
     {
@@ -70,8 +72,43 @@ public class KidsService : IKidsService
         _currentUserContext = currentUserContext;
         _authorizationService = authorizationService;
         _comunicacaoAutomacaoService = comunicacaoAutomacaoService;
+        _tenantContext = tenantContext;
         _pushService = pushService;
         _logger = logger;
+    }
+
+    public KidsService(
+        IPessoaRepository pessoaRepository,
+        ICriancaDetalheRepository criancaDetalheRepository,
+        IKidsEstruturaRepository kidsEstruturaRepository,
+        IResponsavelCriancaRepository responsavelRepository,
+        IKidsCheckinRepository checkinRepository,
+        IKidsNotificacaoRepository notificacaoRepository,
+        IPessoaPerfilRepository perfilRepository,
+        IUnitOfWork unitOfWork,
+        IUsuarioRepository usuarioRepository,
+        ICurrentUserContext currentUserContext,
+        IKidsAuthorizationService authorizationService,
+        IComunicacaoAutomacaoService comunicacaoAutomacaoService,
+        ILogger<KidsService> logger,
+        IKidsPushNotificationService? pushService = null)
+        : this(
+            pessoaRepository,
+            criancaDetalheRepository,
+            kidsEstruturaRepository,
+            responsavelRepository,
+            checkinRepository,
+            notificacaoRepository,
+            perfilRepository,
+            unitOfWork,
+            usuarioRepository,
+            currentUserContext,
+            authorizationService,
+            comunicacaoAutomacaoService,
+            new DefaultTenantContext(),
+            logger,
+            pushService)
+    {
     }
 
     public async Task<IEnumerable<CriancaDto>> GetCriancasAsync()
@@ -216,6 +253,7 @@ public class KidsService : IKidsService
                 // Agora que o ID foi gerado e confirmado, criar CriancaDetalhe
                 var detalhe = new CriancaDetalhe
                 {
+                    TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                     PessoaId = pessoaCriada.Id,
                     Alergias = request.Alergias,
                     RestricoesAlimentares = request.RestricoesAlimentares,
@@ -273,6 +311,7 @@ public class KidsService : IKidsService
 
                         var responsavelCrianca = new ResponsavelCrianca
                         {
+                            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                             CriancaPessoaId = pessoaCriada.Id,
                             ResponsavelPessoaId = responsavelPessoa!.Id,
                             PodeRetirar = respRequest.PodeRetirar,
@@ -322,6 +361,7 @@ public class KidsService : IKidsService
         {
             detalhe = new CriancaDetalhe
             {
+                TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                 PessoaId = criancaPessoaId,
                 Alergias = request.Alergias,
                 RestricoesAlimentares = request.RestricoesAlimentares,
@@ -378,6 +418,7 @@ public class KidsService : IKidsService
         
         var responsavelCrianca = new ResponsavelCrianca
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             CriancaPessoaId = criancaPessoaId,
             ResponsavelPessoaId = request.ResponsavelPessoaId,
             PodeRetirar = request.PodeRetirar,
@@ -450,6 +491,7 @@ public class KidsService : IKidsService
 
                 var checkin = new KidsCheckin
                 {
+                    TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                     CriancaPessoaId = request.CriancaPessoaId,
                     CheckinTime = DateTime.UtcNow,
                     CheckinByPessoaId = request.CheckinByPessoaId,
@@ -473,6 +515,7 @@ public class KidsService : IKidsService
 
                     var notificacao = new KidsNotificacao
                     {
+                        TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                         CriancaPessoaId = request.CriancaPessoaId,
                         ResponsavelPessoaId = responsavel.ResponsavelPessoaId,
                         Titulo = "Check-in realizado",
@@ -605,6 +648,7 @@ public class KidsService : IKidsService
                 {
                     var notificacao = new KidsNotificacao
                     {
+                        TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                         CriancaPessoaId = request.CriancaPessoaId,
                         ResponsavelPessoaId = responsavel.ResponsavelPessoaId,
                         Titulo = "Check-out realizado",

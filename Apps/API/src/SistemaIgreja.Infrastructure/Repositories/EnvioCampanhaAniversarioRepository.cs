@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class EnvioCampanhaAniversarioRepository : IEnvioCampanhaAniversarioRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public EnvioCampanhaAniversarioRepository(SistemaIgrejaDbContext context)
+    public EnvioCampanhaAniversarioRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public EnvioCampanhaAniversarioRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<EnvioCampanhaAniversario?> GetByIdAsync(int id)
@@ -30,6 +38,7 @@ public class EnvioCampanhaAniversarioRepository : IEnvioCampanhaAniversarioRepos
 
     public async Task<EnvioCampanhaAniversario> CreateAsync(EnvioCampanhaAniversario envio)
     {
+        envio.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.EnviosCampanhaAniversario.Add(envio);
         await _context.SaveChangesAsync();
         return envio;

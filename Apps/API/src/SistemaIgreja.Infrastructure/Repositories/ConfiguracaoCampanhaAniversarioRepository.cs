@@ -9,15 +9,23 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class ConfiguracaoCampanhaAniversarioRepository : IConfiguracaoCampanhaAniversarioRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
     public ConfiguracaoCampanhaAniversarioRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
+    }
+
+    public ConfiguracaoCampanhaAniversarioRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<ConfiguracaoCampanhaAniversario> GetAsync()
     {
-        var configuracao = await _context.ConfiguracoesCampanhaAniversario.FirstOrDefaultAsync();
+        var tenantId = await ResolveTenantIdAsync();
+        var configuracao = await _context.ConfiguracoesCampanhaAniversario.FirstOrDefaultAsync(c => c.TenantId == tenantId);
         if (configuracao != null)
         {
             return configuracao;
@@ -25,7 +33,7 @@ public class ConfiguracaoCampanhaAniversarioRepository : IConfiguracaoCampanhaAn
 
         configuracao = new ConfiguracaoCampanhaAniversario
         {
-            Id = 1,
+            TenantId = tenantId,
             Ativo = true,
             ImagemUrl = "/assets/birthday/niver-whatsapp-aniversario.png",
             HorarioEnvio = new TimeSpan(9, 0, 0),
@@ -40,10 +48,11 @@ public class ConfiguracaoCampanhaAniversarioRepository : IConfiguracaoCampanhaAn
 
     public async Task<ConfiguracaoCampanhaAniversario> UpdateAsync(ConfiguracaoCampanhaAniversario configuracao)
     {
-        var existente = await _context.ConfiguracoesCampanhaAniversario.FirstOrDefaultAsync();
+        var tenantId = await ResolveTenantIdAsync();
+        var existente = await _context.ConfiguracoesCampanhaAniversario.FirstOrDefaultAsync(c => c.TenantId == tenantId);
         if (existente == null)
         {
-            configuracao.Id = 1;
+            configuracao.TenantId = tenantId;
             configuracao.DataAtualizacao = DateTime.Now;
             _context.ConfiguracoesCampanhaAniversario.Add(configuracao);
             await _context.SaveChangesAsync();
@@ -58,5 +67,19 @@ public class ConfiguracaoCampanhaAniversarioRepository : IConfiguracaoCampanhaAn
 
         await _context.SaveChangesAsync();
         return existente;
+    }
+
+    private async Task<int> ResolveTenantIdAsync()
+    {
+        if (_tenantContext.TenantId.HasValue)
+        {
+            return _tenantContext.TenantId.Value;
+        }
+
+        var tenant = await _context.Tenants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Slug == Tenant.InitialTenantSlug);
+
+        return tenant?.Id ?? Tenant.InitialTenantId;
     }
 }

@@ -17,13 +17,23 @@ public class EventoRecorrenciaService : IEventoRecorrenciaService
 {
     private readonly IEventoRecorrenciaRepository _repository;
     private readonly IEventoRepository _eventoRepository;
+    private readonly ITenantContext _tenantContext;
 
     public EventoRecorrenciaService(
         IEventoRecorrenciaRepository repository,
         IEventoRepository eventoRepository)
+        : this(repository, eventoRepository, new DefaultTenantContext())
+    {
+    }
+
+    public EventoRecorrenciaService(
+        IEventoRecorrenciaRepository repository,
+        IEventoRepository eventoRepository,
+        ITenantContext tenantContext)
     {
         _repository = repository;
         _eventoRepository = eventoRepository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<EventoRecorrenciaDto>> GetByEventoAsync(int eventoId)
@@ -62,6 +72,7 @@ public class EventoRecorrenciaService : IEventoRecorrenciaService
 
         var entity = new EventoRecorrencia
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             EventoId = dto.EventoId,
             DiaSemana = diaSemana,
             HoraInicio = horaInicio,

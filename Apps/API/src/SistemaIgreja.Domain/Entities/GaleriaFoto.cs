@@ -3,9 +3,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class GaleriaFoto
+public class GaleriaFoto : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
 
     [Required]
     [MaxLength(200)]
@@ -43,8 +47,6 @@ public class GaleriaFoto
     /// <summary>Fotos da galeria (persistidas no banco para listagem sem depender do disco).</summary>
     public virtual ICollection<GaleriaFotoItem> Itens { get; set; } = new List<GaleriaFotoItem>();
 }
-
-
 
 
 

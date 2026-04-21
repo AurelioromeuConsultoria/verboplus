@@ -2,8 +2,12 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class CriancaDetalhe
+public class CriancaDetalhe : ITenantEntity
 {
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
+
     [Required]
     public int PessoaId { get; set; }
     public virtual Pessoa Pessoa { get; set; } = null!;
@@ -26,4 +30,3 @@ public class CriancaDetalhe
     [Required]
     public DateTime DataCadastro { get; set; } = DateTime.UtcNow;
 }
-

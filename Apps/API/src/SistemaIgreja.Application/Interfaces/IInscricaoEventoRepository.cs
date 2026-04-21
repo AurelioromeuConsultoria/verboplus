@@ -8,6 +8,7 @@ public interface IInscricaoEventoRepository
     Task<InscricaoEvento?> GetByIdAsync(int id);
     Task<IEnumerable<InscricaoEvento>> GetByEventoAsync(int eventoId);
     Task<IEnumerable<InscricaoEvento>> GetByStatusAsync(StatusInscricao status);
+    Task<IEnumerable<InscricaoEvento>> GetByEmailAsync(string email);
     Task<int> ContarInscricoesPorEventoAsync(int eventoId);
     Task<int> ContarInscricoesConfirmadasPorEventoAsync(int eventoId);
     Task<bool> ExisteInscricaoAsync(int eventoId, string whatsApp);
@@ -15,7 +16,6 @@ public interface IInscricaoEventoRepository
     Task<InscricaoEvento> UpdateAsync(InscricaoEvento inscricaoEvento);
     Task DeleteAsync(int id);
 }
-
 
 
 

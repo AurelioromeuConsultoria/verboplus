@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class CategoriaMidiaRepository : ICategoriaMidiaRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public CategoriaMidiaRepository(SistemaIgrejaDbContext context)
+    public CategoriaMidiaRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public CategoriaMidiaRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<CategoriaMidia>> GetAllAsync()
@@ -29,6 +37,7 @@ public class CategoriaMidiaRepository : ICategoriaMidiaRepository
 
     public async Task<CategoriaMidia> CreateAsync(CategoriaMidia categoria)
     {
+        categoria.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<CategoriaMidia>().Add(categoria);
         await _context.SaveChangesAsync();
         return categoria;
@@ -51,7 +60,6 @@ public class CategoriaMidiaRepository : ICategoriaMidiaRepository
         return true;
     }
 }
-
 
 
 

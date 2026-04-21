@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class IndisponibilidadeVoluntarioRepository : IIndisponibilidadeVoluntarioRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public IndisponibilidadeVoluntarioRepository(SistemaIgrejaDbContext context)
+    public IndisponibilidadeVoluntarioRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public IndisponibilidadeVoluntarioRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<IndisponibilidadeVoluntario?> GetByIdAsync(int id)
@@ -54,6 +62,7 @@ public class IndisponibilidadeVoluntarioRepository : IIndisponibilidadeVoluntari
 
     public async Task<IndisponibilidadeVoluntario> CreateAsync(IndisponibilidadeVoluntario indisponibilidade)
     {
+        indisponibilidade.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.IndisponibilidadesVoluntarios.Add(indisponibilidade);
         await _context.SaveChangesAsync();
         return indisponibilidade;

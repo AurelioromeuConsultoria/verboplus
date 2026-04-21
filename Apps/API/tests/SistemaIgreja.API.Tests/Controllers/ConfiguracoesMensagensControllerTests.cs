@@ -67,4 +67,61 @@ public class ConfiguracoesMensagensControllerTests
         var result = await _controller.Delete(3);
         result.Should().BeOfType<NoContentResult>();
     }
+
+    [Fact]
+    public async Task GetById_ReturnsOk_WhenItemExists()
+    {
+        var dto = new ConfiguracaoMensagemDto { Id = 2, Nome = "Lembrete", TextoMensagem = "Olá", DiasAposVisita = 1, HorarioEnvio = new TimeSpan(9, 0, 0) };
+        _serviceMock.Setup(s => s.GetByIdAsync(2)).ReturnsAsync(dto);
+
+        var result = await _controller.GetById(2);
+
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        ok.Value.Should().Be(dto);
+    }
+
+    [Fact]
+    public async Task Create_ReturnsBadRequest_WhenServiceThrows()
+    {
+        _serviceMock.Setup(s => s.CreateAsync(It.IsAny<CriarConfiguracaoMensagemDto>()))
+            .ThrowsAsync(new InvalidOperationException("erro"));
+
+        var result = await _controller.Create(new CriarConfiguracaoMensagemDto());
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task Update_ReturnsOk_WhenServiceSucceeds()
+    {
+        var dto = new AtualizarConfiguracaoMensagemDto { Nome = "Atualizada", TextoMensagem = "Teste", DiasAposVisita = 2, HorarioEnvio = new TimeSpan(8, 0, 0), Ativo = true };
+        var updated = new ConfiguracaoMensagemDto { Id = 9, Nome = "Atualizada", TextoMensagem = "Teste", DiasAposVisita = 2, HorarioEnvio = new TimeSpan(8, 0, 0), Ativo = true };
+        _serviceMock.Setup(s => s.UpdateAsync(9, dto)).ReturnsAsync(updated);
+
+        var result = await _controller.Update(9, dto);
+
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        ok.Value.Should().Be(updated);
+    }
+
+    [Fact]
+    public async Task Update_ReturnsBadRequest_WhenServiceThrowsGenericException()
+    {
+        _serviceMock.Setup(s => s.UpdateAsync(99, It.IsAny<AtualizarConfiguracaoMensagemDto>()))
+            .ThrowsAsync(new InvalidOperationException("erro"));
+
+        var result = await _controller.Update(99, new AtualizarConfiguracaoMensagemDto());
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsBadRequest_WhenServiceThrows()
+    {
+        _serviceMock.Setup(s => s.DeleteAsync(3)).ThrowsAsync(new InvalidOperationException("erro"));
+
+        var result = await _controller.Delete(3);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+    }
 }

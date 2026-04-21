@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class PerfilAcessoRepository : IPerfilAcessoRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
     public PerfilAcessoRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
+    }
+
+    public PerfilAcessoRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<PerfilAcesso>> GetAllAsync()
@@ -29,8 +37,31 @@ public class PerfilAcessoRepository : IPerfilAcessoRepository
             .FirstOrDefaultAsync(p => p.Id == id);
     }
 
+    public async Task<PerfilAcesso?> GetByIdIgnoringTenantAsync(int id)
+    {
+        var previousIgnoreTenantFilters = _context.IgnoreTenantFilters;
+        _context.IgnoreTenantFilters = true;
+        try
+        {
+            return await _context.Set<PerfilAcesso>()
+                .Include(p => p.Permissoes)
+                .FirstOrDefaultAsync(p => p.Id == id);
+        }
+        finally
+        {
+            _context.IgnoreTenantFilters = previousIgnoreTenantFilters;
+        }
+    }
+
     public async Task<PerfilAcesso> CreateAsync(PerfilAcesso perfil)
     {
+        var tenantId = _tenantContext.TenantId ?? perfil.TenantId;
+        perfil.TenantId = tenantId == 0 ? Tenant.InitialTenantId : tenantId;
+        foreach (var permissao in perfil.Permissoes)
+        {
+            permissao.TenantId = perfil.TenantId;
+        }
+
         _context.Set<PerfilAcesso>().Add(perfil);
         await _context.SaveChangesAsync();
         return perfil;
@@ -38,6 +69,14 @@ public class PerfilAcessoRepository : IPerfilAcessoRepository
 
     public async Task<PerfilAcesso> UpdateAsync(PerfilAcesso perfil)
     {
+        var tenantId = _tenantContext.TenantId ?? perfil.TenantId;
+
+        perfil.TenantId = tenantId == 0 ? Tenant.InitialTenantId : tenantId;
+        foreach (var permissao in perfil.Permissoes)
+        {
+            permissao.TenantId = perfil.TenantId;
+        }
+
         _context.Set<PerfilAcesso>().Update(perfil);
         await _context.SaveChangesAsync();
         return perfil;

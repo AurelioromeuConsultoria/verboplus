@@ -11,6 +11,7 @@ public interface IInscricaoEventoService
     Task<InscricaoEventoDto?> GetByIdAsync(int id);
     Task<IEnumerable<InscricaoEventoDto>> GetByEventoAsync(int eventoId);
     Task<IEnumerable<InscricaoEventoDto>> GetByStatusAsync(StatusInscricao status);
+    Task<IEnumerable<InscricaoEventoDto>> GetByEmailAsync(string email);
     Task<InscricaoEventoDto> CreateAsync(CriarInscricaoEventoDto dto);
     Task<InscricaoEventoDto> UpdateAsync(int id, AtualizarInscricaoEventoDto dto);
     Task<InscricaoEventoDto> ConfirmarInscricaoAsync(int id);
@@ -23,11 +24,18 @@ public class InscricaoEventoService : IInscricaoEventoService
 {
     private readonly IInscricaoEventoRepository _repository;
     private readonly IEventoRepository _eventoRepository;
+    private readonly ITenantContext _tenantContext;
 
     public InscricaoEventoService(IInscricaoEventoRepository repository, IEventoRepository eventoRepository)
+        : this(repository, eventoRepository, new DefaultTenantContext())
+    {
+    }
+
+    public InscricaoEventoService(IInscricaoEventoRepository repository, IEventoRepository eventoRepository, ITenantContext tenantContext)
     {
         _repository = repository;
         _eventoRepository = eventoRepository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<InscricaoEventoDto>> GetAllAsync()
@@ -54,6 +62,17 @@ public class InscricaoEventoService : IInscricaoEventoService
         return entities.Select(MapToDto);
     }
 
+    public async Task<IEnumerable<InscricaoEventoDto>> GetByEmailAsync(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return [];
+        }
+
+        var entities = await _repository.GetByEmailAsync(email);
+        return entities.Select(MapToDto);
+    }
+
     public async Task<InscricaoEventoDto> CreateAsync(CriarInscricaoEventoDto dto)
     {
         var evento = await _eventoRepository.GetByIdAsync(dto.EventoId);
@@ -75,6 +94,7 @@ public class InscricaoEventoService : IInscricaoEventoService
 
         var entity = new InscricaoEvento
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             EventoId = dto.EventoId,
             Nome = dto.Nome.Trim(),
             WhatsApp = dto.WhatsApp.Trim(),
@@ -247,8 +267,6 @@ public class InscricaoEventoService : IInscricaoEventoService
         };
     }
 }
-
-
 
 
 

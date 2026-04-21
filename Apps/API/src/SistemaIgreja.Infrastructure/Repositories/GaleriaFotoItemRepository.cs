@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class GaleriaFotoItemRepository : IGaleriaFotoItemRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public GaleriaFotoItemRepository(SistemaIgrejaDbContext context)
+    public GaleriaFotoItemRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public GaleriaFotoItemRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<List<GaleriaFotoItem>> GetByGaleriaIdAsync(int galeriaId)
@@ -25,6 +33,11 @@ public class GaleriaFotoItemRepository : IGaleriaFotoItemRepository
 
     public async Task AddRangeAsync(IEnumerable<GaleriaFotoItem> items)
     {
+        var tenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
+        foreach (var item in items)
+        {
+            item.TenantId = tenantId;
+        }
         await _context.Set<GaleriaFotoItem>().AddRangeAsync(items);
         await _context.SaveChangesAsync();
     }

@@ -17,10 +17,17 @@ public interface IEnqueteService
 public class EnqueteService : IEnqueteService
 {
     private readonly IEnqueteRepository _repository;
+    private readonly ITenantContext _tenantContext;
 
-    public EnqueteService(IEnqueteRepository repository)
+    public EnqueteService(IEnqueteRepository repository, ITenantContext tenantContext)
     {
         _repository = repository;
+        _tenantContext = tenantContext;
+    }
+
+    public EnqueteService(IEnqueteRepository repository)
+        : this(repository, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<EnqueteDto>> GetAllAsync()
@@ -45,6 +52,7 @@ public class EnqueteService : IEnqueteService
     {
         var entity = new Enquete
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             Titulo = dto.Titulo,
             Descricao = dto.Descricao,
             DataInicio = dto.DataInicio,
@@ -60,6 +68,7 @@ public class EnqueteService : IEnqueteService
         {
             entity.Opcoes.Add(new EnqueteOpcao
             {
+                TenantId = entity.TenantId,
                 Texto = opcaoDto.Texto,
                 Ordem = opcaoDto.Ordem,
                 DataCriacao = DateTime.Now
@@ -113,6 +122,7 @@ public class EnqueteService : IEnqueteService
                 // Cria nova opção
                 var novaOpcao = new EnqueteOpcao
                 {
+                    TenantId = entity.TenantId,
                     EnqueteId = id,
                     Texto = opcaoDto.Texto,
                     Ordem = opcaoDto.Ordem,

@@ -2,9 +2,14 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class ConfiguracaoCampanhaAniversario
+public class ConfiguracaoCampanhaAniversario : ITenantEntity
 {
-    public int Id { get; set; } = 1;
+    public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public bool Ativo { get; set; } = true;
 

@@ -37,10 +37,13 @@ public class AuthService : IAuthService
 
     public async Task<LoginResponseDto> LoginAsync(LoginDto dto)
     {
-        var usuario = await _usuarioRepository.GetByEmailAsync(dto.Email);
+        var tenantSlug = string.IsNullOrWhiteSpace(dto.TenantSlug)
+            ? null
+            : dto.TenantSlug.Trim();
+        var usuario = await _usuarioRepository.GetByEmailAsync(dto.Email, tenantSlug);
         if (usuario == null || !BCrypt.Net.BCrypt.Verify(dto.Senha, usuario.SenhaHash))
         {
-            _logger.LogWarning("Falha de login. Email={Email}", dto.Email);
+            _logger.LogWarning("Falha de login. Email={Email} TenantSlug={TenantSlug}", dto.Email, tenantSlug);
             throw new UnauthorizedAccessException("Email ou senha inválidos");
         }
 
@@ -61,7 +64,8 @@ public class AuthService : IAuthService
         _refreshTokens[refreshToken] = usuario.Id.ToString();
 
         _logger.LogInformation(
-            "Login realizado com sucesso. UsuarioId={UsuarioId} PessoaId={PessoaId} TipoUsuario={TipoUsuario}",
+            "Login realizado com sucesso. TenantId={TenantId} UsuarioId={UsuarioId} PessoaId={PessoaId} TipoUsuario={TipoUsuario}",
+            usuario.TenantId,
             usuario.Id,
             usuario.PessoaId,
             usuario.TipoUsuario);
@@ -164,8 +168,18 @@ public class AuthService : IAuthService
             new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
             new Claim(ClaimTypes.Name, nome),
             new Claim(ClaimTypes.Email, email),
+            new Claim("TenantId", usuario.TenantId.ToString()),
+            new Claim("TenantSlug", usuario.Tenant?.Slug ?? Tenant.InitialTenantSlug),
+            new Claim("TenantNome", usuario.Tenant?.Nome ?? Tenant.InitialTenantName),
+            new Claim("TenantNomeExibicao", usuario.Tenant?.NomeExibicao ?? string.Empty),
+            new Claim("TenantLogoUrl", usuario.Tenant?.LogoUrl ?? string.Empty),
+            new Claim("TenantFaviconUrl", usuario.Tenant?.FaviconUrl ?? string.Empty),
+            new Claim("TenantCorPrimaria", usuario.Tenant?.CorPrimaria ?? string.Empty),
+            new Claim("TenantCorSecundaria", usuario.Tenant?.CorSecundaria ?? string.Empty),
+            new Claim("IsRootTenant", usuario.Tenant?.IsRootTenant.ToString().ToLowerInvariant() ?? "false"),
             new Claim("TipoUsuario", usuario.TipoUsuario.ToString()),
-            new Claim("TipoUsuarioId", ((int)usuario.TipoUsuario).ToString())
+            new Claim("TipoUsuarioId", ((int)usuario.TipoUsuario).ToString()),
+            new Claim("IsPlatformAdmin", IsPlatformAdmin(usuario).ToString().ToLowerInvariant())
         };
 
         var tokenDescriptor = new SecurityTokenDescriptor
@@ -197,6 +211,16 @@ public class AuthService : IAuthService
         return new UsuarioDto
         {
             Id = u.Id,
+            TenantId = u.TenantId,
+            TenantSlug = u.Tenant?.Slug ?? Tenant.InitialTenantSlug,
+            TenantNome = u.Tenant?.Nome ?? Tenant.InitialTenantName,
+            TenantNomeExibicao = u.Tenant?.NomeExibicao,
+            TenantLogoUrl = u.Tenant?.LogoUrl,
+            TenantFaviconUrl = u.Tenant?.FaviconUrl,
+            TenantCorPrimaria = u.Tenant?.CorPrimaria,
+            TenantCorSecundaria = u.Tenant?.CorSecundaria,
+            IsRootTenant = u.Tenant?.IsRootTenant ?? false,
+            IsPlatformAdmin = IsPlatformAdmin(u),
             PessoaId = u.PessoaId,
             Nome = u.Pessoa?.Nome ?? string.Empty,
             Email = u.Pessoa?.Email ?? string.Empty,
@@ -228,5 +252,10 @@ public class AuthService : IAuthService
             TipoUsuario.Ambos => "Administrador e Portal",
             _ => "Desconhecido"
         };
+    }
+
+    private static bool IsPlatformAdmin(Usuario usuario)
+    {
+        return usuario.IsPlatformAdmin;
     }
 }

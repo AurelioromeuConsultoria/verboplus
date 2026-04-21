@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class DestaqueSiteRepository : IDestaqueSiteRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
     public DestaqueSiteRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
+    }
+
+    public DestaqueSiteRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<DestaqueSite>> GetAllAsync()
@@ -30,6 +38,7 @@ public class DestaqueSiteRepository : IDestaqueSiteRepository
 
     public async Task<DestaqueSite> CreateAsync(DestaqueSite destaqueSite)
     {
+        destaqueSite.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<DestaqueSite>().Add(destaqueSite);
         await _context.SaveChangesAsync();
         return destaqueSite;
@@ -52,6 +61,5 @@ public class DestaqueSiteRepository : IDestaqueSiteRepository
         }
     }
 }
-
 
 

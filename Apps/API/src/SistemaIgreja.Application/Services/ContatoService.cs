@@ -16,10 +16,17 @@ public interface IContatoService
 public class ContatoService : IContatoService
 {
     private readonly IContatoRepository _repository;
+    private readonly ITenantContext _tenantContext;
 
     public ContatoService(IContatoRepository repository)
+        : this(repository, new DefaultTenantContext())
+    {
+    }
+
+    public ContatoService(IContatoRepository repository, ITenantContext tenantContext)
     {
         _repository = repository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<ContatoDto>> GetAllAsync()
@@ -38,6 +45,7 @@ public class ContatoService : IContatoService
     {
         var entity = new Contato
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             Nome = dto.Nome,
             WhatsApp = dto.WhatsApp,
             Email = dto.Email,
@@ -84,7 +92,6 @@ public class ContatoService : IContatoService
         };
     }
 }
-
 
 
 

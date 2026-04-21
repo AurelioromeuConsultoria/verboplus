@@ -2,9 +2,13 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class Enquete
+public class Enquete : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
 
     [Required]
     [MaxLength(200)]
@@ -38,9 +42,13 @@ public class Enquete
     public virtual ICollection<EnqueteVoto> Votos { get; set; } = new List<EnqueteVoto>();
 }
 
-public class EnqueteOpcao
+public class EnqueteOpcao : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
 
     [Required]
     public int EnqueteId { get; set; }
@@ -59,9 +67,13 @@ public class EnqueteOpcao
     public virtual ICollection<EnqueteVoto> Votos { get; set; } = new List<EnqueteVoto>();
 }
 
-public class EnqueteVoto
+public class EnqueteVoto : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
 
     [Required]
     public int EnqueteId { get; set; }

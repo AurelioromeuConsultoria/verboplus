@@ -36,4 +36,26 @@ public class SearchControllerTests
 
         result.Result.Should().BeOfType<OkObjectResult>();
     }
+
+    [Fact]
+    public async Task Search_ReturnsEmpty_WhenQueryIsWhitespace()
+    {
+        var result = await _controller.Search("   ");
+
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        ok.Value.Should().BeEquivalentTo(new GlobalSearchResultDto { Items = Array.Empty<GlobalSearchItemDto>() });
+        _serviceMock.Verify(s => s.SearchAsync(It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Search_UsesDefaultLimit_WhenLimitIsNotProvided()
+    {
+        _serviceMock.Setup(s => s.SearchAsync("marco", 20))
+            .ReturnsAsync(new List<GlobalSearchItemDto>());
+
+        var result = await _controller.Search("marco");
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+        _serviceMock.Verify(s => s.SearchAsync("marco", 20), Times.Once);
+    }
 }

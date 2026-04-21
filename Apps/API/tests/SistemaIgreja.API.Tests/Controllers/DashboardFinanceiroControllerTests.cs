@@ -26,4 +26,21 @@ public class DashboardFinanceiroControllerTests
 
         result.Result.Should().BeOfType<OkObjectResult>();
     }
+
+    [Fact]
+    public async Task GetDashboard_ReturnsDashboardPayload_FromService()
+    {
+        var dto = new DashboardFinanceiroDto
+        {
+            TotalReceitasMes = 1200,
+            TotalDespesasMes = 350
+        };
+        _serviceMock.Setup(s => s.GetDashboardAsync()).ReturnsAsync(dto);
+
+        var result = await _controller.GetDashboard();
+
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        ok.Value.Should().BeSameAs(dto);
+        _serviceMock.Verify(s => s.GetDashboardAsync(), Times.Once);
+    }
 }

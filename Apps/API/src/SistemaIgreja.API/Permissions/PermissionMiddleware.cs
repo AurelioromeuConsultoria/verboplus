@@ -47,6 +47,17 @@ public class PermissionMiddleware
             return;
         }
 
+        var isPlatformAdmin = string.Equals(
+            context.User.FindFirstValue("IsPlatformAdmin"),
+            "true",
+            StringComparison.OrdinalIgnoreCase);
+
+        if (isPlatformAdmin)
+        {
+            await _next(context);
+            return;
+        }
+
         var userIdValue = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0";
         if (!int.TryParse(userIdValue, out var userId) || userId <= 0)
         {

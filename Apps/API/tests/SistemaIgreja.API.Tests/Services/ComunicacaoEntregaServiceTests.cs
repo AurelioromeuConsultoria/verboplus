@@ -74,4 +74,52 @@ public class ComunicacaoEntregaServiceTests
             a => a.RecordAsync("ComunicacaoEntrega", "5", "Falha", It.IsAny<object>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task PrepararReprocessamentoAsync_ReabreFalhaElegivel()
+    {
+        var entrega = new ComunicacaoEntrega
+        {
+            Id = 8,
+            Canal = CanalComunicacao.Email,
+            DestinoResolvido = "pessoa@example.com",
+            Status = StatusComunicacaoEntrega.Falhou,
+            Erro = "SMTP indisponivel",
+            Tentativas = 2
+        };
+
+        _repositoryMock.Setup(r => r.GetByIdAsync(8)).ReturnsAsync(entrega);
+        _repositoryMock.Setup(r => r.UpdateAsync(It.IsAny<ComunicacaoEntrega>()))
+            .ReturnsAsync((ComunicacaoEntrega updated) => updated);
+
+        var result = await _service.PrepararReprocessamentoAsync(8);
+
+        result.Status.Should().Be(StatusComunicacaoEntrega.Pendente);
+        result.PodeReprocessar.Should().BeFalse();
+        entrega.Status.Should().Be(StatusComunicacaoEntrega.Pendente);
+        entrega.Erro.Should().BeNull();
+        _auditLogServiceMock.Verify(
+            a => a.RecordAsync("ComunicacaoEntrega", "8", "ReprocessarEntrega", It.IsAny<object>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task PrepararReprocessamentoAsync_BloqueiaFalhaNaoElegivel()
+    {
+        var entrega = new ComunicacaoEntrega
+        {
+            Id = 9,
+            Canal = CanalComunicacao.WhatsApp,
+            DestinoResolvido = "5511999999999",
+            Status = StatusComunicacaoEntrega.Falhou,
+            Erro = "Entrega bloqueada: Maria não possui WhatsApp válido."
+        };
+
+        _repositoryMock.Setup(r => r.GetByIdAsync(9)).ReturnsAsync(entrega);
+
+        var act = () => _service.PrepararReprocessamentoAsync(9);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Esta entrega não é elegível para reprocessamento.");
+    }
 }

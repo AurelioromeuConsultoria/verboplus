@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class SolicitacaoTrocaEscalaRepository : ISolicitacaoTrocaEscalaRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public SolicitacaoTrocaEscalaRepository(SistemaIgrejaDbContext context)
+    public SolicitacaoTrocaEscalaRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public SolicitacaoTrocaEscalaRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<SolicitacaoTrocaEscala?> GetByIdAsync(int id)
@@ -69,6 +77,7 @@ public class SolicitacaoTrocaEscalaRepository : ISolicitacaoTrocaEscalaRepositor
 
     public async Task<SolicitacaoTrocaEscala> CreateAsync(SolicitacaoTrocaEscala solicitacao)
     {
+        solicitacao.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<SolicitacaoTrocaEscala>().Add(solicitacao);
         await _context.SaveChangesAsync();
         return solicitacao;

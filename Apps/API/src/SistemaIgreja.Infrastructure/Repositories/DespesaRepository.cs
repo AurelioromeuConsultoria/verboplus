@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class DespesaRepository : IDespesaRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public DespesaRepository(SistemaIgrejaDbContext context)
+    public DespesaRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public DespesaRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<Despesa>> GetAllAsync()
@@ -43,6 +51,7 @@ public class DespesaRepository : IDespesaRepository
 
     public async Task<Despesa> CreateAsync(Despesa despesa)
     {
+        despesa.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<Despesa>().Add(despesa);
         await _context.SaveChangesAsync();
         return despesa;

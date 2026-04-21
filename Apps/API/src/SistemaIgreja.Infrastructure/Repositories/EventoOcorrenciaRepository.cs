@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class EventoOcorrenciaRepository : IEventoOcorrenciaRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
     public EventoOcorrenciaRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
+    }
+
+    public EventoOcorrenciaRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<EventoOcorrencia>> GetByEventoAsync(int eventoId)
@@ -56,6 +64,7 @@ public class EventoOcorrenciaRepository : IEventoOcorrenciaRepository
 
     public async Task<EventoOcorrencia> CreateAsync(EventoOcorrencia ocorrencia)
     {
+        ocorrencia.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.EventosOcorrencias.Add(ocorrencia);
         await _context.SaveChangesAsync();
         return ocorrencia;

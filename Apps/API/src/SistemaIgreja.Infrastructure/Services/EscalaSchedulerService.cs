@@ -2,9 +2,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Configuration;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Domain.Entities;
+using SistemaIgreja.Infrastructure.Data;
 
 namespace SistemaIgreja.Infrastructure.Services;
 
@@ -45,22 +48,38 @@ public class EscalaSchedulerService : BackgroundService
             {
                 if (_settings.Enabled)
                 {
-                    await GerarOcorrenciasRecorrentesAsync(stoppingToken);
-                    if (_settings.EnviarLembretesAutomaticos)
+                    var processedTenants = 0;
+                    foreach (var tenant in await GetActiveTenantsAsync(stoppingToken))
                     {
-                        await ProcessarLembretesEscalasAsync(stoppingToken);
+                        if (stoppingToken.IsCancellationRequested)
+                        {
+                            break;
+                        }
+
+                        await GerarOcorrenciasRecorrentesAsync(tenant, stoppingToken);
+                        if (_settings.EnviarLembretesAutomaticos)
+                        {
+                            await ProcessarLembretesEscalasAsync(tenant, stoppingToken);
+                        }
+
+                        processedTenants++;
                     }
+
+                    _executionMonitor.RecordSuccess(
+                        SchedulerName,
+                        startedAtUtc,
+                        DateTime.UtcNow,
+                        $"Enabled: {_settings.Enabled}; lembretes automáticos: {_settings.EnviarLembretesAutomaticos}; tenants: {processedTenants}");
                 }
                 else
                 {
                     _logger.LogDebug("EscalaSchedulerService desativado por configuração.");
-                }
-
-                _executionMonitor.RecordSuccess(
-                    SchedulerName,
-                    startedAtUtc,
-                    DateTime.UtcNow,
-                    $"Enabled: {_settings.Enabled}; lembretes automáticos: {_settings.EnviarLembretesAutomaticos}");
+                    _executionMonitor.RecordSuccess(
+                        SchedulerName,
+                        startedAtUtc,
+                        DateTime.UtcNow,
+                        $"Enabled: {_settings.Enabled}; lembretes automáticos: {_settings.EnviarLembretesAutomaticos}; tenants: 0");
+                }                
             }
             catch (Exception ex)
             {
@@ -88,9 +107,10 @@ public class EscalaSchedulerService : BackgroundService
         return baseInterval.Add(TimeSpan.FromSeconds(jitterSec));
     }
 
-    private async Task GerarOcorrenciasRecorrentesAsync(CancellationToken stoppingToken)
+    private async Task GerarOcorrenciasRecorrentesAsync(Tenant tenant, CancellationToken stoppingToken)
     {
         using var scope = _serviceProvider.CreateScope();
+        scope.ServiceProvider.GetService<TenantScopeOverride>()?.SetTenant(tenant.Id, tenant.Slug);
         var eventoRepository = scope.ServiceProvider.GetRequiredService<IEventoRepository>();
         var eventoOcorrenciaService = scope.ServiceProvider.GetRequiredService<IEventoOcorrenciaService>();
 
@@ -149,20 +169,38 @@ public class EscalaSchedulerService : BackgroundService
         }
 
         _logger.LogInformation(
-            "EscalaScheduler concluído. Eventos processados: {EventosCount}, ocorrências geradas: {OcorrenciasGeradas}",
+            "Tenant {TenantSlug}: EscalaScheduler concluído. Eventos processados: {EventosCount}, ocorrências geradas: {OcorrenciasGeradas}",
+            tenant.Slug,
             eventosRecorrentesAtivos.Count,
             totalGeradas);
     }
 
-    private async Task ProcessarLembretesEscalasAsync(CancellationToken stoppingToken)
+    private async Task ProcessarLembretesEscalasAsync(Tenant tenant, CancellationToken stoppingToken)
     {
         using var scope = _serviceProvider.CreateScope();
+        scope.ServiceProvider.GetService<TenantScopeOverride>()?.SetTenant(tenant.Id, tenant.Slug);
         var escalaService = scope.ServiceProvider.GetRequiredService<IEscalaService>();
         var total = await escalaService.EnviarLembretesPendentesAsync(DateTime.Now);
 
         if (!stoppingToken.IsCancellationRequested && total > 0)
         {
-            _logger.LogInformation("EscalaScheduler enviou {Total} lembrete(s) de escala.", total);
+            _logger.LogInformation("Tenant {TenantSlug}: EscalaScheduler enviou {Total} lembrete(s) de escala.", tenant.Slug, total);
         }
+    }
+
+    private async Task<IReadOnlyList<Tenant>> GetActiveTenantsAsync(CancellationToken stoppingToken)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetService<SistemaIgrejaDbContext>();
+        if (dbContext == null)
+        {
+            return [new Tenant { Id = Tenant.InitialTenantId, Nome = Tenant.InitialTenantName, Slug = Tenant.InitialTenantSlug, Ativo = true }];
+        }
+
+        return await dbContext.Tenants
+            .AsNoTracking()
+            .Where(t => t.Ativo)
+            .OrderBy(t => t.Id)
+            .ToListAsync(stoppingToken);
     }
 }

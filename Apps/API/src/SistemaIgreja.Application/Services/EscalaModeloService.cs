@@ -20,15 +20,26 @@ public class EscalaModeloService : IEscalaModeloService
     private readonly IEscalaModeloRepository _repository;
     private readonly IEquipeRepository _equipeRepository;
     private readonly IEventoRepository _eventoRepository;
+    private readonly ITenantContext _tenantContext;
+
+    public EscalaModeloService(
+        IEscalaModeloRepository repository,
+        IEquipeRepository equipeRepository,
+        IEventoRepository eventoRepository,
+        ITenantContext tenantContext)
+    {
+        _repository = repository;
+        _equipeRepository = equipeRepository;
+        _eventoRepository = eventoRepository;
+        _tenantContext = tenantContext;
+    }
 
     public EscalaModeloService(
         IEscalaModeloRepository repository,
         IEquipeRepository equipeRepository,
         IEventoRepository eventoRepository)
+        : this(repository, equipeRepository, eventoRepository, new DefaultTenantContext())
     {
-        _repository = repository;
-        _equipeRepository = equipeRepository;
-        _eventoRepository = eventoRepository;
     }
 
     public async Task<EscalaModeloDto?> GetByIdAsync(int id)
@@ -72,6 +83,7 @@ public class EscalaModeloService : IEscalaModeloService
 
         var modelo = new EscalaModelo
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             EventoId = dto.EventoId,
             EquipeId = dto.EquipeId,
             Nome = dto.Nome?.Trim(),
@@ -85,6 +97,7 @@ public class EscalaModeloService : IEscalaModeloService
         {
             modelo.Itens.Add(new EscalaModeloItem
             {
+                TenantId = modelo.TenantId,
                 CargoId = item.CargoId,
                 Quantidade = Math.Max(1, item.Quantidade),
                 Ordem = item.Ordem,
@@ -114,6 +127,7 @@ public class EscalaModeloService : IEscalaModeloService
             {
                 modelo.Itens.Add(new EscalaModeloItem
                 {
+                    TenantId = modelo.TenantId,
                     EscalaModeloId = modelo.Id,
                     CargoId = item.CargoId,
                     Quantidade = Math.Max(1, item.Quantidade),

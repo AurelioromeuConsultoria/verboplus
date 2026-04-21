@@ -16,7 +16,7 @@ public interface IPessoaRepository
     Task<Pessoa> UpdateAsync(Pessoa pessoa);
     Task UpdateWithoutSaveAsync(Pessoa pessoa); // Para uso em transações
     Task DeleteAsync(int id);
+    Task<int> ResolveTenantIdAsync(string? tenantSlug = null);
 }
-
 
 

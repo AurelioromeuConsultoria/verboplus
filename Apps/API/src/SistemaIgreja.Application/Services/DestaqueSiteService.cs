@@ -16,10 +16,17 @@ public interface IDestaqueSiteService
 public class DestaqueSiteService : IDestaqueSiteService
 {
     private readonly IDestaqueSiteRepository _repository;
+    private readonly ITenantContext _tenantContext;
 
     public DestaqueSiteService(IDestaqueSiteRepository repository)
+        : this(repository, new DefaultTenantContext())
+    {
+    }
+
+    public DestaqueSiteService(IDestaqueSiteRepository repository, ITenantContext tenantContext)
     {
         _repository = repository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<DestaqueSiteDto>> GetAllAsync()
@@ -38,6 +45,7 @@ public class DestaqueSiteService : IDestaqueSiteService
     {
         var entity = new DestaqueSite
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             Texto = dto.Texto,
             Descricao = dto.Descricao,
             Url = dto.Url,
@@ -81,6 +89,5 @@ public class DestaqueSiteService : IDestaqueSiteService
         };
     }
 }
-
 
 

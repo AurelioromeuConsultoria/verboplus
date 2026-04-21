@@ -7,10 +7,17 @@ namespace SistemaIgreja.Application.Services;
 public class CategoriaMidiaService : ICategoriaMidiaService
 {
     private readonly ICategoriaMidiaRepository _repository;
+    private readonly ITenantContext _tenantContext;
 
-    public CategoriaMidiaService(ICategoriaMidiaRepository repository)
+    public CategoriaMidiaService(ICategoriaMidiaRepository repository, ITenantContext tenantContext)
     {
         _repository = repository;
+        _tenantContext = tenantContext;
+    }
+
+    public CategoriaMidiaService(ICategoriaMidiaRepository repository)
+        : this(repository, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<CategoriaMidiaDto>> GetAllAsync()
@@ -29,6 +36,7 @@ public class CategoriaMidiaService : ICategoriaMidiaService
     {
         var entity = new CategoriaMidia
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             Nome = dto.Nome,
             Descricao = dto.Descricao,
             DataCriacao = DateTime.Now
@@ -66,7 +74,6 @@ public class CategoriaMidiaService : ICategoriaMidiaService
         };
     }
 }
-
 
 
 

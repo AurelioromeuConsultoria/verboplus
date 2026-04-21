@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class HubCasaRepository : IHubCasaRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
     public HubCasaRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
+    }
+
+    public HubCasaRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<HubCasa>> GetAllAsync()
@@ -35,6 +43,7 @@ public class HubCasaRepository : IHubCasaRepository
 
     public async Task<HubCasa> CreateAsync(HubCasa casa)
     {
+        casa.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<HubCasa>().Add(casa);
         await _context.SaveChangesAsync();
         return casa;

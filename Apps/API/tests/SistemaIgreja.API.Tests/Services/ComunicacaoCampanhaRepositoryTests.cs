@@ -11,6 +11,38 @@ namespace SistemaIgreja.API.Tests.Services;
 public class ComunicacaoCampanhaRepositoryTests
 {
     [Fact]
+    public async Task CreateAsyncAndUpdateAsync_PersistCampaignChanges()
+    {
+        await using var context = await CreateContextAsync();
+        var repository = new ComunicacaoCampanhaRepository(context);
+
+        var campanha = new ComunicacaoCampanha
+        {
+            Nome = "Campanha inicial",
+            Objetivo = "Objetivo inicial",
+            PublicoAlvo = "visitantes",
+            Status = StatusComunicacaoCampanha.Rascunho,
+            Origem = TipoOrigemComunicacao.Manual,
+            DataCriacao = new DateTime(2026, 4, 7, 10, 0, 0)
+        };
+
+        var created = await repository.CreateAsync(campanha);
+        created.Id.Should().BeGreaterThan(0);
+
+        created.Nome = "Campanha atualizada";
+        created.Objetivo = "Objetivo atualizado";
+        created.Status = StatusComunicacaoCampanha.Agendada;
+
+        await repository.UpdateAsync(created);
+
+        var persisted = await repository.GetByIdAsync(created.Id);
+        persisted.Should().NotBeNull();
+        persisted!.Nome.Should().Be("Campanha atualizada");
+        persisted.Objetivo.Should().Be("Objetivo atualizado");
+        persisted.Status.Should().Be(StatusComunicacaoCampanha.Agendada);
+    }
+
+    [Fact]
     public async Task GetPagedAsync_FiltersByStatusPublicoAndText()
     {
         await using var context = await CreateContextAsync();

@@ -55,6 +55,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("UserEmail")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -68,9 +71,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt");
+                    b.HasIndex("TenantId", "CreatedAt");
 
-                    b.HasIndex("EntityName", "EntityId");
+                    b.HasIndex("TenantId", "EntityName", "EntityId");
 
                     b.ToTable("AuditLogs");
                 });
@@ -91,7 +94,13 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Nome")
+                        .IsUnique();
 
                     b.ToTable("Cargos");
                 });
@@ -119,7 +128,13 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Nome")
+                        .IsUnique();
 
                     b.ToTable("CategoriasDespesas");
                 });
@@ -144,7 +159,13 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Nome")
+                        .IsUnique();
 
                     b.ToTable("CategoriasMidias");
                 });
@@ -165,7 +186,13 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Nome")
+                        .IsUnique();
 
                     b.ToTable("CategoriasNoticias");
                 });
@@ -193,9 +220,12 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Nome")
+                    b.HasIndex("TenantId", "Nome")
                         .IsUnique();
 
                     b.ToTable("CategoriasPatrimonio");
@@ -207,7 +237,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             Ativo = true,
                             DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Descricao = "Moveis em geral",
-                            Nome = "Moveis"
+                            Nome = "Moveis",
+                            TenantId = 1
                         },
                         new
                         {
@@ -215,7 +246,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             Ativo = true,
                             DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Descricao = "Cadeiras, mesas e similares",
-                            Nome = "Cadeiras e mesas"
+                            Nome = "Cadeiras e mesas",
+                            TenantId = 1
                         },
                         new
                         {
@@ -223,7 +255,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             Ativo = true,
                             DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Descricao = "Instrumentos e acessorios musicais",
-                            Nome = "Instrumentos musicais"
+                            Nome = "Instrumentos musicais",
+                            TenantId = 1
                         },
                         new
                         {
@@ -231,7 +264,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             Ativo = true,
                             DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Descricao = "Caixas, mesas, microfones e audio",
-                            Nome = "Equipamentos de audio"
+                            Nome = "Equipamentos de audio",
+                            TenantId = 1
                         },
                         new
                         {
@@ -239,7 +273,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             Ativo = true,
                             DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Descricao = "Projetores, TVs, cameras e video",
-                            Nome = "Equipamentos de video"
+                            Nome = "Equipamentos de video",
+                            TenantId = 1
                         },
                         new
                         {
@@ -247,7 +282,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             Ativo = true,
                             DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Descricao = "Refletores, spots e iluminacao",
-                            Nome = "Iluminacao"
+                            Nome = "Iluminacao",
+                            TenantId = 1
                         },
                         new
                         {
@@ -255,7 +291,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             Ativo = true,
                             DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Descricao = "Notebooks, computadores e perifericos",
-                            Nome = "Informatica"
+                            Nome = "Informatica",
+                            TenantId = 1
                         },
                         new
                         {
@@ -263,7 +300,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             Ativo = true,
                             DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Descricao = "Geladeiras, micro-ondas e afins",
-                            Nome = "Eletrodomesticos"
+                            Nome = "Eletrodomesticos",
+                            TenantId = 1
                         },
                         new
                         {
@@ -271,7 +309,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             Ativo = true,
                             DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Descricao = "Carros, vans e motos",
-                            Nome = "Veiculos"
+                            Nome = "Veiculos",
+                            TenantId = 1
                         },
                         new
                         {
@@ -279,7 +318,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             Ativo = true,
                             DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Descricao = "Brinquedos, mobiliario e itens infantis",
-                            Nome = "Material infantil"
+                            Nome = "Material infantil",
+                            TenantId = 1
                         },
                         new
                         {
@@ -287,7 +327,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             Ativo = true,
                             DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Descricao = "Aspiradores, enceradeiras e afins",
-                            Nome = "Equipamentos de limpeza"
+                            Nome = "Equipamentos de limpeza",
+                            TenantId = 1
                         },
                         new
                         {
@@ -295,7 +336,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             Ativo = true,
                             DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Descricao = "Itens de apoio e uso geral",
-                            Nome = "Utensilios gerais"
+                            Nome = "Utensilios gerais",
+                            TenantId = 1
                         },
                         new
                         {
@@ -303,7 +345,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             Ativo = true,
                             DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Descricao = "Bens de escritorio e administracao",
-                            Nome = "Patrimonio administrativo"
+                            Nome = "Patrimonio administrativo",
+                            TenantId = 1
                         });
                 });
 
@@ -330,7 +373,13 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Nome")
+                        .IsUnique();
 
                     b.ToTable("CategoriasReceitas");
                 });
@@ -358,7 +407,13 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Nome")
+                        .IsUnique();
 
                     b.ToTable("CentrosCustos");
                 });
@@ -720,7 +775,13 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
 
                     b.ToTable("ConfiguracoesCampanhaAniversario");
                 });
@@ -750,12 +811,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("TextoMensagem")
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Nome");
 
                     b.ToTable("ConfiguracoesMensagens");
 
@@ -768,6 +834,7 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             DiasAposVisita = 1,
                             HorarioEnvio = new TimeSpan(0, 10, 0, 0, 0),
                             Nome = "Boas-vindas",
+                            TenantId = 1,
                             TextoMensagem = "Olá {Nome}! Que alegria ter você conosco na igreja! Esperamos vê-lo novamente em breve. Deus abençoe!"
                         },
                         new
@@ -778,6 +845,7 @@ namespace SistemaIgreja.Infrastructure.Migrations
                             DiasAposVisita = 7,
                             HorarioEnvio = new TimeSpan(0, 18, 0, 0, 0),
                             Nome = "Convite para retorno",
+                            TenantId = 1,
                             TextoMensagem = "Oi {Nome}! Sentimos sua falta na igreja. Que tal nos visitar novamente neste domingo? Será um prazer recebê-lo!"
                         });
                 });
@@ -798,17 +866,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(5);
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
-                    b.ToTable("ConfiguracoesPortal");
+                    b.HasIndex("TenantId")
+                        .IsUnique();
 
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DataAtualizacao = new DateTime(2026, 2, 4, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            TempoTransicaoCarrossel = 5
-                        });
+                    b.ToTable("ConfiguracoesPortal");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.ContaBancaria", b =>
@@ -845,11 +911,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<decimal>("SaldoInicial")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("TipoConta")
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Nome")
+                        .IsUnique();
 
                     b.ToTable("ContasBancarias");
                 });
@@ -882,12 +954,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("WhatsApp")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Contatos");
                 });
@@ -916,11 +993,16 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("TurmaId")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
                     b.HasKey("PessoaId");
+
+                    b.HasIndex("TenantId", "PessoaId");
 
                     b.ToTable("CriancasDetalhes");
                 });
@@ -973,6 +1055,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("UsuarioId")
                         .HasColumnType("integer");
 
@@ -992,6 +1077,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasIndex("ProjetoId");
 
                     b.HasIndex("UsuarioId");
+
+                    b.HasIndex("TenantId", "DataVencimento", "Status");
 
                     b.ToTable("Despesas");
                 });
@@ -1015,6 +1102,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Texto")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -1025,6 +1115,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Texto");
 
                     b.ToTable("DestaquesSite");
                 });
@@ -1059,12 +1151,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<bool>("PermitirVotoAnonimo")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Titulo")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "DataCriacao");
 
                     b.ToTable("Enquetes");
                 });
@@ -1086,6 +1183,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("Ordem")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Texto")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -1094,6 +1194,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EnqueteId");
+
+                    b.HasIndex("TenantId", "EnqueteId", "Ordem")
+                        .IsUnique();
 
                     b.ToTable("EnqueteOpcoes");
                 });
@@ -1119,6 +1222,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("UsuarioId")
                         .HasColumnType("integer");
 
@@ -1129,6 +1235,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasIndex("EnqueteOpcaoId");
 
                     b.HasIndex("UsuarioId");
+
+                    b.HasIndex("TenantId", "EnqueteId", "UsuarioId");
 
                     b.ToTable("EnqueteVotos");
                 });
@@ -1174,6 +1282,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Tentativas")
                         .HasColumnType("integer");
 
@@ -1183,7 +1294,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PessoaId", "AnoReferencia")
+                    b.HasIndex("PessoaId");
+
+                    b.HasIndex("TenantId", "PessoaId", "AnoReferencia")
                         .IsUnique();
 
                     b.ToTable("EnviosCampanhaAniversario");
@@ -1211,9 +1324,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("LiderUsuarioId");
+
+                    b.HasIndex("TenantId", "Nome")
+                        .IsUnique();
 
                     b.ToTable("Equipes");
                 });
@@ -1248,13 +1367,18 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CriadoPorUsuarioId");
 
                     b.HasIndex("EquipeId");
 
-                    b.HasIndex("EventoOcorrenciaId", "EquipeId")
+                    b.HasIndex("EventoOcorrenciaId");
+
+                    b.HasIndex("TenantId", "EventoOcorrenciaId", "EquipeId")
                         .IsUnique();
 
                     b.ToTable("Escalas");
@@ -1327,6 +1451,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(1);
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("VoluntarioId")
                         .HasColumnType("integer");
 
@@ -1338,13 +1465,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasIndex("EquipeId");
 
+                    b.HasIndex("EscalaId");
+
                     b.HasIndex("RespondidoPorUsuarioId");
 
                     b.HasIndex("VoluntarioId");
 
-                    b.HasIndex("EscalaId", "EquipeId");
+                    b.HasIndex("TenantId", "EscalaId", "EquipeId");
 
-                    b.HasIndex("EscalaId", "VoluntarioId");
+                    b.HasIndex("TenantId", "EscalaId", "VoluntarioId");
 
                     b.ToTable("EscalasItens");
                 });
@@ -1376,11 +1505,16 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("EquipeId");
 
-                    b.HasIndex("EventoId", "EquipeId")
+                    b.HasIndex("EventoId");
+
+                    b.HasIndex("TenantId", "EventoId", "EquipeId")
                         .IsUnique();
 
                     b.ToTable("EscalasModelos");
@@ -1409,11 +1543,16 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("Quantidade")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CargoId");
 
                     b.HasIndex("EscalaModeloId");
+
+                    b.HasIndex("TenantId", "EscalaModeloId", "Ordem");
 
                     b.ToTable("EscalasModelosItens");
                 });
@@ -1462,6 +1601,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Tipo")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -1477,6 +1619,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Titulo", "DataInicio");
 
                     b.ToTable("Eventos");
                 });
@@ -1510,11 +1654,16 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("EventoId");
 
                     b.HasIndex("EventoRecorrenciaId");
 
-                    b.HasIndex("EventoId", "DataHoraInicio");
+                    b.HasIndex("TenantId", "EventoId", "DataHoraInicio");
 
                     b.ToTable("EventosOcorrencias");
                 });
@@ -1554,9 +1703,14 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("Periodicidade")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("EventoId", "Ativo");
+                    b.HasIndex("EventoId");
+
+                    b.HasIndex("TenantId", "EventoId", "Ativo");
 
                     b.ToTable("EventosRecorrencias");
                 });
@@ -1617,7 +1771,12 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Nome");
 
                     b.ToTable("Fornecedores");
                 });
@@ -1666,11 +1825,16 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("QuantidadeFotos")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CategoriaMidiaId");
 
                     b.HasIndex("EventoId");
+
+                    b.HasIndex("TenantId", "Nome", "Data");
 
                     b.ToTable("GaleriasFotos");
                 });
@@ -1697,9 +1861,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("Ordem")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("GaleriaFotoId");
+
+                    b.HasIndex("TenantId", "GaleriaFotoId", "NomeArquivo")
+                        .IsUnique();
 
                     b.ToTable("GaleriasFotosItens");
                 });
@@ -1736,6 +1906,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("TimoteoId")
                         .HasColumnType("integer");
 
@@ -1746,6 +1919,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasIndex("LiderId");
 
                     b.HasIndex("TimoteoId");
+
+                    b.HasIndex("TenantId", "Nome")
+                        .IsUnique();
 
                     b.ToTable("HubCasas");
                 });
@@ -1768,12 +1944,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("VoluntarioId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("VoluntarioId", "Data")
+                    b.HasIndex("VoluntarioId");
+
+                    b.HasIndex("TenantId", "VoluntarioId", "Data")
                         .IsUnique();
 
                     b.ToTable("IndisponibilidadesVoluntarios");
@@ -1826,6 +2007,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("WhatsApp")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -1833,7 +2017,10 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EventoId", "WhatsApp");
+                    b.HasIndex("EventoId");
+
+                    b.HasIndex("TenantId", "EventoId", "WhatsApp")
+                        .IsUnique();
 
                     b.ToTable("InscricoesEventos");
                 });
@@ -1906,6 +2093,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("TokenRetirada")
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");
@@ -1919,11 +2109,16 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasIndex("CheckoutByPessoaId");
 
-                    b.HasIndex("CodigoSessao");
+                    b.HasIndex("CriancaPessoaId");
 
-                    b.HasIndex("TokenRetirada");
+                    b.HasIndex("TenantId", "CodigoSessao")
+                        .IsUnique();
 
-                    b.HasIndex("CriancaPessoaId", "Status");
+                    b.HasIndex("TenantId", "PinRetirada");
+
+                    b.HasIndex("TenantId", "TokenRetirada");
+
+                    b.HasIndex("TenantId", "CriancaPessoaId", "Status");
 
                     b.ToTable("KidsCheckins");
                 });
@@ -1949,12 +2144,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PessoaId", "FcmToken")
+                    b.HasIndex("PessoaId");
+
+                    b.HasIndex("TenantId", "PessoaId", "FcmToken")
                         .IsUnique();
 
                     b.ToTable("KidsDeviceTokens");
@@ -2001,6 +2201,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Tipo")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -2013,11 +2216,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CriancaPessoaId", "Status");
+                    b.HasIndex("CriancaPessoaId");
 
-                    b.HasIndex("ResponsavelPessoaId", "LidoEm");
+                    b.HasIndex("ResponsavelPessoaId");
 
-                    b.HasIndex("ResponsavelPessoaId", "Status");
+                    b.HasIndex("TenantId", "CriancaPessoaId", "Status");
+
+                    b.HasIndex("TenantId", "ResponsavelPessoaId", "LidoEm");
+
+                    b.HasIndex("TenantId", "ResponsavelPessoaId", "Status");
 
                     b.ToTable("KidsNotificacoes");
                 });
@@ -2074,6 +2281,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Tipo")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -2097,13 +2307,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasIndex("ContatoResponsavelPorPessoaId");
 
+                    b.HasIndex("CriancaPessoaId");
+
                     b.HasIndex("EncerradoPorPessoaId");
 
                     b.HasIndex("RegistradoPorPessoaId");
 
-                    b.HasIndex("CriancaPessoaId", "DataCriacao");
+                    b.HasIndex("TenantId", "CriancaPessoaId", "DataCriacao");
 
-                    b.HasIndex("Status", "DataCriacao");
+                    b.HasIndex("TenantId", "Status", "DataCriacao");
 
                     b.ToTable("KidsOcorrencias");
                 });
@@ -2131,9 +2343,13 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Nome");
+                    b.HasIndex("TenantId", "Nome")
+                        .IsUnique();
 
                     b.ToTable("KidsSalas");
                 });
@@ -2166,9 +2382,14 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("SalaId", "Nome")
+                    b.HasIndex("SalaId");
+
+                    b.HasIndex("TenantId", "SalaId", "Nome")
                         .IsUnique();
 
                     b.ToTable("KidsTurmas");
@@ -2204,6 +2425,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("TextoFinal")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -2217,6 +2441,10 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasIndex("ConfiguracaoMensagemId");
 
                     b.HasIndex("VisitanteId");
+
+                    b.HasIndex("TenantId", "Status", "DataEnvio");
+
+                    b.HasIndex("TenantId", "VisitanteId", "DataEnvio");
 
                     b.ToTable("MensagensAgendadas");
                 });
@@ -2246,6 +2474,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Texto")
                         .HasMaxLength(5000)
                         .HasColumnType("character varying(5000)");
@@ -2262,6 +2493,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CategoriaNoticiaId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Noticias");
                 });
@@ -2424,6 +2657,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("TipoAquisicao")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -2438,9 +2674,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasIndex("CentroCustoId");
 
-                    b.HasIndex("Codigo")
-                        .IsUnique();
-
                     b.HasIndex("DespesaId");
 
                     b.HasIndex("FornecedorId");
@@ -2448,6 +2681,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasIndex("ProjetoId");
 
                     b.HasIndex("ResponsavelPessoaId");
+
+                    b.HasIndex("TenantId", "Codigo")
+                        .IsUnique();
 
                     b.ToTable("PatrimonioItens");
                 });
@@ -2489,6 +2725,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("TipoMovimentacao")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -2506,6 +2745,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasIndex("PatrimonioItemId");
 
                     b.HasIndex("UsuarioId");
+
+                    b.HasIndex("TenantId", "PatrimonioItemId", "DataMovimentacao");
 
                     b.ToTable("PatrimonioMovimentacoes");
                 });
@@ -2530,18 +2771,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
-                    b.ToTable("PerfisAcesso");
+                    b.HasIndex("TenantId", "Nome")
+                        .IsUnique();
 
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DataCriacao = new DateTime(2026, 2, 6, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Descricao = "Acesso total ao sistema",
-                            Nome = "Administrador"
-                        });
+                    b.ToTable("PerfisAcesso");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.PerfilAcessoPermissao", b =>
@@ -2569,238 +2807,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("PerfilAcessoId");
 
-                    b.ToTable("PerfisAcessoPermissoes");
+                    b.HasIndex("TenantId", "PerfilAcessoId", "Recurso")
+                        .IsUnique();
 
-                    b.HasData(
-                        new
-                        {
-                            Id = 1000,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "dashboard"
-                        },
-                        new
-                        {
-                            Id = 1001,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "usuarios"
-                        },
-                        new
-                        {
-                            Id = 1002,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "perfis-acesso"
-                        },
-                        new
-                        {
-                            Id = 1003,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "pessoas"
-                        },
-                        new
-                        {
-                            Id = 1004,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "perfis"
-                        },
-                        new
-                        {
-                            Id = 1005,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "visitantes"
-                        },
-                        new
-                        {
-                            Id = 1006,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "configuracoes-mensagens"
-                        },
-                        new
-                        {
-                            Id = 1007,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "mensagens-agendadas"
-                        },
-                        new
-                        {
-                            Id = 1008,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "equipes"
-                        },
-                        new
-                        {
-                            Id = 1009,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "cargos"
-                        },
-                        new
-                        {
-                            Id = 1010,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "voluntarios"
-                        },
-                        new
-                        {
-                            Id = 1011,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "eventos"
-                        },
-                        new
-                        {
-                            Id = 1012,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "inscricoes-eventos"
-                        },
-                        new
-                        {
-                            Id = 1013,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "portal"
-                        },
-                        new
-                        {
-                            Id = 1014,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "noticias"
-                        },
-                        new
-                        {
-                            Id = 1015,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "categorias-noticias"
-                        },
-                        new
-                        {
-                            Id = 1016,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "contatos"
-                        },
-                        new
-                        {
-                            Id = 1017,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "destaques-site"
-                        },
-                        new
-                        {
-                            Id = 1018,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "categorias-midias"
-                        },
-                        new
-                        {
-                            Id = 1019,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "galerias-fotos"
-                        },
-                        new
-                        {
-                            Id = 1020,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "enquetes"
-                        },
-                        new
-                        {
-                            Id = 1021,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "kids"
-                        },
-                        new
-                        {
-                            Id = 1022,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "hub"
-                        },
-                        new
-                        {
-                            Id = 1023,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "financeiro"
-                        },
-                        new
-                        {
-                            Id = 1024,
-                            PerfilAcessoId = 1,
-                            PodeEditar = true,
-                            PodeExcluir = true,
-                            PodeVer = true,
-                            Recurso = "fornecedores"
-                        });
+                    b.ToTable("PerfisAcessoPermissoes");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Pessoa", b =>
@@ -2833,6 +2850,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("TipoPessoa")
                         .HasColumnType("integer");
 
@@ -2842,7 +2862,7 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Email")
+                    b.HasIndex("TenantId", "Email")
                         .IsUnique();
 
                     b.ToTable("Pessoas");
@@ -2868,9 +2888,14 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("PessoaId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("PessoaId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("PessoasPerfis");
                 });
@@ -2907,7 +2932,13 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<decimal?>("Orcamento")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Nome")
+                        .IsUnique();
 
                     b.ToTable("Projetos");
                 });
@@ -2957,6 +2988,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("UsuarioId")
                         .HasColumnType("integer");
 
@@ -2974,6 +3008,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasIndex("ProjetoId");
 
                     b.HasIndex("UsuarioId");
+
+                    b.HasIndex("TenantId", "DataRecebimento", "Status");
 
                     b.ToTable("Receitas");
                 });
@@ -3005,11 +3041,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("ResponsavelPessoaId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("CriancaPessoaId");
 
                     b.HasIndex("ResponsavelPessoaId");
 
-                    b.HasIndex("CriancaPessoaId", "ResponsavelPessoaId");
+                    b.HasIndex("TenantId", "CriancaPessoaId", "ResponsavelPessoaId")
+                        .IsUnique();
 
                     b.ToTable("ResponsaveisCriancas");
                 });
@@ -3045,6 +3087,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("VoluntarioSolicitanteId")
                         .HasColumnType("integer");
 
@@ -3053,15 +3098,118 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("EscalaItemId");
+
                     b.HasIndex("RespondidoPorUsuarioId");
 
                     b.HasIndex("VoluntarioSolicitanteId");
 
                     b.HasIndex("VoluntarioSubstitutoId");
 
-                    b.HasIndex("EscalaItemId", "Status");
+                    b.HasIndex("TenantId", "EscalaItemId", "Status");
 
                     b.ToTable("SolicitacoesTrocasEscalas");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Tenant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("CorPrimaria")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("CorSecundaria")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("FaviconUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsRootTenant")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("NomeExibicao")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("Tenants");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Ativo = true,
+                            CorPrimaria = "#111827",
+                            CorSecundaria = "#374151",
+                            DataCriacao = new DateTime(2026, 4, 9, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsRootTenant = true,
+                            Nome = "Mang Guarulhos",
+                            NomeExibicao = "Mang Guarulhos",
+                            Slug = "mang-guarulhos"
+                        });
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.TenantDomain", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Domain")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("TenantDomains");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Usuario", b =>
@@ -3083,6 +3231,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<bool>("IsPlatformAdmin")
+                        .HasColumnType("boolean");
+
                     b.Property<int?>("PerfilAcessoId")
                         .HasColumnType("integer");
 
@@ -3094,6 +3245,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("TipoUsuario")
                         .HasColumnType("integer");
 
@@ -3102,12 +3256,12 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EmailLogin")
-                        .IsUnique();
-
                     b.HasIndex("PerfilAcessoId");
 
                     b.HasIndex("PessoaId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "EmailLogin")
                         .IsUnique();
 
                     b.ToTable("Usuarios");
@@ -3134,9 +3288,14 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("PessoaId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("PessoaId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Visitantes");
                 });
@@ -3164,6 +3323,9 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("PessoaId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CargoId");
@@ -3172,7 +3334,98 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasIndex("PessoaId");
 
+                    b.HasIndex("TenantId", "PessoaId", "EquipeId", "CargoId")
+                        .IsUnique();
+
                     b.ToTable("Voluntarios");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.AuditLog", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Cargo", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaDespesa", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaMidia", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaNoticia", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaPatrimonio", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CategoriaReceita", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.CentroCusto", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.ComunicacaoAutomacao", b =>
@@ -3248,6 +3501,61 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Pessoa");
                 });
 
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.ConfiguracaoCampanhaAniversario", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.ConfiguracaoMensagem", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.ConfiguracaoPortal", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.ContaBancaria", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Contato", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.CriancaDetalhe", b =>
                 {
                     b.HasOne("SistemaIgreja.Domain.Entities.Pessoa", "Pessoa")
@@ -3256,7 +3564,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Pessoa");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Despesa", b =>
@@ -3286,6 +3602,12 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasForeignKey("ProjetoId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SistemaIgreja.Domain.Entities.Usuario", "Usuario")
                         .WithMany()
                         .HasForeignKey("UsuarioId")
@@ -3301,7 +3623,31 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.Navigation("Projeto");
 
+                    b.Navigation("Tenant");
+
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.DestaqueSite", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Enquete", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.EnqueteOpcao", b =>
@@ -3312,7 +3658,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Enquete");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.EnqueteVoto", b =>
@@ -3329,6 +3683,12 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SistemaIgreja.Domain.Entities.Usuario", "Usuario")
                         .WithMany()
                         .HasForeignKey("UsuarioId")
@@ -3337,6 +3697,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Enquete");
 
                     b.Navigation("Opcao");
+
+                    b.Navigation("Tenant");
 
                     b.Navigation("Usuario");
                 });
@@ -3349,7 +3711,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Pessoa");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Equipe", b =>
@@ -3359,7 +3729,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasForeignKey("LiderUsuarioId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("LiderUsuario");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Escala", b =>
@@ -3381,11 +3759,19 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("CriadoPorUsuario");
 
                     b.Navigation("Equipe");
 
                     b.Navigation("EventoOcorrencia");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.EscalaItem", b =>
@@ -3417,6 +3803,12 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasForeignKey("RespondidoPorUsuarioId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SistemaIgreja.Domain.Entities.Voluntario", "Voluntario")
                         .WithMany()
                         .HasForeignKey("VoluntarioId")
@@ -3432,6 +3824,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Escala");
 
                     b.Navigation("RespondidoPorUsuario");
+
+                    b.Navigation("Tenant");
 
                     b.Navigation("Voluntario");
                 });
@@ -3449,9 +3843,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasForeignKey("EventoId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Equipe");
 
                     b.Navigation("Evento");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.EscalaModeloItem", b =>
@@ -3467,9 +3869,28 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Cargo");
 
                     b.Navigation("EscalaModelo");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Evento", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.EventoOcorrencia", b =>
@@ -3485,9 +3906,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasForeignKey("EventoRecorrenciaId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Evento");
 
                     b.Navigation("EventoRecorrencia");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.EventoRecorrencia", b =>
@@ -3498,7 +3927,26 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Evento");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Fornecedor", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.GaleriaFoto", b =>
@@ -3513,9 +3961,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasForeignKey("EventoId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("CategoriaMidia");
 
                     b.Navigation("Evento");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.GaleriaFotoItem", b =>
@@ -3526,7 +3982,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("GaleriaFoto");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.HubCasa", b =>
@@ -3543,6 +4007,12 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SistemaIgreja.Domain.Entities.Usuario", "Timoteo")
                         .WithMany()
                         .HasForeignKey("TimoteoId")
@@ -3553,16 +4023,26 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.Navigation("Lider");
 
+                    b.Navigation("Tenant");
+
                     b.Navigation("Timoteo");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.IndisponibilidadeVoluntario", b =>
                 {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SistemaIgreja.Domain.Entities.Voluntario", "Voluntario")
                         .WithMany("Indisponibilidades")
                         .HasForeignKey("VoluntarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Tenant");
 
                     b.Navigation("Voluntario");
                 });
@@ -3575,7 +4055,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Evento");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.KidsCheckin", b =>
@@ -3596,11 +4084,19 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("CheckinBy");
 
                     b.Navigation("CheckoutBy");
 
                     b.Navigation("Crianca");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.KidsDeviceToken", b =>
@@ -3611,7 +4107,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Pessoa");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.KidsNotificacao", b =>
@@ -3627,9 +4131,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Crianca");
 
                     b.Navigation("Responsavel");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.KidsOcorrencia", b =>
@@ -3661,6 +4173,12 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Checkin");
 
                     b.Navigation("ContatoResponsavelPor");
@@ -3670,6 +4188,19 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("EncerradoPor");
 
                     b.Navigation("RegistradoPor");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.KidsSala", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.KidsTurma", b =>
@@ -3680,7 +4211,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Sala");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.MensagemAgendada", b =>
@@ -3691,6 +4230,12 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SistemaIgreja.Domain.Entities.Visitante", "Visitante")
                         .WithMany("MensagensAgendadas")
                         .HasForeignKey("VisitanteId")
@@ -3698,6 +4243,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("ConfiguracaoMensagem");
+
+                    b.Navigation("Tenant");
 
                     b.Navigation("Visitante");
                 });
@@ -3710,7 +4257,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("CategoriaNoticia");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.NotificacaoUsuario", b =>
@@ -3757,6 +4312,12 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasForeignKey("ResponsavelPessoaId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("CategoriaPatrimonio");
 
                     b.Navigation("CentroCusto");
@@ -3768,6 +4329,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Projeto");
 
                     b.Navigation("ResponsavelPessoa");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.PatrimonioMovimentacao", b =>
@@ -3778,6 +4341,12 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SistemaIgreja.Domain.Entities.Usuario", "Usuario")
                         .WithMany()
                         .HasForeignKey("UsuarioId")
@@ -3785,7 +4354,20 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.Navigation("PatrimonioItem");
 
+                    b.Navigation("Tenant");
+
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.PerfilAcesso", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.PerfilAcessoPermissao", b =>
@@ -3796,7 +4378,26 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("PerfilAcesso");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Pessoa", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.PessoaPerfil", b =>
@@ -3807,7 +4408,26 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Pessoa");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Projeto", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Receita", b =>
@@ -3832,6 +4452,12 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasForeignKey("ProjetoId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SistemaIgreja.Domain.Entities.Usuario", "Usuario")
                         .WithMany()
                         .HasForeignKey("UsuarioId")
@@ -3844,6 +4470,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("ContaBancaria");
 
                     b.Navigation("Projeto");
+
+                    b.Navigation("Tenant");
 
                     b.Navigation("Usuario");
                 });
@@ -3862,9 +4490,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Crianca");
 
                     b.Navigation("Responsavel");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.SolicitacaoTrocaEscala", b =>
@@ -3879,6 +4515,12 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("RespondidoPorUsuarioId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("SistemaIgreja.Domain.Entities.Voluntario", "VoluntarioSolicitante")
                         .WithMany()
@@ -3895,9 +4537,22 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.Navigation("RespondidoPorUsuario");
 
+                    b.Navigation("Tenant");
+
                     b.Navigation("VoluntarioSolicitante");
 
                     b.Navigation("VoluntarioSubstituto");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.TenantDomain", b =>
+                {
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("Domains")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Usuario", b =>
@@ -3913,9 +4568,17 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("PerfilAcesso");
 
                     b.Navigation("Pessoa");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Visitante", b =>
@@ -3926,7 +4589,15 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Pessoa");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Voluntario", b =>
@@ -3949,11 +4620,19 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Cargo");
 
                     b.Navigation("Equipe");
 
                     b.Navigation("Pessoa");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Cargo", b =>
@@ -4122,6 +4801,11 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Despesas");
 
                     b.Navigation("Receitas");
+                });
+
+            modelBuilder.Entity("SistemaIgreja.Domain.Entities.Tenant", b =>
+                {
+                    b.Navigation("Domains");
                 });
 
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.Usuario", b =>

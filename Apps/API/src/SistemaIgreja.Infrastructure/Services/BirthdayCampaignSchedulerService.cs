@@ -4,6 +4,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SistemaIgreja.Application.Configuration;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Domain.Entities;
+using SistemaIgreja.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace SistemaIgreja.Infrastructure.Services;
 
@@ -40,25 +43,38 @@ public class BirthdayCampaignSchedulerService : BackgroundService
             var startedAtUtc = DateTime.UtcNow;
             try
             {
-                using var scope = _serviceProvider.CreateScope();
-                var service = scope.ServiceProvider.GetRequiredService<ICampanhaAniversarioService>();
-                var resultado = await service.ProcessarAniversariantesDoDiaAsync(stoppingToken);
-
-                if (resultado.TotalElegiveis > 0)
+                var processedTenants = 0;
+                foreach (var tenant in await GetActiveTenantsAsync(stoppingToken))
                 {
-                    _logger.LogInformation(
-                        "Campanha de aniversário processada. Elegíveis: {Elegiveis}, Enviados: {Enviados}, Ignorados: {Ignorados}, Falhas: {Falhas}.",
-                        resultado.TotalElegiveis,
-                        resultado.TotalEnviados,
-                        resultado.TotalIgnorados,
-                        resultado.TotalFalhas);
+                    if (stoppingToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    using var scope = _serviceProvider.CreateScope();
+                    scope.ServiceProvider.GetService<TenantScopeOverride>()?.SetTenant(tenant.Id, tenant.Slug);
+                    var service = scope.ServiceProvider.GetRequiredService<ICampanhaAniversarioService>();
+                    var resultado = await service.ProcessarAniversariantesDoDiaAsync(stoppingToken);
+
+                    if (resultado.TotalElegiveis > 0)
+                    {
+                        _logger.LogInformation(
+                            "Tenant {TenantSlug}: campanha de aniversário processada. Elegíveis: {Elegiveis}, Enviados: {Enviados}, Ignorados: {Ignorados}, Falhas: {Falhas}.",
+                            tenant.Slug,
+                            resultado.TotalElegiveis,
+                            resultado.TotalEnviados,
+                            resultado.TotalIgnorados,
+                            resultado.TotalFalhas);
+                    }
+
+                    processedTenants++;
                 }
 
                 _executionMonitor.RecordSuccess(
                     SchedulerName,
                     startedAtUtc,
                     DateTime.UtcNow,
-                    $"Max por execução: {_settings.MaxPessoasPorExecucao}; timezone: {_settings.TimeZoneId}");
+                    $"Max por execução: {_settings.MaxPessoasPorExecucao}; timezone: {_settings.TimeZoneId}; tenants: {processedTenants}");
             }
             catch (Exception ex)
             {
@@ -80,5 +96,21 @@ public class BirthdayCampaignSchedulerService : BackgroundService
         var baseInterval = TimeSpan.FromMinutes(_settings.BaseIntervalMinutes);
         var jitter = Random.Shared.Next(0, _settings.JitterSecondsMax + 1);
         return baseInterval.Add(TimeSpan.FromSeconds(jitter));
+    }
+
+    private async Task<IReadOnlyList<Tenant>> GetActiveTenantsAsync(CancellationToken stoppingToken)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetService<SistemaIgrejaDbContext>();
+        if (dbContext == null)
+        {
+            return [new Tenant { Id = Tenant.InitialTenantId, Nome = Tenant.InitialTenantName, Slug = Tenant.InitialTenantSlug, Ativo = true }];
+        }
+
+        return await dbContext.Tenants
+            .AsNoTracking()
+            .Where(t => t.Ativo)
+            .OrderBy(t => t.Id)
+            .ToListAsync(stoppingToken);
     }
 }

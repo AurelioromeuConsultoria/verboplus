@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,46 +9,60 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class PessoaPerfilRepository : IPessoaPerfilRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
     public PessoaPerfilRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
+    }
+
+    public PessoaPerfilRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<PessoaPerfil?> GetPerfilAtivoAsync(int pessoaId, PerfilPessoa perfil)
     {
+        var tenantId = await ResolveTenantIdAsync();
         return await _context.Set<PessoaPerfil>()
-            .FirstOrDefaultAsync(p => p.PessoaId == pessoaId 
-                && p.Perfil == perfil 
+            .FirstOrDefaultAsync(p => p.PessoaId == pessoaId
+                && p.TenantId == tenantId
+                && p.Perfil == perfil
                 && p.DataFim == null);
     }
 
     public async Task<PessoaPerfil> CreateAsync(PessoaPerfil pessoaPerfil)
     {
+        pessoaPerfil.TenantId = await ResolveTenantIdAsync();
         _context.Set<PessoaPerfil>().Add(pessoaPerfil);
         await _context.SaveChangesAsync();
         return pessoaPerfil;
     }
 
-    public Task<PessoaPerfil> CreateWithoutSaveAsync(PessoaPerfil pessoaPerfil)
+    public async Task<PessoaPerfil> CreateWithoutSaveAsync(PessoaPerfil pessoaPerfil)
     {
+        pessoaPerfil.TenantId = await ResolveTenantIdAsync();
         _context.Set<PessoaPerfil>().Add(pessoaPerfil);
-        return Task.FromResult(pessoaPerfil);
+        return pessoaPerfil;
     }
 
     public async Task<IEnumerable<PessoaPerfil>> GetAllAsync()
     {
+        var tenantId = await ResolveTenantIdAsync();
         return await _context.Set<PessoaPerfil>()
             .Include(p => p.Pessoa)
+            .Where(p => p.TenantId == tenantId)
             .OrderByDescending(p => p.DataInicio)
             .ToListAsync();
     }
 
     public async Task<PessoaPerfil?> GetByIdAsync(int id)
     {
+        var tenantId = await ResolveTenantIdAsync();
         return await _context.Set<PessoaPerfil>()
             .Include(p => p.Pessoa)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId);
     }
 
     public async Task<PessoaPerfil> UpdateAsync(PessoaPerfil pessoaPerfil)
@@ -59,7 +74,9 @@ public class PessoaPerfilRepository : IPessoaPerfilRepository
 
     public async Task DeleteAsync(int id)
     {
-        var entity = await _context.Set<PessoaPerfil>().FindAsync(id);
+        var tenantId = await ResolveTenantIdAsync();
+        var entity = await _context.Set<PessoaPerfil>()
+            .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId);
         if (entity != null)
         {
             _context.Set<PessoaPerfil>().Remove(entity);
@@ -69,13 +86,18 @@ public class PessoaPerfilRepository : IPessoaPerfilRepository
 
     public async Task<IEnumerable<PessoaPerfil>> GetPerfisPorPessoaAsync(int pessoaId)
     {
+        var tenantId = await ResolveTenantIdAsync();
         return await _context.Set<PessoaPerfil>()
             .Include(p => p.Pessoa)
-            .Where(p => p.PessoaId == pessoaId)
+            .Where(p => p.PessoaId == pessoaId && p.TenantId == tenantId)
             .OrderByDescending(p => p.DataInicio)
             .ToListAsync();
     }
-}
 
+    private Task<int> ResolveTenantIdAsync()
+    {
+        return Task.FromResult(_tenantContext.TenantId ?? Tenant.InitialTenantId);
+    }
+}
 
 

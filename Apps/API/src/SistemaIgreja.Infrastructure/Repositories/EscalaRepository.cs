@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class EscalaRepository : IEscalaRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public EscalaRepository(SistemaIgrejaDbContext context)
+    public EscalaRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public EscalaRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<Escala?> GetByIdAsync(int id)
@@ -144,6 +152,7 @@ public class EscalaRepository : IEscalaRepository
 
     public async Task<Escala> CreateAsync(Escala escala)
     {
+        escala.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Escalas.Add(escala);
         await _context.SaveChangesAsync();
         return escala;
@@ -215,6 +224,7 @@ public class EscalaRepository : IEscalaRepository
 
     public async Task<EscalaItem> AddItemAsync(EscalaItem item)
     {
+        item.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.EscalasItens.Add(item);
         await _context.SaveChangesAsync();
         return item;

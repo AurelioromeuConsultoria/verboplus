@@ -2,9 +2,14 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class InscricaoEvento
+public class InscricaoEvento : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     // Relacionamento com Evento
     [Required]
@@ -46,7 +51,6 @@ public class InscricaoEvento
     public DateTime? DataConfirmacao { get; set; }
     public DateTime? DataCancelamento { get; set; }
 }
-
 
 
 

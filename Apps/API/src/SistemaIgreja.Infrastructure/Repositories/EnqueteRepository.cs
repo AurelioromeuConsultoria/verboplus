@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class EnqueteRepository : IEnqueteRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public EnqueteRepository(SistemaIgrejaDbContext context)
+    public EnqueteRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public EnqueteRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<Enquete>> GetAllAsync()
@@ -42,6 +50,12 @@ public class EnqueteRepository : IEnqueteRepository
 
     public async Task<Enquete> CreateAsync(Enquete enquete)
     {
+        var tenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
+        enquete.TenantId = tenantId;
+        foreach (var opcao in enquete.Opcoes)
+        {
+            opcao.TenantId = tenantId;
+        }
         _context.Set<Enquete>().Add(enquete);
         await _context.SaveChangesAsync();
         return enquete;
@@ -81,6 +95,7 @@ public class EnqueteRepository : IEnqueteRepository
 
     public async Task<EnqueteOpcao> CreateOpcaoAsync(EnqueteOpcao opcao)
     {
+        opcao.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<EnqueteOpcao>().Add(opcao);
         await _context.SaveChangesAsync();
         return opcao;
@@ -111,6 +126,7 @@ public class EnqueteRepository : IEnqueteRepository
 
     public async Task<EnqueteVoto> CreateVotoAsync(EnqueteVoto voto)
     {
+        voto.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<EnqueteVoto>().Add(voto);
         await _context.SaveChangesAsync();
         return voto;

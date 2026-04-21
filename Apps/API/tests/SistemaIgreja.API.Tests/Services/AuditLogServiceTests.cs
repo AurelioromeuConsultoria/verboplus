@@ -101,6 +101,61 @@ public class AuditLogServiceTests
     }
 
     [Fact]
+    public async Task GetPagedAsync_FiltersByEntityActionUserIdAndPeriod()
+    {
+        await using var context = await CreateContextAsync();
+        context.AuditLogs.AddRange(
+            new AuditLog
+            {
+                EntityName = "MensagemAgendada",
+                EntityId = "11",
+                Action = "ErroEnvio",
+                UserId = 10,
+                UserName = "Marco",
+                UserEmail = "marco@example.com",
+                CreatedAt = new DateTime(2026, 4, 6, 10, 0, 0, DateTimeKind.Utc)
+            },
+            new AuditLog
+            {
+                EntityName = "MensagemAgendada",
+                EntityId = "12",
+                Action = "Enviado",
+                UserId = 10,
+                UserName = "Marco",
+                UserEmail = "marco@example.com",
+                CreatedAt = new DateTime(2026, 4, 6, 14, 0, 0, DateTimeKind.Utc)
+            },
+            new AuditLog
+            {
+                EntityName = "Escala",
+                EntityId = "11",
+                Action = "ErroEnvio",
+                UserId = 11,
+                UserName = "Aline",
+                UserEmail = "aline@example.com",
+                CreatedAt = new DateTime(2026, 4, 7, 10, 0, 0, DateTimeKind.Utc)
+            });
+        await context.SaveChangesAsync();
+
+        var service = CreateService(context);
+
+        var result = await service.GetPagedAsync(new AuditLogPagedQueryDto
+        {
+            EntityName = "MensagemAgendada",
+            EntityId = "11",
+            Action = "ErroEnvio",
+            UserId = 10,
+            From = new DateTime(2026, 4, 6, 0, 0, 0),
+            To = new DateTime(2026, 4, 6, 12, 0, 0)
+        });
+
+        result.Total.Should().Be(1);
+        result.Items.Should().ContainSingle();
+        result.Items[0].EntityId.Should().Be("11");
+        result.Items[0].Action.Should().Be("ErroEnvio");
+    }
+
+    [Fact]
     public async Task RecordAsync_PersistsCurrentUserDataAndChangesJson()
     {
         await using var context = await CreateContextAsync();
@@ -121,6 +176,67 @@ public class AuditLogServiceTests
         log.UserEmail.Should().Be("marco@example.com");
         log.ChangesJson.Should().Contain("\"Nome\"");
         log.ChangesJson.Should().Contain("P\\u00E1scoa");
+    }
+
+    [Fact]
+    public async Task RecordAsync_AllowsNullChanges()
+    {
+        await using var context = await CreateContextAsync();
+        var service = CreateService(context);
+
+        await service.RecordAsync("Usuario", "3", "Delete");
+
+        var log = await context.AuditLogs.SingleAsync();
+        log.EntityName.Should().Be("Usuario");
+        log.EntityId.Should().Be("3");
+        log.Action.Should().Be("Delete");
+        log.ChangesJson.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetMetricsAsync_WhenThereAreNoLogs_ReturnsZeroedMetrics()
+    {
+        await using var context = await CreateContextAsync();
+        var service = CreateService(context);
+
+        var result = await service.GetMetricsAsync(new AuditLogPagedQueryDto());
+
+        result.TotalLogs.Should().Be(0);
+        result.CriticalActions.Should().Be(0);
+        result.FailureActions.Should().Be(0);
+        result.DistinctUsers.Should().Be(0);
+        result.TopUserLabel.Should().BeNull();
+        result.TopEntityName.Should().BeNull();
+        result.TopActionName.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_UsesPaginationDefaultsAndMaxPageSize()
+    {
+        await using var context = await CreateContextAsync();
+        context.AuditLogs.AddRange(
+            Enumerable.Range(1, 25).Select(i => new AuditLog
+            {
+                EntityName = "Escala",
+                EntityId = i.ToString(),
+                Action = "Publicar",
+                CreatedAt = new DateTime(2026, 4, 6, 10, 0, 0, DateTimeKind.Utc).AddMinutes(i)
+            }));
+        await context.SaveChangesAsync();
+
+        var service = CreateService(context);
+
+        var result = await service.GetPagedAsync(new AuditLogPagedQueryDto
+        {
+            Page = 0,
+            PageSize = 500
+        });
+
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(200);
+        result.Total.Should().Be(25);
+        result.Items.Should().HaveCount(25);
+        result.Items.First().EntityId.Should().Be("25");
     }
 
     private static AuditLogService CreateService(SistemaIgrejaDbContext context)

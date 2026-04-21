@@ -19,6 +19,7 @@ public class KidsNotificacaoService : IKidsNotificacaoService
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly ICurrentUserContext _currentUserContext;
     private readonly IKidsAuthorizationService _authorizationService;
+    private readonly ITenantContext _tenantContext;
     private readonly IKidsPushNotificationService? _pushService;
 
     public KidsNotificacaoService(
@@ -27,6 +28,7 @@ public class KidsNotificacaoService : IKidsNotificacaoService
         IUsuarioRepository usuarioRepository,
         ICurrentUserContext currentUserContext,
         IKidsAuthorizationService authorizationService,
+        ITenantContext tenantContext,
         IKidsPushNotificationService? pushService = null)
     {
         _repository = repository;
@@ -34,7 +36,19 @@ public class KidsNotificacaoService : IKidsNotificacaoService
         _usuarioRepository = usuarioRepository;
         _currentUserContext = currentUserContext;
         _authorizationService = authorizationService;
+        _tenantContext = tenantContext;
         _pushService = pushService;
+    }
+
+    public KidsNotificacaoService(
+        IKidsNotificacaoRepository repository,
+        IResponsavelCriancaRepository responsavelCriancaRepository,
+        IUsuarioRepository usuarioRepository,
+        ICurrentUserContext currentUserContext,
+        IKidsAuthorizationService authorizationService,
+        IKidsPushNotificationService? pushService = null)
+        : this(repository, responsavelCriancaRepository, usuarioRepository, currentUserContext, authorizationService, new DefaultTenantContext(), pushService)
+    {
     }
 
     public async Task<IEnumerable<MeuAvisoKidsDto>> GetMeusAvisosAsync(bool somenteNaoLidos = false, string? tipo = null, int? criancaPessoaId = null, int? limit = null)
@@ -153,7 +167,7 @@ public class KidsNotificacaoService : IKidsNotificacaoService
         var responsavelIds = await _responsavelCriancaRepository.GetResponsavelIdsAtivosAsync();
         return responsavelIds
             .Distinct()
-            .Select(responsavelPessoaId => BuildNotificacao(null, responsavelPessoaId, titulo, mensagem, tipo, criadoByPessoaId, now))
+            .Select(responsavelPessoaId => BuildNotificacao(_tenantContext.TenantId ?? Tenant.InitialTenantId, null, responsavelPessoaId, titulo, mensagem, tipo, criadoByPessoaId, now))
             .ToList();
     }
 
@@ -171,14 +185,14 @@ public class KidsNotificacaoService : IKidsNotificacaoService
             var responsaveis = await _responsavelCriancaRepository.GetByCriancaIdAsync(criancaPessoaId);
             foreach (var responsavelPessoaId in responsaveis.Where(r => r.Ativo).Select(r => r.ResponsavelPessoaId).Distinct())
             {
-                itens.Add(BuildNotificacao(criancaPessoaId, responsavelPessoaId, titulo, mensagem, tipo, criadoByPessoaId, now));
+                itens.Add(BuildNotificacao(_tenantContext.TenantId ?? Tenant.InitialTenantId, criancaPessoaId, responsavelPessoaId, titulo, mensagem, tipo, criadoByPessoaId, now));
             }
         }
 
         return itens;
     }
 
-    private static List<KidsNotificacao> CriarAvisosPorResponsavel(IEnumerable<int> responsavelPessoaIds, string titulo, string mensagem, string tipo, int criadoByPessoaId, DateTime now)
+    private List<KidsNotificacao> CriarAvisosPorResponsavel(IEnumerable<int> responsavelPessoaIds, string titulo, string mensagem, string tipo, int criadoByPessoaId, DateTime now)
     {
         var responsaveis = responsavelPessoaIds.Where(id => id > 0).Distinct().ToList();
         if (responsaveis.Count == 0)
@@ -187,14 +201,15 @@ public class KidsNotificacaoService : IKidsNotificacaoService
         }
 
         return responsaveis
-            .Select(responsavelPessoaId => BuildNotificacao(null, responsavelPessoaId, titulo, mensagem, tipo, criadoByPessoaId, now))
+            .Select(responsavelPessoaId => BuildNotificacao(_tenantContext.TenantId ?? Tenant.InitialTenantId, null, responsavelPessoaId, titulo, mensagem, tipo, criadoByPessoaId, now))
             .ToList();
     }
 
-    private static KidsNotificacao BuildNotificacao(int? criancaPessoaId, int responsavelPessoaId, string titulo, string mensagem, string tipo, int criadoByPessoaId, DateTime now)
+    private static KidsNotificacao BuildNotificacao(int tenantId, int? criancaPessoaId, int responsavelPessoaId, string titulo, string mensagem, string tipo, int criadoByPessoaId, DateTime now)
     {
         return new KidsNotificacao
         {
+            TenantId = tenantId,
             CriancaPessoaId = criancaPessoaId,
             ResponsavelPessoaId = responsavelPessoaId,
             Titulo = titulo,

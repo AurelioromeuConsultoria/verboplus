@@ -76,4 +76,22 @@ public class AtualizarPessoaDto
     public bool Ativo { get; set; }
 }
 
+public class AtualizarMinhaPessoaDto
+{
+    [Required(ErrorMessage = "Nome é obrigatório")]
+    [MaxLength(100)]
+    public string Nome { get; set; } = string.Empty;
+
+    [EmailAddress(ErrorMessage = "Email inválido")]
+    [MaxLength(100)]
+    public string? Email { get; set; }
+
+    [MaxLength(20)]
+    public string? Telefone { get; set; }
+
+    [MaxLength(20)]
+    public string? WhatsApp { get; set; }
+
+    public DateTime? DataNascimento { get; set; }
+}
 

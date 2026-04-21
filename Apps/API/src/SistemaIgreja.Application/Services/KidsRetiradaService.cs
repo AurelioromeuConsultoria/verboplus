@@ -23,6 +23,7 @@ public class KidsRetiradaService : IKidsRetiradaService
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly ICurrentUserContext _currentUserContext;
     private readonly IKidsAuthorizationService _authorizationService;
+    private readonly ITenantContext _tenantContext;
     private readonly IKidsPushNotificationService? _pushService;
     private readonly ILogger<KidsRetiradaService> _logger;
 
@@ -36,6 +37,7 @@ public class KidsRetiradaService : IKidsRetiradaService
         IUsuarioRepository usuarioRepository,
         ICurrentUserContext currentUserContext,
         IKidsAuthorizationService authorizationService,
+        ITenantContext tenantContext,
         ILogger<KidsRetiradaService> logger,
         IKidsPushNotificationService? pushService = null)
     {
@@ -48,8 +50,37 @@ public class KidsRetiradaService : IKidsRetiradaService
         _usuarioRepository = usuarioRepository;
         _currentUserContext = currentUserContext;
         _authorizationService = authorizationService;
+        _tenantContext = tenantContext;
         _logger = logger;
         _pushService = pushService;
+    }
+
+    public KidsRetiradaService(
+        IKidsCheckinRepository checkinRepository,
+        IResponsavelCriancaRepository responsavelRepository,
+        ICriancaDetalheRepository criancaDetalheRepository,
+        IPessoaRepository pessoaRepository,
+        IKidsNotificacaoRepository notificacaoRepository,
+        IUnitOfWork unitOfWork,
+        IUsuarioRepository usuarioRepository,
+        ICurrentUserContext currentUserContext,
+        IKidsAuthorizationService authorizationService,
+        ILogger<KidsRetiradaService> logger,
+        IKidsPushNotificationService? pushService = null)
+        : this(
+            checkinRepository,
+            responsavelRepository,
+            criancaDetalheRepository,
+            pessoaRepository,
+            notificacaoRepository,
+            unitOfWork,
+            usuarioRepository,
+            currentUserContext,
+            authorizationService,
+            new DefaultTenantContext(),
+            logger,
+            pushService)
+    {
     }
 
     public async Task<RetiradaValidacaoDto> ValidarAsync(ValidarRetiradaRequest request)
@@ -135,6 +166,7 @@ public class KidsRetiradaService : IKidsRetiradaService
             {
                 await _notificacaoRepository.CreateWithoutSaveAsync(new KidsNotificacao
                 {
+                    TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                     CriancaPessoaId = checkin.CriancaPessoaId,
                     ResponsavelPessoaId = responsavel.ResponsavelPessoaId,
                     Titulo = "Check-out realizado",
@@ -206,6 +238,7 @@ public class KidsRetiradaService : IKidsRetiradaService
             {
                 await _notificacaoRepository.CreateWithoutSaveAsync(new KidsNotificacao
                 {
+                    TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                     CriancaPessoaId = checkin.CriancaPessoaId,
                     ResponsavelPessoaId = responsavel.ResponsavelPessoaId,
                     Titulo = "Retirada em exceção",

@@ -1,5 +1,6 @@
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 
 namespace SistemaIgreja.Application.Services;
@@ -16,10 +17,17 @@ public interface IPerfilAcessoService
 public class PerfilAcessoService : IPerfilAcessoService
 {
     private readonly IPerfilAcessoRepository _repository;
+    private readonly ITenantContext _tenantContext;
 
     public PerfilAcessoService(IPerfilAcessoRepository repository)
+        : this(repository, new DefaultTenantContext())
+    {
+    }
+
+    public PerfilAcessoService(IPerfilAcessoRepository repository, ITenantContext tenantContext)
     {
         _repository = repository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<PerfilAcessoDto>> GetAllAsync()
@@ -38,6 +46,7 @@ public class PerfilAcessoService : IPerfilAcessoService
     {
         var perfil = new PerfilAcesso
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             Nome = dto.Nome,
             Descricao = dto.Descricao,
             DataCriacao = DateTime.Now,
@@ -49,6 +58,7 @@ public class PerfilAcessoService : IPerfilAcessoService
         {
             perfil.Permissoes.Add(new PerfilAcessoPermissao
             {
+                TenantId = perfil.TenantId,
                 Recurso = permDto.Recurso,
                 PodeVer = permDto.PodeVer,
                 PodeEditar = permDto.PodeEditar,
@@ -73,6 +83,7 @@ public class PerfilAcessoService : IPerfilAcessoService
         {
             perfil.Permissoes.Add(new PerfilAcessoPermissao
             {
+                TenantId = perfil.TenantId,
                 Recurso = permDto.Recurso,
                 PodeVer = permDto.PodeVer,
                 PodeEditar = permDto.PodeEditar,

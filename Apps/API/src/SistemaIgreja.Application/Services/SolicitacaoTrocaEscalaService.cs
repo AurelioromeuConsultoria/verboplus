@@ -25,6 +25,29 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
     private readonly INotificacaoUsuarioService _notificacaoUsuarioService;
     private readonly ILogger<SolicitacaoTrocaEscalaService> _logger;
     private readonly IAuditLogService _auditLogService;
+    private readonly ITenantContext _tenantContext;
+
+    public SolicitacaoTrocaEscalaService(
+        ISolicitacaoTrocaEscalaRepository repository,
+        IEscalaRepository escalaRepository,
+        IEquipeRepository equipeRepository,
+        IVoluntarioRepository voluntarioRepository,
+        IUsuarioRepository usuarioRepository,
+        INotificacaoUsuarioService notificacaoUsuarioService,
+        ILogger<SolicitacaoTrocaEscalaService> logger,
+        IAuditLogService auditLogService,
+        ITenantContext tenantContext)
+    {
+        _repository = repository;
+        _escalaRepository = escalaRepository;
+        _equipeRepository = equipeRepository;
+        _voluntarioRepository = voluntarioRepository;
+        _usuarioRepository = usuarioRepository;
+        _notificacaoUsuarioService = notificacaoUsuarioService;
+        _logger = logger;
+        _auditLogService = auditLogService;
+        _tenantContext = tenantContext;
+    }
 
     public SolicitacaoTrocaEscalaService(
         ISolicitacaoTrocaEscalaRepository repository,
@@ -35,15 +58,8 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
         INotificacaoUsuarioService notificacaoUsuarioService,
         ILogger<SolicitacaoTrocaEscalaService> logger,
         IAuditLogService auditLogService)
+        : this(repository, escalaRepository, equipeRepository, voluntarioRepository, usuarioRepository, notificacaoUsuarioService, logger, auditLogService, new DefaultTenantContext())
     {
-        _repository = repository;
-        _escalaRepository = escalaRepository;
-        _equipeRepository = equipeRepository;
-        _voluntarioRepository = voluntarioRepository;
-        _usuarioRepository = usuarioRepository;
-        _notificacaoUsuarioService = notificacaoUsuarioService;
-        _logger = logger;
-        _auditLogService = auditLogService;
     }
 
     public async Task<IEnumerable<SolicitacaoTrocaEscalaDto>> GetGerenciaveisAsync(int usuarioId, bool isAdmin, int? equipeId, StatusSolicitacaoTrocaEscala? status)
@@ -101,6 +117,7 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
 
         var solicitacao = new SolicitacaoTrocaEscala
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             EscalaItemId = escalaItemId,
             VoluntarioSolicitanteId = item.VoluntarioId,
             Motivo = dto.Motivo?.Trim(),
@@ -155,6 +172,7 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
 
         var novoItem = new EscalaItem
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             EscalaId = item.EscalaId,
             EquipeId = item.EquipeId,
             CargoId = item.CargoId,

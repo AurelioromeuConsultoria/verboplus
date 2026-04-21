@@ -3,9 +3,13 @@ using System.ComponentModel.DataAnnotations;
 namespace SistemaIgreja.Domain.Entities;
 
 /// <summary>Uma “vaga” no modelo: quantas pessoas deste cargo (ou qualquer) são necessárias.</summary>
-public class EscalaModeloItem
+public class EscalaModeloItem : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
 
     [Required]
     public int EscalaModeloId { get; set; }

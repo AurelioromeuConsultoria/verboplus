@@ -45,6 +45,28 @@ public class UsuariosControllerTests
     }
 
     [Fact]
+    public async Task GetById_ReturnsForbidden_WhenUserIsNotAdmin()
+    {
+        SetUser((int)TipoUsuario.Portal);
+
+        var result = await _controller.GetById(1);
+
+        result.Result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(403);
+    }
+
+    [Fact]
+    public async Task GetById_ReturnsOk_WhenUserIsAdmin()
+    {
+        SetUser((int)TipoUsuario.Admin);
+        _serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(new UsuarioDto { Id = 1, EmailLogin = "admin@app.com" });
+
+        var result = await _controller.GetById(1);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
     public async Task Create_ReturnsForbidden_WhenUsersExistAndUserIsNotAdmin()
     {
         SetUser((int)TipoUsuario.Portal);
@@ -76,6 +98,38 @@ public class UsuariosControllerTests
 
         result.Result.Should().BeOfType<ObjectResult>()
             .Which.StatusCode.Should().Be(403);
+    }
+
+    [Fact]
+    public async Task Update_ReturnsOk_WhenUserIsAdmin()
+    {
+        SetUser((int)TipoUsuario.Admin);
+        _serviceMock.Setup(s => s.UpdateAsync(10, It.IsAny<AtualizarUsuarioDto>())).ReturnsAsync(new UsuarioDto { Id = 10, EmailLogin = "admin@app.com" });
+
+        var result = await _controller.Update(10, new AtualizarUsuarioDto());
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsForbidden_WhenUserIsNotAdmin()
+    {
+        SetUser((int)TipoUsuario.Portal);
+
+        var result = await _controller.Delete(10);
+
+        result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(403);
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsNoContent_WhenUserIsAdmin()
+    {
+        SetUser((int)TipoUsuario.Admin);
+
+        var result = await _controller.Delete(10);
+
+        result.Should().BeOfType<NoContentResult>();
     }
 
     private void SetUser(int tipoUsuarioId)

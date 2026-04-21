@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class FornecedorRepository : IFornecedorRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public FornecedorRepository(SistemaIgrejaDbContext context)
+    public FornecedorRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public FornecedorRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<Fornecedor>> GetAllAsync()
@@ -29,6 +37,7 @@ public class FornecedorRepository : IFornecedorRepository
 
     public async Task<Fornecedor> CreateAsync(Fornecedor fornecedor)
     {
+        fornecedor.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<Fornecedor>().Add(fornecedor);
         await _context.SaveChangesAsync();
         return fornecedor;

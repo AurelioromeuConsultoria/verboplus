@@ -29,6 +29,26 @@ public class VoluntariosControllerTests
     }
 
     [Fact]
+    public async Task GetByPessoa_ReturnsOk()
+    {
+        _serviceMock.Setup(s => s.GetVoluntariosPorPessoaAsync(1)).ReturnsAsync([new VoluntarioDto { Id = 2, PessoaId = 1, Nome = "Voluntário" }]);
+
+        var result = await _controller.GetByPessoa(1);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetByEquipe_ReturnsOk()
+    {
+        _serviceMock.Setup(s => s.GetVoluntariosPorEquipeAsync(3)).ReturnsAsync([new VoluntarioDto { Id = 2, EquipeId = 3, Nome = "Voluntário" }]);
+
+        var result = await _controller.GetByEquipe(3);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
     public async Task GetById_NotFound_WhenNull()
     {
         _serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync((VoluntarioDto?)null);
@@ -64,6 +84,18 @@ public class VoluntariosControllerTests
         _serviceMock.Setup(s => s.UpdateAsync(9, dto)).ThrowsAsync(new ArgumentException());
         var result = await _controller.Update(9, dto);
         result.Result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task Update_ReturnsOk_WhenUserIsAdmin()
+    {
+        SetUser((int)TipoUsuario.Admin);
+        var dto = new AtualizarVoluntarioDto { PessoaId = 1, WhatsApp = "11888", Email = "v@x.com", EquipeId = 2, CargoId = 3 };
+        _serviceMock.Setup(s => s.UpdateAsync(9, dto)).ReturnsAsync(new VoluntarioDto { Id = 9, PessoaId = 1, Nome = "V1", EquipeId = 2, CargoId = 3 });
+
+        var result = await _controller.Update(9, dto);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]

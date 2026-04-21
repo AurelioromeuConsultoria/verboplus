@@ -18,11 +18,18 @@ public class KidsEstruturaService : IKidsEstruturaService
 {
     private readonly IKidsEstruturaRepository _repository;
     private readonly IKidsAuthorizationService _authorizationService;
+    private readonly ITenantContext _tenantContext;
 
-    public KidsEstruturaService(IKidsEstruturaRepository repository, IKidsAuthorizationService authorizationService)
+    public KidsEstruturaService(IKidsEstruturaRepository repository, IKidsAuthorizationService authorizationService, ITenantContext tenantContext)
     {
         _repository = repository;
         _authorizationService = authorizationService;
+        _tenantContext = tenantContext;
+    }
+
+    public KidsEstruturaService(IKidsEstruturaRepository repository, IKidsAuthorizationService authorizationService)
+        : this(repository, authorizationService, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<KidsSalaDto>> GetSalasAsync(bool incluirInativas = false)
@@ -44,6 +51,7 @@ public class KidsEstruturaService : IKidsEstruturaService
         var sala = new KidsSala
         {
             Id = id,
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             Nome = request.Nome.Trim(),
             CapacidadeMaxima = request.CapacidadeMaxima,
             Ativo = request.Ativo,
@@ -99,6 +107,7 @@ public class KidsEstruturaService : IKidsEstruturaService
         var turma = new KidsTurma
         {
             Id = id,
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             SalaId = salaId,
             Nome = request.Nome.Trim(),
             CapacidadeMaxima = request.CapacidadeMaxima,

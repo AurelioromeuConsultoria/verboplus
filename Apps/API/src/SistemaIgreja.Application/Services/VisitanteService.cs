@@ -25,6 +25,7 @@ public class VisitanteService : IVisitanteService
     private readonly IPessoaRepository _pessoaRepository;
     private readonly IPessoaPerfilRepository _pessoaPerfilRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ITenantContext _tenantContext;
     private readonly ILogger<VisitanteService> _logger;
 
     public VisitanteService(
@@ -34,12 +35,25 @@ public class VisitanteService : IVisitanteService
         IPessoaPerfilRepository pessoaPerfilRepository,
         IUnitOfWork unitOfWork,
         ILogger<VisitanteService> logger)
+        : this(visitanteRepository, comunicacaoAutomacaoService, pessoaRepository, pessoaPerfilRepository, unitOfWork, new DefaultTenantContext(), logger)
+    {
+    }
+
+    public VisitanteService(
+        IVisitanteRepository visitanteRepository,
+        IComunicacaoAutomacaoService comunicacaoAutomacaoService,
+        IPessoaRepository pessoaRepository,
+        IPessoaPerfilRepository pessoaPerfilRepository,
+        IUnitOfWork unitOfWork,
+        ITenantContext tenantContext,
+        ILogger<VisitanteService> logger)
     {
         _visitanteRepository = visitanteRepository;
         _comunicacaoAutomacaoService = comunicacaoAutomacaoService;
         _pessoaRepository = pessoaRepository;
         _pessoaPerfilRepository = pessoaPerfilRepository;
         _unitOfWork = unitOfWork;
+        _tenantContext = tenantContext;
         _logger = logger;
     }
 
@@ -129,6 +143,7 @@ public class VisitanteService : IVisitanteService
             {
                 pessoa = new Pessoa
                 {
+                    TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                     Nome = request.Nome,
                     Email = NormalizarEmail(request.Email),
                     Telefone = NormalizarTelefone(request.Telefone),
@@ -186,6 +201,7 @@ public class VisitanteService : IVisitanteService
             {
                 var novoPerfil = new PessoaPerfil
                 {
+                    TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                     PessoaId = pessoa.Id,
                     Perfil = PerfilPessoa.Visitante,
                     DataInicio = DateTime.UtcNow,
@@ -198,6 +214,7 @@ public class VisitanteService : IVisitanteService
             // 4. Criar registro de Visitante (histórico de visita)
             var visitante = new Visitante
             {
+                TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                 PessoaId = pessoa.Id,
                 DataVisita = request.DataVisita ?? DateTime.UtcNow,
                 Observacoes = request.Observacoes,

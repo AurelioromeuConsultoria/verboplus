@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc;
 using Moq;
 using SistemaIgreja.API.Controllers;
 using SistemaIgreja.Application.DTOs;
@@ -27,6 +28,16 @@ public class PatrimonioControllerTests
     }
 
     [Fact]
+    public async Task GetAll_ReturnsOk()
+    {
+        _serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync([new PatrimonioItemDto { Id = 1, Nome = "Projetor" }]);
+
+        var result = await _controller.GetAll();
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
     public async Task Create_ReturnsCreated_WhenServiceSucceeds()
     {
         _serviceMock.Setup(s => s.CreateAsync(It.IsAny<CriarPatrimonioItemDto>()))
@@ -46,5 +57,13 @@ public class PatrimonioControllerTests
         var result = await _controller.Update(2, new AtualizarPatrimonioItemDto());
 
         result.Result.Should().BeOfType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsNoContent()
+    {
+        var result = await _controller.Delete(2);
+
+        result.Should().BeOfType<NoContentResult>();
     }
 }

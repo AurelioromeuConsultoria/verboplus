@@ -29,6 +29,16 @@ public class ReceitasControllerTests
     }
 
     [Fact]
+    public async Task GetAll_ReturnsOk()
+    {
+        _serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(new List<ReceitaDto>());
+
+        var result = await _controller.GetAll();
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
     public async Task Create_ReturnsCreated_WhenServiceSucceeds()
     {
         var created = new ReceitaDto { Id = 5, Descricao = "Oferta", Status = StatusReceita.Recebida };
@@ -48,5 +58,13 @@ public class ReceitasControllerTests
         var result = await _controller.Update(5, new AtualizarReceitaDto());
 
         result.Result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsNoContent()
+    {
+        var result = await _controller.Delete(5);
+
+        result.Should().BeOfType<NoContentResult>();
     }
 }

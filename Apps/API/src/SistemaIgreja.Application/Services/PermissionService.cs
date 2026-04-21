@@ -29,7 +29,9 @@ public class PermissionService : IPermissionService
             return usuario.TipoUsuario == TipoUsuario.Admin;
         }
 
-        var perm = permissoes.FirstOrDefault(p => p.Recurso.ToLower() == recurso.ToLower());
+        var perm = permissoes.FirstOrDefault(p =>
+            p.TenantId == usuario.TenantId &&
+            p.Recurso.ToLower() == recurso.ToLower());
         if (perm == null) return false;
 
         return acao switch

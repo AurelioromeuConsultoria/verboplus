@@ -2,9 +2,13 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class Usuario
+public class Usuario : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
 
     [Required]
     public int PessoaId { get; set; }
@@ -24,6 +28,9 @@ public class Usuario
     [Required]
     public bool Ativo { get; set; } = true;
 
+    [Required]
+    public bool IsPlatformAdmin { get; set; }
+
     public int? PerfilAcessoId { get; set; }
     public virtual PerfilAcesso? PerfilAcesso { get; set; }
 
@@ -31,7 +38,3 @@ public class Usuario
     public DateTime? UltimoAcesso { get; set; }
     public virtual ICollection<NotificacaoUsuario> Notificacoes { get; set; } = new List<NotificacaoUsuario>();
 }
-
-
-
-

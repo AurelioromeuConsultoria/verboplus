@@ -6,9 +6,13 @@ namespace SistemaIgreja.Domain.Entities;
 /// Token FCM (Firebase Cloud Messaging) para envio de push ao responsável.
 /// Um responsável pode ter vários dispositivos (vários tokens).
 /// </summary>
-public class KidsDeviceToken
+public class KidsDeviceToken : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
 
     [Required]
     public int PessoaId { get; set; }

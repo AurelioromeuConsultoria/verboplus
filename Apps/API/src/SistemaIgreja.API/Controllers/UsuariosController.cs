@@ -56,7 +56,7 @@ public class UsuariosController : ControllerBase
         try
         {
             // Verificar se já existe algum usuário
-            var existeUsuario = await _repository.ExisteAlgumUsuarioAsync();
+            var existeUsuario = await _repository.ExisteAlgumUsuarioAsync(dto.TenantSlug);
             
             // Se já existir usuário, requer autenticação
             if (existeUsuario)

@@ -20,13 +20,20 @@ public class UsuarioService : IUsuarioService
     private readonly IUsuarioRepository _repository;
     private readonly IPessoaRepository _pessoaRepository;
     private readonly IPerfilAcessoRepository _perfilAcessoRepository;
+    private readonly ITenantContext _tenantContext;
     private readonly ILogger<UsuarioService> _logger;
 
     public UsuarioService(IUsuarioRepository repository, IPessoaRepository pessoaRepository, IPerfilAcessoRepository perfilAcessoRepository, ILogger<UsuarioService> logger)
+        : this(repository, pessoaRepository, perfilAcessoRepository, new DefaultTenantContext(), logger)
+    {
+    }
+
+    public UsuarioService(IUsuarioRepository repository, IPessoaRepository pessoaRepository, IPerfilAcessoRepository perfilAcessoRepository, ITenantContext tenantContext, ILogger<UsuarioService> logger)
     {
         _repository = repository;
         _pessoaRepository = pessoaRepository;
         _perfilAcessoRepository = perfilAcessoRepository;
+        _tenantContext = tenantContext;
         _logger = logger;
     }
 
@@ -50,8 +57,12 @@ public class UsuarioService : IUsuarioService
 
     public async Task<UsuarioDto> CreateAsync(CriarUsuarioDto dto)
     {
+        var targetTenantSlug = string.IsNullOrWhiteSpace(dto.TenantSlug) ? null : dto.TenantSlug;
+        var resolvedTenantId = await _pessoaRepository.ResolveTenantIdAsync(targetTenantSlug);
+        var targetTenantId = resolvedTenantId == 0 ? Tenant.InitialTenantId : resolvedTenantId;
+
         // Verificar se EmailLogin já existe
-        var existeUsuario = await _repository.GetByEmailAsync(dto.EmailLogin);
+        var existeUsuario = await _repository.GetByEmailAsync(dto.EmailLogin, targetTenantSlug);
         if (existeUsuario != null) throw new ArgumentException("Email de login já cadastrado");
 
         Pessoa? pessoa;
@@ -78,6 +89,7 @@ public class UsuarioService : IUsuarioService
 
                 pessoa = new Pessoa
                 {
+                    TenantId = targetTenantId,
                     Nome = dto.Nome,
                     Email = dto.Email,
                     Telefone = dto.Telefone,
@@ -102,14 +114,19 @@ public class UsuarioService : IUsuarioService
 
         var perfil = await _perfilAcessoRepository.GetByIdAsync(dto.PerfilAcessoId.Value);
         if (perfil == null) throw new ArgumentException("Perfil de acesso inválido");
+        var perfilTenantId = perfil.TenantId == 0 ? Tenant.InitialTenantId : perfil.TenantId;
+        if (perfilTenantId != targetTenantId)
+            throw new ArgumentException("Perfil de acesso não pertence ao tenant informado");
 
         // Criar usuário
         var entity = new Usuario
         {
+            TenantId = targetTenantId,
             PessoaId = pessoa.Id,
             EmailLogin = dto.EmailLogin,
             SenhaHash = BCrypt.Net.BCrypt.HashPassword(dto.Senha),
             TipoUsuario = dto.TipoUsuario,
+            IsPlatformAdmin = false,
             PerfilAcessoId = dto.PerfilAcessoId,
             Ativo = true,
             DataCriacao = DateTime.Now
@@ -131,7 +148,7 @@ public class UsuarioService : IUsuarioService
         if (entity == null) throw new ArgumentException("Usuário não encontrado");
 
         // Verificar se EmailLogin já existe em outro usuário
-        var existeUsuario = await _repository.GetByEmailAsync(dto.EmailLogin);
+        var existeUsuario = await _repository.GetByEmailAsync(dto.EmailLogin, entity.Tenant?.Slug);
         if (existeUsuario != null && existeUsuario.Id != id) throw new ArgumentException("Email de login já cadastrado");
 
         // Atualizar pessoa
@@ -157,6 +174,9 @@ public class UsuarioService : IUsuarioService
 
         var perfil = await _perfilAcessoRepository.GetByIdAsync(dto.PerfilAcessoId.Value);
         if (perfil == null) throw new ArgumentException("Perfil de acesso inválido");
+        var perfilTenantId = perfil.TenantId == 0 ? Tenant.InitialTenantId : perfil.TenantId;
+        if (perfilTenantId != entity.TenantId)
+            throw new ArgumentException("Perfil de acesso não pertence ao tenant do usuário");
 
         // Atualizar usuário
         entity.EmailLogin = dto.EmailLogin;
@@ -197,6 +217,16 @@ public class UsuarioService : IUsuarioService
         return new UsuarioDto
         {
             Id = u.Id,
+            TenantId = u.TenantId,
+            TenantSlug = u.Tenant?.Slug ?? Tenant.InitialTenantSlug,
+            TenantNome = u.Tenant?.Nome ?? Tenant.InitialTenantName,
+            TenantNomeExibicao = u.Tenant?.NomeExibicao,
+            TenantLogoUrl = u.Tenant?.LogoUrl,
+            TenantFaviconUrl = u.Tenant?.FaviconUrl,
+            TenantCorPrimaria = u.Tenant?.CorPrimaria,
+            TenantCorSecundaria = u.Tenant?.CorSecundaria,
+            IsRootTenant = u.Tenant?.IsRootTenant ?? false,
+            IsPlatformAdmin = u.IsPlatformAdmin,
             PessoaId = u.PessoaId,
             Nome = u.Pessoa?.Nome ?? string.Empty,
             Email = u.Pessoa?.Email ?? string.Empty,
@@ -219,7 +249,3 @@ public class UsuarioService : IUsuarioService
         };
     }
 }
-
-
-
-

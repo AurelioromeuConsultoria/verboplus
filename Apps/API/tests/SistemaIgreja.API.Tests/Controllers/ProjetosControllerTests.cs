@@ -28,6 +28,27 @@ public class ProjetosControllerTests
     }
 
     [Fact]
+    public async Task GetById_ReturnsNotFound_WhenProjetoDoesNotExist()
+    {
+        _serviceMock.Setup(s => s.GetByIdAsync(2)).ReturnsAsync((ProjetoDto?)null);
+
+        var result = await _controller.GetById(2);
+
+        result.Result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task Create_ReturnsCreated_WhenServiceSucceeds()
+    {
+        _serviceMock.Setup(s => s.CreateAsync(It.IsAny<CriarProjetoDto>()))
+            .ReturnsAsync(new ProjetoDto { Id = 3, Nome = "Construção" });
+
+        var result = await _controller.Create(new CriarProjetoDto());
+
+        result.Result.Should().BeOfType<CreatedAtActionResult>();
+    }
+
+    [Fact]
     public async Task Update_ReturnsNotFound_WhenServiceThrowsArgumentException()
     {
         _serviceMock.Setup(s => s.UpdateAsync(2, It.IsAny<AtualizarProjetoDto>()))
@@ -36,5 +57,13 @@ public class ProjetosControllerTests
         var result = await _controller.Update(2, new AtualizarProjetoDto());
 
         result.Result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsNoContent()
+    {
+        var result = await _controller.Delete(2);
+
+        result.Should().BeOfType<NoContentResult>();
     }
 }

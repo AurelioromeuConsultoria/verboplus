@@ -2,9 +2,14 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class PerfilAcesso
+public class PerfilAcesso : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     [Required]
     [MaxLength(100)]
@@ -19,9 +24,14 @@ public class PerfilAcesso
     public virtual ICollection<Usuario> Usuarios { get; set; } = new List<Usuario>();
 }
 
-public class PerfilAcessoPermissao
+public class PerfilAcessoPermissao : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     [Required]
     public int PerfilAcessoId { get; set; }

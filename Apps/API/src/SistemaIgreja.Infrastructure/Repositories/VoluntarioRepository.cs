@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class VoluntarioRepository : IVoluntarioRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
     public VoluntarioRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
+    }
+
+    public VoluntarioRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<Voluntario>> GetAllAsync()
@@ -72,6 +80,7 @@ public class VoluntarioRepository : IVoluntarioRepository
 
     public async Task<Voluntario> CreateAsync(Voluntario voluntario)
     {
+        voluntario.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<Voluntario>().Add(voluntario);
         await _context.SaveChangesAsync();
         return voluntario;

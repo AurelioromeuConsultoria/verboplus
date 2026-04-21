@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class KidsCheckinRepository : IKidsCheckinRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public KidsCheckinRepository(SistemaIgrejaDbContext context)
+    public KidsCheckinRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public KidsCheckinRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<KidsCheckin?> GetByIdAsync(int id)
@@ -99,6 +107,7 @@ public class KidsCheckinRepository : IKidsCheckinRepository
 
     public async Task<KidsCheckin> CreateAsync(KidsCheckin checkin)
     {
+        checkin.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<KidsCheckin>().Add(checkin);
         await _context.SaveChangesAsync();
         return checkin;
@@ -106,6 +115,7 @@ public class KidsCheckinRepository : IKidsCheckinRepository
 
     public Task<KidsCheckin> CreateWithoutSaveAsync(KidsCheckin checkin)
     {
+        checkin.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<KidsCheckin>().Add(checkin);
         return Task.FromResult(checkin);
     }

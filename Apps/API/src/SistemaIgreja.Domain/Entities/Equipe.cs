@@ -9,9 +9,14 @@ public enum AreaEquipe
     Laranja = 3
 }
 
-public class Equipe
+public class Equipe : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     [Required]
     [MaxLength(100)]

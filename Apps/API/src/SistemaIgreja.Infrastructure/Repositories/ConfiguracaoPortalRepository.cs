@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,22 +9,29 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class ConfiguracaoPortalRepository : IConfiguracaoPortalRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
     public ConfiguracaoPortalRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
+    }
+
+    public ConfiguracaoPortalRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<ConfiguracaoPortal?> GetAsync()
     {
-        var config = await _context.ConfiguracoesPortal.FirstOrDefaultAsync();
+        var tenantId = await ResolveTenantIdAsync();
+        var config = await _context.ConfiguracoesPortal.FirstOrDefaultAsync(c => c.TenantId == tenantId);
         
-        // Se não existir, cria uma configuração padrão
         if (config == null)
         {
             config = new ConfiguracaoPortal
             {
-                Id = 1,
+                TenantId = tenantId,
                 TempoTransicaoCarrossel = 5,
                 DataAtualizacao = DateTime.Now
             };
@@ -36,11 +44,12 @@ public class ConfiguracaoPortalRepository : IConfiguracaoPortalRepository
 
     public async Task<ConfiguracaoPortal> UpdateAsync(ConfiguracaoPortal configuracao)
     {
-        var existing = await _context.ConfiguracoesPortal.FirstOrDefaultAsync();
+        var tenantId = await ResolveTenantIdAsync();
+        var existing = await _context.ConfiguracoesPortal.FirstOrDefaultAsync(c => c.TenantId == tenantId);
         
         if (existing == null)
         {
-            configuracao.Id = 1;
+            configuracao.TenantId = tenantId;
             configuracao.DataAtualizacao = DateTime.Now;
             _context.ConfiguracoesPortal.Add(configuracao);
         }
@@ -52,5 +61,19 @@ public class ConfiguracaoPortalRepository : IConfiguracaoPortalRepository
         
         await _context.SaveChangesAsync();
         return existing ?? configuracao;
+    }
+
+    private async Task<int> ResolveTenantIdAsync()
+    {
+        if (_tenantContext.TenantId.HasValue)
+        {
+            return _tenantContext.TenantId.Value;
+        }
+
+        var tenant = await _context.Tenants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Slug == Tenant.InitialTenantSlug);
+
+        return tenant?.Id ?? Tenant.InitialTenantId;
     }
 }

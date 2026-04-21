@@ -2,9 +2,12 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class MensagemAgendada
+public class MensagemAgendada : ITenantEntity
 {
     public int Id { get; set; }
+
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
     
     public int VisitanteId { get; set; }
     public virtual Visitante Visitante { get; set; } = null!;
@@ -39,4 +42,3 @@ public enum StatusMensagem
     /// <summary>Reservada para processamento; evita dupla execução entre instâncias.</summary>
     EmProcessamento = 6
 }
-

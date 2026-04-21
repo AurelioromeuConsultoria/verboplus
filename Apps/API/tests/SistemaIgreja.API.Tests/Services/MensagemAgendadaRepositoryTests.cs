@@ -11,6 +11,35 @@ namespace SistemaIgreja.API.Tests.Services;
 public class MensagemAgendadaRepositoryTests
 {
     [Fact]
+    public async Task GetAllByIdAndByVisitanteAndByStatus_ReturnExpectedMessages()
+    {
+        await using var context = await CreateContextAsync();
+        var deps = await SeedBaseDependenciasAsync(context);
+        var agendada = CriarMensagem(StatusMensagem.Agendada, new DateTime(2026, 4, 5), deps.VisitanteId, deps.ConfiguracaoId);
+        var enviada = CriarMensagem(StatusMensagem.Enviada, new DateTime(2026, 4, 6), deps.VisitanteId, deps.ConfiguracaoId);
+        context.MensagensAgendadas.AddRange(agendada, enviada);
+        await context.SaveChangesAsync();
+
+        var repository = new MensagemAgendadaRepository(context);
+
+        var all = (await repository.GetAllAsync()).ToList();
+        all.Should().HaveCount(2);
+        all[0].DataCriacao.Should().BeAfter(all[1].DataCriacao);
+
+        var byId = await repository.GetByIdAsync(agendada.Id);
+        byId.Should().NotBeNull();
+        byId!.Visitante.Pessoa.Nome.Should().Be("Pessoa Base");
+
+        var byVisitante = (await repository.GetMensagensPorVisitanteAsync(deps.VisitanteId)).ToList();
+        byVisitante.Should().HaveCount(2);
+        byVisitante.Select(x => x.Status).Should().Contain([StatusMensagem.Agendada, StatusMensagem.Enviada]);
+
+        var byStatus = (await repository.GetMensagensPorStatusAsync(StatusMensagem.Enviada)).ToList();
+        byStatus.Should().ContainSingle();
+        byStatus[0].Status.Should().Be(StatusMensagem.Enviada);
+    }
+
+    [Fact]
     public async Task GetStatsAsync_CalculatesCountsByStatus()
     {
         await using var context = await CreateContextAsync();
@@ -30,6 +59,34 @@ public class MensagemAgendadaRepositoryTests
         result.Agendadas.Should().Be(2);
         result.Enviadas.Should().Be(1);
         result.Erro.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CreateUpdateDeleteAndGetProntasParaEnvio_WorkAsExpected()
+    {
+        await using var context = await CreateContextAsync();
+        var deps = await SeedBaseDependenciasAsync(context);
+        var repository = new MensagemAgendadaRepository(context);
+
+        var created = await repository.CreateAsync(CriarMensagem(StatusMensagem.Agendada, DateTime.Now.AddMinutes(-5), deps.VisitanteId, deps.ConfiguracaoId));
+        created.Id.Should().BeGreaterThan(0);
+
+        created.Status = StatusMensagem.Erro;
+        await repository.UpdateAsync(created);
+
+        var loaded = await repository.GetByIdAsync(created.Id);
+        loaded.Should().NotBeNull();
+        loaded!.Status.Should().Be(StatusMensagem.Erro);
+
+        loaded.Status = StatusMensagem.Agendada;
+        loaded.DataEnvio = DateTime.Now.AddMinutes(-1);
+        await repository.UpdateAsync(loaded);
+
+        var prontas = (await repository.GetMensagensProntasParaEnvioAsync()).ToList();
+        prontas.Should().Contain(x => x.Id == created.Id);
+
+        await repository.DeleteAsync(created.Id);
+        (await repository.GetByIdAsync(created.Id)).Should().BeNull();
     }
 
     [Fact]
@@ -98,6 +155,63 @@ public class MensagemAgendadaRepositoryTests
 
         result.Total.Should().Be(1);
         result.Items[0].TextoFinal.Should().Be("Olá Marco");
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_FiltersByVisitanteDateRangeAndSort()
+    {
+        await using var context = await CreateContextAsync();
+        var deps = await SeedBaseDependenciasAsync(context);
+        var outro = await SeedBaseDependenciasAsync(context);
+
+        context.MensagensAgendadas.AddRange(
+            new MensagemAgendada
+            {
+                VisitanteId = deps.VisitanteId,
+                ConfiguracaoMensagemId = deps.ConfiguracaoId,
+                DataAgendamento = new DateTime(2026, 4, 1),
+                DataEnvio = new DateTime(2026, 4, 10),
+                Status = StatusMensagem.Agendada,
+                TextoFinal = "Primeira",
+                DataCriacao = new DateTime(2026, 4, 2)
+            },
+            new MensagemAgendada
+            {
+                VisitanteId = deps.VisitanteId,
+                ConfiguracaoMensagemId = deps.ConfiguracaoId,
+                DataAgendamento = new DateTime(2026, 4, 3),
+                DataEnvio = new DateTime(2026, 4, 12),
+                Status = StatusMensagem.Agendada,
+                TextoFinal = "Segunda",
+                DataCriacao = new DateTime(2026, 4, 4)
+            },
+            new MensagemAgendada
+            {
+                VisitanteId = outro.VisitanteId,
+                ConfiguracaoMensagemId = outro.ConfiguracaoId,
+                DataAgendamento = new DateTime(2026, 4, 3),
+                DataEnvio = new DateTime(2026, 4, 11),
+                Status = StatusMensagem.Agendada,
+                TextoFinal = "Terceira",
+                DataCriacao = new DateTime(2026, 4, 5)
+            });
+        await context.SaveChangesAsync();
+
+        var repository = new MensagemAgendadaRepository(context);
+
+        var result = await repository.GetPagedAsync(new MensagemAgendadaPagedQuery
+        {
+            VisitanteId = deps.VisitanteId,
+            DataEnvioFrom = new DateTime(2026, 4, 9),
+            DataEnvioTo = new DateTime(2026, 4, 12),
+            Sort = "datacriacao",
+            Direction = "desc"
+        });
+
+        result.Total.Should().Be(2);
+        result.Items.Should().HaveCount(2);
+        result.Items[0].TextoFinal.Should().Be("Segunda");
+        result.Items[1].TextoFinal.Should().Be("Primeira");
     }
 
     [Fact]

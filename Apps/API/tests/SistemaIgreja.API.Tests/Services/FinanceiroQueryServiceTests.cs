@@ -45,6 +45,91 @@ public class FinanceiroQueryServiceTests
     }
 
     [Fact]
+    public async Task GetTotalDespesasAsync_FiltersByPeriodAndStatus()
+    {
+        await using var context = await CreateContextAsync();
+        context.Despesas.AddRange(
+            new Despesa
+            {
+                Descricao = "Conta 1",
+                Valor = 120,
+                DataVencimento = new DateTime(2026, 4, 5),
+                Status = StatusDespesa.Paga
+            },
+            new Despesa
+            {
+                Descricao = "Conta 2",
+                Valor = 80,
+                DataVencimento = new DateTime(2026, 4, 7),
+                Status = StatusDespesa.Pendente
+            },
+            new Despesa
+            {
+                Descricao = "Conta 3",
+                Valor = 999,
+                DataVencimento = new DateTime(2026, 3, 30),
+                Status = StatusDespesa.Paga
+            });
+        await context.SaveChangesAsync();
+
+        var service = new FinanceiroQueryService(context);
+
+        var total = await service.GetTotalDespesasAsync(new DateTime(2026, 4, 1), new DateTime(2026, 4, 30), StatusDespesa.Paga);
+
+        total.Should().Be(120);
+    }
+
+    [Fact]
+    public async Task GetFluxoCaixaMensalAsync_ReturnsMonthsWithReceitasAndDespesas()
+    {
+        await using var context = await CreateContextAsync();
+        var hoje = DateTime.Now;
+        var mesAtual = new DateTime(hoje.Year, hoje.Month, 10);
+        var mesAnterior = mesAtual.AddMonths(-1);
+
+        context.Receitas.AddRange(
+            new Receita
+            {
+                Descricao = "Oferta atual",
+                Valor = 300,
+                DataRecebimento = mesAtual,
+                Status = StatusReceita.Recebida
+            },
+            new Receita
+            {
+                Descricao = "Oferta anterior",
+                Valor = 150,
+                DataRecebimento = mesAnterior,
+                Status = StatusReceita.Recebida
+            });
+        context.Despesas.AddRange(
+            new Despesa
+            {
+                Descricao = "Conta atual",
+                Valor = 100,
+                DataVencimento = mesAtual,
+                Status = StatusDespesa.Paga
+            },
+            new Despesa
+            {
+                Descricao = "Conta anterior",
+                Valor = 50,
+                DataVencimento = mesAnterior,
+                Status = StatusDespesa.Paga
+            });
+        await context.SaveChangesAsync();
+
+        var service = new FinanceiroQueryService(context);
+
+        var result = await service.GetFluxoCaixaMensalAsync(2);
+
+        result.Should().HaveCount(2);
+        result[^1].TotalReceitas.Should().Be(300);
+        result[^1].TotalDespesas.Should().Be(100);
+        result[^1].Saldo.Should().Be(200);
+    }
+
+    [Fact]
     public async Task GetReceitasPorCategoriaAsync_GroupsAndCalculatesPercentual()
     {
         await using var context = await CreateContextAsync();
@@ -80,6 +165,44 @@ public class FinanceiroQueryServiceTests
         result[0].CategoriaNome.Should().Be("Dizimos");
         result[0].Total.Should().Be(300);
         result[0].Percentual.Should().Be(75);
+    }
+
+    [Fact]
+    public async Task GetDespesasPorCategoriaAsync_GroupsAndCalculatesPercentual()
+    {
+        await using var context = await CreateContextAsync();
+        var categoriaA = new CategoriaDespesa { Nome = "Operacional", Ativo = true };
+        var categoriaB = new CategoriaDespesa { Nome = "Manutencao", Ativo = true };
+        context.CategoriasDespesas.AddRange(categoriaA, categoriaB);
+        await context.SaveChangesAsync();
+
+        context.Despesas.AddRange(
+            new Despesa
+            {
+                Descricao = "D1",
+                Valor = 200,
+                DataVencimento = new DateTime(2026, 4, 2),
+                Status = StatusDespesa.Paga,
+                CategoriaDespesaId = categoriaA.Id
+            },
+            new Despesa
+            {
+                Descricao = "D2",
+                Valor = 100,
+                DataVencimento = new DateTime(2026, 4, 3),
+                Status = StatusDespesa.Paga,
+                CategoriaDespesaId = categoriaB.Id
+            });
+        await context.SaveChangesAsync();
+
+        var service = new FinanceiroQueryService(context);
+
+        var result = await service.GetDespesasPorCategoriaAsync(new DateTime(2026, 4, 1), new DateTime(2026, 4, 30));
+
+        result.Should().HaveCount(2);
+        result[0].CategoriaNome.Should().Be("Operacional");
+        result[0].Total.Should().Be(200);
+        result[0].Percentual.Should().BeApproximately(66.666m, 0.01m);
     }
 
     [Fact]
@@ -146,6 +269,48 @@ public class FinanceiroQueryServiceTests
         result[0].TotalReceitas.Should().Be(500);
         result[0].TotalDespesas.Should().Be(150);
         result[0].Saldo.Should().Be(350);
+    }
+
+    [Fact]
+    public async Task GetRelatorioReceitasEDespesasPorCategoriaAsync_ReturnExpectedAggregates()
+    {
+        await using var context = await CreateContextAsync();
+        var categoriaReceita = new CategoriaReceita { Nome = "Ofertas", Ativo = true };
+        var categoriaDespesa = new CategoriaDespesa { Nome = "Operacional", Ativo = true };
+        context.CategoriasReceitas.Add(categoriaReceita);
+        context.CategoriasDespesas.Add(categoriaDespesa);
+        await context.SaveChangesAsync();
+
+        context.Receitas.Add(new Receita
+        {
+            Descricao = "R1",
+            Valor = 250,
+            DataRecebimento = new DateTime(2026, 4, 5),
+            Status = StatusReceita.Recebida,
+            CategoriaReceitaId = categoriaReceita.Id
+        });
+        context.Despesas.Add(new Despesa
+        {
+            Descricao = "D1",
+            Valor = 90,
+            DataVencimento = new DateTime(2026, 4, 6),
+            Status = StatusDespesa.Paga,
+            CategoriaDespesaId = categoriaDespesa.Id
+        });
+        await context.SaveChangesAsync();
+
+        var service = new FinanceiroQueryService(context);
+
+        var receitas = await service.GetRelatorioReceitasPorCategoriaAsync(new DateTime(2026, 4, 1), new DateTime(2026, 4, 30));
+        var despesas = await service.GetRelatorioDespesasPorCategoriaAsync(new DateTime(2026, 4, 1), new DateTime(2026, 4, 30));
+
+        receitas.Should().ContainSingle();
+        receitas[0].CategoriaNome.Should().Be("Ofertas");
+        receitas[0].Valor.Should().Be(250);
+
+        despesas.Should().ContainSingle();
+        despesas[0].CategoriaNome.Should().Be("Operacional");
+        despesas[0].Valor.Should().Be(90);
     }
 
     [Fact]

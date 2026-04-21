@@ -2,11 +2,15 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class KidsSala
+public class KidsSala : ITenantEntity
 {
     [Key]
     [MaxLength(50)]
     public string Id { get; set; } = string.Empty;
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
 
     [Required]
     [MaxLength(120)]

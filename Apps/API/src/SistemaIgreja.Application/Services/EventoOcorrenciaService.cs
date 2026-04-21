@@ -21,15 +21,26 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
     private readonly IEventoOcorrenciaRepository _repository;
     private readonly IEventoRepository _eventoRepository;
     private readonly IEscalaRepository _escalaRepository;
+    private readonly ITenantContext _tenantContext;
 
     public EventoOcorrenciaService(
         IEventoOcorrenciaRepository repository,
         IEventoRepository eventoRepository,
         IEscalaRepository escalaRepository)
+        : this(repository, eventoRepository, escalaRepository, new DefaultTenantContext())
+    {
+    }
+
+    public EventoOcorrenciaService(
+        IEventoOcorrenciaRepository repository,
+        IEventoRepository eventoRepository,
+        IEscalaRepository escalaRepository,
+        ITenantContext tenantContext)
     {
         _repository = repository;
         _eventoRepository = eventoRepository;
         _escalaRepository = escalaRepository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<EventoOcorrenciaDto>> GetByEventoAsync(int eventoId)
@@ -93,6 +104,7 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
 
         var entity = new EventoOcorrencia
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             EventoId = dto.EventoId,
             EventoRecorrenciaId = dto.EventoRecorrenciaId,
             DataHoraInicio = dto.DataHoraInicio,
@@ -191,6 +203,7 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
 
                 var entity = new EventoOcorrencia
                 {
+                    TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                     EventoId = eventoId,
                     EventoRecorrenciaId = recorrencia.Id,
                     DataHoraInicio = dataHoraInicio,

@@ -14,6 +14,7 @@ public sealed class KidsAuthorizationContext
 {
     public required int UsuarioId { get; init; }
     public required int PessoaId { get; init; }
+    public required int TenantId { get; init; }
     public required TipoUsuario TipoUsuario { get; init; }
     public required IReadOnlyCollection<PerfilPessoa> PerfisAtivos { get; init; }
 
@@ -74,6 +75,12 @@ public class KidsAuthorizationService : IKidsAuthorizationService
             throw new UnauthorizedAccessException("Usuário atual não identificado.");
         }
 
+        var tenantId = _currentUserContext.TenantId ?? usuario.TenantId;
+        if (tenantId <= 0 || usuario.TenantId != tenantId)
+        {
+            throw new UnauthorizedAccessException("Contexto do tenant atual é inválido para operações de Kids.");
+        }
+
         var agora = DateTime.UtcNow;
         var perfisAtivos = (await _pessoaPerfilRepository.GetPerfisPorPessoaAsync(usuario.PessoaId))
             .Where(p => p.DataInicio <= agora && (!p.DataFim.HasValue || p.DataFim.Value >= agora))
@@ -85,6 +92,7 @@ public class KidsAuthorizationService : IKidsAuthorizationService
         {
             UsuarioId = usuario.Id,
             PessoaId = usuario.PessoaId,
+            TenantId = tenantId,
             TipoUsuario = usuario.TipoUsuario,
             PerfisAtivos = perfisAtivos
         };

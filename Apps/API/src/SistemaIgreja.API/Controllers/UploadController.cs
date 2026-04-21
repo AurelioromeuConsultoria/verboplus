@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using SistemaIgreja.Application.Services;
+using SistemaIgreja.Domain.Entities;
 
 namespace SistemaIgreja.API.Controllers;
 
@@ -12,6 +14,7 @@ public class UploadController : ControllerBase
     private readonly IWebHostEnvironment _environment;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
+    private readonly ITenantContext _tenantContext;
     private readonly ILogger<UploadController> _logger;
     private const long MaxFileSize = 500 * 1024 * 1024; // 500MB
     private static readonly string[] AllowedImageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
@@ -20,11 +23,13 @@ public class UploadController : ControllerBase
         IWebHostEnvironment environment,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
+        ITenantContext tenantContext,
         ILogger<UploadController> logger)
     {
         _environment = environment;
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
+        _tenantContext = tenantContext;
         _logger = logger;
     }
 
@@ -66,7 +71,7 @@ public class UploadController : ControllerBase
     [HttpPost("sync-image")]
     [Consumes("multipart/form-data")]
     [AllowAnonymous]
-    public async Task<IActionResult> SyncImage(IFormFile file, [FromForm] string? fileName)
+    public async Task<IActionResult> SyncImage(IFormFile file, [FromForm] string? fileName, [FromForm] string? tenantSlug = null)
     {
         var key = Request.Headers["X-Sync-Api-Key"].FirstOrDefault();
         var expectedKey = _configuration["ProductionUploadSync:ApiKey"];
@@ -81,13 +86,14 @@ public class UploadController : ControllerBase
             name = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
 
         var folder = "images";
-        var uploadsPath = Path.Combine(_environment.ContentRootPath, "uploads", folder);
+        var resolvedTenantSlug = ResolveTenantSlug(tenantSlug);
+        var uploadsPath = BuildUploadsPath(resolvedTenantSlug, folder);
         Directory.CreateDirectory(uploadsPath);
         var filePath = Path.Combine(uploadsPath, name);
         using (var stream = new FileStream(filePath, FileMode.Create))
             await file.CopyToAsync(stream);
 
-        var relativePath = $"/uploads/{folder}/{name}";
+        var relativePath = BuildRelativePath(resolvedTenantSlug, folder, name);
         return Ok(new { url = relativePath, path = relativePath, fileName = name });
     }
 
@@ -127,13 +133,14 @@ public class UploadController : ControllerBase
                 return BadRequest(new { message = "Imagem muito grande (máx. 5MB)" });
 
             var folder = "images";
-            var uploadsPath = Path.Combine(_environment.ContentRootPath, "uploads", folder);
+            var resolvedTenantSlug = ResolveTenantSlug();
+            var uploadsPath = BuildUploadsPath(resolvedTenantSlug, folder);
             Directory.CreateDirectory(uploadsPath);
             var fileName = $"{Guid.NewGuid()}{extension}";
             var filePath = Path.Combine(uploadsPath, fileName);
             await System.IO.File.WriteAllBytesAsync(filePath, bytes);
 
-            var relativePath = $"/uploads/{folder}/{fileName}";
+            var relativePath = BuildRelativePath(resolvedTenantSlug, folder, fileName);
 
             // Sync para produção (server-to-server), para a imagem aparecer no portal
             var syncBaseUrl = _configuration["ProductionUploadSync:BaseUrl"]?.Trim();
@@ -147,6 +154,7 @@ public class UploadController : ControllerBase
                     using var content = new MultipartFormDataContent();
                     content.Add(new ByteArrayContent(bytes), "file", fileName);
                     content.Add(new StringContent(fileName), "fileName");
+                    content.Add(new StringContent(resolvedTenantSlug), "tenantSlug");
                     var syncRequest = new HttpRequestMessage(HttpMethod.Post, $"{syncBaseUrl.TrimEnd('/')}/api/admin/upload/sync-image");
                     syncRequest.Headers.Add("X-Sync-Api-Key", syncApiKey);
                     syncRequest.Content = content;
@@ -218,7 +226,8 @@ public class UploadController : ControllerBase
 
         try
         {
-            var uploadsPath = Path.Combine(_environment.ContentRootPath, "uploads", folder);
+            var resolvedTenantSlug = ResolveTenantSlug();
+            var uploadsPath = BuildUploadsPath(resolvedTenantSlug, folder);
             Directory.CreateDirectory(uploadsPath);
 
             var fileName = $"{Guid.NewGuid()}{extension}";
@@ -229,10 +238,9 @@ public class UploadController : ControllerBase
                 await file.CopyToAsync(stream);
             }
 
-            await TentarSincronizarImagemParaProducaoAsync(folder, filePath, fileName);
+            await TentarSincronizarImagemParaProducaoAsync(resolvedTenantSlug, folder, filePath, fileName);
 
-            // Retornar o caminho relativo que será usado para servir o arquivo
-            var relativePath = $"/uploads/{folder}/{fileName}";
+            var relativePath = BuildRelativePath(resolvedTenantSlug, folder, fileName);
             
             return Ok(new { 
                 url = relativePath,
@@ -247,7 +255,7 @@ public class UploadController : ControllerBase
         }
     }
 
-    private async Task TentarSincronizarImagemParaProducaoAsync(string folder, string filePath, string fileName)
+    private async Task TentarSincronizarImagemParaProducaoAsync(string tenantSlug, string folder, string filePath, string fileName)
     {
         if (!string.Equals(folder, "images", StringComparison.OrdinalIgnoreCase))
             return;
@@ -266,6 +274,7 @@ public class UploadController : ControllerBase
             using var content = new MultipartFormDataContent();
             content.Add(new ByteArrayContent(bytes), "file", fileName);
             content.Add(new StringContent(fileName), "fileName");
+            content.Add(new StringContent(tenantSlug), "tenantSlug");
 
             var syncRequest = new HttpRequestMessage(HttpMethod.Post, $"{syncBaseUrl.TrimEnd('/')}/api/admin/upload/sync-image");
             syncRequest.Headers.Add("X-Sync-Api-Key", syncApiKey);
@@ -282,6 +291,33 @@ public class UploadController : ControllerBase
             _logger.LogWarning(ex, "Falha ao sincronizar imagem enviada para a API de produção.");
         }
     }
+
+    private string ResolveTenantSlug(string? explicitTenantSlug = null)
+    {
+        var candidate = string.IsNullOrWhiteSpace(explicitTenantSlug)
+            ? _tenantContext.TenantSlug
+            : explicitTenantSlug;
+
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return Tenant.InitialTenantSlug;
+        }
+
+        var sanitized = candidate.Trim().ToLowerInvariant();
+        foreach (var invalid in Path.GetInvalidFileNameChars())
+        {
+            sanitized = sanitized.Replace(invalid, '-');
+        }
+
+        sanitized = sanitized.Replace("/", "-").Replace("\\", "-");
+        return string.IsNullOrWhiteSpace(sanitized) ? Tenant.InitialTenantSlug : sanitized;
+    }
+
+    private string BuildUploadsPath(string tenantSlug, string folder)
+        => Path.Combine(_environment.ContentRootPath, "uploads", "tenants", tenantSlug, folder);
+
+    private static string BuildRelativePath(string tenantSlug, string folder, string fileName)
+        => $"/uploads/tenants/{tenantSlug}/{folder}/{fileName}";
 }
 
 public class UploadImageFromUrlRequest

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class ResponsavelCriancaRepository : IResponsavelCriancaRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public ResponsavelCriancaRepository(SistemaIgrejaDbContext context)
+    public ResponsavelCriancaRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public ResponsavelCriancaRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<ResponsavelCrianca>> GetByCriancaIdAsync(int criancaPessoaId)
@@ -88,6 +96,7 @@ public class ResponsavelCriancaRepository : IResponsavelCriancaRepository
 
     public async Task<ResponsavelCrianca> CreateAsync(ResponsavelCrianca responsavel)
     {
+        responsavel.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<ResponsavelCrianca>().Add(responsavel);
         await _context.SaveChangesAsync();
         return responsavel;
@@ -95,6 +104,7 @@ public class ResponsavelCriancaRepository : IResponsavelCriancaRepository
 
     public Task<ResponsavelCrianca> CreateWithoutSaveAsync(ResponsavelCrianca responsavel)
     {
+        responsavel.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<ResponsavelCrianca>().Add(responsavel);
         return Task.FromResult(responsavel);
     }

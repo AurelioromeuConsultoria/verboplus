@@ -18,11 +18,18 @@ public class NoticiaService : INoticiaService
 {
     private readonly INoticiaRepository _repository;
     private readonly ICategoriaNoticiaRepository _categoriaRepository;
+    private readonly ITenantContext _tenantContext;
 
     public NoticiaService(INoticiaRepository repository, ICategoriaNoticiaRepository categoriaRepository)
+        : this(repository, categoriaRepository, new DefaultTenantContext())
+    {
+    }
+
+    public NoticiaService(INoticiaRepository repository, ICategoriaNoticiaRepository categoriaRepository, ITenantContext tenantContext)
     {
         _repository = repository;
         _categoriaRepository = categoriaRepository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<NoticiaDto>> GetAllAsync()
@@ -51,6 +58,7 @@ public class NoticiaService : INoticiaService
 
         var entity = new Noticia
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             Titulo = dto.Titulo,
             Descricao = dto.Descricao,
             Texto = dto.Texto,
@@ -108,6 +116,5 @@ public class NoticiaService : INoticiaService
         };
     }
 }
-
 
 

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using SistemaIgreja.API.Controllers;
 using SistemaIgreja.Application.DTOs;
+using SistemaIgreja.Application.DTOs.Visitantes;
 using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 
@@ -64,6 +65,38 @@ public class VisitantesControllerTests
     }
 
     [Fact]
+    public async Task GetPaged_ReturnsOk_WithPagedResult()
+    {
+        SetUser((int)TipoUsuario.Admin);
+        var query = new VisitantePagedQueryDto { Page = 1, PageSize = 10, Nome = "mar" };
+        _serviceMock.Setup(s => s.GetPagedAsync(query)).ReturnsAsync(new PagedResultDto<VisitanteDto>
+        {
+            Items = [new VisitanteDto { Id = 1, Nome = "Marco", Telefone = "123", DataVisita = DateTime.UtcNow }],
+            Total = 1,
+            Page = 1,
+            PageSize = 10
+        });
+
+        var result = await _controller.GetPaged(query);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetByPessoa_ReturnsOk_WithItems()
+    {
+        SetUser((int)TipoUsuario.Admin);
+        _serviceMock.Setup(s => s.GetVisitantesPorPessoaAsync(7)).ReturnsAsync(
+        [
+            new VisitanteDto { Id = 1, Nome = "Marco", Telefone = "123", DataVisita = DateTime.UtcNow }
+        ]);
+
+        var result = await _controller.GetByPessoa(7);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
     public async Task Create_ReturnsCreated_WhenOk()
     {
         SetUser((int)TipoUsuario.Admin);
@@ -99,6 +132,50 @@ public class VisitantesControllerTests
         var result = await _controller.Update(42, dto);
 
         result.Result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task Update_ReturnsOk_WhenVisitanteExists()
+    {
+        SetUser((int)TipoUsuario.Admin);
+        var dto = new AtualizarVisitanteDto { DataVisita = DateTime.UtcNow, Observacoes = "Atualizado" };
+        _serviceMock.Setup(s => s.UpdateAsync(42, dto)).ReturnsAsync(new VisitanteDto
+        {
+            Id = 42,
+            Nome = "Marco",
+            Telefone = "123",
+            DataVisita = dto.DataVisita
+        });
+
+        var result = await _controller.Update(42, dto);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task RegerarMensagens_ReturnsOk_WhenSuccessful()
+    {
+        SetUser((int)TipoUsuario.Admin);
+        _mensagemServiceMock.Setup(s => s.RegerarMensagensParaVisitanteAsync(5)).ReturnsAsync(new RegerarMensagensResultDto
+        {
+            MensagensCanceladas = 2,
+            MensagensCriadas = 3
+        });
+
+        var result = await _controller.RegerarMensagens(5);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task RegerarMensagens_ReturnsForbidden_WhenUserIsNotAdmin()
+    {
+        SetUser((int)TipoUsuario.Portal);
+
+        var result = await _controller.RegerarMensagens(5);
+
+        result.Result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(403);
     }
 
     [Fact]

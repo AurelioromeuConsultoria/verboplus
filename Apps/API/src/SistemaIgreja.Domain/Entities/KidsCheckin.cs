@@ -2,9 +2,13 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class KidsCheckin
+public class KidsCheckin : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
 
     [Required]
     public int CriancaPessoaId { get; set; }
@@ -60,4 +64,3 @@ public class KidsCheckin
     [MaxLength(500)]
     public string? Observacoes { get; set; }
 }
-

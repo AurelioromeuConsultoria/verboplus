@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class InscricaoEventoRepository : IInscricaoEventoRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
     public InscricaoEventoRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
+    }
+
+    public InscricaoEventoRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<InscricaoEvento>> GetAllAsync()
@@ -47,6 +55,17 @@ public class InscricaoEventoRepository : IInscricaoEventoRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<InscricaoEvento>> GetByEmailAsync(string email)
+    {
+        var normalized = email.Trim().ToLower();
+
+        return await _context.Set<InscricaoEvento>()
+            .Include(i => i.Evento)
+            .Where(i => i.Email != null && i.Email.ToLower() == normalized)
+            .OrderByDescending(i => i.DataInscricao)
+            .ToListAsync();
+    }
+
     public async Task<int> ContarInscricoesPorEventoAsync(int eventoId)
     {
         return await _context.Set<InscricaoEvento>()
@@ -67,6 +86,7 @@ public class InscricaoEventoRepository : IInscricaoEventoRepository
 
     public async Task<InscricaoEvento> CreateAsync(InscricaoEvento inscricaoEvento)
     {
+        inscricaoEvento.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<InscricaoEvento>().Add(inscricaoEvento);
         await _context.SaveChangesAsync();
         return inscricaoEvento;
@@ -89,8 +109,6 @@ public class InscricaoEventoRepository : IInscricaoEventoRepository
         }
     }
 }
-
-
 
 
 

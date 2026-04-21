@@ -2,9 +2,13 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class PatrimonioMovimentacao
+public class PatrimonioMovimentacao : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public int PatrimonioItemId { get; set; }
     public virtual PatrimonioItem? PatrimonioItem { get; set; }

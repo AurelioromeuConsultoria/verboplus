@@ -9,9 +9,11 @@ public interface IComunicacaoEntregaService
 {
     Task<PagedResultDto<ComunicacaoEntregaResumoDto>> GetPagedAsync(ComunicacaoEntregaPagedQueryDto query);
     Task<IReadOnlyList<ComunicacaoEntregaResumoDto>> GetByCampanhaIdAsync(int campanhaId);
+    Task<ComunicacaoEntregaResumoDto?> GetByIdAsync(int entregaId);
     Task<IReadOnlyList<ComunicacaoEntregaResumoDto>> ReservarPendentesAsync(int limit);
     Task MarcarComoEnviadaAsync(int entregaId);
     Task MarcarComoFalhaAsync(int entregaId, string erro);
+    Task<ComunicacaoEntregaResumoDto> PrepararReprocessamentoAsync(int entregaId);
 }
 
 public class ComunicacaoEntregaService : IComunicacaoEntregaService
@@ -49,6 +51,12 @@ public class ComunicacaoEntregaService : IComunicacaoEntregaService
     {
         var items = await _repository.GetByCampanhaIdAsync(campanhaId);
         return items.Select(MapResumo).ToList();
+    }
+
+    public async Task<ComunicacaoEntregaResumoDto?> GetByIdAsync(int entregaId)
+    {
+        var item = await _repository.GetByIdAsync(entregaId);
+        return item == null ? null : MapResumo(item);
     }
 
     public async Task<IReadOnlyList<ComunicacaoEntregaResumoDto>> ReservarPendentesAsync(int limit)
@@ -105,6 +113,30 @@ public class ComunicacaoEntregaService : IComunicacaoEntregaService
         });
     }
 
+    public async Task<ComunicacaoEntregaResumoDto> PrepararReprocessamentoAsync(int entregaId)
+    {
+        var entrega = await _repository.GetByIdAsync(entregaId) ?? throw new ArgumentException("Entrega não encontrada");
+        if (!PodeReprocessar(entrega))
+        {
+            throw new InvalidOperationException("Esta entrega não é elegível para reprocessamento.");
+        }
+
+        entrega.Status = StatusComunicacaoEntrega.Pendente;
+        entrega.Erro = null;
+        entrega.ProcessadoEm = null;
+        entrega.EntregueEm = null;
+        await _repository.UpdateAsync(entrega);
+
+        await _auditLogService.RecordAsync("ComunicacaoEntrega", entrega.Id.ToString(), "ReprocessarEntrega", new
+        {
+            entrega.Canal,
+            entrega.DestinoResolvido,
+            TentativasAnteriores = entrega.Tentativas
+        });
+
+        return MapResumo(entrega);
+    }
+
     private static ComunicacaoEntregaResumoDto MapResumo(ComunicacaoEntrega entrega)
     {
         return new ComunicacaoEntregaResumoDto
@@ -117,7 +149,25 @@ public class ComunicacaoEntregaService : IComunicacaoEntregaService
             ProcessadoEm = entrega.ProcessadoEm,
             EntregueEm = entrega.EntregueEm,
             Erro = entrega.Erro,
-            MidiaUrl = entrega.MidiaUrl
+            MidiaUrl = entrega.MidiaUrl,
+            PodeReprocessar = PodeReprocessar(entrega)
         };
+    }
+
+    private static bool PodeReprocessar(ComunicacaoEntrega entrega)
+    {
+        if (entrega.Status != StatusComunicacaoEntrega.Falhou)
+        {
+            return false;
+        }
+
+        var erro = entrega.Erro ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(erro))
+        {
+            return true;
+        }
+
+        return !erro.StartsWith("Entrega bloqueada:", StringComparison.OrdinalIgnoreCase) &&
+               !erro.StartsWith("Entrega ignorada:", StringComparison.OrdinalIgnoreCase);
     }
 }

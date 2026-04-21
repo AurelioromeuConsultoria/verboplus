@@ -29,4 +29,24 @@ public class ComunicacaoEntregasController : ControllerBase
         var processadas = await _processamentoService.ProcessarPendentesAsync(limit, cancellationToken);
         return Ok(new { processadas });
     }
+
+    [HttpPost("reprocessar/{id:int}")]
+    public async Task<ActionResult<ComunicacaoEntregaResumoDto>> Reprocessar(int id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _service.PrepararReprocessamentoAsync(id);
+            await _processamentoService.ProcessarEntregaAsync(id, cancellationToken);
+            var item = await _service.GetByIdAsync(id);
+            return item == null ? NotFound() : Ok(item);
+        }
+        catch (ArgumentException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
 }

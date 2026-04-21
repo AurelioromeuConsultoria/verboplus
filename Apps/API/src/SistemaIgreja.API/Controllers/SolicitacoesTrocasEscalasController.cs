@@ -15,11 +15,13 @@ public class SolicitacoesTrocasEscalasController : ControllerBase
 {
     private readonly ISolicitacaoTrocaEscalaService _service;
     private readonly IUsuarioRepository _usuarioRepository;
+    private readonly ILogger<SolicitacoesTrocasEscalasController> _logger;
 
-    public SolicitacoesTrocasEscalasController(ISolicitacaoTrocaEscalaService service, IUsuarioRepository usuarioRepository)
+    public SolicitacoesTrocasEscalasController(ISolicitacaoTrocaEscalaService service, IUsuarioRepository usuarioRepository, ILogger<SolicitacoesTrocasEscalasController> logger)
     {
         _service = service;
         _usuarioRepository = usuarioRepository;
+        _logger = logger;
     }
 
     [HttpGet("escala/{escalaId}")]
@@ -51,9 +53,14 @@ public class SolicitacoesTrocasEscalasController : ControllerBase
     public async Task<ActionResult<IEnumerable<SolicitacaoTrocaEscalaDto>>> GetMinhas()
     {
         var pessoaId = await GetUsuarioPessoaIdAsync();
-        if (!pessoaId.HasValue) return Unauthorized();
+        if (!pessoaId.HasValue)
+        {
+            _logger.LogWarning("SolicitacoesTrocasEscalas/minhas negado: usuario {UsuarioId} sem pessoa vinculada.", GetUsuarioId());
+            return Unauthorized();
+        }
 
         var items = await _service.GetMinhasAsync(pessoaId.Value);
+        _logger.LogInformation("SolicitacoesTrocasEscalas/minhas carregado para usuario {UsuarioId}, pessoa {PessoaId}. Total {Total}.", GetUsuarioId(), pessoaId.Value, items.Count());
         return Ok(items);
     }
 
@@ -63,14 +70,17 @@ public class SolicitacoesTrocasEscalasController : ControllerBase
         try
         {
             var created = await _service.CreateAsync(escalaId, escalaItemId, dto, GetUsuarioId(), IsAdminUser(), await GetUsuarioPessoaIdAsync());
+            _logger.LogInformation("Solicitacao de troca criada. Usuario {UsuarioId}, escala {EscalaId}, item {EscalaItemId}, solicitacao {SolicitacaoId}.", GetUsuarioId(), escalaId, escalaItemId, created.Id);
             return Ok(created);
         }
         catch (UnauthorizedAccessException ex)
         {
+            _logger.LogWarning(ex, "Solicitacao de troca negada para usuario {UsuarioId}, escala {EscalaId}, item {EscalaItemId}.", GetUsuarioId(), escalaId, escalaItemId);
             return StatusCode(403, ex.Message);
         }
         catch (ArgumentException ex)
         {
+            _logger.LogWarning(ex, "Solicitacao de troca invalida para usuario {UsuarioId}, escala {EscalaId}, item {EscalaItemId}.", GetUsuarioId(), escalaId, escalaItemId);
             return BadRequest(ex.Message);
         }
     }

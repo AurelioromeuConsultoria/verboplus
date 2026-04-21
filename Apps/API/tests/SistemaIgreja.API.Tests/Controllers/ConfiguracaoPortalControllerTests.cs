@@ -37,4 +37,29 @@ public class ConfiguracaoPortalControllerTests
 
         result.Result.Should().BeOfType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>();
     }
+
+    [Fact]
+    public async Task Get_ReturnsPayloadFromService()
+    {
+        var dto = new ConfiguracaoPortalDto { TempoTransicaoCarrossel = 7 };
+        _serviceMock.Setup(s => s.GetAsync()).ReturnsAsync(dto);
+
+        var result = await _controller.Get();
+
+        var ok = result.Result.Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>().Subject;
+        ok.Value.Should().Be(dto);
+    }
+
+    [Fact]
+    public async Task Update_ReturnsOk_WhenTempoIsValid()
+    {
+        var dto = new AtualizarConfiguracaoPortalDto { TempoTransicaoCarrossel = 8 };
+        var updated = new ConfiguracaoPortalDto { TempoTransicaoCarrossel = 8 };
+        _serviceMock.Setup(s => s.UpdateAsync(dto)).ReturnsAsync(updated);
+
+        var result = await _controller.Update(dto);
+
+        var ok = result.Result.Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>().Subject;
+        ok.Value.Should().Be(updated);
+    }
 }

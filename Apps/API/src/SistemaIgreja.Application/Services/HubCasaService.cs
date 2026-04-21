@@ -17,11 +17,18 @@ public class HubCasaService : IHubCasaService
 {
     private readonly IHubCasaRepository _repository;
     private readonly IUsuarioRepository _usuarioRepository;
+    private readonly ITenantContext _tenantContext;
 
     public HubCasaService(IHubCasaRepository repository, IUsuarioRepository usuarioRepository)
+        : this(repository, usuarioRepository, new DefaultTenantContext())
+    {
+    }
+
+    public HubCasaService(IHubCasaRepository repository, IUsuarioRepository usuarioRepository, ITenantContext tenantContext)
     {
         _repository = repository;
         _usuarioRepository = usuarioRepository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<IEnumerable<HubCasaDto>> GetAllAsync()
@@ -42,6 +49,7 @@ public class HubCasaService : IHubCasaService
 
         var casa = new HubCasa
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             Nome = dto.Nome,
             AbertoPorId = dto.AbertoPorId,
             LiderId = dto.LiderId,

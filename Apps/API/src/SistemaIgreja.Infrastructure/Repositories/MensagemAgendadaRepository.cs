@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.DTOs.MensagensAgendadas;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -9,10 +10,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class MensagemAgendadaRepository : IMensagemAgendadaRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public MensagemAgendadaRepository(SistemaIgrejaDbContext context)
+    public MensagemAgendadaRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public MensagemAgendadaRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<MensagemAgendada>> GetAllAsync()
@@ -114,6 +122,7 @@ public class MensagemAgendadaRepository : IMensagemAgendadaRepository
 
     public async Task<MensagemAgendada> CreateAsync(MensagemAgendada mensagem)
     {
+        mensagem.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.MensagensAgendadas.Add(mensagem);
         await _context.SaveChangesAsync();
         return mensagem;
@@ -153,6 +162,7 @@ public class MensagemAgendadaRepository : IMensagemAgendadaRepository
     {
         var agora = DateTime.Now;
         var statusAgendada = (int)StatusMensagem.Agendada;
+        var tenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         List<int> ids = new();
 
         var strategy = _context.Database.CreateExecutionStrategy();
@@ -165,7 +175,8 @@ public class MensagemAgendadaRepository : IMensagemAgendadaRepository
                 {
                     ids = await _context.MensagensAgendadas
                         .FromSqlRaw(
-                            "SELECT * FROM \"MensagensAgendadas\" WHERE \"Status\" = {0} AND \"DataEnvio\" <= {1} ORDER BY \"DataEnvio\" FOR UPDATE SKIP LOCKED",
+                            "SELECT * FROM \"MensagensAgendadas\" WHERE \"TenantId\" = {0} AND \"Status\" = {1} AND \"DataEnvio\" <= {2} ORDER BY \"DataEnvio\" FOR UPDATE SKIP LOCKED",
+                            tenantId,
                             statusAgendada,
                             agora)
                         .Take(limit)
@@ -176,7 +187,8 @@ public class MensagemAgendadaRepository : IMensagemAgendadaRepository
                 {
                     ids = await _context.MensagensAgendadas
                         .FromSqlRaw(
-                            "SELECT * FROM MensagensAgendadas WITH (UPDLOCK, ROWLOCK) WHERE Status = {0} AND DataEnvio <= {1} ORDER BY DataEnvio",
+                            "SELECT * FROM MensagensAgendadas WITH (UPDLOCK, ROWLOCK) WHERE TenantId = {0} AND Status = {1} AND DataEnvio <= {2} ORDER BY DataEnvio",
+                            tenantId,
                             statusAgendada,
                             agora)
                         .Take(limit)
@@ -252,4 +264,3 @@ public class MensagemAgendadaRepository : IMensagemAgendadaRepository
                 .SetProperty(m => m.LogErro, motivoFinal));
     }
 }
-

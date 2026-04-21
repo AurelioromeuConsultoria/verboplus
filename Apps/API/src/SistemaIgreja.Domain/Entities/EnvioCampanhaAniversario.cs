@@ -2,9 +2,12 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class EnvioCampanhaAniversario
+public class EnvioCampanhaAniversario : ITenantEntity
 {
     public int Id { get; set; }
+
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public int PessoaId { get; set; }
     public virtual Pessoa Pessoa { get; set; } = null!;

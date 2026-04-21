@@ -2,9 +2,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Configuration;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Domain.Entities;
+using SistemaIgreja.Infrastructure.Data;
 
 namespace SistemaIgreja.Infrastructure.Services;
 
@@ -43,12 +46,12 @@ public class MessageSchedulerService : BackgroundService
             var startedAtUtc = DateTime.UtcNow;
             try
             {
-                await ProcessarMensagensAgendadas();
+                var processedTenants = await ProcessarMensagensAgendadas(stoppingToken);
                 _executionMonitor.RecordSuccess(
                     SchedulerName,
                     startedAtUtc,
                     DateTime.UtcNow,
-                    $"Intervalo base: {_settings.BaseIntervalMinutes} min; batch: {_settings.BatchSizeReserva}");
+                    $"Intervalo base: {_settings.BaseIntervalMinutes} min; batch: {_settings.BatchSizeReserva}; tenants: {processedTenants}");
             }
             catch (Exception ex)
             {
@@ -102,48 +105,81 @@ public class MessageSchedulerService : BackgroundService
         return baseInterval.Add(TimeSpan.FromSeconds(jitterSec));
     }
 
-    private async Task ProcessarMensagensAgendadas()
+    private async Task<int> ProcessarMensagensAgendadas(CancellationToken stoppingToken)
+    {
+        var processedTenants = 0;
+        foreach (var tenant in await GetActiveTenantsAsync(stoppingToken))
+        {
+            if (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+
+            using var scope = _serviceProvider.CreateScope();
+            scope.ServiceProvider.GetService<TenantScopeOverride>()?.SetTenant(tenant.Id, tenant.Slug);
+            var mensagemService = scope.ServiceProvider.GetRequiredService<IMensagemAgendadaService>();
+
+            var reservadas = await mensagemService.ReservarProntasParaEnvioAsync(_settings.BatchSizeReserva);
+            var lista = reservadas.ToList();
+
+            foreach (var mensagem in lista)
+            {
+                try
+                {
+                    _logger.LogInformation(
+                        "Processando mensagem ID {MensagemId} do tenant {TenantSlug} para visitante {VisitanteNome} ({Telefone})",
+                        mensagem.Id,
+                        tenant.Slug,
+                        mensagem.NomeVisitante,
+                        mensagem.TelefoneVisitante);
+
+                    await EnviarViaEvolutionApi(mensagem);
+
+                    await mensagemService.MarcarComoEnviadaAsync(mensagem.Id);
+
+                    _logger.LogInformation(
+                        "Mensagem ID {MensagemId} do tenant {TenantSlug} enviada com sucesso para {Telefone}",
+                        mensagem.Id,
+                        tenant.Slug,
+                        mensagem.TelefoneVisitante);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Erro ao enviar mensagem ID {MensagemId} do tenant {TenantSlug} para {Telefone}",
+                        mensagem.Id,
+                        tenant.Slug,
+                        mensagem.TelefoneVisitante);
+
+                    await mensagemService.MarcarComoErroAsync(mensagem.Id, ex.Message);
+                }
+            }
+
+            if (lista.Count > 0)
+            {
+                _logger.LogInformation("Tenant {TenantSlug}: processadas {Count} mensagens reservadas", tenant.Slug, lista.Count);
+            }
+
+            processedTenants++;
+        }
+
+        return processedTenants;
+    }
+
+    private async Task<IReadOnlyList<Tenant>> GetActiveTenantsAsync(CancellationToken stoppingToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var mensagemService = scope.ServiceProvider.GetRequiredService<IMensagemAgendadaService>();
-
-        var reservadas = await mensagemService.ReservarProntasParaEnvioAsync(_settings.BatchSizeReserva);
-        var lista = reservadas.ToList();
-
-        foreach (var mensagem in lista)
+        var dbContext = scope.ServiceProvider.GetService<SistemaIgrejaDbContext>();
+        if (dbContext == null)
         {
-            try
-            {
-                _logger.LogInformation(
-                    "Processando mensagem ID {MensagemId} para visitante {VisitanteNome} ({Telefone})",
-                    mensagem.Id,
-                    mensagem.NomeVisitante,
-                    mensagem.TelefoneVisitante);
-
-                await EnviarViaEvolutionApi(mensagem);
-
-                await mensagemService.MarcarComoEnviadaAsync(mensagem.Id);
-
-                _logger.LogInformation(
-                    "Mensagem ID {MensagemId} enviada com sucesso para {Telefone}",
-                    mensagem.Id,
-                    mensagem.TelefoneVisitante);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex,
-                    "Erro ao enviar mensagem ID {MensagemId} para {Telefone}",
-                    mensagem.Id,
-                    mensagem.TelefoneVisitante);
-
-                await mensagemService.MarcarComoErroAsync(mensagem.Id, ex.Message);
-            }
+            return [new Tenant { Id = Tenant.InitialTenantId, Nome = Tenant.InitialTenantName, Slug = Tenant.InitialTenantSlug, Ativo = true }];
         }
 
-        if (lista.Count > 0)
-        {
-            _logger.LogInformation("Processadas {Count} mensagens reservadas", lista.Count);
-        }
+        return await dbContext.Tenants
+            .AsNoTracking()
+            .Where(t => t.Ativo)
+            .OrderBy(t => t.Id)
+            .ToListAsync(stoppingToken);
     }
 
     private async Task EnviarViaEvolutionApi(Application.DTOs.MensagemAgendadaDto mensagem)

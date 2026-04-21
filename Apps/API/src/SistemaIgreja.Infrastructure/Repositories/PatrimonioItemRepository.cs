@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class PatrimonioItemRepository : IPatrimonioItemRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public PatrimonioItemRepository(SistemaIgrejaDbContext context)
+    public PatrimonioItemRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public PatrimonioItemRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<PatrimonioItem>> GetAllAsync()
@@ -35,6 +43,7 @@ public class PatrimonioItemRepository : IPatrimonioItemRepository
 
     public async Task<PatrimonioItem> CreateAsync(PatrimonioItem item)
     {
+        item.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<PatrimonioItem>().Add(item);
         await _context.SaveChangesAsync();
         return item;

@@ -14,6 +14,7 @@ public interface IPessoaService
     Task<Pessoa360Dto?> Get360Async(int id);
     Task<PessoaDto> CreateAsync(CriarPessoaDto dto);
     Task<PessoaDto> UpdateAsync(int id, AtualizarPessoaDto dto);
+    Task<PessoaDto> UpdateMinhaPessoaAsync(int id, AtualizarMinhaPessoaDto dto);
     Task DeleteAsync(int id);
     Task<IEnumerable<AniversarianteDto>> GetProximosAniversariantesAsync(int dias, int limite);
     Task<IEnumerable<AniversarianteDto>> GetAniversariantesPorMesAsync(int mes, int limite);
@@ -26,6 +27,7 @@ public class PessoaService : IPessoaService
     private readonly IVisitanteService _visitanteService;
     private readonly IVoluntarioService _voluntarioService;
     private readonly IUsuarioService _usuarioService;
+    private readonly ITenantContext _tenantContext;
     private readonly ILogger<PessoaService> _logger;
 
     public PessoaService(
@@ -35,12 +37,25 @@ public class PessoaService : IPessoaService
         IVoluntarioService voluntarioService,
         IUsuarioService usuarioService,
         ILogger<PessoaService> logger)
+        : this(repository, perfilRepository, visitanteService, voluntarioService, usuarioService, new DefaultTenantContext(), logger)
+    {
+    }
+
+    public PessoaService(
+        IPessoaRepository repository,
+        IPessoaPerfilRepository perfilRepository,
+        IVisitanteService visitanteService,
+        IVoluntarioService voluntarioService,
+        IUsuarioService usuarioService,
+        ITenantContext tenantContext,
+        ILogger<PessoaService> logger)
     {
         _repository = repository;
         _perfilRepository = perfilRepository;
         _visitanteService = visitanteService;
         _voluntarioService = voluntarioService;
         _usuarioService = usuarioService;
+        _tenantContext = tenantContext;
         _logger = logger;
     }
 
@@ -157,6 +172,7 @@ public class PessoaService : IPessoaService
 
         var pessoa = new Pessoa
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             Nome = dto.Nome,
             Email = dto.Email,
             Telefone = dto.Telefone,
@@ -196,6 +212,7 @@ public class PessoaService : IPessoaService
         pessoa.DataNascimento = dto.DataNascimento;
         pessoa.TipoPessoa = dto.TipoPessoa;
         pessoa.Ativo = dto.Ativo;
+        pessoa.TenantId = _tenantContext.TenantId ?? pessoa.TenantId;
 
         var updated = await _repository.UpdateAsync(pessoa);
         _logger.LogInformation(
@@ -203,6 +220,34 @@ public class PessoaService : IPessoaService
             updated.Id,
             updated.TipoPessoa,
             updated.Ativo);
+        var perfis = await _perfilRepository.GetPerfisPorPessoaAsync(updated.Id);
+        return MapToDto(updated, perfis);
+    }
+
+    public async Task<PessoaDto> UpdateMinhaPessoaAsync(int id, AtualizarMinhaPessoaDto dto)
+    {
+        var pessoa = await _repository.GetByIdAsync(id);
+        if (pessoa == null) throw new ArgumentException("Pessoa não encontrada");
+
+        if (!string.IsNullOrEmpty(dto.Email) && dto.Email != pessoa.Email)
+        {
+            var existe = await _repository.GetByEmailAsync(dto.Email);
+            if (existe != null && existe.Id != id) throw new ArgumentException("Email já cadastrado para outra pessoa");
+        }
+
+        pessoa.Nome = dto.Nome;
+        pessoa.Email = dto.Email;
+        pessoa.Telefone = dto.Telefone;
+        pessoa.WhatsApp = dto.WhatsApp;
+        pessoa.DataNascimento = dto.DataNascimento;
+        pessoa.TipoPessoa = ResolveTipoPessoa(dto.DataNascimento, pessoa.TipoPessoa);
+        pessoa.TenantId = _tenantContext.TenantId ?? pessoa.TenantId;
+
+        var updated = await _repository.UpdateAsync(pessoa);
+        _logger.LogInformation(
+            "Pessoa atualizou o proprio cadastro. PessoaId={PessoaId} TipoPessoa={TipoPessoa}",
+            updated.Id,
+            updated.TipoPessoa);
         var perfis = await _perfilRepository.GetPerfisPorPessoaAsync(updated.Id);
         return MapToDto(updated, perfis);
     }
@@ -347,5 +392,21 @@ public class PessoaService : IPessoaService
 
         return proximo;
     }
-}
 
+    private static TipoPessoa ResolveTipoPessoa(DateTime? dataNascimento, TipoPessoa atual)
+    {
+        if (!dataNascimento.HasValue)
+        {
+            return atual;
+        }
+
+        var hoje = DateTime.Today;
+        var idade = hoje.Year - dataNascimento.Value.Year;
+        if (dataNascimento.Value.Date > hoje.AddYears(-idade))
+        {
+            idade--;
+        }
+
+        return idade < 18 ? TipoPessoa.Crianca : TipoPessoa.Adulto;
+    }
+}

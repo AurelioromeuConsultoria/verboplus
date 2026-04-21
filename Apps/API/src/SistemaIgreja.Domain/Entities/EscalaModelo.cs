@@ -3,9 +3,13 @@ using System.ComponentModel.DataAnnotations;
 namespace SistemaIgreja.Domain.Entities;
 
 /// <summary>Modelo de escala: quantas pessoas (por cargo) uma equipe precisa para um evento.</summary>
-public class EscalaModelo
+public class EscalaModelo : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
 
     /// <summary>Null = modelo padrão da equipe para qualquer evento.</summary>
     public int? EventoId { get; set; }

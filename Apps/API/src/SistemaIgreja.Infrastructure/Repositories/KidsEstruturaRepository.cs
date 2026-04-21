@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class KidsEstruturaRepository : IKidsEstruturaRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public KidsEstruturaRepository(SistemaIgrejaDbContext context)
+    public KidsEstruturaRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public KidsEstruturaRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<KidsSala>> GetSalasAsync(bool incluirInativas = false)
@@ -34,6 +42,7 @@ public class KidsEstruturaRepository : IKidsEstruturaRepository
 
     public async Task<KidsSala> CreateSalaAsync(KidsSala sala)
     {
+        sala.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.KidsSalas.Add(sala);
         await _context.SaveChangesAsync();
         return sala;
@@ -77,6 +86,7 @@ public class KidsEstruturaRepository : IKidsEstruturaRepository
 
     public async Task<KidsTurma> CreateTurmaAsync(KidsTurma turma)
     {
+        turma.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.KidsTurmas.Add(turma);
         await _context.SaveChangesAsync();
         return turma;

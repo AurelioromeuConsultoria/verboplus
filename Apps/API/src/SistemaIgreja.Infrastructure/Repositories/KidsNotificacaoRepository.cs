@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class KidsNotificacaoRepository : IKidsNotificacaoRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public KidsNotificacaoRepository(SistemaIgrejaDbContext context)
+    public KidsNotificacaoRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public KidsNotificacaoRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<KidsNotificacao?> GetByIdAsync(int id)
@@ -117,6 +125,7 @@ public class KidsNotificacaoRepository : IKidsNotificacaoRepository
 
     public async Task<KidsNotificacao> CreateAsync(KidsNotificacao notificacao)
     {
+        notificacao.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<KidsNotificacao>().Add(notificacao);
         await _context.SaveChangesAsync();
         return notificacao;
@@ -124,12 +133,18 @@ public class KidsNotificacaoRepository : IKidsNotificacaoRepository
 
     public Task<KidsNotificacao> CreateWithoutSaveAsync(KidsNotificacao notificacao)
     {
+        notificacao.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<KidsNotificacao>().Add(notificacao);
         return Task.FromResult(notificacao);
     }
 
     public async Task CreateRangeAsync(IEnumerable<KidsNotificacao> notificacoes)
     {
+        var tenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
+        foreach (var notificacao in notificacoes)
+        {
+            notificacao.TenantId = tenantId;
+        }
         await _context.Set<KidsNotificacao>().AddRangeAsync(notificacoes);
         await _context.SaveChangesAsync();
     }
@@ -141,4 +156,3 @@ public class KidsNotificacaoRepository : IKidsNotificacaoRepository
         return notificacao;
     }
 }
-

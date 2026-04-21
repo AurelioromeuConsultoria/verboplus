@@ -165,6 +165,8 @@ builder.Services.AddScoped<IComunicacaoCanalProvider, ComunicacaoNotificacaoInte
 builder.Services.AddScoped<IComunicacaoCanalProvider, ComunicacaoPushCanalProvider>();
 builder.Services.AddScoped<ISearchService, SearchService>();
 builder.Services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
+builder.Services.AddScoped<TenantScopeOverride>();
+builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
 builder.Services.AddScoped<AuditSaveChangesInterceptor>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IEquipeService, EquipeService>();
@@ -198,6 +200,7 @@ builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<INotificacaoUsuarioService, NotificacaoUsuarioService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPerfilAcessoService, PerfilAcessoService>();
+builder.Services.AddScoped<ITenantManagementService, TenantManagementService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddSingleton<ISchedulerExecutionMonitor, SchedulerExecutionMonitor>();
 builder.Services.AddScoped<ICategoriaMidiaService, CategoriaMidiaService>();
@@ -409,7 +412,7 @@ app.Use(async (context, next) =>
     {
         context.Response.Headers.Append("Access-Control-Allow-Origin", origin);
         context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-        context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept");
+        context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Tenant-Id, X-Tenant-Slug");
     }
 
     if (context.Request.Method == "OPTIONS")

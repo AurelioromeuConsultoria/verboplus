@@ -9,9 +9,13 @@ public enum StatusReceita
     Cancelada = 3
 }
 
-public class Receita
+public class Receita : ITenantEntity
 {
     public int Id { get; set; }
+
+    [Required]
+    public int TenantId { get; set; } = Tenant.InitialTenantId;
+    public virtual Tenant Tenant { get; set; } = null!;
 
     [Required]
     [MaxLength(200)]

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class KidsOcorrenciaRepository : IKidsOcorrenciaRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public KidsOcorrenciaRepository(SistemaIgrejaDbContext context)
+    public KidsOcorrenciaRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public KidsOcorrenciaRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<KidsOcorrencia?> GetByIdAsync(int id)
@@ -51,6 +59,7 @@ public class KidsOcorrenciaRepository : IKidsOcorrenciaRepository
 
     public async Task<KidsOcorrencia> CreateAsync(KidsOcorrencia ocorrencia)
     {
+        ocorrencia.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<KidsOcorrencia>().Add(ocorrencia);
         await _context.SaveChangesAsync();
         return ocorrencia;

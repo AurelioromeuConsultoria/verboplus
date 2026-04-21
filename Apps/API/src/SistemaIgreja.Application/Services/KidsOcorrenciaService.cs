@@ -21,6 +21,27 @@ public class KidsOcorrenciaService : IKidsOcorrenciaService
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly ICurrentUserContext _currentUserContext;
     private readonly IKidsAuthorizationService _authorizationService;
+    private readonly ITenantContext _tenantContext;
+
+    public KidsOcorrenciaService(
+        IKidsOcorrenciaRepository repository,
+        IPessoaRepository pessoaRepository,
+        IKidsCheckinRepository checkinRepository,
+        ICriancaDetalheRepository criancaDetalheRepository,
+        IUsuarioRepository usuarioRepository,
+        ICurrentUserContext currentUserContext,
+        IKidsAuthorizationService authorizationService,
+        ITenantContext tenantContext)
+    {
+        _repository = repository;
+        _pessoaRepository = pessoaRepository;
+        _checkinRepository = checkinRepository;
+        _criancaDetalheRepository = criancaDetalheRepository;
+        _usuarioRepository = usuarioRepository;
+        _currentUserContext = currentUserContext;
+        _authorizationService = authorizationService;
+        _tenantContext = tenantContext;
+    }
 
     public KidsOcorrenciaService(
         IKidsOcorrenciaRepository repository,
@@ -30,14 +51,8 @@ public class KidsOcorrenciaService : IKidsOcorrenciaService
         IUsuarioRepository usuarioRepository,
         ICurrentUserContext currentUserContext,
         IKidsAuthorizationService authorizationService)
+        : this(repository, pessoaRepository, checkinRepository, criancaDetalheRepository, usuarioRepository, currentUserContext, authorizationService, new DefaultTenantContext())
     {
-        _repository = repository;
-        _pessoaRepository = pessoaRepository;
-        _checkinRepository = checkinRepository;
-        _criancaDetalheRepository = criancaDetalheRepository;
-        _usuarioRepository = usuarioRepository;
-        _currentUserContext = currentUserContext;
-        _authorizationService = authorizationService;
     }
 
     public async Task<KidsOcorrenciaDto> CriarAsync(CriarKidsOcorrenciaRequest request)
@@ -64,6 +79,7 @@ public class KidsOcorrenciaService : IKidsOcorrenciaService
 
         var entity = new KidsOcorrencia
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             CriancaPessoaId = request.CriancaPessoaId,
             CheckinId = request.CheckinId,
             Tipo = request.Tipo.Trim().ToUpperInvariant(),

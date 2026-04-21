@@ -66,6 +66,160 @@ public class NoticiaUrlExtractorServiceTests
         result.Data.Should().Be(new DateTime(2026, 4, 6, 10, 30, 0, DateTimeKind.Utc));
     }
 
+    [Fact]
+    public async Task ExtrairAsync_ReturnsNull_WhenHtmlIsEmpty()
+    {
+        var service = CreateService(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("", Encoding.UTF8, "text/html")
+        });
+
+        var result = await service.ExtrairAsync("https://example.com/noticia");
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ExtrairAsync_PrefersLongerTitleTag_AndNormalizesUrlWithoutProtocol()
+    {
+        const string html = """
+            <html>
+              <head>
+                <title>Titulo principal mais longo e completo da noticia</title>
+                <meta property="og:title" content="Titulo curto" />
+              </head>
+              <body>
+                <article>
+                  <p>Primeiro paragrafo longo o bastante para ser tratado como descricao valida e texto de abertura da materia jornalistica.</p>
+                </article>
+              </body>
+            </html>
+            """;
+
+        var service = CreateService(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(html, Encoding.UTF8, "text/html")
+        });
+
+        var result = await service.ExtrairAsync("portal.exemplo.com/noticia");
+
+        result.Should().NotBeNull();
+        result!.Titulo.Should().Be("Titulo principal mais longo e completo da noticia");
+        result.Url.Should().Be("https://portal.exemplo.com/noticia");
+    }
+
+    [Fact]
+    public async Task ExtrairAsync_UsesBodyParagraph_WhenMetaDescriptionLooksLikeAuthor()
+    {
+        const string html = """
+            <html>
+              <head>
+                <title>Noticia importante</title>
+                <meta name="description" content="Redação CPAD News Website" />
+              </head>
+              <body>
+                <div class="content-body">
+                  <p>Este e o primeiro paragrafo util da noticia com contexto suficiente para virar descricao principal da materia sem depender de meta ruim.</p>
+                  <p>Outro paragrafo complementar.</p>
+                </div>
+              </body>
+            </html>
+            """;
+
+        var service = CreateService(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(html, Encoding.UTF8, "text/html")
+        });
+
+        var result = await service.ExtrairAsync("https://example.com/noticia");
+
+        result.Should().NotBeNull();
+        result!.Descricao.Should().Contain("primeiro paragrafo util da noticia");
+        result.Descricao.Should().NotContain("Redação CPAD News Website");
+    }
+
+    [Fact]
+    public async Task ExtrairAsync_UsesMetaDescription_WhenItIsLongAndValid()
+    {
+        const string html = """
+            <html>
+              <head>
+                <title>Noticia sem subtitulo</title>
+                <meta property="og:description" content="Descricao longa e valida da materia com informacoes suficientes para ser aproveitada como resumo principal desta noticia." />
+              </head>
+              <body>
+                <div>Bloco curto.</div>
+              </body>
+            </html>
+            """;
+
+        var service = CreateService(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(html, Encoding.UTF8, "text/html")
+        });
+
+        var result = await service.ExtrairAsync("https://example.com/noticia");
+
+        result.Should().NotBeNull();
+        result!.Descricao.Should().StartWith("Descricao longa e valida da materia");
+    }
+
+    [Fact]
+    public async Task ExtrairAsync_UsesFirstArticleParagraphAsDescription_WhenSubtitleIsMissing()
+    {
+        const string html = """
+            <html>
+              <head>
+                <title>Materia sem subtitulo</title>
+              </head>
+              <body>
+                <article>
+                  <p>Primeiro bloco descritivo com tamanho suficiente para ser aproveitado como resumo principal da noticia.</p>
+                  <p>Segundo bloco complementar.</p>
+                </article>
+              </body>
+            </html>
+            """;
+
+        var service = CreateService(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(html, Encoding.UTF8, "text/html")
+        });
+
+        var result = await service.ExtrairAsync("https://example.com/noticia");
+
+        result.Should().NotBeNull();
+        result!.Descricao.Should().Contain("Primeiro bloco descritivo");
+    }
+
+    [Fact]
+    public async Task ExtrairAsync_UsesLeadStartingWithSegundoA_WhenSpecificSubtitleClassDoesNotExist()
+    {
+        const string html = """
+            <html>
+              <head>
+                <title>Noticia com lead textual</title>
+              </head>
+              <body>
+                <div>Segundo a Portas Abertas, houve crescimento expressivo da igreja perseguida em regioes sensiveis ao redor do mundo.</div>
+                <div class="content-body">
+                  <p>Corpo principal da noticia com mais detalhes e contexto adicional para o leitor.</p>
+                </div>
+              </body>
+            </html>
+            """;
+
+        var service = CreateService(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(html, Encoding.UTF8, "text/html")
+        });
+
+        var result = await service.ExtrairAsync("https://example.com/noticia");
+
+        result.Should().NotBeNull();
+        result!.Descricao.Should().StartWith("Segundo a Portas Abertas");
+    }
+
     private static NoticiaUrlExtractorService CreateService(Func<HttpRequestMessage, HttpResponseMessage> responder)
     {
         var factory = new Mock<IHttpClientFactory>();

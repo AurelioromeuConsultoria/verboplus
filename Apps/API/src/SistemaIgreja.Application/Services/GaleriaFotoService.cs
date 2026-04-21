@@ -10,11 +10,18 @@ public class GaleriaFotoService : IGaleriaFotoService
 {
     private readonly IGaleriaFotoRepository _repository;
     private readonly IGaleriaFotoItemRepository _itemRepository;
+    private readonly ITenantContext _tenantContext;
 
-    public GaleriaFotoService(IGaleriaFotoRepository repository, IGaleriaFotoItemRepository itemRepository)
+    public GaleriaFotoService(IGaleriaFotoRepository repository, IGaleriaFotoItemRepository itemRepository, ITenantContext tenantContext)
     {
         _repository = repository;
         _itemRepository = itemRepository;
+        _tenantContext = tenantContext;
+    }
+
+    public GaleriaFotoService(IGaleriaFotoRepository repository, IGaleriaFotoItemRepository itemRepository)
+        : this(repository, itemRepository, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<GaleriaFotoDto>> GetAllAsync()
@@ -55,6 +62,7 @@ public class GaleriaFotoService : IGaleriaFotoService
 
         var entity = new GaleriaFoto
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             Nome = dto.Nome,
             Descricao = dto.Descricao,
             Data = dto.Data,
@@ -163,6 +171,7 @@ public class GaleriaFotoService : IGaleriaFotoService
 
             novosItens.Add(new GaleriaFotoItem
             {
+                TenantId = galeria.TenantId,
                 GaleriaFotoId = galeriaId,
                 NomeArquivo = fileName,
                 Destaque = isDestaque,
@@ -270,6 +279,7 @@ public class GaleriaFotoService : IGaleriaFotoService
             var isDestaque = galeria.ImagemDestaque != null && galeria.ImagemDestaque.Contains(nomeArquivo);
             novos.Add(new GaleriaFotoItem
             {
+                TenantId = galeria.TenantId,
                 GaleriaFotoId = galeriaId,
                 NomeArquivo = nomeArquivo,
                 Destaque = isDestaque,
@@ -303,4 +313,3 @@ public class GaleriaFotoService : IGaleriaFotoService
         };
     }
 }
-

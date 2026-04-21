@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Services;
@@ -10,10 +11,14 @@ namespace SistemaIgreja.API.Controllers;
 public class InscricoesEventosController : ControllerBase
 {
     private readonly IInscricaoEventoService _service;
+    private readonly ICurrentUserContext _currentUser;
+    private readonly ILogger<InscricoesEventosController> _logger;
 
-    public InscricoesEventosController(IInscricaoEventoService service)
+    public InscricoesEventosController(IInscricaoEventoService service, ICurrentUserContext currentUser, ILogger<InscricoesEventosController> logger)
     {
         _service = service;
+        _currentUser = currentUser;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -42,6 +47,21 @@ public class InscricoesEventosController : ControllerBase
     public async Task<ActionResult<IEnumerable<InscricaoEventoDto>>> GetByStatus(StatusInscricao status)
     {
         var items = await _service.GetByStatusAsync(status);
+        return Ok(items);
+    }
+
+    [Authorize]
+    [HttpGet("minhas")]
+    public async Task<ActionResult<IEnumerable<InscricaoEventoDto>>> GetMinhas()
+    {
+        if (string.IsNullOrWhiteSpace(_currentUser.UserEmail))
+        {
+            _logger.LogWarning("InscricoesEventos/minhas negado: usuario {UsuarioId} sem email no contexto.", _currentUser.UserId);
+            return Unauthorized();
+        }
+
+        var items = await _service.GetByEmailAsync(_currentUser.UserEmail);
+        _logger.LogInformation("InscricoesEventos/minhas carregado para usuario {UsuarioId} com email {Email}. Total {Total}.", _currentUser.UserId, _currentUser.UserEmail, items.Count());
         return Ok(items);
     }
 
@@ -145,9 +165,6 @@ public class InscricoesEventosController : ControllerBase
         }
     }
 }
-
-
-
 
 
 

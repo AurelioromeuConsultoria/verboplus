@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class ContaBancariaRepository : IContaBancariaRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public ContaBancariaRepository(SistemaIgrejaDbContext context)
+    public ContaBancariaRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public ContaBancariaRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<IEnumerable<ContaBancaria>> GetAllAsync()
@@ -29,6 +37,7 @@ public class ContaBancariaRepository : IContaBancariaRepository
 
     public async Task<ContaBancaria> CreateAsync(ContaBancaria contaBancaria)
     {
+        contaBancaria.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<ContaBancaria>().Add(contaBancaria);
         await _context.SaveChangesAsync();
         return contaBancaria;

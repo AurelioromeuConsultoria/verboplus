@@ -30,6 +30,26 @@ public class NoticiasControllerTests
     }
 
     [Fact]
+    public async Task GetAll_ReturnsOk()
+    {
+        _serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync([new NoticiaDto { Id = 1, Titulo = "Portal" }]);
+
+        var result = await _controller.GetAll();
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetByCategoria_ReturnsOk()
+    {
+        _serviceMock.Setup(s => s.GetByCategoriaAsync(2)).ReturnsAsync([new NoticiaDto { Id = 1, Titulo = "Portal" }]);
+
+        var result = await _controller.GetByCategoria(2);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
     public async Task ExtrairDeUrl_ReturnsBadRequest_WhenUrlIsMissing()
     {
         var result = await _controller.ExtrairDeUrl(new ExtrairNoticiaUrlRequest { Url = "" });
@@ -46,5 +66,35 @@ public class NoticiasControllerTests
         var result = await _controller.Create(new CriarNoticiaDto());
 
         result.Result.Should().BeOfType<CreatedAtActionResult>();
+    }
+
+    [Fact]
+    public async Task Update_ReturnsOk_WhenServiceSucceeds()
+    {
+        _serviceMock.Setup(s => s.UpdateAsync(4, It.IsAny<AtualizarNoticiaDto>()))
+            .ReturnsAsync(new NoticiaDto { Id = 4, Titulo = "Atualizada" });
+
+        var result = await _controller.Update(4, new AtualizarNoticiaDto());
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task Update_ReturnsNotFound_WhenServiceThrowsArgumentException()
+    {
+        _serviceMock.Setup(s => s.UpdateAsync(4, It.IsAny<AtualizarNoticiaDto>()))
+            .ThrowsAsync(new ArgumentException());
+
+        var result = await _controller.Update(4, new AtualizarNoticiaDto());
+
+        result.Result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsNoContent_WhenServiceSucceeds()
+    {
+        var result = await _controller.Delete(4);
+
+        result.Should().BeOfType<NoContentResult>();
     }
 }

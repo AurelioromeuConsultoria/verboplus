@@ -31,6 +31,36 @@ public class PessoasPerfisControllerTests
     }
 
     [Fact]
+    public async Task GetById_ReturnsOk_WhenPerfilExists()
+    {
+        _serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(new PessoaPerfilDto { Id = 1 });
+
+        var result = await _controller.GetById(1);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetById_ReturnsNotFound_WhenPerfilDoesNotExist()
+    {
+        _serviceMock.Setup(s => s.GetByIdAsync(99)).ReturnsAsync((PessoaPerfilDto?)null);
+
+        var result = await _controller.GetById(99);
+
+        result.Result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task GetByPessoa_ReturnsOk_WithPerfis()
+    {
+        _serviceMock.Setup(s => s.GetPerfisPorPessoaAsync(7)).ReturnsAsync([new PessoaPerfilDto { Id = 1, PessoaId = 7 }]);
+
+        var result = await _controller.GetByPessoa(7);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
     public async Task Create_ReturnsForbidden_WhenUserIsNotAdmin()
     {
         SetUser((int)TipoUsuario.Portal);
@@ -50,6 +80,38 @@ public class PessoasPerfisControllerTests
         var result = await _controller.Create(new CriarPessoaPerfilDto());
 
         result.Result.Should().BeOfType<CreatedAtActionResult>();
+    }
+
+    [Fact]
+    public async Task Update_ReturnsOk_WhenUserIsAdmin()
+    {
+        SetUser((int)TipoUsuario.Admin);
+        _serviceMock.Setup(s => s.UpdateAsync(1, It.IsAny<AtualizarPessoaPerfilDto>())).ReturnsAsync(new PessoaPerfilDto { Id = 1 });
+
+        var result = await _controller.Update(1, new AtualizarPessoaPerfilDto());
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task Update_ReturnsNotFound_WhenPerfilDoesNotExist()
+    {
+        SetUser((int)TipoUsuario.Admin);
+        _serviceMock.Setup(s => s.UpdateAsync(1, It.IsAny<AtualizarPessoaPerfilDto>())).ThrowsAsync(new ArgumentException());
+
+        var result = await _controller.Update(1, new AtualizarPessoaPerfilDto());
+
+        result.Result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsNoContent_WhenUserIsAdmin()
+    {
+        SetUser((int)TipoUsuario.Admin);
+
+        var result = await _controller.Delete(1);
+
+        result.Should().BeOfType<NoContentResult>();
     }
 
     [Fact]

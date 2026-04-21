@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -8,10 +9,17 @@ namespace SistemaIgreja.Infrastructure.Repositories;
 public class CriancaDetalheRepository : ICriancaDetalheRepository
 {
     private readonly SistemaIgrejaDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public CriancaDetalheRepository(SistemaIgrejaDbContext context)
+    public CriancaDetalheRepository(SistemaIgrejaDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    public CriancaDetalheRepository(SistemaIgrejaDbContext context)
+        : this(context, new DefaultTenantContext())
+    {
     }
 
     public async Task<CriancaDetalhe?> GetByPessoaIdAsync(int pessoaId)
@@ -23,6 +31,7 @@ public class CriancaDetalheRepository : ICriancaDetalheRepository
 
     public async Task<CriancaDetalhe> CreateAsync(CriancaDetalhe detalhe)
     {
+        detalhe.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<CriancaDetalhe>().Add(detalhe);
         await _context.SaveChangesAsync();
         return detalhe;
@@ -30,6 +39,7 @@ public class CriancaDetalheRepository : ICriancaDetalheRepository
 
     public Task<CriancaDetalhe> CreateWithoutSaveAsync(CriancaDetalhe detalhe)
     {
+        detalhe.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
         _context.Set<CriancaDetalhe>().Add(detalhe);
         return Task.FromResult(detalhe);
     }
@@ -52,5 +62,4 @@ public class CriancaDetalheRepository : ICriancaDetalheRepository
         }
     }
 }
-
 

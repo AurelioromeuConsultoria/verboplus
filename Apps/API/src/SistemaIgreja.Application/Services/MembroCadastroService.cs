@@ -26,6 +26,7 @@ public class MembroCadastroService : IMembroCadastroService
     private readonly IPessoaPerfilRepository _perfilRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICadastroMembroNotificationService _notificationService;
+    private readonly ITenantContext _tenantContext;
     private readonly ILogger<MembroCadastroService> _logger;
 
     public MembroCadastroService(
@@ -34,11 +35,23 @@ public class MembroCadastroService : IMembroCadastroService
         IUnitOfWork unitOfWork,
         ICadastroMembroNotificationService notificationService,
         ILogger<MembroCadastroService> logger)
+        : this(pessoaRepository, perfilRepository, unitOfWork, notificationService, new DefaultTenantContext(), logger)
+    {
+    }
+
+    public MembroCadastroService(
+        IPessoaRepository pessoaRepository,
+        IPessoaPerfilRepository perfilRepository,
+        IUnitOfWork unitOfWork,
+        ICadastroMembroNotificationService notificationService,
+        ITenantContext tenantContext,
+        ILogger<MembroCadastroService> logger)
     {
         _pessoaRepository = pessoaRepository;
         _perfilRepository = perfilRepository;
         _unitOfWork = unitOfWork;
         _notificationService = notificationService;
+        _tenantContext = tenantContext;
         _logger = logger;
     }
 
@@ -74,6 +87,7 @@ public class MembroCadastroService : IMembroCadastroService
             {
                 pessoa = new Pessoa
                 {
+                    TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                     Nome = dto.Nome.Trim(),
                     Email = dto.Email.Trim(),
                     WhatsApp = whatsAppNormalizado,
@@ -122,6 +136,7 @@ public class MembroCadastroService : IMembroCadastroService
             {
                 var novoPerfil = new PessoaPerfil
                 {
+                    TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                     PessoaId = pessoa.Id,
                     Perfil = PerfilPessoa.Membro,
                     DataInicio = DateTime.UtcNow,

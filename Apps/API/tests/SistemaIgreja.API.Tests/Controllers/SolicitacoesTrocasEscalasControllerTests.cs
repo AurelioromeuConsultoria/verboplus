@@ -2,6 +2,7 @@ using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Moq;
 using SistemaIgreja.API.Controllers;
 using SistemaIgreja.Application.DTOs;
@@ -15,11 +16,12 @@ public class SolicitacoesTrocasEscalasControllerTests
 {
     private readonly Mock<ISolicitacaoTrocaEscalaService> _serviceMock = new();
     private readonly Mock<IUsuarioRepository> _usuarioRepositoryMock = new();
+    private readonly Mock<ILogger<SolicitacoesTrocasEscalasController>> _loggerMock = new();
     private readonly SolicitacoesTrocasEscalasController _controller;
 
     public SolicitacoesTrocasEscalasControllerTests()
     {
-        _controller = new SolicitacoesTrocasEscalasController(_serviceMock.Object, _usuarioRepositoryMock.Object);
+        _controller = new SolicitacoesTrocasEscalasController(_serviceMock.Object, _usuarioRepositoryMock.Object, _loggerMock.Object);
     }
 
     [Fact]
@@ -51,6 +53,20 @@ public class SolicitacoesTrocasEscalasControllerTests
     }
 
     [Fact]
+    public async Task GetMinhas_ReturnsOk_WhenUsuarioHasPessoa()
+    {
+        SetUser((int)TipoUsuario.Portal, 10);
+        _usuarioRepositoryMock.Setup(r => r.GetByIdAsync(10))
+            .ReturnsAsync(new Usuario { Id = 10, PessoaId = 20 });
+        _serviceMock.Setup(s => s.GetMinhasAsync(20))
+            .ReturnsAsync(new List<SolicitacaoTrocaEscalaDto> { new() { Id = 1 } });
+
+        var result = await _controller.GetMinhas();
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
     public async Task Aprovar_ReturnsForbidden_WhenServiceThrowsUnauthorized()
     {
         SetUser((int)TipoUsuario.Portal, 10);
@@ -73,6 +89,30 @@ public class SolicitacoesTrocasEscalasControllerTests
         var result = await _controller.GetGerenciaveis(2, StatusSolicitacaoTrocaEscala.Pendente);
 
         result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetByEscala_ReturnsOk_WhenServiceSucceeds()
+    {
+        SetUser((int)TipoUsuario.Admin, 1);
+        _serviceMock.Setup(s => s.GetByEscalaAsync(3, 1, true))
+            .ReturnsAsync(new List<SolicitacaoTrocaEscalaDto>());
+
+        var result = await _controller.GetByEscala(3);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task Rejeitar_ReturnsBadRequest_WhenServiceThrowsArgumentException()
+    {
+        SetUser((int)TipoUsuario.Admin, 1);
+        _serviceMock.Setup(s => s.RejeitarAsync(5, It.IsAny<RejeitarSolicitacaoTrocaEscalaDto>(), 1, true))
+            .ThrowsAsync(new ArgumentException("inválida"));
+
+        var result = await _controller.Rejeitar(5, new RejeitarSolicitacaoTrocaEscalaDto());
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
     }
 
     private void SetUser(int tipoUsuarioId, int usuarioId)

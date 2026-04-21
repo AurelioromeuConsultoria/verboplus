@@ -16,13 +16,23 @@ public class IndisponibilidadeVoluntarioService : IIndisponibilidadeVoluntarioSe
 {
     private readonly IIndisponibilidadeVoluntarioRepository _repository;
     private readonly IVoluntarioRepository _voluntarioRepository;
+    private readonly ITenantContext _tenantContext;
+
+    public IndisponibilidadeVoluntarioService(
+        IIndisponibilidadeVoluntarioRepository repository,
+        IVoluntarioRepository voluntarioRepository,
+        ITenantContext tenantContext)
+    {
+        _repository = repository;
+        _voluntarioRepository = voluntarioRepository;
+        _tenantContext = tenantContext;
+    }
 
     public IndisponibilidadeVoluntarioService(
         IIndisponibilidadeVoluntarioRepository repository,
         IVoluntarioRepository voluntarioRepository)
+        : this(repository, voluntarioRepository, new DefaultTenantContext())
     {
-        _repository = repository;
-        _voluntarioRepository = voluntarioRepository;
     }
 
     public async Task<IndisponibilidadeVoluntarioDto?> GetByIdAsync(int id)
@@ -44,6 +54,7 @@ public class IndisponibilidadeVoluntarioService : IIndisponibilidadeVoluntarioSe
 
         var indisponibilidade = new IndisponibilidadeVoluntario
         {
+            TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             VoluntarioId = dto.VoluntarioId,
             Data = dto.Data.Date,
             Motivo = dto.Motivo?.Trim(),
