@@ -189,6 +189,12 @@ const menuGroups = [
         permission: RESOURCES.VOLUNTARIOS,
       },
       {
+        titleKey: 'menu.monthlyPlanning',
+        href: '/voluntariado/planejamento-mensal',
+        icon: Calendar,
+        permission: RESOURCES.VOLUNTARIOS,
+      },
+      {
         titleKey: 'menu.coveragePanel',
         href: '/voluntariado/painel-cobertura',
         icon: ClipboardCheck,

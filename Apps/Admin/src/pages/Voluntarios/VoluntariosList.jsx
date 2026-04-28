@@ -44,7 +44,26 @@ export default function VoluntariosList() {
         equipesApi.getAll(),
         cargosApi.getAll(),
       ]);
-      setItems(v.data || []);
+      const voluntariosAgrupados = Array.from(
+        (v.data || []).reduce((acc, vinculo) => {
+          const key = vinculo.pessoaId || vinculo.id;
+          const atual = acc.get(key) || {
+            ...vinculo,
+            id: vinculo.id,
+            vinculos: [],
+            quantidadeEquipes: 0,
+            cargosResumo: '',
+          };
+
+          atual.vinculos.push(vinculo);
+          atual.quantidadeEquipes = new Set(atual.vinculos.map((item) => item.equipeId).filter(Boolean)).size;
+          atual.cargosResumo = Array.from(new Set(atual.vinculos.map((item) => item.nomeCargo).filter(Boolean))).join(', ');
+          acc.set(key, atual);
+          return acc;
+        }, new Map()).values()
+      ).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+
+      setItems(voluntariosAgrupados);
       setEquipes(e.data || []);
       setCargos(c.data || []);
     } catch (err) {
@@ -60,8 +79,7 @@ export default function VoluntariosList() {
     load();
   }, []);
 
-  const handleDelete = async (id) => {
-    const voluntario = items.find(v => v.id === id);
+  const handleDelete = async (voluntario) => {
     confirmDialog.show({
       title: t('volunteer.volunteers.deleteTitle'),
       description: t('volunteer.volunteers.deleteDescription', { name: voluntario?.nome || t('volunteer.volunteers.thisVolunteer') }),
@@ -70,7 +88,7 @@ export default function VoluntariosList() {
       variant: 'destructive',
       onConfirm: async () => {
         try {
-          await voluntariosApi.delete(id);
+          await Promise.all((voluntario.vinculos || [voluntario]).map((vinculo) => voluntariosApi.delete(vinculo.id)));
           toast.success(t('volunteer.volunteers.deleteSuccess'));
           await load();
         } catch (err) {
@@ -84,8 +102,8 @@ export default function VoluntariosList() {
 
   const filtered = items.filter((v) => {
     if (busca && !v.nome.toLowerCase().includes(busca.toLowerCase())) return false;
-    if (equipeId && String(v.equipeId) !== String(equipeId)) return false;
-    if (cargoId && String(v.cargoId) !== String(cargoId)) return false;
+    if (equipeId && !(v.vinculos || []).some((item) => String(item.equipeId) === String(equipeId))) return false;
+    if (cargoId && !(v.vinculos || []).some((item) => String(item.cargoId) === String(cargoId))) return false;
     return true;
   });
 
@@ -186,8 +204,8 @@ export default function VoluntariosList() {
                 <TableRow>
                   <TableHead>{t('volunteer.volunteers.table.name')}</TableHead>
                   <TableHead>{t('volunteer.volunteers.table.whatsApp')}</TableHead>
-                  <TableHead>{t('volunteer.volunteers.table.team')}</TableHead>
-                  <TableHead>{t('volunteer.volunteers.table.role')}</TableHead>
+                  <TableHead className="text-right">{t('volunteer.volunteers.table.teamsCount')}</TableHead>
+                  <TableHead>{t('volunteer.volunteers.table.roles')}</TableHead>
                   <TableHead className="text-right">{t('volunteer.volunteers.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -209,8 +227,8 @@ export default function VoluntariosList() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{vol.nomeEquipe}</TableCell>
-                    <TableCell>{vol.nomeCargo}</TableCell>
+                    <TableCell className="text-right">{vol.quantidadeEquipes}</TableCell>
+                    <TableCell>{vol.cargosResumo || '-'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
                         {canEdit && (
@@ -221,7 +239,7 @@ export default function VoluntariosList() {
                           </Button>
                         )}
                         {canDelete && (
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(vol.id)}>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(vol)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}

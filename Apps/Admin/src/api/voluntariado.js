@@ -35,6 +35,10 @@ export const escalasApi = {
   getByOcorrenciaAndEquipe: (eventoOcorrenciaId, equipeId) =>
     api.get(`/Escalas/ocorrencia/${eventoOcorrenciaId}/equipe/${equipeId}`),
   getSugestoes: (escalaId, equipeId) => api.get(`/Escalas/${escalaId}/sugestoes`, { params: { equipeId } }),
+  getPlanejamentoMensal: (params) => api.get('/Escalas/planejamento-mensal', { params }),
+  gerarPlanejamentoMensalAutomatico: (data) => api.post('/Escalas/planejamento-mensal/gerar-automatico', data),
+  criarAlocacaoPlanejamentoMensal: (data) => api.post('/Escalas/planejamento-mensal/alocacoes', data),
+  dispararPlanejamentoMensalWhatsApp: (data) => api.post('/Escalas/planejamento-mensal/disparar-whatsapp', data),
   create: (data) => api.post('/Escalas', data),
   update: (id, data) => api.put(`/Escalas/${id}`, data),
   delete: (id) => api.delete(`/Escalas/${id}`),

@@ -28,6 +28,7 @@
     "roles": "Cargos",
     "volunteers": "Voluntários",
     "schedules": "Escalas",
+    "monthlyPlanning": "Planejamento Mensal",
     "coveragePanel": "Painel de Cobertura",
     "scheduleModels": "Modelos de Escala",
     "unavailabilities": "Indisponibilidades",
@@ -138,6 +139,7 @@
     "select": "Selecione",
     "update": "Atualizar",
     "create": "Cadastrar",
+    "remove": "Remover",
     "refresh": "Atualizar",
     "refreshing": "Atualizando...",
     "see": "Ver"
@@ -2628,6 +2630,7 @@
       "table": {
         "name": "Nome",
         "area": "Área",
+        "members": "Membros",
         "createdAt": "Data de Criação",
         "actions": "Ações"
       }
@@ -2688,7 +2691,9 @@
         "name": "Nome",
         "whatsApp": "WhatsApp",
         "team": "Equipe",
+        "teamsCount": "Qtd. equipes",
         "role": "Cargo",
+        "roles": "Cargos",
         "actions": "Ações"
       },
       "form": {
@@ -2724,6 +2729,97 @@
           "team": "Equipe",
           "role": "Cargo"
         }
+      }
+    },
+    "monthlyPlanning": {
+      "title": "Planejamento Mensal",
+      "subtitle": "Visualize a distribuição das escalas do mês por voluntário, ocorrência e equipe.",
+      "loading": "Carregando planejamento mensal...",
+      "errorLoad": "Erro ao carregar planejamento mensal",
+      "filtersTitle": "Filtros",
+      "monthLabel": "Mês",
+      "eventLabel": "Evento",
+      "teamLabel": "Equipe",
+      "allEvents": "Todos os eventos",
+      "allTeams": "Todas as equipes",
+      "gridTitle": "Distribuição mensal",
+      "occurrences": "ocorrências",
+      "manualTitle": "Montagem manual",
+      "manualSelectTeamHint": "Selecione uma equipe para montar escalas manualmente ou gerar o mês automaticamente.",
+      "emptyOccurrencesTitle": "Nenhuma ocorrência encontrada para o mês.",
+      "emptyOccurrencesDescription": "Gere ocorrências do evento antes de planejar as escalas.",
+      "emptyVolunteersTitle": "Nenhum voluntário encontrado.",
+      "emptyVolunteersDescription": "Cadastre voluntários ou ajuste os filtros de equipe e evento.",
+      "cards": {
+        "volunteers": "Voluntários",
+        "allocations": "Escalas",
+        "withoutSchedule": "Sem escala",
+        "overloaded": "Mais de 2x",
+        "consecutive": "Consecutivos"
+      },
+      "table": {
+        "volunteer": "Voluntário",
+        "total": "Total"
+      },
+      "status": {
+        "confirmed": "Confirmado",
+        "pending": "Pendente",
+        "declined": "Recusado",
+        "absent": "Faltou"
+      },
+      "alerts": {
+        "consecutive": "Semanas seguidas"
+      },
+      "share": {
+        "title": "Escala mensal",
+        "badge": "VOLUNTARIADO",
+        "subtitle": "Distribuição de voluntários por data",
+        "footer": "Gerado pelo Sistema Igreja",
+        "allTeams": "Todas as equipes",
+        "preview": "Ver imagem",
+        "previewing": "Gerando...",
+        "previewTitle": "Prévia da imagem da escala",
+        "actualSize": "Tamanho real",
+        "fitPreview": "Ajustar à tela",
+        "download": "Baixar imagem",
+        "share": "Compartilhar",
+        "noData": "Não há escalas preenchidas para gerar a imagem.",
+        "error": "Erro ao gerar imagem da escala.",
+        "downloadedFallback": "Seu navegador não compartilhou o arquivo diretamente. A imagem foi baixada."
+      },
+      "whatsapp": {
+        "send": "Disparar WhatsApp",
+        "sending": "Disparando...",
+        "message": "Olá! Segue a escala mensal de {{team}} - {{month}}. Qualquer ajuste, fale com a liderança.",
+        "sent": "{{sent}} de {{total}} mensagens enviadas pelo WhatsApp.",
+        "failures": "{{count}} envio(s) falharam. {{details}}",
+        "noRecipients": "Nenhum voluntário da equipe possui WhatsApp preenchido.",
+        "uploadError": "Não foi possível salvar a imagem da escala para envio.",
+        "error": "Erro ao disparar escala pelo WhatsApp."
+      },
+      "manualFields": {
+        "occurrence": "Ocorrência",
+        "selectOccurrence": "Selecione a data",
+        "volunteer": "Voluntário",
+        "selectVolunteer": "Selecione o voluntário",
+        "role": "Cargo",
+        "selectRole": "Selecione o cargo",
+        "keepVolunteerRole": "Usar cargo do vínculo"
+      },
+      "actions": {
+        "autoGenerate": "Gerar mês automaticamente",
+        "generating": "Gerando...",
+        "selectTeamRequired": "Selecione uma equipe para executar esta ação.",
+        "autoGenerateSuccess": "{{count}} escalas geradas em rascunho",
+        "autoGenerateError": "Erro ao gerar planejamento mensal",
+        "manualAdd": "Adicionar à escala",
+        "manualValidation": "Selecione ocorrência, equipe e voluntário.",
+        "manualAddSuccess": "Voluntário adicionado à escala",
+        "manualAddError": "Erro ao adicionar voluntário",
+        "removeSuccess": "Voluntário removido da escala",
+        "removeError": "Erro ao remover voluntário",
+        "scheduleHere": "Escalar",
+        "volunteerNotLinkedToTeam": "Este voluntário não tem vínculo com a equipe selecionada."
       }
     },
     "schedules": {

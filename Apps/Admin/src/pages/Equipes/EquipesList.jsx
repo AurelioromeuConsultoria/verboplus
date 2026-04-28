@@ -14,7 +14,7 @@ import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { equipesApi } from '@/lib/api';
+import { equipesApi, voluntariosApi } from '@/lib/api';
 import { formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
@@ -47,8 +47,24 @@ export default function EquipesList() {
       if (!silent) {
         setError(null);
       }
-      const res = await equipesApi.getAll();
-      setItems(res.data || []);
+      const [equipesRes, voluntariosRes] = await Promise.all([
+        equipesApi.getAll(),
+        voluntariosApi.getAll(),
+      ]);
+      const membrosPorEquipe = (voluntariosRes.data || []).reduce((acc, voluntario) => {
+        const equipeId = voluntario.equipeId;
+        if (!equipeId) return acc;
+
+        const membros = acc.get(equipeId) || new Set();
+        membros.add(voluntario.pessoaId || voluntario.id);
+        acc.set(equipeId, membros);
+        return acc;
+      }, new Map());
+
+      setItems((equipesRes.data || []).map((equipe) => ({
+        ...equipe,
+        quantidadeMembros: membrosPorEquipe.get(equipe.id)?.size ?? 0,
+      })));
     } catch (err) {
       setError(t('volunteer.teams.errorLoad'));
       console.error(err);
@@ -176,6 +192,7 @@ export default function EquipesList() {
                 <TableRow>
                   <TableHead>{t('volunteer.teams.table.name')}</TableHead>
                   <TableHead>{t('volunteer.teams.table.area')}</TableHead>
+                  <TableHead className="text-right">{t('volunteer.teams.table.members')}</TableHead>
                   <TableHead>{t('volunteer.teams.table.createdAt')}</TableHead>
                   <TableHead className="text-right">{t('volunteer.teams.table.actions')}</TableHead>
                 </TableRow>
@@ -185,6 +202,7 @@ export default function EquipesList() {
                   <TableRow key={equipe.id}>
                     <TableCell className="font-medium">{equipe.nome}</TableCell>
                     <TableCell>{areaLabel[equipe.area] || equipe.area}</TableCell>
+                    <TableCell className="text-right">{equipe.quantidadeMembros ?? 0}</TableCell>
                     <TableCell>{formatDate(equipe.dataCriacao)}</TableCell>
                     <TableCell className="text-right">
                       <TableRowActions>

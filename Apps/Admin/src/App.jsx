@@ -35,6 +35,7 @@ const CargoForm = lazy(() => import('./pages/Cargos/CargoForm'));
 const VoluntariosList = lazy(() => import('./pages/Voluntarios/VoluntariosList'));
 const VoluntarioForm = lazy(() => import('./pages/Voluntarios/VoluntarioForm'));
 const EscalasList = lazy(() => import('./pages/Voluntariado/EscalasList'));
+const PlanejamentoMensalEscalas = lazy(() => import('./pages/Voluntariado/PlanejamentoMensalEscalas'));
 const PainelCoberturaVoluntariado = lazy(() => import('./pages/Voluntariado/PainelCoberturaVoluntariado'));
 const EscalasPorOcorrencia = lazy(() => import('./pages/Voluntariado/EscalasPorOcorrencia'));
 const EscalaEditor = lazy(() => import('./pages/Voluntariado/EscalaEditor'));
@@ -321,6 +322,11 @@ function App() {
           <Route path="voluntariado/escalas" element={
             <RequirePermission resource={RESOURCES.VOLUNTARIOS}>
               <EscalasList />
+            </RequirePermission>
+          } />
+          <Route path="voluntariado/planejamento-mensal" element={
+            <RequirePermission resource={RESOURCES.VOLUNTARIOS}>
+              <PlanejamentoMensalEscalas />
             </RequirePermission>
           } />
           <Route path="voluntariado/painel-cobertura" element={

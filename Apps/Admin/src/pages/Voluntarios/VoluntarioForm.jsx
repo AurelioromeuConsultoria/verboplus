@@ -61,7 +61,18 @@ export default function VoluntarioForm() {
         });
         if (v.pessoaId) {
           const vinculosRes = await voluntariosApi.getByPessoa(v.pessoaId);
-          setVinculosExistentes(vinculosRes.data || []);
+          const vinculos = vinculosRes.data || [];
+          setVinculosExistentes(vinculos);
+          setFormData((prev) => ({
+            ...prev,
+            vinculos: vinculos.length > 0
+              ? vinculos.map((item) => ({
+                  equipeId: String(item.equipeId || ''),
+                  cargoId: String(item.cargoId || ''),
+                  id: item.id,
+                }))
+              : prev.vinculos,
+          }));
         }
       }
     } catch (err) {
@@ -161,15 +172,19 @@ export default function VoluntarioForm() {
         telefone: formData.telefone?.trim() || null,
       };
       if (isEditing) {
-        const rowToUpdate = validVinculos.find((v) => v.id && String(v.id) === String(id));
+        const validIds = new Set(validVinculos.filter((v) => v.id).map((v) => Number(v.id)));
+        const removed = vinculosExistentes.filter((v) => !validIds.has(Number(v.id)));
+        const toUpdate = validVinculos.filter((v) => v.id);
         const toCreate = validVinculos.filter((v) => !v.id);
-        const rowRemoved = !formData.vinculos.some((v) => v.id && String(v.id) === String(id));
-        if (rowRemoved) await voluntariosApi.delete(id);
-        else if (rowToUpdate) {
-          await voluntariosApi.update(rowToUpdate.id, {
+
+        for (const v of removed) {
+          await voluntariosApi.delete(v.id);
+        }
+        for (const v of toUpdate) {
+          await voluntariosApi.update(v.id, {
             ...basePayload,
-            equipeId: Number(rowToUpdate.equipeId),
-            cargoId: Number(rowToUpdate.cargoId),
+            equipeId: Number(v.equipeId),
+            cargoId: Number(v.cargoId),
           });
         }
         for (const v of toCreate) {
@@ -372,4 +387,3 @@ export default function VoluntarioForm() {
     </div>
   );
 }
-
