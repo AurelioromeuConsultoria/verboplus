@@ -7,6 +7,7 @@ public class EquipeDto
     public int Area { get; set; }
     public int? LiderUsuarioId { get; set; }
     public string? LiderNome { get; set; }
+    public int QuantidadeMembros { get; set; }
     public DateTime DataCriacao { get; set; }
 }
 

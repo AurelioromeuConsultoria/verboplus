@@ -281,11 +281,30 @@ public class CampanhaAniversarioService : ICampanhaAniversarioService
 
             if (!response.Sucesso)
             {
-                envio.Status = StatusEnvioCampanhaAniversario.Erro;
-                envio.LogErro = response.MensagemErro ?? "Falha ao enviar mensagem de aniversário.";
-                await _envioRepository.UpdateAsync(envio);
-                _logger.LogWarning("Falha ao enviar campanha de aniversário. PessoaId={PessoaId} EnvioId={EnvioId} Tentativas={Tentativas}", pessoa.Id, envio.Id, envio.Tentativas);
-                return StatusProcessamentoCampanha.Falhou;
+                _logger.LogWarning(
+                    "Falha ao enviar campanha com mídia. PessoaId={PessoaId} EnvioId={EnvioId}. Tentando fallback para texto. Erro={Erro}",
+                    pessoa.Id,
+                    envio.Id,
+                    response.MensagemErro);
+
+                var textResponse = await _evolutionApiService.EnviarMensagemTextoAsync(
+                    pessoa.WhatsApp!,
+                    mensagem,
+                    cancellationToken);
+
+                if (!textResponse.Sucesso)
+                {
+                    envio.Status = StatusEnvioCampanhaAniversario.Erro;
+                    envio.LogErro = textResponse.MensagemErro ?? response.MensagemErro ?? "Falha ao enviar mensagem de aniversário.";
+                    await _envioRepository.UpdateAsync(envio);
+                    _logger.LogWarning("Falha ao enviar campanha de aniversário. PessoaId={PessoaId} EnvioId={EnvioId} Tentativas={Tentativas}", pessoa.Id, envio.Id, envio.Tentativas);
+                    return StatusProcessamentoCampanha.Falhou;
+                }
+
+                _logger.LogInformation(
+                    "Campanha de aniversário enviada em modo texto após falha na mídia. PessoaId={PessoaId} EnvioId={EnvioId}",
+                    pessoa.Id,
+                    envio.Id);
             }
 
             envio.Status = StatusEnvioCampanhaAniversario.Enviado;

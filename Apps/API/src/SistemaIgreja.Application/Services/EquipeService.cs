@@ -89,6 +89,7 @@ public class EquipeService : IEquipeService
             Area = (int)e.Area,
             LiderUsuarioId = e.LiderUsuarioId,
             LiderNome = e.LiderUsuario?.Pessoa?.Nome,
+            QuantidadeMembros = e.Voluntarios?.Count ?? 0,
             DataCriacao = e.DataCriacao
         };
     }

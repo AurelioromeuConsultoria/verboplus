@@ -123,3 +123,105 @@ public class SugestaoEscalaVoluntarioDto
     public int CargaRecente { get; set; }
     public string? MotivoBloqueio { get; set; }
 }
+
+public class PlanejamentoMensalEscalaDto
+{
+    public DateTime DataInicio { get; set; }
+    public DateTime DataFim { get; set; }
+    public int? EventoId { get; set; }
+    public int? EquipeId { get; set; }
+    public List<PlanejamentoMensalOcorrenciaDto> Ocorrencias { get; set; } = new();
+    public List<PlanejamentoMensalVoluntarioDto> Voluntarios { get; set; } = new();
+    public PlanejamentoMensalResumoDto Resumo { get; set; } = new();
+}
+
+public class PlanejamentoMensalOcorrenciaDto
+{
+    public int OcorrenciaId { get; set; }
+    public int EventoId { get; set; }
+    public string EventoTitulo { get; set; } = string.Empty;
+    public DateTime DataHoraInicio { get; set; }
+    public int TotalEscalados { get; set; }
+}
+
+public class PlanejamentoMensalVoluntarioDto
+{
+    public int PessoaId { get; set; }
+    public string Nome { get; set; } = string.Empty;
+    public string? WhatsApp { get; set; }
+    public List<string> Equipes { get; set; } = new();
+    public List<string> Cargos { get; set; } = new();
+    public int TotalEscalas { get; set; }
+    public int Confirmados { get; set; }
+    public int Pendentes { get; set; }
+    public int Recusados { get; set; }
+    public int Faltas { get; set; }
+    public bool TemDomingosConsecutivos { get; set; }
+    public List<PlanejamentoMensalAlocacaoDto> Alocacoes { get; set; } = new();
+}
+
+public class PlanejamentoMensalAlocacaoDto
+{
+    public int EscalaId { get; set; }
+    public int EscalaItemId { get; set; }
+    public int OcorrenciaId { get; set; }
+    public int EquipeId { get; set; }
+    public string EquipeNome { get; set; } = string.Empty;
+    public int? CargoId { get; set; }
+    public string? CargoNome { get; set; }
+    public DateTime DataHoraInicio { get; set; }
+    public StatusEscalaItem Status { get; set; }
+}
+
+public class PlanejamentoMensalResumoDto
+{
+    public int TotalVoluntarios { get; set; }
+    public int TotalEscalas { get; set; }
+    public int VoluntariosSemEscala { get; set; }
+    public int VoluntariosComMaisDeDuasEscalas { get; set; }
+    public int VoluntariosComDomingosConsecutivos { get; set; }
+}
+
+public class GerarPlanejamentoMensalDto
+{
+    public int Ano { get; set; }
+    public int Mes { get; set; }
+    public int EquipeId { get; set; }
+    public int? EventoId { get; set; }
+}
+
+public class GerarPlanejamentoMensalResultadoDto
+{
+    public int OcorrenciasProcessadas { get; set; }
+    public int EscalasGeradas { get; set; }
+    public List<string> Avisos { get; set; } = new();
+}
+
+public class CriarAlocacaoPlanejamentoMensalDto
+{
+    public int EventoOcorrenciaId { get; set; }
+    public int EquipeId { get; set; }
+    public int VoluntarioId { get; set; }
+    public int? CargoId { get; set; }
+    public bool ForcarConflito { get; set; } = false;
+    public string? MotivoExcecao { get; set; }
+}
+
+public class DispararPlanejamentoMensalWhatsAppDto
+{
+    public int Ano { get; set; }
+    public int Mes { get; set; }
+    public int EquipeId { get; set; }
+    public int? EventoId { get; set; }
+    public string ImagemUrl { get; set; } = string.Empty;
+    public string? Mensagem { get; set; }
+    public string? WhatsAppTeste { get; set; }
+}
+
+public class DispararPlanejamentoMensalWhatsAppResultadoDto
+{
+    public int TotalDestinatarios { get; set; }
+    public int TotalEnviados { get; set; }
+    public int TotalFalhas { get; set; }
+    public List<string> Falhas { get; set; } = new();
+}

@@ -2,8 +2,10 @@ using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Moq;
 using SistemaIgreja.API.Controllers;
+using SistemaIgreja.Application.Configuration;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Application.Services;
@@ -15,11 +17,16 @@ public class EscalasControllerTests
 {
     private readonly Mock<IEscalaService> _serviceMock = new();
     private readonly Mock<IUsuarioRepository> _usuarioRepositoryMock = new();
+    private readonly Mock<IEvolutionApiService> _evolutionApiServiceMock = new();
     private readonly EscalasController _controller;
 
     public EscalasControllerTests()
     {
-        _controller = new EscalasController(_serviceMock.Object, _usuarioRepositoryMock.Object);
+        _controller = new EscalasController(
+            _serviceMock.Object,
+            _usuarioRepositoryMock.Object,
+            _evolutionApiServiceMock.Object,
+            Options.Create(new PublicAppUrlSettings { ApiBaseUrl = "https://api.kingdombr.com.br" }));
     }
 
     [Fact]

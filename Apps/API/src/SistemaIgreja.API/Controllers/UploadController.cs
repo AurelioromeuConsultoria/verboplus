@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 
@@ -140,34 +141,8 @@ public class UploadController : ControllerBase
             var filePath = Path.Combine(uploadsPath, fileName);
             await System.IO.File.WriteAllBytesAsync(filePath, bytes);
 
-            var relativePath = BuildRelativePath(resolvedTenantSlug, folder, fileName);
-
-            // Sync para produção (server-to-server), para a imagem aparecer no portal
-            var syncBaseUrl = _configuration["ProductionUploadSync:BaseUrl"]?.Trim();
-            var syncApiKey = _configuration["ProductionUploadSync:ApiKey"]?.Trim();
-            if (!string.IsNullOrEmpty(syncBaseUrl) && !string.IsNullOrEmpty(syncApiKey))
-            {
-                try
-                {
-                    var syncClient = _httpClientFactory.CreateClient();
-                    syncClient.Timeout = TimeSpan.FromSeconds(30);
-                    using var content = new MultipartFormDataContent();
-                    content.Add(new ByteArrayContent(bytes), "file", fileName);
-                    content.Add(new StringContent(fileName), "fileName");
-                    content.Add(new StringContent(resolvedTenantSlug), "tenantSlug");
-                    var syncRequest = new HttpRequestMessage(HttpMethod.Post, $"{syncBaseUrl.TrimEnd('/')}/api/admin/upload/sync-image");
-                    syncRequest.Headers.Add("X-Sync-Api-Key", syncApiKey);
-                    syncRequest.Content = content;
-                    using var syncResponse = await syncClient.SendAsync(syncRequest);
-                    if (!syncResponse.IsSuccessStatusCode)
-                        throw new InvalidOperationException($"Sync produção retornou {(int)syncResponse.StatusCode}");
-                }
-                catch (Exception ex)
-                {
-                    // Log mas não falha a requisição; a imagem ficou salva localmente
-                    _logger.LogWarning(ex, "Falha ao enviar imagem para produção (sync). Imagem salva apenas localmente.");
-                }
-            }
+            var syncedRelativePath = await TentarSincronizarImagemParaProducaoAsync(resolvedTenantSlug, folder, filePath, fileName);
+            var relativePath = syncedRelativePath ?? BuildRelativePath(resolvedTenantSlug, folder, fileName);
 
             return Ok(new { url = relativePath, path = relativePath, fileName });
         }
@@ -238,9 +213,8 @@ public class UploadController : ControllerBase
                 await file.CopyToAsync(stream);
             }
 
-            await TentarSincronizarImagemParaProducaoAsync(resolvedTenantSlug, folder, filePath, fileName);
-
-            var relativePath = BuildRelativePath(resolvedTenantSlug, folder, fileName);
+            var syncedRelativePath = await TentarSincronizarImagemParaProducaoAsync(resolvedTenantSlug, folder, filePath, fileName);
+            var relativePath = syncedRelativePath ?? BuildRelativePath(resolvedTenantSlug, folder, fileName);
             
             return Ok(new { 
                 url = relativePath,
@@ -255,15 +229,15 @@ public class UploadController : ControllerBase
         }
     }
 
-    private async Task TentarSincronizarImagemParaProducaoAsync(string tenantSlug, string folder, string filePath, string fileName)
+    private async Task<string?> TentarSincronizarImagemParaProducaoAsync(string tenantSlug, string folder, string filePath, string fileName)
     {
         if (!string.Equals(folder, "images", StringComparison.OrdinalIgnoreCase))
-            return;
+            return null;
 
         var syncBaseUrl = _configuration["ProductionUploadSync:BaseUrl"]?.Trim();
         var syncApiKey = _configuration["ProductionUploadSync:ApiKey"]?.Trim();
         if (string.IsNullOrEmpty(syncBaseUrl) || string.IsNullOrEmpty(syncApiKey))
-            return;
+            return null;
 
         try
         {
@@ -285,11 +259,45 @@ public class UploadController : ControllerBase
             {
                 throw new InvalidOperationException($"Sync produção retornou {(int)syncResponse.StatusCode}");
             }
+
+            var contentString = await syncResponse.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(contentString))
+            {
+                return null;
+            }
+
+            try
+            {
+                using var json = JsonDocument.Parse(contentString);
+                if (json.RootElement.TryGetProperty("url", out var urlElement))
+                {
+                    var resolvedUrl = urlElement.GetString();
+                    if (!string.IsNullOrWhiteSpace(resolvedUrl))
+                    {
+                        _logger.LogInformation(
+                            "Imagem sincronizada para produção com sucesso. TenantSlug={TenantSlug} LocalFileName={FileName} PublicUrl={PublicUrl}",
+                            tenantSlug,
+                            fileName,
+                            resolvedUrl);
+                        return resolvedUrl;
+                    }
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Sync de produção respondeu sucesso, mas o payload não pôde ser interpretado. FileName={FileName} Response={Response}",
+                    fileName,
+                    contentString);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Falha ao sincronizar imagem enviada para a API de produção.");
         }
+
+        return null;
     }
 
     private string ResolveTenantSlug(string? explicitTenantSlug = null)

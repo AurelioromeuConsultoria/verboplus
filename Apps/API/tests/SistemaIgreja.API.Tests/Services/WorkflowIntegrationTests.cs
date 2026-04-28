@@ -1765,6 +1765,1312 @@ public class WorkflowIntegrationTests
             .WithMessage("*Motivo da exceção é obrigatório*");
     }
 
+    [Fact]
+    public async Task AddItemAsync_WithRealRepositories_AllowsAdminOverrideConflictWithReason()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var adminPessoa = await scope.SeedPessoaAsync("Admin Override Ok", "admin.override.ok@app.com");
+        var adminUsuario = await scope.SeedUsuarioAsync(adminPessoa, "admin.override.ok@app.com", TipoUsuario.Admin);
+        var equipeA = await scope.SeedEquipeAsync("Equipe Override Ok A", adminUsuario.Id);
+        var equipeB = await scope.SeedEquipeAsync("Equipe Override Ok B", adminUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Override Ok");
+        var evento = await scope.SeedEventoAsync("Evento Override Ok");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(34));
+        var pessoaCompartilhada = await scope.SeedPessoaAsync("Pessoa Override Ok", "pessoa.override.ok@app.com");
+        var voluntarioA = await scope.SeedVoluntarioAsync(pessoaCompartilhada, equipeA, cargo);
+        var voluntarioB = await scope.SeedVoluntarioAsync(pessoaCompartilhada, equipeB, cargo);
+        var escalaA = await scope.SeedEscalaAsync(ocorrencia, equipeA, adminUsuario);
+        var escalaB = await scope.SeedEscalaAsync(ocorrencia, equipeB, adminUsuario);
+        await scope.SeedEscalaItemAsync(escalaA, equipeA, cargo, voluntarioA, StatusEscalaItem.Pendente);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var criado = await service.AddItemAsync(escalaB.Id, new CriarEscalaItemDto
+        {
+            EquipeId = equipeB.Id,
+            CargoId = cargo.Id,
+            VoluntarioId = voluntarioB.Id,
+            ForcarConflito = true,
+            MotivoExcecao = "Cobertura operacional aprovada"
+        }, adminUsuario.Id, true);
+
+        criado.ConflitoAprovado.Should().BeTrue();
+        criado.MotivoExcecao.Should().Be("Cobertura operacional aprovada");
+
+        var itemPersistido = await new EscalaRepository(scope.Context, scope.TenantContext).GetItemByIdAsync(criado.Id);
+        itemPersistido.Should().NotBeNull();
+        itemPersistido!.ConflitoAprovado.Should().BeTrue();
+        itemPersistido.MotivoExcecao.Should().Be("Cobertura operacional aprovada");
+    }
+
+    [Fact]
+    public async Task UpdateItemAsync_WithRealRepositories_ThrowsWhenNewVolunteerHasConflictAndNoOverride()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var adminPessoa = await scope.SeedPessoaAsync("Admin Update Conflito", "admin.update.conflito@app.com");
+        var adminUsuario = await scope.SeedUsuarioAsync(adminPessoa, "admin.update.conflito@app.com", TipoUsuario.Admin);
+        var equipeA = await scope.SeedEquipeAsync("Equipe Update Conflito A", adminUsuario.Id);
+        var equipeB = await scope.SeedEquipeAsync("Equipe Update Conflito B", adminUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Update Conflito");
+        var evento = await scope.SeedEventoAsync("Evento Update Conflito");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(35));
+        var pessoaCompartilhada = await scope.SeedPessoaAsync("Pessoa Update Conflito", "pessoa.update.conflito@app.com");
+        var voluntarioA = await scope.SeedVoluntarioAsync(pessoaCompartilhada, equipeA, cargo);
+        var voluntarioB = await scope.SeedVoluntarioAsync(pessoaCompartilhada, equipeB, cargo);
+        var pessoaLivre = await scope.SeedPessoaAsync("Pessoa Livre Update", "pessoa.livre.update@app.com");
+        var voluntarioLivre = await scope.SeedVoluntarioAsync(pessoaLivre, equipeB, cargo);
+        var escalaA = await scope.SeedEscalaAsync(ocorrencia, equipeA, adminUsuario);
+        var escalaB = await scope.SeedEscalaAsync(ocorrencia, equipeB, adminUsuario);
+        await scope.SeedEscalaItemAsync(escalaA, equipeA, cargo, voluntarioA, StatusEscalaItem.Pendente);
+        var itemB = await scope.SeedEscalaItemAsync(escalaB, equipeB, cargo, voluntarioLivre, StatusEscalaItem.Pendente);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.UpdateItemAsync(escalaB.Id, itemB.Id, new AtualizarEscalaItemDto
+        {
+            EquipeId = equipeB.Id,
+            CargoId = cargo.Id,
+            VoluntarioId = voluntarioB.Id,
+            Ordem = 2
+        }, adminUsuario.Id, true);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*já está escalado neste evento*");
+    }
+
+    [Fact]
+    public async Task UpdateItemAsync_WithRealRepositories_AllowsAdminOverrideConflictWithReason()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var adminPessoa = await scope.SeedPessoaAsync("Admin Update Override", "admin.update.override@app.com");
+        var adminUsuario = await scope.SeedUsuarioAsync(adminPessoa, "admin.update.override@app.com", TipoUsuario.Admin);
+        var equipeA = await scope.SeedEquipeAsync("Equipe Update Override A", adminUsuario.Id);
+        var equipeB = await scope.SeedEquipeAsync("Equipe Update Override B", adminUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Update Override");
+        var evento = await scope.SeedEventoAsync("Evento Update Override");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(36));
+        var pessoaCompartilhada = await scope.SeedPessoaAsync("Pessoa Update Override", "pessoa.update.override@app.com");
+        var voluntarioA = await scope.SeedVoluntarioAsync(pessoaCompartilhada, equipeA, cargo);
+        var voluntarioB = await scope.SeedVoluntarioAsync(pessoaCompartilhada, equipeB, cargo);
+        var pessoaLivre = await scope.SeedPessoaAsync("Pessoa Livre Override", "pessoa.livre.override@app.com");
+        var voluntarioLivre = await scope.SeedVoluntarioAsync(pessoaLivre, equipeB, cargo);
+        var escalaA = await scope.SeedEscalaAsync(ocorrencia, equipeA, adminUsuario);
+        var escalaB = await scope.SeedEscalaAsync(ocorrencia, equipeB, adminUsuario);
+        await scope.SeedEscalaItemAsync(escalaA, equipeA, cargo, voluntarioA, StatusEscalaItem.Pendente);
+        var itemB = await scope.SeedEscalaItemAsync(escalaB, equipeB, cargo, voluntarioLivre, StatusEscalaItem.Pendente);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var atualizado = await service.UpdateItemAsync(escalaB.Id, itemB.Id, new AtualizarEscalaItemDto
+        {
+            EquipeId = equipeB.Id,
+            CargoId = cargo.Id,
+            VoluntarioId = voluntarioB.Id,
+            Ordem = 3,
+            ForcarConflito = true,
+            MotivoExcecao = "Aprovacao administrativa"
+        }, adminUsuario.Id, true);
+
+        atualizado.VoluntarioId.Should().Be(voluntarioB.Id);
+        atualizado.ConflitoAprovado.Should().BeTrue();
+        atualizado.MotivoExcecao.Should().Be("Aprovacao administrativa");
+    }
+
+    [Fact]
+    public async Task DeleteItemAsync_WithRealRepositories_ThrowsWhenUserDoesNotManageTeam()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Delete Item Permissao", "lider.delete.item.permissao@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.delete.item.permissao@app.com", TipoUsuario.Admin);
+        var outroPessoa = await scope.SeedPessoaAsync("Usuario Delete Item Permissao", "usuario.delete.item.permissao@app.com");
+        var outroUsuario = await scope.SeedUsuarioAsync(outroPessoa, "usuario.delete.item.permissao@app.com", TipoUsuario.Portal);
+        var equipe = await scope.SeedEquipeAsync("Equipe Delete Item Permissao", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Delete Item Permissao");
+        var evento = await scope.SeedEventoAsync("Evento Delete Item Permissao");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(37));
+        var voluntario = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Delete Permissao", "vol.delete.permissao@app.com"), equipe, cargo);
+        var escala = await scope.SeedEscalaAsync(ocorrencia, equipe, liderUsuario);
+        var item = await scope.SeedEscalaItemAsync(escala, equipe, cargo, voluntario, StatusEscalaItem.Pendente);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.DeleteItemAsync(escala.Id, item.Id, outroUsuario.Id, false);
+
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("*gerenciar escalas desta equipe*");
+    }
+
+    [Fact]
+    public async Task GerarAutomaticoAsync_WithRealRepositories_CreatesDraftScaleFromModel()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Geracao Auto", "lider.geracao.auto@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.geracao.auto@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Geracao Auto", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Geracao Auto");
+        var evento = await scope.SeedEventoAsync("Evento Geracao Auto");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(38));
+        var voluntarioA = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Auto A", "vol.auto.a@app.com"), equipe, cargo);
+        var voluntarioB = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Auto B", "vol.auto.b@app.com"), equipe, cargo);
+        await scope.SeedEscalaModeloAsync(evento, equipe, "Modelo Auto", [(cargo.Id, 2, 0)]);
+
+        var auditMock = new Mock<IAuditLogService>();
+        auditMock.Setup(x => x.RecordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object?>()))
+            .Returns(Task.CompletedTask);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            auditMock.Object,
+            scope.TenantContext);
+
+        var gerada = await service.GerarAutomaticoAsync(ocorrencia.Id, equipe.Id, liderUsuario.Id, false);
+
+        gerada.Status.Should().Be(StatusEscala.Rascunho);
+        gerada.Itens.Should().HaveCount(2);
+        gerada.Itens.Select(i => i.VoluntarioId).Should().BeEquivalentTo([voluntarioA.Id, voluntarioB.Id]);
+        gerada.Itens.Select(i => i.Ordem).Should().Equal(0, 1);
+        auditMock.Verify(x => x.RecordAsync("Escala", gerada.Id.ToString(), "GerarAutomatico", It.IsAny<object?>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GerarAutomaticoAsync_WithRealRepositories_ThrowsWhenThereIsNoActiveModel()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Sem Modelo", "lider.sem.modelo@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.sem.modelo@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Sem Modelo", liderUsuario.Id);
+        var evento = await scope.SeedEventoAsync("Evento Sem Modelo");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(39));
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.GerarAutomaticoAsync(ocorrencia.Id, equipe.Id, liderUsuario.Id, false);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Não há modelo de escala ativo*");
+    }
+
+    [Fact]
+    public async Task GerarAutomaticoAsync_WithRealRepositories_ReusesDraftScaleAndReplacesExistingItems()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Reuso Auto", "lider.reuso.auto@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.reuso.auto@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Reuso Auto", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Reuso Auto");
+        var evento = await scope.SeedEventoAsync("Evento Reuso Auto");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(40));
+        var voluntarioAntigo = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Antigo", "vol.antigo.auto@app.com"), equipe, cargo);
+        var voluntarioNovo = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Novo Auto", "vol.novo.auto@app.com"), equipe, cargo);
+        await scope.SeedEscalaModeloAsync(evento, equipe, "Modelo Reuso", [(cargo.Id, 1, 0)]);
+
+        var escala = await scope.SeedEscalaAsync(ocorrencia, equipe, liderUsuario);
+        var itemAntigo = await scope.SeedEscalaItemAsync(escala, equipe, cargo, voluntarioAntigo, StatusEscalaItem.Pendente);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var gerada = await service.GerarAutomaticoAsync(ocorrencia.Id, equipe.Id, liderUsuario.Id, false);
+
+        gerada.Id.Should().Be(escala.Id);
+        gerada.Itens.Should().HaveCount(1);
+        gerada.Itens[0].VoluntarioId.Should().Be(voluntarioAntigo.Id);
+        gerada.Itens[0].Id.Should().NotBe(itemAntigo.Id);
+
+        (await scope.Context.EscalasItens.AnyAsync(i => i.Id == itemAntigo.Id)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GerarAutomaticoAsync_WithRealRepositories_ThrowsWhenExistingScaleIsNotDraft()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Escala Publicada Auto", "lider.escala.publicada.auto@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.escala.publicada.auto@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Escala Publicada Auto", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Escala Publicada Auto");
+        var evento = await scope.SeedEventoAsync("Evento Escala Publicada Auto");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(41));
+        await scope.SeedEscalaModeloAsync(evento, equipe, "Modelo Publicado", [(cargo.Id, 1, 0)]);
+        var escala = await scope.SeedEscalaAsync(ocorrencia, equipe, liderUsuario);
+        escala.Status = StatusEscala.Publicada;
+        await scope.Context.SaveChangesAsync();
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.GerarAutomaticoAsync(ocorrencia.Id, equipe.Id, liderUsuario.Id, false);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Só é possível gerar automaticamente em escala em rascunho*");
+    }
+
+    [Fact]
+    public async Task GerarAutomaticoAsync_WithRealRepositories_ThrowsWhenUserDoesNotManageTeam()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Auto Permissao", "lider.auto.permissao@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.auto.permissao@app.com", TipoUsuario.Admin);
+        var outroPessoa = await scope.SeedPessoaAsync("Usuario Auto Sem Gestao", "usuario.auto.sem.gestao@app.com");
+        var outroUsuario = await scope.SeedUsuarioAsync(outroPessoa, "usuario.auto.sem.gestao@app.com", TipoUsuario.Portal);
+        var equipe = await scope.SeedEquipeAsync("Equipe Auto Permissao", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Auto Permissao");
+        var evento = await scope.SeedEventoAsync("Evento Auto Permissao");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(42));
+        await scope.SeedEscalaModeloAsync(evento, equipe, "Modelo Auto Permissao", [(cargo.Id, 1, 0)]);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.GerarAutomaticoAsync(ocorrencia.Id, equipe.Id, outroUsuario.Id, false);
+
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("*gerenciar escalas desta equipe*");
+    }
+
+    [Fact]
+    public async Task GerarAutomaticoAsync_WithRealRepositories_SkipsUnavailableAndMonthlyLimitVolunteers()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Auto Filtros", "lider.auto.filtros@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.auto.filtros@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Auto Filtros", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Auto Filtros");
+        var eventoAtual = await scope.SeedEventoAsync("Evento Auto Filtros Atual");
+        var eventoAnterior = await scope.SeedEventoAsync("Evento Auto Filtros Anterior");
+        var ocorrenciaAtual = await scope.SeedOcorrenciaAsync(eventoAtual, new DateTime(2026, 5, 20, 19, 0, 0));
+        var ocorrenciaAnterior = await scope.SeedOcorrenciaAsync(eventoAnterior, new DateTime(2026, 5, 10, 19, 0, 0));
+
+        var voluntarioIndisponivel = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Indisponivel", "vol.indisponivel.auto@app.com"), equipe, cargo);
+        var voluntarioLimitado = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Limitado", "vol.limitado.auto@app.com"), equipe, cargo);
+        var voluntarioElegivel = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Elegivel", "vol.elegivel.auto@app.com"), equipe, cargo);
+
+        voluntarioLimitado.MaxEscalasPorMes = 1;
+        await scope.Context.SaveChangesAsync();
+
+        await scope.SeedIndisponibilidadeAsync(voluntarioIndisponivel, ocorrenciaAtual.DataHoraInicio, "Viagem");
+
+        var escalaAnterior = await scope.SeedEscalaAsync(ocorrenciaAnterior, equipe, liderUsuario);
+        await scope.SeedEscalaItemAsync(escalaAnterior, equipe, cargo, voluntarioLimitado, StatusEscalaItem.Confirmado);
+
+        await scope.SeedEscalaModeloAsync(eventoAtual, equipe, "Modelo Auto Filtros", [(cargo.Id, 1, 0)]);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var gerada = await service.GerarAutomaticoAsync(ocorrenciaAtual.Id, equipe.Id, liderUsuario.Id, false);
+
+        gerada.Itens.Should().HaveCount(1);
+        gerada.Itens[0].VoluntarioId.Should().Be(voluntarioElegivel.Id);
+    }
+
+    [Fact]
+    public async Task GerarAutomaticoAsync_WithRealRepositories_RespectsCooldownDaysAfterLastScale()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Auto Folga", "lider.auto.folga@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.auto.folga@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Auto Folga", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Auto Folga");
+        var eventoAtual = await scope.SeedEventoAsync("Evento Auto Folga Atual");
+        var eventoAnterior = await scope.SeedEventoAsync("Evento Auto Folga Anterior");
+        var ocorrenciaAtual = await scope.SeedOcorrenciaAsync(eventoAtual, new DateTime(2026, 5, 20, 19, 0, 0));
+        var ocorrenciaAnterior = await scope.SeedOcorrenciaAsync(eventoAnterior, new DateTime(2026, 5, 17, 19, 0, 0));
+
+        var voluntarioEmFolga = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Em Folga", "vol.em.folga.auto@app.com"), equipe, cargo);
+        var voluntarioDisponivel = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Disponivel Folga", "vol.disponivel.folga.auto@app.com"), equipe, cargo);
+
+        var escalaAnterior = await scope.SeedEscalaAsync(ocorrenciaAnterior, equipe, liderUsuario);
+        await scope.SeedEscalaItemAsync(escalaAnterior, equipe, cargo, voluntarioEmFolga, StatusEscalaItem.Confirmado);
+
+        await scope.SeedEscalaModeloAsync(eventoAtual, equipe, "Modelo Auto Folga", [(cargo.Id, 1, 0)], diasFolgaAposEscala: 5);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var gerada = await service.GerarAutomaticoAsync(ocorrenciaAtual.Id, equipe.Id, liderUsuario.Id, false);
+
+        gerada.Itens.Should().HaveCount(1);
+        gerada.Itens[0].VoluntarioId.Should().Be(voluntarioDisponivel.Id);
+    }
+
+    [Fact]
+    public async Task GerarAutomaticoAsync_WithRealRepositories_PrioritizesVolunteerWithLowerRecentLoad()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Auto Carga", "lider.auto.carga@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.auto.carga@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Auto Carga", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Auto Carga");
+        var eventoAtual = await scope.SeedEventoAsync("Evento Auto Carga Atual");
+        var eventoAntigo1 = await scope.SeedEventoAsync("Evento Auto Carga Antigo 1");
+        var eventoAntigo2 = await scope.SeedEventoAsync("Evento Auto Carga Antigo 2");
+        var ocorrenciaAtual = await scope.SeedOcorrenciaAsync(eventoAtual, new DateTime(2026, 5, 25, 19, 0, 0));
+        var ocorrenciaAntiga1 = await scope.SeedOcorrenciaAsync(eventoAntigo1, new DateTime(2026, 5, 5, 19, 0, 0));
+        var ocorrenciaAntiga2 = await scope.SeedOcorrenciaAsync(eventoAntigo2, new DateTime(2026, 5, 12, 19, 0, 0));
+
+        var voluntarioMaisCarregado = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Carregado", "vol.carregado.auto@app.com"), equipe, cargo);
+        var voluntarioLeve = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Leve", "vol.leve.auto@app.com"), equipe, cargo);
+
+        var escalaAntiga1 = await scope.SeedEscalaAsync(ocorrenciaAntiga1, equipe, liderUsuario);
+        var escalaAntiga2 = await scope.SeedEscalaAsync(ocorrenciaAntiga2, equipe, liderUsuario);
+        await scope.SeedEscalaItemAsync(escalaAntiga1, equipe, cargo, voluntarioMaisCarregado, StatusEscalaItem.Confirmado);
+        await scope.SeedEscalaItemAsync(escalaAntiga2, equipe, cargo, voluntarioMaisCarregado, StatusEscalaItem.Confirmado);
+
+        await scope.SeedEscalaModeloAsync(eventoAtual, equipe, "Modelo Auto Carga", [(cargo.Id, 1, 0)]);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var gerada = await service.GerarAutomaticoAsync(ocorrenciaAtual.Id, equipe.Id, liderUsuario.Id, false);
+
+        gerada.Itens.Should().HaveCount(1);
+        gerada.Itens[0].VoluntarioId.Should().Be(voluntarioLeve.Id);
+    }
+
+    [Fact]
+    public async Task GerarAutomaticoAsync_WithRealRepositories_DoesNotDuplicateSamePersonAcrossMultipleModelItems()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Auto Pessoa Unica", "lider.auto.pessoa.unica@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.auto.pessoa.unica@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Auto Pessoa Unica", liderUsuario.Id);
+        var cargoA = await scope.SeedCargoAsync("Auto Pessoa Unica A");
+        var cargoB = await scope.SeedCargoAsync("Auto Pessoa Unica B");
+        var evento = await scope.SeedEventoAsync("Evento Auto Pessoa Unica");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, new DateTime(2026, 5, 26, 19, 0, 0));
+
+        var pessoaCompartilhada = await scope.SeedPessoaAsync("Pessoa Multi Cargo", "pessoa.multi.cargo@app.com");
+        await scope.SeedVoluntarioAsync(pessoaCompartilhada, equipe, cargoA);
+        await scope.SeedVoluntarioAsync(pessoaCompartilhada, equipe, cargoB);
+
+        var pessoaCargoB = await scope.SeedPessoaAsync("Pessoa Cargo B", "pessoa.cargo.b@app.com");
+        var voluntarioCargoBAlternativo = await scope.SeedVoluntarioAsync(pessoaCargoB, equipe, cargoB);
+
+        await scope.SeedEscalaModeloAsync(evento, equipe, "Modelo Auto Pessoa Unica",
+            [
+                (cargoA.Id, 1, 0),
+                (cargoB.Id, 1, 1)
+            ]);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var gerada = await service.GerarAutomaticoAsync(ocorrencia.Id, equipe.Id, liderUsuario.Id, false);
+
+        gerada.Itens.Should().HaveCount(2);
+        gerada.Itens.Select(i => i.VoluntarioPessoaId).Should().OnlyHaveUniqueItems();
+        gerada.Itens.Should().Contain(i => i.CargoId == cargoB.Id && i.VoluntarioId == voluntarioCargoBAlternativo.Id);
+    }
+
+    [Fact]
+    public async Task GerarAutomaticoAsync_WithRealRepositories_UsesOnlyVolunteersFromRequiredCargo()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Auto Cargo", "lider.auto.cargo@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.auto.cargo@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Auto Cargo", liderUsuario.Id);
+        var cargoSom = await scope.SeedCargoAsync("Som Auto Cargo");
+        var cargoMidia = await scope.SeedCargoAsync("Midia Auto Cargo");
+        var evento = await scope.SeedEventoAsync("Evento Auto Cargo");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, new DateTime(2026, 5, 27, 19, 0, 0));
+
+        var voluntarioSom = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Som", "vol.som.auto@app.com"), equipe, cargoSom);
+        await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Midia", "vol.midia.auto@app.com"), equipe, cargoMidia);
+
+        await scope.SeedEscalaModeloAsync(evento, equipe, "Modelo Auto Cargo", [(cargoSom.Id, 1, 0)]);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var gerada = await service.GerarAutomaticoAsync(ocorrencia.Id, equipe.Id, liderUsuario.Id, false);
+
+        gerada.Itens.Should().HaveCount(1);
+        gerada.Itens[0].VoluntarioId.Should().Be(voluntarioSom.Id);
+        gerada.Itens[0].CargoId.Should().Be(cargoSom.Id);
+    }
+
+    [Fact]
+    public async Task GerarAutomaticoAsync_WithRealRepositories_SupportsModelItemWithoutCargoRestriction()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Auto Sem Cargo", "lider.auto.sem.cargo@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.auto.sem.cargo@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Auto Sem Cargo", liderUsuario.Id);
+        var cargoA = await scope.SeedCargoAsync("Cargo Generico A");
+        var cargoB = await scope.SeedCargoAsync("Cargo Generico B");
+        var evento = await scope.SeedEventoAsync("Evento Auto Sem Cargo");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, new DateTime(2026, 5, 28, 19, 0, 0));
+
+        var voluntarioA = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Generico A", "vol.generico.a@app.com"), equipe, cargoA);
+        var voluntarioB = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Generico B", "vol.generico.b@app.com"), equipe, cargoB);
+
+        await scope.SeedEscalaModeloAsync(evento, equipe, "Modelo Auto Sem Cargo", [(null, 2, 0)]);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var gerada = await service.GerarAutomaticoAsync(ocorrencia.Id, equipe.Id, liderUsuario.Id, false);
+
+        gerada.Itens.Should().HaveCount(2);
+        gerada.Itens.Select(i => i.VoluntarioId).Should().BeEquivalentTo([voluntarioA.Id, voluntarioB.Id]);
+    }
+
+    [Fact]
+    public async Task GerarAutomaticoAsync_WithRealRepositories_CreatesPartialScaleWhenEligiblePoolIsSmallerThanRequestedQuantity()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Auto Parcial", "lider.auto.parcial@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.auto.parcial@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Auto Parcial", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Cargo Parcial");
+        var evento = await scope.SeedEventoAsync("Evento Auto Parcial");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, new DateTime(2026, 5, 29, 19, 0, 0));
+
+        var voluntario = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Unico Parcial", "vol.unico.parcial@app.com"), equipe, cargo);
+        await scope.SeedEscalaModeloAsync(evento, equipe, "Modelo Auto Parcial", [(cargo.Id, 3, 0)]);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var gerada = await service.GerarAutomaticoAsync(ocorrencia.Id, equipe.Id, liderUsuario.Id, false);
+
+        gerada.Itens.Should().HaveCount(1);
+        gerada.Itens[0].VoluntarioId.Should().Be(voluntario.Id);
+    }
+
+    [Fact]
+    public async Task GetByEventoOcorrenciaAsync_WithRealRepositories_ReturnsNullWhenScaleDoesNotExist()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Consulta Nula", "lider.consulta.nula@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.consulta.nula@app.com", TipoUsuario.Admin);
+        var evento = await scope.SeedEventoAsync("Evento Consulta Nula");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(43));
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var escala = await service.GetByEventoOcorrenciaAsync(ocorrencia.Id, liderUsuario.Id, true);
+
+        escala.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetByEventoOcorrenciaAndEquipeAsync_WithRealRepositories_ReturnsNullWhenNoScaleExists()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Consulta Equipe Nula", "lider.consulta.equipe.nula@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.consulta.equipe.nula@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Consulta Equipe Nula", liderUsuario.Id);
+        var evento = await scope.SeedEventoAsync("Evento Consulta Equipe Nula");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(44));
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var escala = await service.GetByEventoOcorrenciaAndEquipeAsync(ocorrencia.Id, equipe.Id, liderUsuario.Id, false);
+
+        escala.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithRealRepositories_ThrowsWhenUserDoesNotManageTeam()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Update Permissao", "lider.update.permissao@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.update.permissao@app.com", TipoUsuario.Admin);
+        var outroPessoa = await scope.SeedPessoaAsync("Usuario Update Sem Gestao", "usuario.update.sem.gestao@app.com");
+        var outroUsuario = await scope.SeedUsuarioAsync(outroPessoa, "usuario.update.sem.gestao@app.com", TipoUsuario.Portal);
+        var equipe = await scope.SeedEquipeAsync("Equipe Update Permissao", liderUsuario.Id);
+        var evento = await scope.SeedEventoAsync("Evento Update Permissao");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(45));
+        var escala = await scope.SeedEscalaAsync(ocorrencia, equipe, liderUsuario);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.UpdateAsync(escala.Id, new AtualizarEscalaDto
+        {
+            Status = StatusEscala.Publicada,
+            Observacoes = "Tentativa sem permissao"
+        }, outroUsuario.Id, false);
+
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("*gerenciar escalas desta equipe*");
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithRealRepositories_ThrowsWhenItemStatusDoesNotAllowSwapRequest()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Troca Status", "lider.troca.status@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.troca.status@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Troca Status", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Troca Status");
+        var evento = await scope.SeedEventoAsync("Evento Troca Status");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(46));
+        var pessoaSolicitante = await scope.SeedPessoaAsync("Solicitante Status", "solicitante.status@app.com");
+        var usuarioSolicitante = await scope.SeedUsuarioAsync(pessoaSolicitante, "solicitante.status@app.com", TipoUsuario.Portal);
+        var voluntario = await scope.SeedVoluntarioAsync(pessoaSolicitante, equipe, cargo);
+        var escala = await scope.SeedEscalaAsync(ocorrencia, equipe, liderUsuario);
+        var item = await scope.SeedEscalaItemAsync(escala, equipe, cargo, voluntario, StatusEscalaItem.Substituido);
+
+        var service = new SolicitacaoTrocaEscalaService(
+            new SolicitacaoTrocaEscalaRepository(scope.Context, scope.TenantContext),
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            Mock.Of<ILogger<SolicitacaoTrocaEscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.CreateAsync(escala.Id, item.Id, new CriarSolicitacaoTrocaEscalaDto
+        {
+            Motivo = "Nao deveria permitir"
+        }, usuarioSolicitante.Id, false, pessoaSolicitante.Id);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*não permite solicitação de troca*");
+    }
+
+    [Fact]
+    public async Task AprovarAsync_WithRealRepositories_ThrowsWhenSubstituteIsSamePersonAsRequester()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Substituto Igual", "lider.substituto.igual@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.substituto.igual@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Substituto Igual", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Substituto Igual");
+        var cargoAlternativo = await scope.SeedCargoAsync("Substituto Igual Alternativo");
+        var evento = await scope.SeedEventoAsync("Evento Substituto Igual");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(47));
+        var pessoaSolicitante = await scope.SeedPessoaAsync("Solicitante Igual", "solicitante.igual@app.com");
+        var usuarioSolicitante = await scope.SeedUsuarioAsync(pessoaSolicitante, "solicitante.igual@app.com", TipoUsuario.Portal);
+        var voluntarioSolicitante = await scope.SeedVoluntarioAsync(pessoaSolicitante, equipe, cargo);
+        var voluntarioMesmoPessoaOutroCadastro = await scope.SeedVoluntarioAsync(pessoaSolicitante, equipe, cargoAlternativo);
+        var escala = await scope.SeedEscalaAsync(ocorrencia, equipe, liderUsuario);
+        var item = await scope.SeedEscalaItemAsync(escala, equipe, cargo, voluntarioSolicitante, StatusEscalaItem.Pendente);
+
+        var service = new SolicitacaoTrocaEscalaService(
+            new SolicitacaoTrocaEscalaRepository(scope.Context, scope.TenantContext),
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            Mock.Of<ILogger<SolicitacaoTrocaEscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var solicitacao = await service.CreateAsync(escala.Id, item.Id, new CriarSolicitacaoTrocaEscalaDto
+        {
+            Motivo = "Teste mesma pessoa"
+        }, usuarioSolicitante.Id, false, pessoaSolicitante.Id);
+
+        var act = () => service.AprovarAsync(solicitacao.Id, new AprovarSolicitacaoTrocaEscalaDto
+        {
+            VoluntarioSubstitutoId = voluntarioMesmoPessoaOutroCadastro.Id
+        }, liderUsuario.Id, false);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*substituto deve ser diferente do solicitante*");
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithRealRepositories_ReturnsNullWhenScaleDoesNotExist()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var adminPessoa = await scope.SeedPessoaAsync("Admin Consulta Escala Nula", "admin.consulta.escala.nula@app.com");
+        var adminUsuario = await scope.SeedUsuarioAsync(adminPessoa, "admin.consulta.escala.nula@app.com", TipoUsuario.Admin);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var escala = await service.GetByIdAsync(999999, adminUsuario.Id, true);
+
+        escala.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AddItemAsync_WithRealRepositories_ThrowsWhenDtoEquipeDiffersFromScaleTeam()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Equipe Invalida Add", "lider.equipe.invalida.add@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.equipe.invalida.add@app.com", TipoUsuario.Admin);
+        var equipeEscala = await scope.SeedEquipeAsync("Equipe Escala Invalida Add", liderUsuario.Id);
+        var equipeErrada = await scope.SeedEquipeAsync("Equipe Errada Add", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Cargo Add Invalido");
+        var evento = await scope.SeedEventoAsync("Evento Add Invalido");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(48));
+        var voluntario = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Add Invalido", "vol.add.invalido@app.com"), equipeEscala, cargo);
+        var escala = await scope.SeedEscalaAsync(ocorrencia, equipeEscala, liderUsuario);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.AddItemAsync(escala.Id, new CriarEscalaItemDto
+        {
+            EquipeId = equipeErrada.Id,
+            CargoId = cargo.Id,
+            VoluntarioId = voluntario.Id
+        }, liderUsuario.Id, false);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*mesma equipe da escala*");
+    }
+
+    [Fact]
+    public async Task UpdateItemAsync_WithRealRepositories_ThrowsWhenVolunteerDoesNotExist()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Voluntario Inexistente Update", "lider.voluntario.inexistente.update@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.voluntario.inexistente.update@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Voluntario Inexistente Update", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Cargo Update Inexistente");
+        var evento = await scope.SeedEventoAsync("Evento Update Inexistente");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(49));
+        var voluntario = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Base Update", "vol.base.update@app.com"), equipe, cargo);
+        var escala = await scope.SeedEscalaAsync(ocorrencia, equipe, liderUsuario);
+        var item = await scope.SeedEscalaItemAsync(escala, equipe, cargo, voluntario, StatusEscalaItem.Pendente);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.UpdateItemAsync(escala.Id, item.Id, new AtualizarEscalaItemDto
+        {
+            EquipeId = equipe.Id,
+            CargoId = cargo.Id,
+            VoluntarioId = 999999,
+            Ordem = 1
+        }, liderUsuario.Id, false);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Voluntário não encontrado*");
+    }
+
+    [Fact]
+    public async Task AprovarAsync_WithRealRepositories_ThrowsWhenRequestAlreadyResponded()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Solicitacao Respondida", "lider.solicitacao.respondida@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.solicitacao.respondida@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Solicitacao Respondida", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Solicitacao Respondida");
+        var evento = await scope.SeedEventoAsync("Evento Solicitacao Respondida");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(50));
+        var pessoaSolicitante = await scope.SeedPessoaAsync("Solicitante Respondido", "solicitante.respondido@app.com");
+        var usuarioSolicitante = await scope.SeedUsuarioAsync(pessoaSolicitante, "solicitante.respondido@app.com", TipoUsuario.Portal);
+        var voluntarioSolicitante = await scope.SeedVoluntarioAsync(pessoaSolicitante, equipe, cargo);
+        var pessoaSubstituto = await scope.SeedPessoaAsync("Substituto Respondido", "substituto.respondido@app.com");
+        var voluntarioSubstituto = await scope.SeedVoluntarioAsync(pessoaSubstituto, equipe, cargo);
+        var escala = await scope.SeedEscalaAsync(ocorrencia, equipe, liderUsuario);
+        var item = await scope.SeedEscalaItemAsync(escala, equipe, cargo, voluntarioSolicitante, StatusEscalaItem.Pendente);
+
+        var service = new SolicitacaoTrocaEscalaService(
+            new SolicitacaoTrocaEscalaRepository(scope.Context, scope.TenantContext),
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            Mock.Of<ILogger<SolicitacaoTrocaEscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var solicitacao = await service.CreateAsync(escala.Id, item.Id, new CriarSolicitacaoTrocaEscalaDto
+        {
+            Motivo = "Primeira resposta"
+        }, usuarioSolicitante.Id, false, pessoaSolicitante.Id);
+
+        await service.RejeitarAsync(solicitacao.Id, new RejeitarSolicitacaoTrocaEscalaDto
+        {
+            ObservacaoResposta = "Ja respondida"
+        }, liderUsuario.Id, false);
+
+        var act = () => service.AprovarAsync(solicitacao.Id, new AprovarSolicitacaoTrocaEscalaDto
+        {
+            VoluntarioSubstitutoId = voluntarioSubstituto.Id
+        }, liderUsuario.Id, false);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Solicitação já foi respondida*");
+    }
+
+    [Fact]
+    public async Task RejeitarAsync_WithRealRepositories_ThrowsWhenRequestDoesNotExist()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var adminPessoa = await scope.SeedPessoaAsync("Admin Rejeicao Inexistente", "admin.rejeicao.inexistente@app.com");
+        var adminUsuario = await scope.SeedUsuarioAsync(adminPessoa, "admin.rejeicao.inexistente@app.com", TipoUsuario.Admin);
+
+        var service = new SolicitacaoTrocaEscalaService(
+            new SolicitacaoTrocaEscalaRepository(scope.Context, scope.TenantContext),
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            Mock.Of<ILogger<SolicitacaoTrocaEscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.RejeitarAsync(999999, new RejeitarSolicitacaoTrocaEscalaDto
+        {
+            ObservacaoResposta = "Nao existe"
+        }, adminUsuario.Id, true);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Solicitação não encontrada*");
+    }
+
+    [Fact]
+    public async Task GetSugestoesAsync_WithRealRepositories_ThrowsWhenScaleDoesNotExist()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var adminPessoa = await scope.SeedPessoaAsync("Admin Sugestao Inexistente", "admin.sugestao.inexistente@app.com");
+        var adminUsuario = await scope.SeedUsuarioAsync(adminPessoa, "admin.sugestao.inexistente@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Sugestao Inexistente", adminUsuario.Id);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.GetSugestoesAsync(999999, equipe.Id, adminUsuario.Id, true);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Escala não encontrada*");
+    }
+
+    [Fact]
+    public async Task GetSugestoesAsync_WithRealRepositories_ThrowsWhenEquipeDoesNotMatchScale()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Equipe Invalida Sugestao", "lider.equipe.invalida.sugestao@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.equipe.invalida.sugestao@app.com", TipoUsuario.Admin);
+        var equipeEscala = await scope.SeedEquipeAsync("Equipe Escala Sugestao", liderUsuario.Id);
+        var equipeErrada = await scope.SeedEquipeAsync("Equipe Errada Sugestao", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Cargo Sugestao Invalida");
+        var evento = await scope.SeedEventoAsync("Evento Sugestao Invalida");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(51));
+        var voluntario = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Sugestao", "vol.sugestao.invalida@app.com"), equipeEscala, cargo);
+        var escala = await scope.SeedEscalaAsync(ocorrencia, equipeEscala, liderUsuario);
+        await scope.SeedEscalaItemAsync(escala, equipeEscala, cargo, voluntario, StatusEscalaItem.Pendente);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.GetSugestoesAsync(escala.Id, equipeErrada.Id, liderUsuario.Id, false);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Equipe inválida para esta escala*");
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithRealRepositories_ThrowsWhenOccurrenceDoesNotExist()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var adminPessoa = await scope.SeedPessoaAsync("Admin Ocorrencia Inexistente", "admin.ocorrencia.inexistente@app.com");
+        var adminUsuario = await scope.SeedUsuarioAsync(adminPessoa, "admin.ocorrencia.inexistente@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Ocorrencia Inexistente", adminUsuario.Id);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.CreateAsync(new CriarEscalaDto
+        {
+            EventoOcorrenciaId = 999999,
+            EquipeId = equipe.Id,
+            Observacoes = "Ocorrencia inexistente"
+        }, adminUsuario.Id, true);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Ocorrência não encontrada*");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithRealRepositories_ThrowsWhenScaleDoesNotExist()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var adminPessoa = await scope.SeedPessoaAsync("Admin Update Inexistente", "admin.update.inexistente@app.com");
+        var adminUsuario = await scope.SeedUsuarioAsync(adminPessoa, "admin.update.inexistente@app.com", TipoUsuario.Admin);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.UpdateAsync(999999, new AtualizarEscalaDto
+        {
+            Status = StatusEscala.Rascunho,
+            Observacoes = "Nao existe"
+        }, adminUsuario.Id, true);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Escala não encontrada*");
+    }
+
+    [Fact]
+    public async Task AddItemAsync_WithRealRepositories_ThrowsWhenScaleDoesNotExist()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var adminPessoa = await scope.SeedPessoaAsync("Admin Add Escala Inexistente", "admin.add.escala.inexistente@app.com");
+        var adminUsuario = await scope.SeedUsuarioAsync(adminPessoa, "admin.add.escala.inexistente@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Add Escala Inexistente", adminUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Cargo Add Escala Inexistente");
+        var voluntario = await scope.SeedVoluntarioAsync(await scope.SeedPessoaAsync("Voluntario Add Escala Inexistente", "vol.add.escala.inexistente@app.com"), equipe, cargo);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.AddItemAsync(999999, new CriarEscalaItemDto
+        {
+            EquipeId = equipe.Id,
+            CargoId = cargo.Id,
+            VoluntarioId = voluntario.Id
+        }, adminUsuario.Id, true);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Escala não encontrada*");
+    }
+
+    [Fact]
+    public async Task AddItemAsync_WithRealRepositories_ThrowsWhenVolunteerDoesNotExist()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var adminPessoa = await scope.SeedPessoaAsync("Admin Add Voluntario Inexistente", "admin.add.voluntario.inexistente@app.com");
+        var adminUsuario = await scope.SeedUsuarioAsync(adminPessoa, "admin.add.voluntario.inexistente@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Add Voluntario Inexistente", adminUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Cargo Add Voluntario Inexistente");
+        var evento = await scope.SeedEventoAsync("Evento Add Voluntario Inexistente");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(52));
+        var escala = await scope.SeedEscalaAsync(ocorrencia, equipe, adminUsuario);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.AddItemAsync(escala.Id, new CriarEscalaItemDto
+        {
+            EquipeId = equipe.Id,
+            CargoId = cargo.Id,
+            VoluntarioId = 999999
+        }, adminUsuario.Id, true);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Voluntário não encontrado*");
+    }
+
+    [Fact]
+    public async Task DeleteItemAsync_WithRealRepositories_ThrowsWhenItemDoesNotExist()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Delete Item Inexistente", "lider.delete.item.inexistente@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.delete.item.inexistente@app.com", TipoUsuario.Admin);
+        var equipe = await scope.SeedEquipeAsync("Equipe Delete Item Inexistente", liderUsuario.Id);
+        var evento = await scope.SeedEventoAsync("Evento Delete Item Inexistente");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(53));
+        var escala = await scope.SeedEscalaAsync(ocorrencia, equipe, liderUsuario);
+
+        var service = new EscalaService(
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EventoOcorrenciaRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new EscalaModeloRepository(scope.Context, scope.TenantContext),
+            new IndisponibilidadeVoluntarioRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            CreateComunicacaoMock().Object,
+            Mock.Of<ILogger<EscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.DeleteItemAsync(escala.Id, 999999, liderUsuario.Id, false);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Item da escala não encontrado*");
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithRealRepositories_ThrowsWhenRequesterHasNoPermissionForSwap()
+    {
+        await using var scope = await IntegrationScope.CreateAsync();
+
+        var liderPessoa = await scope.SeedPessoaAsync("Lider Troca Sem Permissao", "lider.troca.sem.permissao@app.com");
+        var liderUsuario = await scope.SeedUsuarioAsync(liderPessoa, "lider.troca.sem.permissao@app.com", TipoUsuario.Admin);
+        var usuarioSemPermissaoPessoa = await scope.SeedPessoaAsync("Usuario Sem Permissao Troca", "usuario.sem.permissao.troca@app.com");
+        var usuarioSemPermissao = await scope.SeedUsuarioAsync(usuarioSemPermissaoPessoa, "usuario.sem.permissao.troca@app.com", TipoUsuario.Portal);
+        var equipe = await scope.SeedEquipeAsync("Equipe Troca Sem Permissao", liderUsuario.Id);
+        var cargo = await scope.SeedCargoAsync("Cargo Troca Sem Permissao");
+        var evento = await scope.SeedEventoAsync("Evento Troca Sem Permissao");
+        var ocorrencia = await scope.SeedOcorrenciaAsync(evento, DateTime.Now.AddDays(54));
+        var pessoaVoluntario = await scope.SeedPessoaAsync("Voluntario Troca Sem Permissao", "vol.troca.sem.permissao@app.com");
+        var voluntario = await scope.SeedVoluntarioAsync(pessoaVoluntario, equipe, cargo);
+        var escala = await scope.SeedEscalaAsync(ocorrencia, equipe, liderUsuario);
+        var item = await scope.SeedEscalaItemAsync(escala, equipe, cargo, voluntario, StatusEscalaItem.Pendente);
+
+        var service = new SolicitacaoTrocaEscalaService(
+            new SolicitacaoTrocaEscalaRepository(scope.Context, scope.TenantContext),
+            new EscalaRepository(scope.Context, scope.TenantContext),
+            new EquipeRepository(scope.Context, scope.TenantContext),
+            new VoluntarioRepository(scope.Context, scope.TenantContext),
+            new UsuarioRepository(scope.Context, scope.TenantContext),
+            CreateNotificationMock().Object,
+            Mock.Of<ILogger<SolicitacaoTrocaEscalaService>>(),
+            Mock.Of<IAuditLogService>(),
+            scope.TenantContext);
+
+        var act = () => service.CreateAsync(escala.Id, item.Id, new CriarSolicitacaoTrocaEscalaDto
+        {
+            Motivo = "Nao deveria poder"
+        }, usuarioSemPermissao.Id, false, usuarioSemPermissaoPessoa.Id);
+
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("*não pode solicitar troca para esta escala*");
+    }
+
     private static IConfiguration CreateJwtConfiguration()
     {
         return new ConfigurationBuilder()
@@ -1983,6 +3289,52 @@ public class WorkflowIntegrationTests
             Context.Escalas.Add(escala);
             await Context.SaveChangesAsync();
             return escala;
+        }
+
+        public async Task<EscalaModelo> SeedEscalaModeloAsync(Evento evento, Equipe equipe, string nome, IEnumerable<(int? cargoId, int quantidade, int ordem)> itens, int? diasFolgaAposEscala = null)
+        {
+            var modelo = new EscalaModelo
+            {
+                TenantId = Tenant.InitialTenantId,
+                EventoId = evento.Id,
+                EquipeId = equipe.Id,
+                Nome = nome,
+                DiasFolgaAposEscala = diasFolgaAposEscala,
+                Ativo = true,
+                DataCriacao = DateTime.Now
+            };
+
+            foreach (var item in itens)
+            {
+                modelo.Itens.Add(new EscalaModeloItem
+                {
+                    TenantId = Tenant.InitialTenantId,
+                    CargoId = item.cargoId,
+                    Quantidade = item.quantidade,
+                    Ordem = item.ordem,
+                    DataCriacao = DateTime.Now
+                });
+            }
+
+            Context.EscalasModelos.Add(modelo);
+            await Context.SaveChangesAsync();
+            return modelo;
+        }
+
+        public async Task<IndisponibilidadeVoluntario> SeedIndisponibilidadeAsync(Voluntario voluntario, DateTime data, string? motivo = null)
+        {
+            var indisponibilidade = new IndisponibilidadeVoluntario
+            {
+                TenantId = Tenant.InitialTenantId,
+                VoluntarioId = voluntario.Id,
+                Data = data,
+                Motivo = motivo,
+                DataCriacao = DateTime.Now
+            };
+
+            Context.IndisponibilidadesVoluntarios.Add(indisponibilidade);
+            await Context.SaveChangesAsync();
+            return indisponibilidade;
         }
 
         public async Task<EscalaItem> SeedEscalaItemAsync(Escala escala, Equipe equipe, Cargo cargo, Voluntario voluntario, StatusEscalaItem status)

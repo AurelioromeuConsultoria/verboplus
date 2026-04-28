@@ -26,6 +26,9 @@ public interface IEscalaService
     Task<EscalaItemDto> RecusarItemAsync(int escalaId, int escalaItemId, string? motivoRecusa, int usuarioId, bool isAdmin, int? usuarioPessoaId);
     Task<EscalaItemDto> RegistrarPresencaAsync(int escalaId, int escalaItemId, bool compareceu, string? observacaoOperacional, int usuarioId, bool isAdmin);
     Task<IEnumerable<HistoricoVoluntarioDto>> GetHistoricoVoluntariosAsync(int usuarioId, bool isAdmin, int? equipeId = null, int? eventoId = null, DateTime? dataInicio = null, DateTime? dataFim = null);
+    Task<PlanejamentoMensalEscalaDto> GetPlanejamentoMensalAsync(int usuarioId, bool isAdmin, int ano, int mes, int? equipeId = null, int? eventoId = null);
+    Task<GerarPlanejamentoMensalResultadoDto> GerarPlanejamentoMensalAutomaticoAsync(GerarPlanejamentoMensalDto dto, int usuarioId, bool isAdmin);
+    Task<EscalaItemDto> CriarAlocacaoPlanejamentoMensalAsync(CriarAlocacaoPlanejamentoMensalDto dto, int usuarioId, bool isAdmin);
     Task<int> EnviarLembretesPendentesAsync(DateTime? referencia = null);
 }
 
@@ -659,6 +662,199 @@ public class EscalaService : IEscalaService
             .ToList();
     }
 
+    public async Task<PlanejamentoMensalEscalaDto> GetPlanejamentoMensalAsync(int usuarioId, bool isAdmin, int ano, int mes, int? equipeId = null, int? eventoId = null)
+    {
+        if (ano < 2000 || ano > 2100) throw new ArgumentException("Ano inválido");
+        if (mes < 1 || mes > 12) throw new ArgumentException("Mês inválido");
+
+        var inicio = new DateTime(ano, mes, 1);
+        var fim = inicio.AddMonths(1).AddTicks(-1);
+        var equipeIdsPermitidas = await GetEquipeIdsPermitidasAsync(usuarioId, isAdmin, equipeId);
+
+        var ocorrencias = (await _eventoOcorrenciaRepository.GetByPeriodoAsync(inicio, fim, eventoId))
+            .OrderBy(o => o.DataHoraInicio)
+            .ToList();
+
+        var itens = (await _repository.GetItensComOcorrenciaNoPeriodoAsync(inicio, fim, equipeId, eventoId))
+            .Where(i => equipeIdsPermitidas == null || equipeIdsPermitidas.Contains(i.EquipeId))
+            .ToList();
+
+        var voluntariosBase = await GetVoluntariosBasePlanejamentoAsync(equipeId, equipeIdsPermitidas);
+        var pessoasBase = voluntariosBase
+            .Where(v => v.Pessoa != null)
+            .GroupBy(v => v.PessoaId)
+            .ToDictionary(
+                g => g.Key,
+                g => new
+                {
+                    PessoaId = g.Key,
+                    Nome = g.Select(v => v.Pessoa!.Nome).FirstOrDefault() ?? string.Empty,
+                    WhatsApp = g.Select(v => v.Pessoa!.WhatsApp).FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)),
+                    Equipes = g.Select(v => v.Equipe?.Nome ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().OrderBy(x => x).ToList(),
+                    Cargos = g.Select(v => v.Cargo?.Nome ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().OrderBy(x => x).ToList()
+                });
+
+        var rowsByPessoa = itens
+            .Where(i => i.Voluntario?.Pessoa != null)
+            .GroupBy(i => i.Voluntario.PessoaId)
+            .ToDictionary(g => g.Key, g =>
+            {
+                pessoasBase.TryGetValue(g.Key, out var pessoaBase);
+                var datas = g
+                    .Select(i => i.Escala?.EventoOcorrencia?.DataHoraInicio.Date)
+                    .Where(d => d.HasValue)
+                    .Select(d => d!.Value)
+                    .Distinct()
+                    .OrderBy(d => d)
+                    .ToList();
+
+                return new PlanejamentoMensalVoluntarioDto
+                {
+                    PessoaId = g.Key,
+                    Nome = pessoaBase?.Nome ?? g.Select(i => i.Voluntario.Pessoa.Nome).FirstOrDefault() ?? string.Empty,
+                    WhatsApp = pessoaBase?.WhatsApp ?? g.Select(i => i.Voluntario.Pessoa.WhatsApp).FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)),
+                    Equipes = pessoaBase?.Equipes ?? g.Select(i => i.Equipe?.Nome ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().OrderBy(x => x).ToList(),
+                    Cargos = pessoaBase?.Cargos ?? g.Select(i => i.Cargo?.Nome ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().OrderBy(x => x).ToList(),
+                    TotalEscalas = g.Count(),
+                    Confirmados = g.Count(i => i.Status == StatusEscalaItem.Confirmado || i.Status == StatusEscalaItem.Serviu),
+                    Pendentes = g.Count(i => i.Status == StatusEscalaItem.Pendente),
+                    Recusados = g.Count(i => i.Status == StatusEscalaItem.Recusado || i.Status == StatusEscalaItem.Substituido),
+                    Faltas = g.Count(i => i.Status == StatusEscalaItem.Faltou),
+                    TemDomingosConsecutivos = TemDatasConsecutivas(datas),
+                    Alocacoes = g
+                        .OrderBy(i => i.Escala?.EventoOcorrencia?.DataHoraInicio)
+                        .ThenBy(i => i.Equipe?.Nome)
+                        .Select(i => new PlanejamentoMensalAlocacaoDto
+                        {
+                            EscalaId = i.EscalaId,
+                            EscalaItemId = i.Id,
+                            OcorrenciaId = i.Escala?.EventoOcorrenciaId ?? 0,
+                            EquipeId = i.EquipeId,
+                            EquipeNome = i.Equipe?.Nome ?? string.Empty,
+                            CargoId = i.CargoId,
+                            CargoNome = i.Cargo?.Nome,
+                            DataHoraInicio = i.Escala?.EventoOcorrencia?.DataHoraInicio ?? DateTime.MinValue,
+                            Status = i.Status
+                        })
+                        .ToList()
+                };
+            });
+
+        foreach (var pessoa in pessoasBase.Values)
+        {
+            if (rowsByPessoa.ContainsKey(pessoa.PessoaId)) continue;
+            rowsByPessoa[pessoa.PessoaId] = new PlanejamentoMensalVoluntarioDto
+            {
+                PessoaId = pessoa.PessoaId,
+                Nome = pessoa.Nome,
+                WhatsApp = pessoa.WhatsApp,
+                Equipes = pessoa.Equipes,
+                Cargos = pessoa.Cargos
+            };
+        }
+
+        var rows = rowsByPessoa.Values
+            .OrderByDescending(v => v.TotalEscalas)
+            .ThenBy(v => v.Nome)
+            .ToList();
+
+        return new PlanejamentoMensalEscalaDto
+        {
+            DataInicio = inicio,
+            DataFim = fim,
+            EventoId = eventoId,
+            EquipeId = equipeId,
+            Ocorrencias = ocorrencias.Select(o => new PlanejamentoMensalOcorrenciaDto
+            {
+                OcorrenciaId = o.Id,
+                EventoId = o.EventoId,
+                EventoTitulo = o.Evento?.Titulo ?? string.Empty,
+                DataHoraInicio = o.DataHoraInicio,
+                TotalEscalados = itens.Count(i => i.Escala?.EventoOcorrenciaId == o.Id)
+            }).ToList(),
+            Voluntarios = rows,
+            Resumo = new PlanejamentoMensalResumoDto
+            {
+                TotalVoluntarios = rows.Count,
+                TotalEscalas = itens.Count,
+                VoluntariosSemEscala = rows.Count(v => v.TotalEscalas == 0),
+                VoluntariosComMaisDeDuasEscalas = rows.Count(v => v.TotalEscalas > 2),
+                VoluntariosComDomingosConsecutivos = rows.Count(v => v.TemDomingosConsecutivos)
+            }
+        };
+    }
+
+    public async Task<GerarPlanejamentoMensalResultadoDto> GerarPlanejamentoMensalAutomaticoAsync(GerarPlanejamentoMensalDto dto, int usuarioId, bool isAdmin)
+    {
+        if (dto.EquipeId <= 0) throw new ArgumentException("Equipe é obrigatória para gerar o mês automaticamente");
+        if (dto.Ano < 2000 || dto.Ano > 2100) throw new ArgumentException("Ano inválido");
+        if (dto.Mes < 1 || dto.Mes > 12) throw new ArgumentException("Mês inválido");
+
+        await ValidarPermissaoGestaoEquipeAsync(dto.EquipeId, usuarioId, isAdmin);
+
+        var inicio = new DateTime(dto.Ano, dto.Mes, 1);
+        var fim = inicio.AddMonths(1).AddTicks(-1);
+        var ocorrencias = (await _eventoOcorrenciaRepository.GetByPeriodoAsync(inicio, fim, dto.EventoId))
+            .OrderBy(o => o.DataHoraInicio)
+            .ToList();
+
+        var resultado = new GerarPlanejamentoMensalResultadoDto
+        {
+            OcorrenciasProcessadas = ocorrencias.Count
+        };
+
+        foreach (var ocorrencia in ocorrencias)
+        {
+            try
+            {
+                var escala = await GerarAutomaticoAsync(ocorrencia.Id, dto.EquipeId, usuarioId, isAdmin);
+                resultado.EscalasGeradas += 1;
+
+                if (!escala.Itens.Any())
+                {
+                    resultado.Avisos.Add($"{ocorrencia.DataHoraInicio:dd/MM}: nenhuma pessoa foi selecionada automaticamente.");
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                resultado.Avisos.Add($"{ocorrencia.DataHoraInicio:dd/MM}: {ex.Message}");
+            }
+        }
+
+        return resultado;
+    }
+
+    public async Task<EscalaItemDto> CriarAlocacaoPlanejamentoMensalAsync(CriarAlocacaoPlanejamentoMensalDto dto, int usuarioId, bool isAdmin)
+    {
+        if (dto.EventoOcorrenciaId <= 0) throw new ArgumentException("Ocorrência é obrigatória");
+        if (dto.EquipeId <= 0) throw new ArgumentException("Equipe é obrigatória");
+        if (dto.VoluntarioId <= 0) throw new ArgumentException("Voluntário é obrigatório");
+
+        await ValidarPermissaoGestaoEquipeAsync(dto.EquipeId, usuarioId, isAdmin);
+
+        var escala = await _repository.GetByEventoOcorrenciaAndEquipeAsync(dto.EventoOcorrenciaId, dto.EquipeId);
+        if (escala == null)
+        {
+            var created = await CreateAsync(new CriarEscalaDto
+            {
+                EventoOcorrenciaId = dto.EventoOcorrenciaId,
+                EquipeId = dto.EquipeId
+            }, usuarioId, isAdmin);
+            escala = await _repository.GetByIdAsync(created.Id);
+        }
+
+        if (escala == null) throw new ArgumentException("Não foi possível criar a escala");
+
+        return await AddItemAsync(escala.Id, new CriarEscalaItemDto
+        {
+            EquipeId = dto.EquipeId,
+            VoluntarioId = dto.VoluntarioId,
+            CargoId = dto.CargoId,
+            ForcarConflito = dto.ForcarConflito,
+            MotivoExcecao = dto.MotivoExcecao
+        }, usuarioId, isAdmin);
+    }
+
     public async Task<int> EnviarLembretesPendentesAsync(DateTime? referencia = null)
     {
         var agora = referencia ?? DateTime.Now;
@@ -793,6 +989,59 @@ public class EscalaService : IEscalaService
                 usuarioId);
             throw new UnauthorizedAccessException("Você não tem permissão para gerenciar escalas desta equipe.");
         }
+    }
+
+    private async Task<HashSet<int>?> GetEquipeIdsPermitidasAsync(int usuarioId, bool isAdmin, int? equipeId)
+    {
+        if (isAdmin)
+        {
+            if (equipeId.HasValue)
+            {
+                return new HashSet<int> { equipeId.Value };
+            }
+
+            return null;
+        }
+
+        var equipesGeridas = (await _equipeRepository.GetAllAsync())
+            .Where(e => e.LiderUsuarioId == usuarioId)
+            .Select(e => e.Id)
+            .ToHashSet();
+
+        if (equipeId.HasValue && !equipesGeridas.Contains(equipeId.Value))
+        {
+            throw new UnauthorizedAccessException("Você não tem permissão para gerenciar escalas desta equipe.");
+        }
+
+        return equipeId.HasValue ? new HashSet<int> { equipeId.Value } : equipesGeridas;
+    }
+
+    private async Task<List<Voluntario>> GetVoluntariosBasePlanejamentoAsync(int? equipeId, HashSet<int>? equipeIdsPermitidas)
+    {
+        var voluntarios = equipeId.HasValue
+            ? (await _voluntarioRepository.GetByEquipeAsync(equipeId.Value)).ToList()
+            : (await _voluntarioRepository.GetAllAsync()).ToList();
+
+        if (equipeIdsPermitidas != null)
+        {
+            voluntarios = voluntarios.Where(v => equipeIdsPermitidas.Contains(v.EquipeId)).ToList();
+        }
+
+        return voluntarios;
+    }
+
+    private static bool TemDatasConsecutivas(IReadOnlyList<DateTime> datas)
+    {
+        for (var i = 1; i < datas.Count; i++)
+        {
+            var diferenca = (datas[i] - datas[i - 1]).TotalDays;
+            if (diferenca > 0 && diferenca <= 8)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private async Task<EscalaItem> ObterItemComPermissaoAsync(

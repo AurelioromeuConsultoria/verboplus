@@ -58,7 +58,7 @@ public class DashboardService : IDashboardService
             TotalPessoas = pessoas.Count(),
             TotalEventos = eventos.Count(),
             TotalInscricoes = inscricoes.Count(),
-            TotalVoluntarios = voluntarios.Count(),
+            TotalVoluntarios = voluntarios.Select(v => v.PessoaId).Distinct().Count(),
             TotalAniversariantesProximos = aniversariantes.Count,
             ProximosAniversariantes = aniversariantes
         };

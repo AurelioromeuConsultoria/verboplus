@@ -1,9 +1,12 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using SistemaIgreja.Application.Configuration;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Application.Services;
+using SistemaIgreja.Application.Utils;
 using SistemaIgreja.Domain.Entities;
 
 namespace SistemaIgreja.API.Controllers;
@@ -13,13 +16,23 @@ namespace SistemaIgreja.API.Controllers;
 [Authorize]
 public class EscalasController : ControllerBase
 {
+    private sealed record DestinatarioWhatsApp(string Nome, string WhatsApp);
+
     private readonly IEscalaService _service;
     private readonly IUsuarioRepository _usuarioRepository;
+    private readonly IEvolutionApiService _evolutionApiService;
+    private readonly PublicAppUrlSettings _publicAppUrlSettings;
 
-    public EscalasController(IEscalaService service, IUsuarioRepository usuarioRepository)
+    public EscalasController(
+        IEscalaService service,
+        IUsuarioRepository usuarioRepository,
+        IEvolutionApiService evolutionApiService,
+        IOptions<PublicAppUrlSettings> publicAppUrlSettings)
     {
         _service = service;
         _usuarioRepository = usuarioRepository;
+        _evolutionApiService = evolutionApiService;
+        _publicAppUrlSettings = publicAppUrlSettings.Value;
     }
 
     [HttpGet("{id}")]
@@ -97,6 +110,159 @@ public class EscalasController : ControllerBase
     {
         var items = await _service.GetHistoricoVoluntariosAsync(GetUsuarioId(), IsAdminUser(), equipeId, eventoId, dataInicio, dataFim);
         return Ok(items);
+    }
+
+    [HttpGet("planejamento-mensal")]
+    public async Task<ActionResult<PlanejamentoMensalEscalaDto>> GetPlanejamentoMensal(
+        [FromQuery] int ano,
+        [FromQuery] int mes,
+        [FromQuery] int? equipeId = null,
+        [FromQuery] int? eventoId = null)
+    {
+        try
+        {
+            var item = await _service.GetPlanejamentoMensalAsync(GetUsuarioId(), IsAdminUser(), ano, mes, equipeId, eventoId);
+            return Ok(item);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("planejamento-mensal/gerar-automatico")]
+    public async Task<ActionResult<GerarPlanejamentoMensalResultadoDto>> GerarPlanejamentoMensalAutomatico(GerarPlanejamentoMensalDto dto)
+    {
+        try
+        {
+            var item = await _service.GerarPlanejamentoMensalAutomaticoAsync(dto, GetUsuarioId(), IsAdminUser());
+            return Ok(item);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("planejamento-mensal/alocacoes")]
+    public async Task<ActionResult<EscalaItemDto>> CriarAlocacaoPlanejamentoMensal(CriarAlocacaoPlanejamentoMensalDto dto)
+    {
+        try
+        {
+            var item = await _service.CriarAlocacaoPlanejamentoMensalAsync(dto, GetUsuarioId(), IsAdminUser());
+            return Ok(item);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("planejamento-mensal/disparar-whatsapp")]
+    public async Task<ActionResult<DispararPlanejamentoMensalWhatsAppResultadoDto>> DispararPlanejamentoMensalWhatsApp(
+        DispararPlanejamentoMensalWhatsAppDto dto,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (dto.EquipeId <= 0) return BadRequest("Equipe é obrigatória para disparar a escala mensal.");
+            if (string.IsNullOrWhiteSpace(dto.ImagemUrl)) return BadRequest("Imagem da escala é obrigatória.");
+            var planejamento = await _service.GetPlanejamentoMensalAsync(
+                GetUsuarioId(),
+                IsAdminUser(),
+                dto.Ano,
+                dto.Mes,
+                dto.EquipeId,
+                dto.EventoId);
+
+            var destinatarios = planejamento.Voluntarios
+                .Where(v => !string.IsNullOrWhiteSpace(v.WhatsApp))
+                .GroupBy(v => v.PessoaId)
+                .Select(g => g.First())
+                .OrderBy(v => v.Nome)
+                .Select(v => new DestinatarioWhatsApp(v.Nome, v.WhatsApp!))
+                .ToList();
+
+            var whatsappTesteNormalizado = TelefoneUtils.NormalizarTelefone(dto.WhatsAppTeste);
+            if (!string.IsNullOrWhiteSpace(whatsappTesteNormalizado))
+            {
+                destinatarios = new List<DestinatarioWhatsApp>
+                {
+                    new("Destino de teste", dto.WhatsAppTeste!.Trim())
+                };
+            }
+
+            var resultado = new DispararPlanejamentoMensalWhatsAppResultadoDto
+            {
+                TotalDestinatarios = destinatarios.Count
+            };
+
+            if (destinatarios.Count == 0)
+            {
+                return Ok(resultado);
+            }
+
+            var mensagem = string.IsNullOrWhiteSpace(dto.Mensagem)
+                ? BuildMensagemPlanejamentoMensal(planejamento)
+                : dto.Mensagem.Trim();
+            var imagemUrl = ResolverImagemUrl(dto.ImagemUrl);
+
+            foreach (var voluntario in destinatarios)
+            {
+                var response = await _evolutionApiService.EnviarMensagemImagemAsync(
+                    voluntario.WhatsApp!,
+                    imagemUrl,
+                    mensagem,
+                    cancellationToken);
+
+                if (response.Sucesso)
+                {
+                    resultado.TotalEnviados++;
+                    continue;
+                }
+
+                var fallbackResponse = await _evolutionApiService.EnviarMensagemTextoAsync(
+                    voluntario.WhatsApp!,
+                    mensagem,
+                    cancellationToken);
+
+                if (fallbackResponse.Sucesso)
+                {
+                    resultado.TotalEnviados++;
+                    resultado.Falhas.Add($"{voluntario.Nome}: mídia falhou, mas texto foi entregue.");
+                    continue;
+                }
+
+                resultado.TotalFalhas++;
+                resultado.Falhas.Add($"{voluntario.Nome}: {fallbackResponse.MensagemErro ?? response.MensagemErro ?? "falha no envio"}");
+            }
+
+            return Ok(resultado);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpGet("{escalaId}/sugestoes")]
@@ -378,5 +544,36 @@ public class EscalasController : ControllerBase
 
         var usuario = await _usuarioRepository.GetByIdAsync(usuarioId);
         return usuario?.PessoaId;
+    }
+
+    private string ResolverImagemUrl(string imagemUrl)
+    {
+        var url = imagemUrl.Trim();
+        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return url;
+        }
+
+        if (string.IsNullOrWhiteSpace(_publicAppUrlSettings.ApiBaseUrl))
+        {
+            throw new InvalidOperationException("PublicAppUrl:ApiBaseUrl não configurado para expor a imagem da escala.");
+        }
+
+        return $"{_publicAppUrlSettings.ApiBaseUrl.TrimEnd('/')}/{url.TrimStart('/')}";
+    }
+
+    private static string BuildMensagemPlanejamentoMensal(PlanejamentoMensalEscalaDto planejamento)
+    {
+        var mes = planejamento.DataInicio.ToString("MM/yyyy");
+        var equipe = planejamento.Voluntarios
+            .SelectMany(v => v.Equipes)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .GroupBy(x => x)
+            .OrderByDescending(g => g.Count())
+            .Select(g => g.Key)
+            .FirstOrDefault() ?? "equipe";
+
+        return $"Olá! Segue a escala mensal de {equipe} - {mes}. Qualquer ajuste, fale com a liderança.";
     }
 }

@@ -141,70 +141,100 @@ public class EvolutionApiService : IEvolutionApiService
             };
         }
 
-        var mediaContent = ResolverConteudoMedia(imageUrl);
-
-        _logger.LogDebug(
-            "Evolution sendMedia payload preparado. Source: {Source}. IsBase64: {IsBase64}. Prefix: {Prefix}",
-            imageUrl,
-            PareceBase64(mediaContent),
-            mediaContent.Length > 40 ? mediaContent[..40] : mediaContent);
-
-        var request = new EvolutionApiSendMediaRequest
-        {
-            Number = numeroFormatado,
-            Media = mediaContent,
-            FileName = ObterNomeArquivo(imageUrl, "feliz-aniversario.png"),
-            Mimetype = ObterMimeType(imageUrl),
-            Caption = legenda,
-            Mediatype = "image",
-            Delay = Math.Max(0, _settings.DelayMs)
-        };
-
+        var mediaContent = await ResolverConteudoMediaAsync(imageUrl, cancellationToken);
+        var mimeType = ObterMimeType(imageUrl);
+        var fileName = ObterNomeArquivo(imageUrl, "feliz-aniversario.png");
         var endpoint = $"message/sendMedia/{_settings.InstanceName}";
-        var response = await EnviarComRetryAsync(
-            endpoint,
-            request,
-            numeroFormatado,
-            legenda,
-            cancellationToken);
 
-        if (response.Sucesso || response.StatusCode != 400)
+        foreach (var variante in CriarVariantesMedia(mediaContent, imageUrl))
         {
-            return response;
+            _logger.LogInformation(
+                "Tentando envio de mídia via Evolution API. Numero={Numero} Variante={Variante} Prefixo={Prefixo}",
+                numeroFormatado,
+                variante.Descricao,
+                variante.Conteudo.Length > 40 ? variante.Conteudo[..40] : variante.Conteudo);
+
+            var request = new EvolutionApiSendMediaRequest
+            {
+                Number = numeroFormatado,
+                Media = variante.Conteudo,
+                FileName = fileName,
+                Mimetype = mimeType,
+                Caption = legenda,
+                Mediatype = "image",
+                Delay = Math.Max(0, _settings.DelayMs)
+            };
+
+            var response = await EnviarComRetryAsync(
+                endpoint,
+                request,
+                numeroFormatado,
+                legenda,
+                cancellationToken);
+
+            if (response.Sucesso)
+            {
+                return response;
+            }
+
+            if (PodeTentarFallbackMedia(response))
+            {
+                _logger.LogWarning(
+                    "Evolution sendMedia falhou na variante {Variante}. Tentando payload compatível com v1 para o número {Numero}.",
+                    variante.Descricao,
+                    numeroFormatado);
+
+                var fallbackRequest = new EvolutionApiSendMediaV1Request
+                {
+                    Number = numeroFormatado,
+                    Mediatype = "image",
+                    FileName = fileName,
+                    Mimetype = mimeType,
+                    Caption = legenda,
+                    Media = variante.Conteudo,
+                    MediaMessage = new EvolutionApiMediaMessageV1
+                    {
+                        MediaType = "image",
+                        FileName = fileName,
+                        Caption = legenda,
+                        Media = variante.Conteudo
+                    },
+                    Options = new EvolutionApiMediaOptionsV1
+                    {
+                        Delay = Math.Max(0, _settings.DelayMs),
+                        Presence = "composing"
+                    }
+                };
+
+                var fallbackResponse = await EnviarComRetryAsync(
+                    endpoint,
+                    fallbackRequest,
+                    numeroFormatado,
+                    legenda,
+                    cancellationToken);
+
+                if (fallbackResponse.Sucesso)
+                {
+                    return fallbackResponse;
+                }
+
+                if (!PodeTentarFallbackMedia(fallbackResponse))
+                {
+                    return fallbackResponse;
+                }
+            }
+            else
+            {
+                return response;
+            }
         }
 
-        _logger.LogWarning(
-            "Evolution sendMedia retornou 400 no payload v2. Tentando fallback compatível com v1 para o número {Numero}.",
-            numeroFormatado);
-
-        var fallbackRequest = new EvolutionApiSendMediaV1Request
+        return new EvolutionApiResponse
         {
-            Number = numeroFormatado,
-            Mediatype = "image",
-            FileName = request.FileName ?? "feliz-aniversario.png",
-            Mimetype = request.Mimetype,
-            Caption = legenda,
-            Media = request.Media,
-            MediaMessage = new EvolutionApiMediaMessageV1
-            {
-                MediaType = "image",
-                FileName = request.FileName ?? "feliz-aniversario.png",
-                Caption = legenda,
-                Media = request.Media
-            },
-            Options = new EvolutionApiMediaOptionsV1
-            {
-                Delay = Math.Max(0, _settings.DelayMs),
-                Presence = "composing"
-            }
+            Sucesso = false,
+            MensagemErro = "Nao foi possivel enviar a mídia em nenhum formato compatível com a Evolution API.",
+            StatusCode = 500
         };
-
-        return await EnviarComRetryAsync(
-            $"message/sendMedia/{_settings.InstanceName}",
-            fallbackRequest,
-            numeroFormatado,
-            legenda,
-            cancellationToken);
     }
 
     public async Task<bool> ValidarInstanciaAsync(CancellationToken cancellationToken = default)
@@ -618,10 +648,59 @@ public class EvolutionApiService : IEvolutionApiService
         };
     }
 
-    private static string ResolverConteudoMedia(string imageUrl)
+    private async Task<string> ResolverConteudoMediaAsync(string imageUrl, CancellationToken cancellationToken)
     {
-        if (EhUrlExternaOuDataUri(imageUrl))
+        if (string.IsNullOrWhiteSpace(imageUrl))
         {
+            throw new FileNotFoundException("Nao foi possivel localizar o arquivo da midia para envio. Caminho informado esta vazio.");
+        }
+
+        if (EhDataUri(imageUrl))
+        {
+            return imageUrl;
+        }
+
+        if (EhUrlHttp(imageUrl))
+        {
+            try
+            {
+                using var mediaClient = new HttpClient
+                {
+                    Timeout = TimeSpan.FromSeconds(Math.Min(_settings.TimeoutSeconds, 15))
+                };
+
+                using var response = await mediaClient.GetAsync(imageUrl, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    _logger.LogWarning(
+                        "Falha ao baixar midia remota para envio na Evolution API. Url: {Url}. Status: {StatusCode}. Response: {Response}",
+                        imageUrl,
+                        response.StatusCode,
+                        Truncate(responseContent, 300));
+                }
+                else
+                {
+                    var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+                    if (bytes.Length > 0)
+                    {
+                        var mimeType = response.Content.Headers.ContentType?.MediaType ?? ObterMimeType(imageUrl);
+                        _logger.LogInformation(
+                            "Midia remota baixada com sucesso para envio inline na Evolution API. Url: {Url}. Bytes: {Bytes}",
+                            imageUrl,
+                            bytes.Length);
+                        return ConstruirDataUri(mimeType, bytes);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Nao foi possivel baixar midia remota para envio inline na Evolution API. Url: {Url}. Sera mantido o envio por URL.",
+                    imageUrl);
+            }
+
             return imageUrl;
         }
 
@@ -649,7 +728,7 @@ public class EvolutionApiService : IEvolutionApiService
                 continue;
 
             var bytes = File.ReadAllBytes(candidato);
-            return Convert.ToBase64String(bytes);
+            return ConstruirDataUri(ObterMimeType(candidato), bytes);
         }
 
         var fileName = Path.GetFileName(imageUrl);
@@ -676,7 +755,7 @@ public class EvolutionApiService : IEvolutionApiService
                         continue;
 
                     var bytes = File.ReadAllBytes(encontrado);
-                    return Convert.ToBase64String(bytes);
+                    return ConstruirDataUri(ObterMimeType(encontrado), bytes);
                 }
                 catch
                 {
@@ -689,7 +768,7 @@ public class EvolutionApiService : IEvolutionApiService
             $"Nao foi possivel localizar o arquivo da midia para envio. Caminho informado: {imageUrl}");
     }
 
-    private static bool EhUrlExternaOuDataUri(string valor)
+    private static bool EhUrlHttp(string valor)
     {
         if (string.IsNullOrWhiteSpace(valor))
         {
@@ -702,8 +781,22 @@ public class EvolutionApiService : IEvolutionApiService
         }
 
         return uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
-               uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
-               uri.Scheme.Equals("data", StringComparison.OrdinalIgnoreCase);
+               uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool EhDataUri(string valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+        {
+            return false;
+        }
+
+        if (!Uri.TryCreate(valor, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        return uri.Scheme.Equals("data", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool PareceBase64(string valor)
@@ -716,5 +809,77 @@ public class EvolutionApiService : IEvolutionApiService
         }
 
         return valor.Length > 100 && !valor.Contains('/');
+    }
+
+    private static IEnumerable<(string Descricao, string Conteudo)> CriarVariantesMedia(string mediaContent, string imageUrl)
+    {
+        var variantes = new List<(string Descricao, string Conteudo)>();
+
+        if (!string.IsNullOrWhiteSpace(mediaContent))
+        {
+            variantes.Add(("inline", mediaContent));
+
+            if (EhDataUri(mediaContent))
+            {
+                var plainBase64 = ExtrairBase64DeDataUri(mediaContent);
+                if (!string.IsNullOrWhiteSpace(plainBase64))
+                {
+                    variantes.Add(("base64", plainBase64));
+                }
+            }
+        }
+
+        if (EhUrlHttp(imageUrl))
+        {
+            variantes.Add(("url", imageUrl));
+        }
+
+        return variantes
+            .Where(v => !string.IsNullOrWhiteSpace(v.Conteudo))
+            .DistinctBy(v => v.Conteudo);
+    }
+
+    private static string? ExtrairBase64DeDataUri(string valor)
+    {
+        if (!EhDataUri(valor))
+        {
+            return null;
+        }
+
+        var indice = valor.IndexOf("base64,", StringComparison.OrdinalIgnoreCase);
+        if (indice < 0)
+        {
+            return null;
+        }
+
+        return valor[(indice + "base64,".Length)..];
+    }
+
+    private static bool PodeTentarFallbackMedia(EvolutionApiResponse response)
+    {
+        if (response.Sucesso)
+        {
+            return false;
+        }
+
+        if (response.StatusCode is 400 or 404)
+        {
+            return true;
+        }
+
+        if (response.StatusCode == 500)
+        {
+            var conteudo = $"{response.MensagemErro} {response.RespostaCompleta}";
+            return conteudo.Contains("404", StringComparison.OrdinalIgnoreCase) ||
+                   conteudo.Contains("sendMedia", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
+    }
+
+    private static string ConstruirDataUri(string mimeType, byte[] bytes)
+    {
+        var mime = string.IsNullOrWhiteSpace(mimeType) ? "image/png" : mimeType;
+        return $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
     }
 }
