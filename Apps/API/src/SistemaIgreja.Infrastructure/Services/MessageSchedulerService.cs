@@ -46,12 +46,12 @@ public class MessageSchedulerService : BackgroundService
             var startedAtUtc = DateTime.UtcNow;
             try
             {
-                var processedTenants = await ProcessarMensagensAgendadas(stoppingToken);
+                var (processedTenants, entregasComunicacaoProcessadas) = await ProcessarMensagensAgendadas(stoppingToken);
                 _executionMonitor.RecordSuccess(
                     SchedulerName,
                     startedAtUtc,
                     DateTime.UtcNow,
-                    $"Intervalo base: {_settings.BaseIntervalMinutes} min; batch: {_settings.BatchSizeReserva}; tenants: {processedTenants}");
+                    $"Intervalo base: {_settings.BaseIntervalMinutes} min; batch: {_settings.BatchSizeReserva}; tenants: {processedTenants}; comunicacao: {entregasComunicacaoProcessadas}");
             }
             catch (Exception ex)
             {
@@ -105,9 +105,10 @@ public class MessageSchedulerService : BackgroundService
         return baseInterval.Add(TimeSpan.FromSeconds(jitterSec));
     }
 
-    private async Task<int> ProcessarMensagensAgendadas(CancellationToken stoppingToken)
+    private async Task<(int ProcessedTenants, int EntregasComunicacaoProcessadas)> ProcessarMensagensAgendadas(CancellationToken stoppingToken)
     {
         var processedTenants = 0;
+        var entregasComunicacaoProcessadas = 0;
         foreach (var tenant in await GetActiveTenantsAsync(stoppingToken))
         {
             if (stoppingToken.IsCancellationRequested)
@@ -118,6 +119,7 @@ public class MessageSchedulerService : BackgroundService
             using var scope = _serviceProvider.CreateScope();
             scope.ServiceProvider.GetService<TenantScopeOverride>()?.SetTenant(tenant.Id, tenant.Slug);
             var mensagemService = scope.ServiceProvider.GetRequiredService<IMensagemAgendadaService>();
+            var comunicacaoProcessamentoService = scope.ServiceProvider.GetService<IComunicacaoProcessamentoService>();
 
             var reservadas = await mensagemService.ReservarProntasParaEnvioAsync(_settings.BatchSizeReserva);
             var lista = reservadas.ToList();
@@ -160,10 +162,21 @@ public class MessageSchedulerService : BackgroundService
                 _logger.LogInformation("Tenant {TenantSlug}: processadas {Count} mensagens reservadas", tenant.Slug, lista.Count);
             }
 
+            if (comunicacaoProcessamentoService != null)
+            {
+                var processadas = await comunicacaoProcessamentoService.ProcessarPendentesAsync(_settings.BatchSizeReserva, stoppingToken);
+                entregasComunicacaoProcessadas += processadas;
+
+                if (processadas > 0)
+                {
+                    _logger.LogInformation("Tenant {TenantSlug}: processadas {Count} entregas de comunicação", tenant.Slug, processadas);
+                }
+            }
+
             processedTenants++;
         }
 
-        return processedTenants;
+        return (processedTenants, entregasComunicacaoProcessadas);
     }
 
     private async Task<IReadOnlyList<Tenant>> GetActiveTenantsAsync(CancellationToken stoppingToken)

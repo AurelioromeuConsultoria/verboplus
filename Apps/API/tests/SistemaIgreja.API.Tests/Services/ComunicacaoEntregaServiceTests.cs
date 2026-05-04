@@ -11,6 +11,7 @@ namespace SistemaIgreja.API.Tests.Services;
 public class ComunicacaoEntregaServiceTests
 {
     private readonly Mock<IComunicacaoEntregaRepository> _repositoryMock = new();
+    private readonly Mock<IComunicacaoCampanhaRepository> _campanhaRepositoryMock = new();
     private readonly Mock<ILogger<ComunicacaoEntregaService>> _loggerMock = new();
     private readonly Mock<IAuditLogService> _auditLogServiceMock = new();
     private readonly ComunicacaoEntregaService _service;
@@ -19,6 +20,7 @@ public class ComunicacaoEntregaServiceTests
     {
         _service = new ComunicacaoEntregaService(
             _repositoryMock.Object,
+            _campanhaRepositoryMock.Object,
             _loggerMock.Object,
             _auditLogServiceMock.Object);
     }
@@ -56,6 +58,7 @@ public class ComunicacaoEntregaServiceTests
         var entrega = new ComunicacaoEntrega
         {
             Id = 5,
+            ComunicacaoCampanhaId = 12,
             Canal = CanalComunicacao.Email,
             DestinoResolvido = "pessoa@example.com",
             Status = StatusComunicacaoEntrega.Pendente
@@ -73,6 +76,29 @@ public class ComunicacaoEntregaServiceTests
         _auditLogServiceMock.Verify(
             a => a.RecordAsync("ComunicacaoEntrega", "5", "Falha", It.IsAny<object>()),
             Times.Once);
+        _campanhaRepositoryMock.Verify(r => r.AtualizarStatusPorEntregasAsync(12), Times.Once);
+    }
+
+    [Fact]
+    public async Task MarcarComoEnviadaAsync_AtualizaStatusDaCampanha()
+    {
+        var entrega = new ComunicacaoEntrega
+        {
+            Id = 6,
+            ComunicacaoCampanhaId = 13,
+            Canal = CanalComunicacao.WhatsApp,
+            DestinoResolvido = "5511999999999",
+            Status = StatusComunicacaoEntrega.Reservado
+        };
+
+        _repositoryMock.Setup(r => r.GetByIdAsync(6)).ReturnsAsync(entrega);
+        _repositoryMock.Setup(r => r.UpdateAsync(It.IsAny<ComunicacaoEntrega>()))
+            .ReturnsAsync((ComunicacaoEntrega updated) => updated);
+
+        await _service.MarcarComoEnviadaAsync(6);
+
+        entrega.Status.Should().Be(StatusComunicacaoEntrega.Enviado);
+        _campanhaRepositoryMock.Verify(r => r.AtualizarStatusPorEntregasAsync(13), Times.Once);
     }
 
     [Fact]

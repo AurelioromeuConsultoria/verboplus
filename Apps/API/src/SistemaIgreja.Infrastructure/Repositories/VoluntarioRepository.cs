@@ -78,6 +78,13 @@ public class VoluntarioRepository : IVoluntarioRepository
         return await q.AnyAsync();
     }
 
+    public async Task<bool> HasEscalasRelacionadasAsync(int id)
+    {
+        return await _context.EscalasItens
+            .AsNoTracking()
+            .AnyAsync(item => item.VoluntarioId == id);
+    }
+
     public async Task<Voluntario> CreateAsync(Voluntario voluntario)
     {
         voluntario.TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;

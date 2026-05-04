@@ -10,6 +10,26 @@ namespace SistemaIgreja.API.Tests.Services;
 public class PermissionMiddlewareTests
 {
     [Fact]
+    public async Task Invoke_AllowsOptionsPreflightToPassThrough()
+    {
+        var permissionService = new Mock<IPermissionService>(MockBehavior.Strict);
+        var nextCalled = false;
+        var middleware = new PermissionMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+        var context = BuildAuthenticatedContext("12");
+        context.Request.Path = "/api/visitantes";
+        context.Request.Method = HttpMethods.Options;
+
+        await middleware.Invoke(context, permissionService.Object);
+
+        nextCalled.Should().BeTrue();
+        permissionService.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task Invoke_AllowsAnonymousRequestToPassThrough()
     {
         var nextCalled = false;

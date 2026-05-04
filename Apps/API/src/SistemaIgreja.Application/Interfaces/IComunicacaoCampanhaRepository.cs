@@ -9,5 +9,6 @@ public interface IComunicacaoCampanhaRepository
     Task<ComunicacaoCampanha?> GetByIdAsync(int id);
     Task<ComunicacaoCampanha> CreateAsync(ComunicacaoCampanha campanha);
     Task<ComunicacaoCampanha> UpdateAsync(ComunicacaoCampanha campanha);
+    Task AtualizarStatusPorEntregasAsync(int campanhaId);
     Task<ComunicacaoStatsDto> GetStatsAsync();
 }

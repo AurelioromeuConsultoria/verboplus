@@ -114,6 +114,48 @@ public class SchedulerServicesTests
     }
 
     [Fact]
+    public async Task MessageSchedulerService_ProcessesComunicacaoDeliveries_AndRecordsSuccess()
+    {
+        var mensagemServiceMock = new Mock<IMensagemAgendadaService>();
+        var comunicacaoProcessamentoMock = new Mock<IComunicacaoProcessamentoService>();
+        var evolutionServiceMock = new Mock<IEvolutionApiService>();
+        var monitor = new SchedulerExecutionMonitor();
+        using var cts = new CancellationTokenSource();
+
+        mensagemServiceMock.Setup(s => s.ReservarProntasParaEnvioAsync(10))
+            .ReturnsAsync([]);
+        comunicacaoProcessamentoMock.Setup(s => s.ProcessarPendentesAsync(10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(2)
+            .Callback(() => cts.Cancel());
+        evolutionServiceMock.Setup(s => s.ValidarInstanciaAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var provider = BuildProvider(services =>
+        {
+            services.AddSingleton(mensagemServiceMock.Object);
+            services.AddSingleton(comunicacaoProcessamentoMock.Object);
+            services.AddSingleton(evolutionServiceMock.Object);
+        });
+
+        var service = new TestableMessageSchedulerService(
+            provider,
+            Mock.Of<ILogger<MessageSchedulerService>>(),
+            Options.Create(new MessageSchedulerSettings
+            {
+                BaseIntervalMinutes = 1,
+                JitterSecondsMax = 0,
+                BatchSizeReserva = 10
+            }),
+            monitor);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.RunAsync(cts.Token));
+
+        comunicacaoProcessamentoMock.Verify(s => s.ProcessarPendentesAsync(10, It.IsAny<CancellationToken>()), Times.Once);
+        monitor.GetAll().Single().Status.Should().Be("Healthy");
+        monitor.GetAll().Single().Details.Should().Contain("comunicacao: 2");
+    }
+
+    [Fact]
     public async Task MessageSchedulerService_WhenResolutionFails_RecordsFailure()
     {
         var evolutionServiceMock = new Mock<IEvolutionApiService>();

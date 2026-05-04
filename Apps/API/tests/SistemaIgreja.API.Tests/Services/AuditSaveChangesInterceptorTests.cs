@@ -50,6 +50,7 @@ public class AuditSaveChangesInterceptorTests
         logs[0].Action.Should().Be("Create");
         logs[0].UserId.Should().Be(42);
         logs[0].UserEmail.Should().Be("marco@example.com");
+        logs[0].CreatedAt.Kind.Should().Be(DateTimeKind.Unspecified);
         logs[0].ChangesJson.Should().Contain("Pessoa Auditada");
     }
 

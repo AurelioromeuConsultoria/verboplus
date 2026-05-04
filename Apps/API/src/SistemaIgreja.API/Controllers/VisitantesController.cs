@@ -15,11 +15,16 @@ public class VisitantesController : ControllerBase
 {
     private readonly IVisitanteService _visitanteService;
     private readonly IMensagemAgendadaService _mensagemService;
+    private readonly ILogger<VisitantesController> _logger;
 
-    public VisitantesController(IVisitanteService visitanteService, IMensagemAgendadaService mensagemService)
+    public VisitantesController(
+        IVisitanteService visitanteService,
+        IMensagemAgendadaService mensagemService,
+        ILogger<VisitantesController> logger)
     {
         _visitanteService = visitanteService;
         _mensagemService = mensagemService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -107,7 +112,14 @@ public class VisitantesController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Erro ao criar visitante", error = ex.Message });
+            var rootCause = ex.GetBaseException().Message;
+            _logger.LogError(ex, "Erro ao criar visitante. Nome={Nome} WhatsApp={WhatsApp}", request.Nome, request.WhatsApp);
+            return StatusCode(500, new
+            {
+                message = "Erro ao criar visitante",
+                error = ex.Message,
+                detail = rootCause
+            });
         }
     }
 

@@ -19,15 +19,18 @@ public interface IComunicacaoEntregaService
 public class ComunicacaoEntregaService : IComunicacaoEntregaService
 {
     private readonly IComunicacaoEntregaRepository _repository;
+    private readonly IComunicacaoCampanhaRepository _campanhaRepository;
     private readonly ILogger<ComunicacaoEntregaService> _logger;
     private readonly IAuditLogService _auditLogService;
 
     public ComunicacaoEntregaService(
         IComunicacaoEntregaRepository repository,
+        IComunicacaoCampanhaRepository campanhaRepository,
         ILogger<ComunicacaoEntregaService> logger,
         IAuditLogService auditLogService)
     {
         _repository = repository;
+        _campanhaRepository = campanhaRepository;
         _logger = logger;
         _auditLogService = auditLogService;
     }
@@ -81,6 +84,7 @@ public class ComunicacaoEntregaService : IComunicacaoEntregaService
         entrega.ProcessadoEm = DateTime.UtcNow;
         entrega.Tentativas += 1;
         await _repository.UpdateAsync(entrega);
+        await AtualizarCampanhaAsync(entrega);
 
         _logger.LogInformation(
             "{EventName} EntregaId={EntregaId} Canal={Canal}",
@@ -97,6 +101,7 @@ public class ComunicacaoEntregaService : IComunicacaoEntregaService
         entrega.ProcessadoEm = DateTime.UtcNow;
         entrega.Tentativas += 1;
         await _repository.UpdateAsync(entrega);
+        await AtualizarCampanhaAsync(entrega);
 
         _logger.LogWarning(
             "{EventName} EntregaId={EntregaId} Canal={Canal} Erro={Erro}",
@@ -126,6 +131,7 @@ public class ComunicacaoEntregaService : IComunicacaoEntregaService
         entrega.ProcessadoEm = null;
         entrega.EntregueEm = null;
         await _repository.UpdateAsync(entrega);
+        await AtualizarCampanhaAsync(entrega);
 
         await _auditLogService.RecordAsync("ComunicacaoEntrega", entrega.Id.ToString(), "ReprocessarEntrega", new
         {
@@ -152,6 +158,14 @@ public class ComunicacaoEntregaService : IComunicacaoEntregaService
             MidiaUrl = entrega.MidiaUrl,
             PodeReprocessar = PodeReprocessar(entrega)
         };
+    }
+
+    private async Task AtualizarCampanhaAsync(ComunicacaoEntrega entrega)
+    {
+        if (entrega.ComunicacaoCampanhaId.HasValue)
+        {
+            await _campanhaRepository.AtualizarStatusPorEntregasAsync(entrega.ComunicacaoCampanhaId.Value);
+        }
     }
 
     private static bool PodeReprocessar(ComunicacaoEntrega entrega)

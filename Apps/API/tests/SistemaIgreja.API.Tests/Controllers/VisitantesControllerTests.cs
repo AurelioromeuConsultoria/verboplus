@@ -2,6 +2,7 @@ using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Moq;
 using SistemaIgreja.API.Controllers;
 using SistemaIgreja.Application.DTOs;
@@ -21,7 +22,10 @@ public class VisitantesControllerTests
     {
         _serviceMock = new Mock<IVisitanteService>();
         _mensagemServiceMock = new Mock<IMensagemAgendadaService>();
-        _controller = new VisitantesController(_serviceMock.Object, _mensagemServiceMock.Object);
+        _controller = new VisitantesController(
+            _serviceMock.Object,
+            _mensagemServiceMock.Object,
+            Mock.Of<ILogger<VisitantesController>>());
     }
 
     [Fact]
@@ -120,6 +124,28 @@ public class VisitantesControllerTests
 
         result.Result.Should().BeOfType<ObjectResult>()
             .Which.StatusCode.Should().Be(403);
+    }
+
+    [Fact]
+    public async Task Create_ReturnsRootCause_WhenUnexpectedError()
+    {
+        SetUser((int)TipoUsuario.Admin);
+        var request = new CreateVisitanteRequest { Nome = "A", Telefone = "123", DataVisita = DateTime.UtcNow };
+        var exception = new InvalidOperationException(
+            "An error occurred while saving the entity changes. See the inner exception for details.",
+            new Exception("duplicate key value violates unique constraint"));
+        _serviceMock.Setup(s => s.CreateVisitanteAsync(request)).ThrowsAsync(exception);
+
+        var result = await _controller.Create(request);
+
+        var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(500);
+        objectResult.Value.Should().BeEquivalentTo(new
+        {
+            message = "Erro ao criar visitante",
+            error = exception.Message,
+            detail = "duplicate key value violates unique constraint"
+        });
     }
 
     [Fact]

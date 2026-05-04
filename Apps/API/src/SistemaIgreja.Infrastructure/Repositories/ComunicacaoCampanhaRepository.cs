@@ -74,11 +74,38 @@ public class ComunicacaoCampanhaRepository : IComunicacaoCampanhaRepository
         return campanha;
     }
 
+    public async Task AtualizarStatusPorEntregasAsync(int campanhaId)
+    {
+        var campanha = await _context.ComunicacaoCampanhas
+            .Include(c => c.Entregas)
+            .FirstOrDefaultAsync(c => c.Id == campanhaId);
+
+        if (campanha == null || campanha.Status == StatusComunicacaoCampanha.Cancelada)
+        {
+            return;
+        }
+
+        var status = CalcularStatusOperacional(campanha);
+        if (campanha.Status == status)
+        {
+            return;
+        }
+
+        campanha.Status = status;
+        campanha.DataAtualizacao = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+    }
+
     public async Task<ComunicacaoStatsDto> GetStatsAsync()
     {
-        var totalCampanhas = await _context.ComunicacaoCampanhas.CountAsync();
-        var campanhasRascunho = await _context.ComunicacaoCampanhas.CountAsync(c => c.Status == StatusComunicacaoCampanha.Rascunho);
-        var campanhasAgendadas = await _context.ComunicacaoCampanhas.CountAsync(c => c.Status == StatusComunicacaoCampanha.Agendada);
+        var campanhas = await _context.ComunicacaoCampanhas
+            .AsNoTracking()
+            .Include(c => c.Entregas)
+            .ToListAsync();
+        var statusCampanhas = campanhas.Select(CalcularStatusOperacional).ToList();
+        var totalCampanhas = campanhas.Count;
+        var campanhasRascunho = statusCampanhas.Count(s => s == StatusComunicacaoCampanha.Rascunho);
+        var campanhasAgendadas = statusCampanhas.Count(s => s == StatusComunicacaoCampanha.Agendada);
         var entregasPendentes = await _context.ComunicacaoEntregas.CountAsync(e =>
             e.Status == StatusComunicacaoEntrega.Pendente || e.Status == StatusComunicacaoEntrega.Reservado);
         var entregasEnviadas = await _context.ComunicacaoEntregas.CountAsync(e =>
@@ -94,5 +121,32 @@ public class ComunicacaoCampanhaRepository : IComunicacaoCampanhaRepository
             EntregasEnviadas = entregasEnviadas,
             EntregasComFalha = entregasComFalha
         };
+    }
+
+    private static StatusComunicacaoCampanha CalcularStatusOperacional(ComunicacaoCampanha campanha)
+    {
+        var entregas = campanha.Entregas.ToList();
+        if (campanha.Status == StatusComunicacaoCampanha.Cancelada)
+        {
+            return StatusComunicacaoCampanha.Cancelada;
+        }
+
+        if (entregas.Count == 0)
+        {
+            return campanha.DataAgendamento.HasValue
+                ? StatusComunicacaoCampanha.Agendada
+                : StatusComunicacaoCampanha.Rascunho;
+        }
+
+        if (entregas.Any(e => e.Status == StatusComunicacaoEntrega.Pendente || e.Status == StatusComunicacaoEntrega.Reservado))
+        {
+            return campanha.DataAgendamento.HasValue && campanha.DataAgendamento.Value > DateTime.Now
+                ? StatusComunicacaoCampanha.Agendada
+                : StatusComunicacaoCampanha.Processando;
+        }
+
+        return entregas.Any(e => e.Status == StatusComunicacaoEntrega.Falhou)
+            ? StatusComunicacaoCampanha.ConcluidaComFalhas
+            : StatusComunicacaoCampanha.Concluida;
     }
 }

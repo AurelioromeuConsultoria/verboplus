@@ -107,7 +107,7 @@ public class AuditSaveChangesInterceptor : SaveChangesInterceptor
                         UserName = _currentUser.UserName,
                         UserEmail = _currentUser.UserEmail,
                         IpAddress = _currentUser.IpAddress,
-                        CreatedAt = DateTime.UtcNow,
+                        CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
                         ChangesJson = p.ChangesJson
                     };
                 })
@@ -184,4 +184,3 @@ public class AuditSaveChangesInterceptor : SaveChangesInterceptor
         public string? ChangesJson { get; init; }
     }
 }
-

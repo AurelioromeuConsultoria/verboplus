@@ -108,6 +108,20 @@ public class VoluntariosControllerTests
     }
 
     [Fact]
+    public async Task Delete_ReturnsBadRequest_WhenVoluntarioHasEscalasRelacionadas()
+    {
+        SetUser((int)TipoUsuario.Admin);
+        _serviceMock
+            .Setup(s => s.DeleteAsync(3))
+            .ThrowsAsync(new InvalidOperationException("Não é possível excluir este voluntário porque ele já possui escalas vinculadas."));
+
+        var result = await _controller.Delete(3);
+
+        result.Should().BeOfType<BadRequestObjectResult>()
+            .Which.Value.Should().Be("Não é possível excluir este voluntário porque ele já possui escalas vinculadas.");
+    }
+
+    [Fact]
     public async Task Delete_ReturnsForbidden_WhenUserIsNotAdmin()
     {
         SetUser((int)TipoUsuario.Portal);

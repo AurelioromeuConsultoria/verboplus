@@ -75,4 +75,33 @@ public class EquipeCargoVoluntarioServicesTests
         result.NomeEquipe.Should().Be("Recepcao");
         result.NomeCargo.Should().Be("Recepcionista");
     }
+
+    [Fact]
+    public async Task VoluntarioService_Delete_Throws_WhenHasEscalasRelacionadas()
+    {
+        var volRepo = new Mock<IVoluntarioRepository>();
+        var eqRepo = new Mock<IEquipeRepository>();
+        var cgRepo = new Mock<ICargoRepository>();
+        var pessoaRepo = new Mock<IPessoaRepository>();
+
+        volRepo.Setup(r => r.GetByIdAsync(10)).ReturnsAsync(new Voluntario
+        {
+            Id = 10,
+            PessoaId = 1,
+            EquipeId = 1,
+            CargoId = 2,
+            Pessoa = new Pessoa { Id = 1, Nome = "Maria", Ativo = true, TipoPessoa = TipoPessoa.Adulto, DataCriacao = DateTime.UtcNow },
+            Equipe = new Equipe { Id = 1, Nome = "Recepcao" },
+            Cargo = new Cargo { Id = 2, Nome = "Recepcionista" }
+        });
+        volRepo.Setup(r => r.HasEscalasRelacionadasAsync(10)).ReturnsAsync(true);
+
+        var service = new VoluntarioService(volRepo.Object, eqRepo.Object, cgRepo.Object, pessoaRepo.Object);
+
+        await service.Invoking(s => s.DeleteAsync(10))
+            .Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*já possui escalas vinculadas*");
+
+        volRepo.Verify(r => r.DeleteAsync(It.IsAny<int>()), Times.Never);
+    }
 }

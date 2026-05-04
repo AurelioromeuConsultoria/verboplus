@@ -59,6 +59,117 @@ public class VisitanteServiceTests
     }
 
     [Fact]
+    public async Task CreateVisitanteAsync_NormalizesDateTimes_BeforeSaving()
+    {
+        var request = new CreateVisitanteRequest
+        {
+            Nome = "Ronei",
+            WhatsApp = "11949633429",
+            DataNascimento = new DateTime(1985, 5, 3, 3, 0, 0, DateTimeKind.Utc),
+            DataVisita = new DateTime(2026, 5, 3, 3, 0, 0, DateTimeKind.Utc)
+        };
+
+        _pessoaRepoMock.Setup(r => r.GetByWhatsAppAsync("11949633429")).ReturnsAsync((Pessoa?)null);
+        _pessoaRepoMock.Setup(r => r.CreateWithoutSaveAsync(It.IsAny<Pessoa>()))
+            .ReturnsAsync((Pessoa p) =>
+            {
+                p.Id = 11;
+                return p;
+            });
+
+        _pessoaPerfilRepoMock.Setup(r => r.GetPerfilAtivoAsync(11, PerfilPessoa.Visitante)).ReturnsAsync((PessoaPerfil?)null);
+        _pessoaPerfilRepoMock.Setup(r => r.CreateWithoutSaveAsync(It.IsAny<PessoaPerfil>())).ReturnsAsync((PessoaPerfil p) => p);
+        _pessoaPerfilRepoMock.Setup(r => r.GetPerfisPorPessoaAsync(11)).ReturnsAsync(new List<PessoaPerfil>
+        {
+            new() { Id = 1, PessoaId = 11, Perfil = PerfilPessoa.Visitante, DataInicio = DateTime.UtcNow }
+        });
+
+        _repoMock.Setup(r => r.CreateWithoutSaveAsync(It.IsAny<Visitante>()))
+            .ReturnsAsync((Visitante v) =>
+            {
+                v.Id = 15;
+                v.Pessoa = new Pessoa { Id = 11, Nome = request.Nome, WhatsApp = request.WhatsApp };
+                return v;
+            });
+        _repoMock.Setup(r => r.GetByIdAsync(15)).ReturnsAsync(new Visitante
+        {
+            Id = 15,
+            PessoaId = 11,
+            Pessoa = new Pessoa { Id = 11, Nome = request.Nome, WhatsApp = request.WhatsApp },
+            DataVisita = DateTime.SpecifyKind(request.DataVisita.Value, DateTimeKind.Unspecified),
+            DataCadastro = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+        });
+
+        await _service.CreateVisitanteAsync(request);
+
+        _pessoaRepoMock.Verify(r => r.CreateWithoutSaveAsync(It.Is<Pessoa>(p =>
+            p.DataNascimento!.Value.Kind == DateTimeKind.Unspecified &&
+            p.DataCriacao.Kind == DateTimeKind.Unspecified)));
+        _pessoaPerfilRepoMock.Verify(r => r.CreateWithoutSaveAsync(It.Is<PessoaPerfil>(p =>
+            p.DataInicio.Kind == DateTimeKind.Unspecified)));
+        _repoMock.Verify(r => r.CreateWithoutSaveAsync(It.Is<Visitante>(v =>
+            v.DataVisita.Kind == DateTimeKind.Unspecified &&
+            v.DataCadastro.Kind == DateTimeKind.Unspecified)));
+    }
+
+    [Fact]
+    public async Task CreateVisitanteAsync_SavesNewPessoa_BeforeCreatingPerfilAndVisitante()
+    {
+        var request = new CreateVisitanteRequest
+        {
+            Nome = "Ronei",
+            WhatsApp = "11949633429",
+            DataVisita = DateTime.UtcNow
+        };
+        Pessoa? pessoaCriada = null;
+
+        _pessoaRepoMock.Setup(r => r.GetByWhatsAppAsync("11949633429")).ReturnsAsync((Pessoa?)null);
+        _pessoaRepoMock.Setup(r => r.CreateWithoutSaveAsync(It.IsAny<Pessoa>()))
+            .ReturnsAsync((Pessoa p) =>
+            {
+                pessoaCriada = p;
+                return p;
+            });
+        _unitOfWorkMock.Setup(u => u.SaveChangesAsync())
+            .ReturnsAsync(() =>
+            {
+                if (pessoaCriada is { Id: 0 })
+                {
+                    pessoaCriada.Id = 22;
+                }
+
+                return 1;
+            });
+        _pessoaPerfilRepoMock.Setup(r => r.GetPerfilAtivoAsync(22, PerfilPessoa.Visitante)).ReturnsAsync((PessoaPerfil?)null);
+        _pessoaPerfilRepoMock.Setup(r => r.CreateWithoutSaveAsync(It.IsAny<PessoaPerfil>())).ReturnsAsync((PessoaPerfil p) => p);
+        _pessoaPerfilRepoMock.Setup(r => r.GetPerfisPorPessoaAsync(22)).ReturnsAsync(new List<PessoaPerfil>
+        {
+            new() { Id = 1, PessoaId = 22, Perfil = PerfilPessoa.Visitante, DataInicio = DateTime.UtcNow }
+        });
+        _repoMock.Setup(r => r.CreateWithoutSaveAsync(It.IsAny<Visitante>()))
+            .ReturnsAsync((Visitante v) =>
+            {
+                v.Id = 33;
+                v.Pessoa = new Pessoa { Id = 22, Nome = request.Nome, WhatsApp = request.WhatsApp };
+                return v;
+            });
+        _repoMock.Setup(r => r.GetByIdAsync(33)).ReturnsAsync(new Visitante
+        {
+            Id = 33,
+            PessoaId = 22,
+            Pessoa = new Pessoa { Id = 22, Nome = request.Nome, WhatsApp = request.WhatsApp },
+            DataVisita = DateTime.SpecifyKind(request.DataVisita.Value, DateTimeKind.Unspecified),
+            DataCadastro = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+        });
+
+        await _service.CreateVisitanteAsync(request);
+
+        _pessoaPerfilRepoMock.Verify(r => r.CreateWithoutSaveAsync(It.Is<PessoaPerfil>(p => p.PessoaId == 22)));
+        _repoMock.Verify(r => r.CreateWithoutSaveAsync(It.Is<Visitante>(v => v.PessoaId == 22)));
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(), Times.Exactly(2));
+    }
+
+    [Fact]
     public async Task UpdateAsync_Throws_WhenNotFound()
     {
         _repoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync((Visitante?)null);

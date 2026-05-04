@@ -14,6 +14,12 @@ public class PermissionMiddleware
 
     public async Task Invoke(HttpContext context, IPermissionService permissionService)
     {
+        if (HttpMethods.IsOptions(context.Request.Method))
+        {
+            await _next(context);
+            return;
+        }
+
         if (!context.User.Identity?.IsAuthenticated ?? true)
         {
             await _next(context);

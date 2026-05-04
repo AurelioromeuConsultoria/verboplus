@@ -150,7 +150,7 @@ public class ComunicacaoCampanhaService : IComunicacaoCampanhaService
             Nome = campanha.Nome,
             Objetivo = campanha.Objetivo,
             PublicoAlvo = campanha.PublicoAlvo,
-            Status = campanha.Status,
+            Status = CalcularStatusOperacional(campanha),
             DataAgendamento = campanha.DataAgendamento,
             DataCriacao = campanha.DataCriacao,
             TotalEntregas = campanha.Entregas.Count,
@@ -166,7 +166,7 @@ public class ComunicacaoCampanhaService : IComunicacaoCampanhaService
             Nome = campanha.Nome,
             Objetivo = campanha.Objetivo,
             PublicoAlvo = campanha.PublicoAlvo,
-            Status = campanha.Status,
+            Status = CalcularStatusOperacional(campanha),
             DataAgendamento = campanha.DataAgendamento,
             DataCriacao = campanha.DataCriacao,
             TotalEntregas = campanha.Entregas.Count,
@@ -186,6 +186,33 @@ public class ComunicacaoCampanhaService : IComunicacaoCampanhaService
                 .Select(MapEntrega)
                 .ToList()
         };
+    }
+
+    private static StatusComunicacaoCampanha CalcularStatusOperacional(ComunicacaoCampanha campanha)
+    {
+        var entregas = campanha.Entregas.ToList();
+        if (campanha.Status == StatusComunicacaoCampanha.Cancelada)
+        {
+            return StatusComunicacaoCampanha.Cancelada;
+        }
+
+        if (entregas.Count == 0)
+        {
+            return campanha.DataAgendamento.HasValue
+                ? StatusComunicacaoCampanha.Agendada
+                : StatusComunicacaoCampanha.Rascunho;
+        }
+
+        if (entregas.Any(e => e.Status == StatusComunicacaoEntrega.Pendente || e.Status == StatusComunicacaoEntrega.Reservado))
+        {
+            return campanha.DataAgendamento.HasValue && campanha.DataAgendamento.Value > DateTime.Now
+                ? StatusComunicacaoCampanha.Agendada
+                : StatusComunicacaoCampanha.Processando;
+        }
+
+        return entregas.Any(e => e.Status == StatusComunicacaoEntrega.Falhou)
+            ? StatusComunicacaoCampanha.ConcluidaComFalhas
+            : StatusComunicacaoCampanha.Concluida;
     }
 
     private static ComunicacaoEntregaResumoDto MapEntrega(ComunicacaoEntrega entrega)

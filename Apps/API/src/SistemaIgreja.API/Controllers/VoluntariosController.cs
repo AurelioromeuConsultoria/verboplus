@@ -98,8 +98,19 @@ public class VoluntariosController : ControllerBase
             return StatusCode(403, "Apenas administradores podem excluir voluntários.");
         }
 
-        await _service.DeleteAsync(id);
-        return NoContent();
+        try
+        {
+            await _service.DeleteAsync(id);
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     private bool IsAdminUser()

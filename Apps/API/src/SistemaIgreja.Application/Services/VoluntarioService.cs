@@ -128,6 +128,17 @@ public class VoluntarioService : IVoluntarioService
 
     public async Task DeleteAsync(int id)
     {
+        var entity = await _repository.GetByIdAsync(id);
+        if (entity == null)
+        {
+            throw new ArgumentException("Voluntário não encontrado");
+        }
+
+        if (await _repository.HasEscalasRelacionadasAsync(id))
+        {
+            throw new InvalidOperationException("Não é possível excluir este voluntário porque ele já possui escalas vinculadas. Remova o vínculo apenas se não houver histórico, ou mantenha o cadastro para preservar as escalas já registradas.");
+        }
+
         await _repository.DeleteAsync(id);
     }
 

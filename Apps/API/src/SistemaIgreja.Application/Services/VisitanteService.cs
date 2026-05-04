@@ -148,12 +148,13 @@ public class VisitanteService : IVisitanteService
                     Email = NormalizarEmail(request.Email),
                     Telefone = NormalizarTelefone(request.Telefone),
                     WhatsApp = NormalizarTelefone(request.WhatsApp),
-                    DataNascimento = request.DataNascimento,
+                    DataNascimento = NormalizarDataOpcional(request.DataNascimento),
                     TipoPessoa = TipoPessoa.Adulto,
                     Ativo = true,
-                    DataCriacao = DateTime.UtcNow
+                    DataCriacao = AgoraSemFuso()
                 };
                 pessoa = await _pessoaRepository.CreateWithoutSaveAsync(pessoa);
+                await _unitOfWork.SaveChangesAsync();
                 pessoaCriada = true;
             }
             else
@@ -182,7 +183,7 @@ public class VisitanteService : IVisitanteService
                 }
                 if (pessoa.DataNascimento == null && request.DataNascimento.HasValue)
                 {
-                    pessoa.DataNascimento = request.DataNascimento;
+                    pessoa.DataNascimento = NormalizarDataOpcional(request.DataNascimento);
                     atualizado = true;
                 }
 
@@ -204,7 +205,7 @@ public class VisitanteService : IVisitanteService
                     TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                     PessoaId = pessoa.Id,
                     Perfil = PerfilPessoa.Visitante,
-                    DataInicio = DateTime.UtcNow,
+                    DataInicio = AgoraSemFuso(),
                     DataFim = null
                 };
                 await _pessoaPerfilRepository.CreateWithoutSaveAsync(novoPerfil);
@@ -216,9 +217,9 @@ public class VisitanteService : IVisitanteService
             {
                 TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
                 PessoaId = pessoa.Id,
-                DataVisita = request.DataVisita ?? DateTime.UtcNow,
+                DataVisita = NormalizarDataObrigatoria(request.DataVisita) ?? AgoraSemFuso(),
                 Observacoes = request.Observacoes,
-                DataCadastro = DateTime.UtcNow
+                DataCadastro = AgoraSemFuso()
             };
 
             var visitanteCriado = await _visitanteRepository.CreateWithoutSaveAsync(visitante);
@@ -312,6 +313,27 @@ public class VisitanteService : IVisitanteService
             return null;
 
         return email.Trim().ToLowerInvariant();
+    }
+
+    private static DateTime AgoraSemFuso()
+    {
+        return DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+    }
+
+    private static DateTime? NormalizarDataOpcional(DateTime? data)
+    {
+        if (!data.HasValue)
+            return null;
+
+        return DateTime.SpecifyKind(data.Value.Date, DateTimeKind.Unspecified);
+    }
+
+    private static DateTime? NormalizarDataObrigatoria(DateTime? data)
+    {
+        if (!data.HasValue)
+            return null;
+
+        return DateTime.SpecifyKind(data.Value, DateTimeKind.Unspecified);
     }
 
     private static bool IsValidEmail(string email)
