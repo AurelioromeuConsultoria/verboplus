@@ -250,14 +250,14 @@ export default function VisitantesList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold">{t('visitors.title')}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold sm:text-3xl">{t('visitors.title')}</h1>
           <p className="text-muted-foreground">
             {t('visitors.subtitle')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <PageRefreshButton onClick={() => loadVisitantes({ silent: true })} refreshing={refreshing} />
           {isAdmin && (
             <Button asChild>
@@ -300,10 +300,10 @@ export default function VisitantesList() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>{t('visitors.listTitle')} ({total})</CardTitle>
             {total > 0 && (
-              <Button variant="outline" size="sm" onClick={handleExport}>
+              <Button variant="outline" size="sm" onClick={handleExport} className="w-full sm:w-auto">
                 <Download className="h-4 w-4 mr-2" />
                 {t('visitors.export.button')}
               </Button>
@@ -312,11 +312,11 @@ export default function VisitantesList() {
         </CardHeader>
         <CardContent>
           {selectedIds.size > 0 && (
-            <div className="flex items-center justify-between rounded-md border bg-muted/50 px-4 py-2 mb-4">
+            <div className="mb-4 flex flex-col gap-3 rounded-md border bg-muted/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:py-2">
               <span className="text-sm font-medium">
                 {t('visitors.selectedCount', { count: selectedIds.size })}
               </span>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
                   {t('visitors.clearSelection')}
                 </Button>
@@ -341,123 +341,231 @@ export default function VisitantesList() {
               ) : null}
             />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={allPageSelected}
-                      onCheckedChange={toggleSelectAll}
-                      aria-label={t('visitors.selectAll')}
-                    />
-                  </TableHead>
-                  <SortableTableHeader field="dataVisita" onSort={handleSort} sortConfig={sortConfig}>
-                    {t('visitors.table.visitDate')}
-                  </SortableTableHeader>
-                  <SortableTableHeader field="nome" onSort={handleSort} sortConfig={sortConfig}>
-                    {t('visitors.table.person')}
-                  </SortableTableHeader>
-                  <TableHead>{t('visitors.table.contact')}</TableHead>
-                  <TableHead>{t('visitors.table.notes')}</TableHead>
-                  <TableHead>{t('visitors.table.profiles')}</TableHead>
-                  <TableHead className="text-right">{t('visitors.table.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="space-y-3 md:hidden">
+                <div className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2">
+                  <span className="text-sm font-medium">{t('visitors.selectAll')}</span>
+                  <Checkbox
+                    checked={allPageSelected}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label={t('visitors.selectAll')}
+                  />
+                </div>
+
                 {visitantes.map((visitante) => {
                   const contato = visitante.email || visitante.whatsApp || visitante.telefone || '-';
                   const perfisAtivos = visitante.perfis || [];
-                  
+
                   return (
-                    <TableRow key={visitante.id}>
-                      <TableCell>
+                    <div key={visitante.id} className="rounded-lg border bg-background p-3 shadow-xs">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 space-y-1">
+                          <div className="font-medium leading-snug">{visitante.nome || '-'}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {visitante.dataVisita ? formatDate(visitante.dataVisita) : '-'}
+                          </div>
+                        </div>
                         <Checkbox
                           checked={selectedIds.has(visitante.id)}
                           onCheckedChange={() => toggleSelect(visitante.id)}
                           aria-label={t('visitors.selectOne', { name: visitante.nome || t('visitors.visitFallback') })}
                         />
-                      </TableCell>
-                      <TableCell>
-                        {visitante.dataVisita ? formatDate(visitante.dataVisita) : '-'}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {visitante.nome || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm">{contato}</span>
-                          {visitante.email && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => window.open(`mailto:${visitante.email}`)}
-                            >
-                              <Mail className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {visitante.whatsApp && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => window.open(`https://wa.me/55${visitante.whatsApp.replace(/\D/g, '')}`)}
-                            >
-                              <Phone className="h-4 w-4" />
-                            </Button>
-                          )}
+                      </div>
+
+                      <div className="mt-3 space-y-2 text-sm">
+                        <div className="flex min-w-0 items-center justify-between gap-2">
+                          <span className="min-w-0 truncate text-muted-foreground">{contato}</span>
+                          <div className="flex shrink-0 items-center gap-1">
+                            {visitante.email && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => window.open(`mailto:${visitante.email}`)}
+                              >
+                                <Mail className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {visitante.whatsApp && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => window.open(`https://wa.me/55${visitante.whatsApp.replace(/\D/g, '')}`)}
+                              >
+                                <Phone className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {visitante.observacoes 
-                            ? (visitante.observacoes.length > 50 
-                                ? visitante.observacoes.substring(0, 50) + '...'
-                                : visitante.observacoes)
-                            : '-'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {perfisAtivos.length > 0 ? (
-                            perfisAtivos.map((perfil, idx) => (
-                              <Badge key={idx} variant="secondary" className="text-xs">
-                                {perfil}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/visitantes/${visitante.id}`}>
-                              <Eye className="h-4 w-4" />
+                        {visitante.observacoes && (
+                          <p className="line-clamp-2 text-muted-foreground">
+                            {visitante.observacoes}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {perfisAtivos.length > 0 ? (
+                          perfisAtivos.map((perfil, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {perfil}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                          <Link to={`/visitantes/${visitante.id}`}>
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        {isAdmin && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                            <Link to={`/visitantes/${visitante.id}/editar`}>
+                              <Edit className="h-4 w-4" />
                             </Link>
                           </Button>
-                          {isAdmin && (
-                            <Button variant="ghost" size="sm" asChild>
-                              <Link to={`/visitantes/${visitante.id}/editar`}>
-                                <Edit className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                          )}
-                          {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(visitante.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDelete(visitante.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </div>
+
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={allPageSelected}
+                          onCheckedChange={toggleSelectAll}
+                          aria-label={t('visitors.selectAll')}
+                        />
+                      </TableHead>
+                      <SortableTableHeader field="dataVisita" onSort={handleSort} sortConfig={sortConfig}>
+                        {t('visitors.table.visitDate')}
+                      </SortableTableHeader>
+                      <SortableTableHeader field="nome" onSort={handleSort} sortConfig={sortConfig}>
+                        {t('visitors.table.person')}
+                      </SortableTableHeader>
+                      <TableHead>{t('visitors.table.contact')}</TableHead>
+                      <TableHead>{t('visitors.table.notes')}</TableHead>
+                      <TableHead>{t('visitors.table.profiles')}</TableHead>
+                      <TableHead className="text-right">{t('visitors.table.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visitantes.map((visitante) => {
+                      const contato = visitante.email || visitante.whatsApp || visitante.telefone || '-';
+                      const perfisAtivos = visitante.perfis || [];
+
+                      return (
+                        <TableRow key={visitante.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedIds.has(visitante.id)}
+                              onCheckedChange={() => toggleSelect(visitante.id)}
+                              aria-label={t('visitors.selectOne', { name: visitante.nome || t('visitors.visitFallback') })}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {visitante.dataVisita ? formatDate(visitante.dataVisita) : '-'}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {visitante.nome || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm">{contato}</span>
+                              {visitante.email && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => window.open(`mailto:${visitante.email}`)}
+                                >
+                                  <Mail className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {visitante.whatsApp && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => window.open(`https://wa.me/55${visitante.whatsApp.replace(/\D/g, '')}`)}
+                                >
+                                  <Phone className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">
+                              {visitante.observacoes
+                                ? (visitante.observacoes.length > 50
+                                    ? visitante.observacoes.substring(0, 50) + '...'
+                                    : visitante.observacoes)
+                                : '-'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {perfisAtivos.length > 0 ? (
+                                perfisAtivos.map((perfil, idx) => (
+                                  <Badge key={idx} variant="secondary" className="text-xs">
+                                    {perfil}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end space-x-2">
+                              <Button variant="ghost" size="sm" asChild>
+                                <Link to={`/visitantes/${visitante.id}`}>
+                                  <Eye className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                              {isAdmin && (
+                                <Button variant="ghost" size="sm" asChild>
+                                  <Link to={`/visitantes/${visitante.id}/editar`}>
+                                    <Edit className="h-4 w-4" />
+                                  </Link>
+                                </Button>
+                              )}
+                              {isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDelete(visitante.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
           {total > 0 && (
             <DataTablePagination

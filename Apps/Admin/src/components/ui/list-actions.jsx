@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 
 export function TableRowActions({ children, className }) {
   return (
-    <div className={`flex items-center justify-end space-x-2 ${className || ''}`}>
+    <div className={`flex flex-wrap items-center justify-end gap-1 md:gap-2 ${className || ''}`}>
       {children}
     </div>
   );

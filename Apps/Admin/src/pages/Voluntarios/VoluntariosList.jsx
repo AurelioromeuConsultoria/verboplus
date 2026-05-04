@@ -117,12 +117,12 @@ export default function VoluntariosList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold">{t('volunteer.volunteers.title')}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold sm:text-3xl">{t('volunteer.volunteers.title')}</h1>
           <p className="text-muted-foreground">{t('volunteer.volunteers.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
           {canEdit && (
             <Button asChild>
@@ -139,7 +139,7 @@ export default function VoluntariosList() {
           <CardTitle>{t('volunteer.volunteers.filtersTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2"><Search className="h-4 w-4" />{t('volunteer.volunteers.searchLabel')}</label>
               <Input
@@ -199,56 +199,107 @@ export default function VoluntariosList() {
               ) : null}
             />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('volunteer.volunteers.table.name')}</TableHead>
-                  <TableHead>{t('volunteer.volunteers.table.whatsApp')}</TableHead>
-                  <TableHead className="text-right">{t('volunteer.volunteers.table.teamsCount')}</TableHead>
-                  <TableHead>{t('volunteer.volunteers.table.roles')}</TableHead>
-                  <TableHead className="text-right">{t('volunteer.volunteers.table.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="space-y-3 md:hidden">
                 {paginatedItems.map((vol) => (
-                  <TableRow key={vol.id}>
-                    <TableCell className="font-medium">{vol.nome}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <span>{vol.whatsApp}</span>
+                  <div key={vol.id} className="rounded-lg border bg-background p-3 shadow-xs">
+                    <div className="space-y-1">
+                      <div className="font-medium leading-snug">{vol.nome}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {t('volunteer.volunteers.table.teamsCount')}: {vol.quantidadeEquipes || 0}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 space-y-2 text-sm">
+                      <div className="flex min-w-0 items-center justify-between gap-2">
+                        <span className="min-w-0 truncate text-muted-foreground">{vol.whatsApp || '-'}</span>
                         {vol.whatsApp && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => window.open(`https://wa.me/55${String(vol.whatsApp).replace(/\D/g, '')}`)}
                           >
                             <Phone className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell className="text-right">{vol.quantidadeEquipes}</TableCell>
-                    <TableCell>{vol.cargosResumo || '-'}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        {canEdit && (
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/voluntarios/${vol.id}/editar`}>
-                              <Edit className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                        )}
-                        {canDelete && (
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(vol)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                      <div className="text-muted-foreground">
+                        {vol.cargosResumo || '-'}
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                      {canEdit && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                          <Link to={`/voluntarios/${vol.id}/editar`}>
+                            <Edit className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(vol)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('volunteer.volunteers.table.name')}</TableHead>
+                      <TableHead>{t('volunteer.volunteers.table.whatsApp')}</TableHead>
+                      <TableHead className="text-right">{t('volunteer.volunteers.table.teamsCount')}</TableHead>
+                      <TableHead>{t('volunteer.volunteers.table.roles')}</TableHead>
+                      <TableHead className="text-right">{t('volunteer.volunteers.table.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedItems.map((vol) => (
+                      <TableRow key={vol.id}>
+                        <TableCell className="font-medium">{vol.nome}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <span>{vol.whatsApp}</span>
+                            {vol.whatsApp && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(`https://wa.me/55${String(vol.whatsApp).replace(/\D/g, '')}`)}
+                              >
+                                <Phone className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">{vol.quantidadeEquipes}</TableCell>
+                        <TableCell>{vol.cargosResumo || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            {canEdit && (
+                              <Button variant="ghost" size="sm" asChild>
+                                <Link to={`/voluntarios/${vol.id}/editar`}>
+                                  <Edit className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(vol)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
           {filtered.length > 0 && (
             <DataTablePagination

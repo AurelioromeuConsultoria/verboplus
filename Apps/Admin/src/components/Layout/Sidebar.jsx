@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { 
   Home, 
   Users, 
@@ -22,7 +22,6 @@ import {
   Globe,
   ChevronDown,
   ChevronRight,
-  Network,
   UserCog,
   Images,
   Folder,
@@ -35,7 +34,9 @@ import {
   Shield,
   Package,
   Activity,
-  Building2
+  Building2,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -56,46 +57,12 @@ const menuItems = [
     href: '/minhas-escalas',
     icon: ClipboardCheck,
   },
-  {
-    titleKey: 'menu.users',
-    href: '/usuarios',
-    icon: UserCog,
-    permission: RESOURCES.USUARIOS,
-    adminOnly: true,
-  },
-  {
-    titleKey: 'menu.audit',
-    href: '/auditoria',
-    icon: Shield,
-    permission: RESOURCES.AUDITORIA,
-    adminOnly: true,
-  },
-  {
-    titleKey: 'menu.operations',
-    href: '/operacao',
-    icon: Activity,
-    permission: RESOURCES.AUDITORIA,
-    adminOnly: true,
-  },
-  {
-    title: 'Tenants',
-    href: '/plataforma/tenants',
-    icon: Building2,
-    platformOnly: true,
-  },
-  {
-    titleKey: 'menu.accessProfiles',
-    href: '/perfis-acesso',
-    icon: UserCog,
-    permission: RESOURCES.PERFIS_ACESSO,
-    adminOnly: true,
-  },
 ];
 
 const menuGroups = [
   {
-    titleKey: 'menu.connect',
-    icon: Network,
+    titleKey: 'menu.people',
+    icon: Users,
     items: [
       {
         titleKey: 'menu.people',
@@ -122,23 +89,23 @@ const menuGroups = [
         permission: RESOURCES.VISITANTES,
         adminOnly: true,
       },
+    ],
+  },
+  {
+    titleKey: 'menu.communication',
+    icon: MessageSquare,
+    items: [
       {
-        titleKey: 'menu.messageSettings',
-        href: '/configuracoes-mensagens',
+        titleKey: 'menu.communicationCampaigns',
+        href: '/comunicacao/campanhas',
         icon: MessageSquare,
-        permission: RESOURCES.CONFIG_MENSAGENS,
+        permission: RESOURCES.COMUNICACAO,
       },
       {
         titleKey: 'menu.scheduledMessages',
         href: '/mensagens-agendadas',
         icon: CalendarDays,
         permission: RESOURCES.MENSAGENS_AGENDADAS,
-      },
-      {
-        titleKey: 'menu.communicationCampaigns',
-        href: '/comunicacao/campanhas',
-        icon: MessageSquare,
-        permission: RESOURCES.COMUNICACAO,
       },
       {
         titleKey: 'menu.communicationTemplates',
@@ -158,12 +125,24 @@ const menuGroups = [
         icon: Shield,
         permission: RESOURCES.COMUNICACAO,
       },
+      {
+        titleKey: 'menu.messageSettings',
+        href: '/configuracoes-mensagens',
+        icon: Cog,
+        permission: RESOURCES.CONFIG_MENSAGENS,
+      },
     ],
   },
   {
     titleKey: 'menu.volunteering',
     icon: Handshake,
     items: [
+      {
+        titleKey: 'menu.volunteers',
+        href: '/voluntarios',
+        icon: Handshake,
+        permission: RESOURCES.VOLUNTARIOS,
+      },
       {
         titleKey: 'menu.teams',
         href: '/equipes',
@@ -175,12 +154,6 @@ const menuGroups = [
         href: '/cargos',
         icon: Briefcase,
         permission: RESOURCES.CARGOS,
-      },
-      {
-        titleKey: 'menu.volunteers',
-        href: '/voluntarios',
-        icon: Handshake,
-        permission: RESOURCES.VOLUNTARIOS,
       },
       {
         titleKey: 'menu.schedules',
@@ -201,9 +174,9 @@ const menuGroups = [
         permission: RESOURCES.VOLUNTARIOS,
       },
       {
-        titleKey: 'menu.scheduleModels',
-        href: '/voluntariado/modelos-escala',
-        icon: ClipboardList,
+        titleKey: 'menu.swapRequests',
+        href: '/voluntariado/solicitacoes-troca',
+        icon: ClipboardCheck,
         permission: RESOURCES.VOLUNTARIOS,
       },
       {
@@ -213,15 +186,9 @@ const menuGroups = [
         permission: RESOURCES.VOLUNTARIOS,
       },
       {
-        titleKey: 'menu.linksReport',
-        href: '/voluntariado/relatorio-vinculos',
-        icon: ArrowRightLeft,
-        permission: RESOURCES.VOLUNTARIOS,
-      },
-      {
-        titleKey: 'menu.swapRequests',
-        href: '/voluntariado/solicitacoes-troca',
-        icon: ClipboardCheck,
+        titleKey: 'menu.scheduleModels',
+        href: '/voluntariado/modelos-escala',
+        icon: ClipboardList,
         permission: RESOURCES.VOLUNTARIOS,
       },
       {
@@ -230,16 +197,11 @@ const menuGroups = [
         icon: ClipboardCheck,
         permission: RESOURCES.VOLUNTARIOS,
       },
-    ],
-  },
-  {
-    titleKey: 'menu.hub',
-    icon: Home,
-    items: [
       {
-        titleKey: 'menu.houses',
-        href: '/hub/casas',
-        icon: Home,
+        titleKey: 'menu.linksReport',
+        href: '/voluntariado/relatorio-vinculos',
+        icon: ArrowRightLeft,
+        permission: RESOURCES.VOLUNTARIOS,
       },
     ],
   },
@@ -268,19 +230,78 @@ const menuGroups = [
     ],
   },
   {
+    titleKey: 'menu.kids',
+    icon: Baby,
+    items: [
+      {
+        titleKey: 'menu.kidsPanel',
+        href: '/kids/painel',
+        icon: ActivitySquare,
+        permission: RESOURCES.KIDS,
+      },
+      {
+        titleKey: 'menu.kidsChildren',
+        href: '/kids/criancas',
+        icon: Users,
+        permission: RESOURCES.KIDS,
+      },
+      {
+        titleKey: 'menu.kidsCheckins',
+        href: '/kids/checkins',
+        icon: LogIn,
+        permission: RESOURCES.KIDS,
+      },
+      {
+        titleKey: 'menu.kidsHistory',
+        href: '/kids/historico',
+        icon: ClipboardList,
+        permission: RESOURCES.KIDS,
+      },
+      {
+        titleKey: 'menu.kidsStructure',
+        href: '/kids/estrutura',
+        icon: Cog,
+        permission: RESOURCES.KIDS,
+      },
+    ],
+  },
+  {
+    titleKey: 'menu.hub',
+    icon: Home,
+    items: [
+      {
+        titleKey: 'menu.houses',
+        href: '/hub/casas',
+        icon: Home,
+      },
+    ],
+  },
+  {
     titleKey: 'menu.finance',
     icon: Briefcase,
     items: [
       {
-        titleKey: 'menu.suppliers',
-        href: '/financeiro/fornecedores',
-        icon: Contact,
-        permission: RESOURCES.FORNECEDORES,
+        titleKey: 'menu.financeDashboard',
+        href: '/financeiro/dashboard',
+        icon: BarChart3,
+        permission: RESOURCES.FINANCEIRO,
       },
       {
-        titleKey: 'menu.expenseCategories',
-        href: '/financeiro/categorias-despesas',
-        icon: Tag,
+        titleKey: 'menu.revenues',
+        href: '/financeiro/receitas',
+        icon: BarChart3,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        titleKey: 'menu.expenses',
+        href: '/financeiro/despesas',
+        icon: Briefcase,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        titleKey: 'menu.financeReports',
+        href: '/financeiro/relatorios',
+        icon: BarChart3,
         permission: RESOURCES.FINANCEIRO,
       },
       {
@@ -288,6 +309,12 @@ const menuGroups = [
         href: '/financeiro/contas-bancarias',
         icon: Briefcase,
         permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        titleKey: 'menu.suppliers',
+        href: '/financeiro/fornecedores',
+        icon: Contact,
+        permission: RESOURCES.FORNECEDORES,
       },
       {
         titleKey: 'menu.costCenters',
@@ -299,6 +326,18 @@ const menuGroups = [
         titleKey: 'menu.projects',
         href: '/financeiro/projetos',
         icon: Calendar,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        titleKey: 'menu.revenueCategories',
+        href: '/financeiro/categorias-receitas',
+        icon: Tag,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        titleKey: 'menu.expenseCategories',
+        href: '/financeiro/categorias-despesas',
+        icon: Tag,
         permission: RESOURCES.FINANCEIRO,
       },
       {
@@ -319,42 +358,18 @@ const menuGroups = [
         icon: BarChart3,
         permission: RESOURCES.FINANCEIRO,
       },
-      {
-        titleKey: 'menu.expenses',
-        href: '/financeiro/despesas',
-        icon: Briefcase,
-        permission: RESOURCES.FINANCEIRO,
-      },
-      {
-        titleKey: 'menu.revenues',
-        href: '/financeiro/receitas',
-        icon: BarChart3,
-        permission: RESOURCES.FINANCEIRO,
-      },
-      {
-        titleKey: 'menu.revenueCategories',
-        href: '/financeiro/categorias-receitas',
-        icon: Tag,
-        permission: RESOURCES.FINANCEIRO,
-      },
-      {
-        titleKey: 'menu.financeDashboard',
-        href: '/financeiro/dashboard',
-        icon: BarChart3,
-        permission: RESOURCES.FINANCEIRO,
-      },
-      {
-        titleKey: 'menu.financeReports',
-        href: '/financeiro/relatorios',
-        icon: BarChart3,
-        permission: RESOURCES.FINANCEIRO,
-      },
     ],
   },
   {
     titleKey: 'menu.portal',
     icon: Globe,
     items: [
+      {
+        titleKey: 'menu.siteHighlights',
+        href: '/destaques-site',
+        icon: Star,
+        permission: RESOURCES.DESTAQUES_SITE,
+      },
       {
         titleKey: 'menu.newsCategories',
         href: '/categorias-noticias',
@@ -374,16 +389,22 @@ const menuGroups = [
         permission: RESOURCES.ENQUETES,
       },
       {
-        titleKey: 'menu.contacts',
+        titleKey: 'menu.contactMessages',
         href: '/contatos',
         icon: Contact,
         permission: RESOURCES.CONTATOS,
       },
       {
-        titleKey: 'menu.siteHighlights',
-        href: '/destaques-site',
-        icon: Star,
-        permission: RESOURCES.DESTAQUES_SITE,
+        titleKey: 'menu.photoGalleries',
+        href: '/galerias-fotos',
+        icon: Images,
+        permission: RESOURCES.GALERIAS_FOTOS,
+      },
+      {
+        titleKey: 'menu.mediaCategories',
+        href: '/categorias-midias',
+        icon: Folder,
+        permission: RESOURCES.MIDIA,
       },
       {
         titleKey: 'menu.portalConfig',
@@ -394,65 +415,69 @@ const menuGroups = [
     ],
   },
   {
-    titleKey: 'menu.media',
-    icon: Images,
+    titleKey: 'menu.administration',
+    icon: Shield,
     items: [
       {
-        titleKey: 'menu.mediaCategories',
-        href: '/categorias-midias',
-        icon: Folder,
-        permission: RESOURCES.MIDIA,
+        titleKey: 'menu.users',
+        href: '/usuarios',
+        icon: UserCog,
+        permission: RESOURCES.USUARIOS,
+        adminOnly: true,
       },
       {
-        titleKey: 'menu.photoGalleries',
-        href: '/galerias-fotos',
-        icon: Images,
-        permission: RESOURCES.GALERIAS_FOTOS,
+        titleKey: 'menu.accessProfiles',
+        href: '/perfis-acesso',
+        icon: UserCog,
+        permission: RESOURCES.PERFIS_ACESSO,
+        adminOnly: true,
+      },
+      {
+        titleKey: 'menu.audit',
+        href: '/auditoria',
+        icon: Shield,
+        permission: RESOURCES.AUDITORIA,
+        adminOnly: true,
+      },
+      {
+        titleKey: 'menu.operations',
+        href: '/operacao',
+        icon: Activity,
+        permission: RESOURCES.AUDITORIA,
+        adminOnly: true,
       },
     ],
   },
   {
-    titleKey: 'menu.kids',
-    icon: Baby,
+    titleKey: 'menu.platform',
+    icon: Building2,
     items: [
       {
-        titleKey: 'menu.kidsPanel',
-        href: '/kids/painel',
-        icon: ActivitySquare,
-        permission: RESOURCES.KIDS,
-      },
-      {
-        titleKey: 'menu.kidsChildren',
-        href: '/kids/criancas',
-        icon: Users,
-        permission: RESOURCES.KIDS,
-      },
-      {
-        titleKey: 'menu.kidsStructure',
-        href: '/kids/estrutura',
-        icon: Cog,
-        permission: RESOURCES.KIDS,
-      },
-      {
-        titleKey: 'menu.kidsHistory',
-        href: '/kids/historico',
-        icon: ClipboardList,
-        permission: RESOURCES.KIDS,
-      },
-      {
-        titleKey: 'menu.kidsCheckins',
-        href: '/kids/checkins',
-        icon: LogIn,
-        permission: RESOURCES.KIDS,
+        titleKey: 'menu.tenants',
+        href: '/plataforma/tenants',
+        icon: Building2,
+        platformOnly: true,
       },
     ],
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({
+  className,
+  forceExpanded = false,
+  showCollapseControl = true,
+  onNavigate,
+}) {
   const location = useLocation();
   const { can, isAdmin, isPlatformAdmin, currentTenant, homeTenant, operandoTenantRemoto } = useAuth();
   const { t } = useTranslation();
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('admin-sidebar-collapsed') === 'true';
+  });
+  const [isHoverExpanded, setIsHoverExpanded] = useState(false);
+  const hoverOpenTimerRef = useRef(null);
+  const isIconOnly = !forceExpanded && isCollapsed && !isHoverExpanded;
 
   const canSeeMenuItem = (item) => {
     if (item.platformOnly) {
@@ -468,10 +493,39 @@ export function Sidebar() {
   const [openGroups, setOpenGroups] = useState({});
 
   const toggleGroup = (groupKey) => {
+    if (isIconOnly) {
+      setIsCollapsed(false);
+      setIsHoverExpanded(false);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('admin-sidebar-collapsed', 'false');
+      }
+      setOpenGroups((prev) => ({
+        ...prev,
+        [groupKey]: true,
+      }));
+      return;
+    }
+
     setOpenGroups((prev) => ({
       ...prev,
       [groupKey]: !prev[groupKey],
     }));
+  };
+
+  const toggleSidebar = () => {
+    if (hoverOpenTimerRef.current) {
+      window.clearTimeout(hoverOpenTimerRef.current);
+      hoverOpenTimerRef.current = null;
+    }
+
+    setIsCollapsed((current) => {
+      const next = !current;
+      setIsHoverExpanded(false);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('admin-sidebar-collapsed', String(next));
+      }
+      return next;
+    });
   };
 
   const expandAllGroups = () => {
@@ -514,28 +568,73 @@ export function Sidebar() {
   };
 
   return (
-    <div className="flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border">
+    <div
+      onMouseEnter={() => {
+        if (forceExpanded) return;
+        if (!isCollapsed || hoverOpenTimerRef.current) return;
+
+        hoverOpenTimerRef.current = window.setTimeout(() => {
+          setIsHoverExpanded(true);
+          hoverOpenTimerRef.current = null;
+        }, 180);
+      }}
+      onMouseLeave={() => {
+        if (forceExpanded) return;
+        if (hoverOpenTimerRef.current) {
+          window.clearTimeout(hoverOpenTimerRef.current);
+          hoverOpenTimerRef.current = null;
+        }
+        setIsHoverExpanded(false);
+      }}
+      onFocus={() => {
+        if (!forceExpanded && isCollapsed) setIsHoverExpanded(true);
+      }}
+      className={cn(
+        'flex h-dvh shrink-0 flex-col bg-sidebar border-r border-sidebar-border transition-[width] duration-350 ease-out',
+        isIconOnly ? 'w-20' : 'w-64',
+        className
+      )}
+    >
       {/* Logo */}
-      <div className="flex h-16 items-center justify-between px-6 border-b border-sidebar-border">
-        <div className="flex items-center space-x-2">
-          <Church className="h-8 w-8 text-sidebar-primary" />
-          <span className="text-lg font-semibold text-sidebar-foreground">
+      <div className={cn(
+        'flex h-16 items-center border-b border-sidebar-border',
+        isIconOnly ? 'justify-center px-3' : 'justify-between px-4'
+      )}>
+        <div className={cn('flex items-center min-w-0 space-x-2', isIconOnly && 'hidden')}>
+          <Church className="h-8 w-8 shrink-0 text-sidebar-primary" />
+          <span className="truncate text-lg font-semibold text-sidebar-foreground">
             {t('app.name')}
           </span>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleAllGroups}
-          className="h-8 w-8 p-0 text-sidebar-foreground/60 hover:text-sidebar-foreground"
-          title={allExpanded ? t('layout.collapseAll') : t('layout.expandAll')}
-        >
-          <ChevronsUpDown className="h-4 w-4" />
-        </Button>
+        {showCollapseControl && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleSidebar}
+            className="h-8 w-8 p-0 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+            title={isCollapsed ? t('layout.expandSidebar') : t('layout.collapseSidebar')}
+            aria-label={isCollapsed ? t('layout.expandSidebar') : t('layout.collapseSidebar')}
+          >
+            {isCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          </Button>
+        )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+      <nav className={cn('flex-1 space-y-1 overflow-y-auto', isIconOnly ? 'p-3' : 'p-4')}>
+        {!isIconOnly && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleAllGroups}
+            className="mb-2 h-8 w-full justify-start gap-2 px-3 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+            title={allExpanded ? t('layout.collapseAll') : t('layout.expandAll')}
+          >
+            <ChevronsUpDown className="h-4 w-4" />
+            <span className="text-xs">{allExpanded ? t('layout.collapseAll') : t('layout.expandAll')}</span>
+          </Button>
+        )}
+
         {menuItems.filter(canSeeMenuItem).map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.href || 
@@ -545,15 +644,18 @@ export function Sidebar() {
             <Link
               key={item.href}
               to={item.href}
+              onClick={onNavigate}
+              title={item.title ?? t(item.titleKey)}
               className={cn(
-                'flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                'flex h-10 items-center rounded-lg text-sm font-medium transition-colors',
+                isIconOnly ? 'justify-center px-0' : 'space-x-3 px-3',
                 isActive
                   ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                   : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               )}
             >
-              <Icon className="h-5 w-5" />
-              <span>{item.title ?? t(item.titleKey)}</span>
+              <Icon className="h-5 w-5 shrink-0" />
+              <span className={cn('truncate', isIconOnly && 'sr-only')}>{item.title ?? t(item.titleKey)}</span>
             </Link>
           );
         })}
@@ -575,24 +677,28 @@ export function Sidebar() {
               className="mt-2"
             >
               <CollapsibleTrigger
+                title={t(group.titleKey)}
                 className={cn(
-                  'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'flex h-10 w-full items-center rounded-lg text-sm font-medium transition-colors',
+                  isIconOnly ? 'justify-center px-0' : 'justify-between px-3',
                   isActiveGroup
                     ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                 )}
               >
-                <div className="flex items-center space-x-3">
-                  <GroupIcon className="h-5 w-5" />
-                  <span>{t(group.titleKey)}</span>
+                <div className={cn('flex items-center min-w-0', isIconOnly ? 'justify-center' : 'space-x-3')}>
+                  <GroupIcon className="h-5 w-5 shrink-0" />
+                  <span className={cn('truncate', isIconOnly && 'sr-only')}>{t(group.titleKey)}</span>
                 </div>
-                {isOpen ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
+                {!isIconOnly && (
+                  isOpen ? (
+                    <ChevronDown className="h-4 w-4 shrink-0" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 shrink-0" />
+                  )
                 )}
               </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-1 mt-1">
+              <CollapsibleContent className={cn('space-y-1 mt-1', isIconOnly && 'hidden')}>
                 {visibleItems.map((item) => {
                   const ItemIcon = item.icon;
                   const isActive = location.pathname === item.href || 
@@ -602,14 +708,15 @@ export function Sidebar() {
                     <Link
                       key={item.href}
                       to={item.href}
+                      onClick={onNavigate}
                       className={cn(
-                        'flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ml-6',
+                        'ml-6 flex min-h-10 items-start space-x-3 rounded-lg px-3 py-2 text-sm font-medium leading-snug transition-colors',
                         isActive
                           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                           : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                       )}
                     >
-                      <ItemIcon className="h-4 w-4" />
+                      <ItemIcon className="mt-0.5 h-4 w-4 shrink-0" />
                       <span>{t(item.titleKey)}</span>
                     </Link>
                   );
@@ -621,8 +728,8 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-sidebar-border">
-        {isPlatformAdmin && (
+      <div className={cn('border-t border-sidebar-border', isIconOnly ? 'p-3' : 'p-4')}>
+        {isPlatformAdmin && !isIconOnly && (
           <div className={`mb-3 rounded-lg border px-3 py-3 text-xs ${operandoTenantRemoto ? 'border-amber-500/30 bg-amber-500/10 text-sidebar-foreground' : 'border-emerald-500/30 bg-emerald-500/10 text-sidebar-foreground'}`}>
             <div className="flex items-center gap-2 font-semibold">
               <Shield className="h-4 w-4" />
@@ -642,10 +749,13 @@ export function Sidebar() {
           </div>
         )}
 
-        <div className="text-xs text-sidebar-foreground/60">
+        <div className={cn('text-xs text-sidebar-foreground/60', isIconOnly && 'sr-only')}>
           {t('app.tagline')}
         </div>
-        <div className="mt-3 rounded-lg border border-sidebar-border/70 bg-sidebar-accent/40 px-3 py-2 text-xs text-sidebar-foreground/80">
+        <div className={cn(
+          'mt-3 rounded-lg border border-sidebar-border/70 bg-sidebar-accent/40 px-3 py-2 text-xs text-sidebar-foreground/80',
+          isIconOnly && 'hidden'
+        )}>
           <div className="font-medium">{currentTenant?.slug || 'tenant-indefinido'}</div>
           <div>{isPlatformAdmin ? 'Backoffice da plataforma' : 'Contexto da igreja atual'}</div>
         </div>
@@ -653,7 +763,11 @@ export function Sidebar() {
           href="https://malachdigital.com.br/"
           target="_blank"
           rel="noreferrer"
-          className="mt-3 flex items-center gap-2 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground"
+          title="Malach Digital"
+          className={cn(
+            'mt-3 flex items-center text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground',
+            isIconOnly ? 'justify-center' : 'gap-2'
+          )}
         >
           <svg
             viewBox="0 0 24 24"
@@ -663,7 +777,7 @@ export function Sidebar() {
           >
             <path d="M3 20V4h4l5 5 5-5h4v16h-4V10l-5 5-5-5v10H3z" />
           </svg>
-          <span>{t('app.developedBy')}</span>
+          <span className={cn(isIconOnly && 'sr-only')}>{t('app.developedBy')}</span>
         </a>
       </div>
     </div>

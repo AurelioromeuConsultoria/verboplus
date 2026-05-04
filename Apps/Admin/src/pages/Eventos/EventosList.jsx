@@ -159,12 +159,12 @@ export default function EventosList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold">{t('events.title')}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold sm:text-3xl">{t('events.title')}</h1>
           <p className="text-muted-foreground">{t('events.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
           {canEdit && (
             <Button asChild>
@@ -202,10 +202,10 @@ export default function EventosList() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>{t('events.listTitle')} ({total})</CardTitle>
             {filtered.length > 0 && (
-              <Button variant="outline" size="sm" onClick={handleExport}>
+              <Button variant="outline" size="sm" onClick={handleExport} className="w-full sm:w-auto">
                 <Download className="h-4 w-4 mr-2" />
                 {t('events.export.button')}
               </Button>
@@ -227,66 +227,124 @@ export default function EventosList() {
               ) : null}
             />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <SortableTableHeader field="titulo" onSort={handleSort} sortConfig={sortConfig}>
-                    {t('events.fields.title')}
-                  </SortableTableHeader>
-                  <TableHead>{t('events.fields.type')}</TableHead>
-                  <SortableTableHeader field="descricao" onSort={handleSort} sortConfig={sortConfig}>
-                    {t('events.fields.description')}
-                  </SortableTableHeader>
-                  <SortableTableHeader field="dataInicio" onSort={handleSort} sortConfig={sortConfig}>
-                    {t('events.fields.startDate')}
-                  </SortableTableHeader>
-                  <SortableTableHeader field="dataFim" onSort={handleSort} sortConfig={sortConfig}>
-                    {t('events.fields.endDate')}
-                  </SortableTableHeader>
-                  <TableHead>{t('events.fields.url')}</TableHead>
-                  <TableHead className="text-right">{t('events.fields.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="space-y-3 md:hidden">
                 {paginatedItems.map((evento) => (
-                  <TableRow key={evento.id}>
-                    <TableCell className="font-medium">{evento.titulo || '-'}</TableCell>
-                    <TableCell>{getTipoLabel(evento.tipo, evento.tipoDescricao)}</TableCell>
-                    <TableCell>{evento.descricao ? (evento.descricao.length > 50 ? `${evento.descricao.substring(0, 50)}...` : evento.descricao) : '-'}</TableCell>
-                    <TableCell>{formatEventDate(evento.dataInicio)}</TableCell>
-                    <TableCell>{formatEventDate(evento.dataFim)}</TableCell>
-                    <TableCell>
-                      {evento.url ? (
-                        <a href={evento.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                          {evento.url.length > 30 ? `${evento.url.substring(0, 30)}...` : evento.url}
+                  <div key={evento.id} className="rounded-lg border bg-background p-3 shadow-xs">
+                    <div className="space-y-1">
+                      <div className="font-medium leading-snug">{evento.titulo || '-'}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {getTipoLabel(evento.tipo, evento.tipoDescricao)}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">{t('events.fields.startDate')}: </span>
+                        <span>{formatEventDate(evento.dataInicio)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">{t('events.fields.endDate')}: </span>
+                        <span>{formatEventDate(evento.dataFim)}</span>
+                      </div>
+                      {evento.descricao && (
+                        <p className="text-muted-foreground">
+                          {evento.descricao.length > 120 ? `${evento.descricao.substring(0, 120)}...` : evento.descricao}
+                        </p>
+                      )}
+                      {evento.url && (
+                        <a href={evento.url} target="_blank" rel="noopener noreferrer" className="truncate text-blue-600 hover:underline">
+                          {evento.url}
                         </a>
-                      ) : '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button variant="ghost" size="sm" asChild title={t('events.actions.viewRegistrations')}>
-                          <Link to={`/eventos/${evento.id}/inscricoes`}>
-                            <Users className="h-4 w-4" />
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" asChild title={t('events.actions.viewRegistrations')}>
+                        <Link to={`/eventos/${evento.id}/inscricoes`}>
+                          <Users className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      {canEdit && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                          <Link to={`/eventos/${evento.id}/editar`}>
+                            <Edit className="h-4 w-4" />
                           </Link>
                         </Button>
-                        {canEdit && (
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/eventos/${evento.id}/editar`}>
-                              <Edit className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                        )}
-                        {canDelete && (
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(evento.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                      )}
+                      {canDelete && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(evento.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <SortableTableHeader field="titulo" onSort={handleSort} sortConfig={sortConfig}>
+                        {t('events.fields.title')}
+                      </SortableTableHeader>
+                      <TableHead>{t('events.fields.type')}</TableHead>
+                      <SortableTableHeader field="descricao" onSort={handleSort} sortConfig={sortConfig}>
+                        {t('events.fields.description')}
+                      </SortableTableHeader>
+                      <SortableTableHeader field="dataInicio" onSort={handleSort} sortConfig={sortConfig}>
+                        {t('events.fields.startDate')}
+                      </SortableTableHeader>
+                      <SortableTableHeader field="dataFim" onSort={handleSort} sortConfig={sortConfig}>
+                        {t('events.fields.endDate')}
+                      </SortableTableHeader>
+                      <TableHead>{t('events.fields.url')}</TableHead>
+                      <TableHead className="text-right">{t('events.fields.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedItems.map((evento) => (
+                      <TableRow key={evento.id}>
+                        <TableCell className="font-medium">{evento.titulo || '-'}</TableCell>
+                        <TableCell>{getTipoLabel(evento.tipo, evento.tipoDescricao)}</TableCell>
+                        <TableCell>{evento.descricao ? (evento.descricao.length > 50 ? `${evento.descricao.substring(0, 50)}...` : evento.descricao) : '-'}</TableCell>
+                        <TableCell>{formatEventDate(evento.dataInicio)}</TableCell>
+                        <TableCell>{formatEventDate(evento.dataFim)}</TableCell>
+                        <TableCell>
+                          {evento.url ? (
+                            <a href={evento.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                              {evento.url.length > 30 ? `${evento.url.substring(0, 30)}...` : evento.url}
+                            </a>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            <Button variant="ghost" size="sm" asChild title={t('events.actions.viewRegistrations')}>
+                              <Link to={`/eventos/${evento.id}/inscricoes`}>
+                                <Users className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                            {canEdit && (
+                              <Button variant="ghost" size="sm" asChild>
+                                <Link to={`/eventos/${evento.id}/editar`}>
+                                  <Edit className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(evento.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
           {filtered.length > 0 && (
             <DataTablePagination

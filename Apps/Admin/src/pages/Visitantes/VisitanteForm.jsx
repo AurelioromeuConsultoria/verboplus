@@ -61,6 +61,10 @@ export default function VisitanteForm() {
     return phone ? phone.replace(/\D/g, '') : null;
   };
 
+  const toLocalDateTime = (date) => {
+    return date ? `${date}T00:00:00` : null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -82,10 +86,8 @@ export default function VisitanteForm() {
         email: formData.email?.trim() || null,
         telefone: normalizePhone(formData.telefone),
         whatsApp: normalizePhone(formData.whatsApp),
-        dataNascimento: formData.dataNascimento 
-          ? new Date(formData.dataNascimento + 'T00:00:00').toISOString()
-          : null,
-        dataVisita: new Date(formData.dataVisita + 'T00:00:00').toISOString(),
+        dataNascimento: toLocalDateTime(formData.dataNascimento),
+        dataVisita: toLocalDateTime(formData.dataVisita),
         observacoes: formData.observacoes?.trim() || null
       };
 
@@ -103,8 +105,9 @@ export default function VisitanteForm() {
 
       navigate('/visitantes');
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 
+      const errorMessage = err.response?.data?.detail ||
                           err.response?.data?.error ||
+                          err.response?.data?.message ||
                           t(isEditing ? 'visitors.form.updateError' : 'visitors.form.createError');
       toast.error(errorMessage);
       console.error(`Erro ao ${isEditing ? 'atualizar' : 'cadastrar'} visita:`, err);

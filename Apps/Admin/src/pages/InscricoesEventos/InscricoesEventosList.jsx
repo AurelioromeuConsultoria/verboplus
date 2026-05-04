@@ -135,9 +135,9 @@ export default function InscricoesEventosList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{t('eventRegistrations.title')}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold sm:text-3xl">{t('eventRegistrations.title')}</h1>
           <p className="text-muted-foreground">{t('eventRegistrations.subtitle')}</p>
         </div>
         <PageRefreshButton onClick={() => load({ silent: true })} refreshing={refreshing} />
@@ -148,7 +148,7 @@ export default function InscricoesEventosList() {
           <CardTitle>{t('eventRegistrations.filtersTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
                 <Filter className="h-4 w-4" />
@@ -195,95 +195,177 @@ export default function InscricoesEventosList() {
               description={t('eventRegistrations.emptyDescription')}
             />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('eventRegistrations.table.name')}</TableHead>
-                  <TableHead>{t('eventRegistrations.table.whatsapp')}</TableHead>
-                  <TableHead>{t('eventRegistrations.table.email')}</TableHead>
-                  <TableHead>{t('eventRegistrations.table.event')}</TableHead>
-                  <TableHead>{t('eventRegistrations.table.status')}</TableHead>
-                  <TableHead>{t('eventRegistrations.table.companions')}</TableHead>
-                  <TableHead>{t('eventRegistrations.table.registrationDate')}</TableHead>
-                  <TableHead className="text-right">{t('eventRegistrations.table.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="space-y-3 md:hidden">
                 {paginatedItems.map((inscricao) => (
-                  <TableRow key={inscricao.id}>
-                    <TableCell className="font-medium">{inscricao.nome}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <span>{inscricao.whatsApp}</span>
+                  <div key={inscricao.id} className="rounded-lg border bg-background p-3 shadow-xs">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <div className="font-medium leading-snug">{inscricao.nome}</div>
+                        <div className="truncate text-xs text-muted-foreground">{inscricao.eventoTitulo || '-'}</div>
+                      </div>
+                      <StatusBadge tone={STATUS_TONES[inscricao.status] || 'neutral'}>
+                        {STATUS_LABELS(t)[inscricao.status] || inscricao.statusDescricao}
+                      </StatusBadge>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-sm">
+                      <div className="flex min-w-0 items-center justify-between gap-2">
+                        <span className="min-w-0 truncate text-muted-foreground">{inscricao.whatsApp || '-'}</span>
                         {inscricao.whatsApp && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => window.open(`https://wa.me/55${inscricao.whatsApp.replace(/\D/g, '')}`)}
                           >
                             <Phone className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <span>{inscricao.email || '-'}</span>
+                      <div className="flex min-w-0 items-center justify-between gap-2">
+                        <span className="min-w-0 truncate text-muted-foreground">{inscricao.email || '-'}</span>
                         {inscricao.email && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => window.open(`mailto:${inscricao.email}`)}
                           >
                             <Mail className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>{inscricao.eventoTitulo || '-'}</TableCell>
-                    <TableCell>
-                      <StatusBadge tone={STATUS_TONES[inscricao.status] || 'neutral'}>
-                        {STATUS_LABELS(t)[inscricao.status] || inscricao.statusDescricao}
-                      </StatusBadge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        {inscricao.quantidadeAcompanhantes || 0}
+                      <div className="flex items-center justify-between gap-2 text-muted-foreground">
+                        <span>{formatDateTime(inscricao.dataInscricao)}</span>
+                        <span className="inline-flex items-center gap-1">
+                          <Users className="h-4 w-4" />
+                          {inscricao.quantidadeAcompanhantes || 0}
+                        </span>
                       </div>
-                    </TableCell>
-                    <TableCell>{formatDateTime(inscricao.dataInscricao)}</TableCell>
-                    <TableCell className="text-right">
-                      <TableRowActions className="space-x-1">
-                        <RowIconLinkAction>
-                          <Link to={`/inscricoes-eventos/${inscricao.id}`}>
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </RowIconLinkAction>
-                        {inscricao.status === 1 && (
-                          <RowIconButtonAction onClick={() => handleConfirmar(inscricao.id)} title={t('eventRegistrations.confirmAction')}>
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          </RowIconButtonAction>
-                        )}
-                        {(inscricao.status === 1 || inscricao.status === 2) && (
-                          <RowIconButtonAction onClick={() => handleCancelar(inscricao.id)} title={t('eventRegistrations.cancelAction')}>
-                            <XCircle className="h-4 w-4 text-red-600" />
-                          </RowIconButtonAction>
-                        )}
-                        <RowIconLinkAction>
-                          <Link to={`/inscricoes-eventos/${inscricao.id}/editar`}>
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </RowIconLinkAction>
-                        <RowIconButtonAction onClick={() => handleDelete(inscricao.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </RowIconButtonAction>
-                      </TableRowActions>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                        <Link to={`/inscricoes-eventos/${inscricao.id}`}>
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      {inscricao.status === 1 && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleConfirmar(inscricao.id)} title={t('eventRegistrations.confirmAction')}>
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        </Button>
+                      )}
+                      {(inscricao.status === 1 || inscricao.status === 2) && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCancelar(inscricao.id)} title={t('eventRegistrations.cancelAction')}>
+                          <XCircle className="h-4 w-4 text-red-600" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                        <Link to={`/inscricoes-eventos/${inscricao.id}/editar`}>
+                          <Edit className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(inscricao.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('eventRegistrations.table.name')}</TableHead>
+                      <TableHead>{t('eventRegistrations.table.whatsapp')}</TableHead>
+                      <TableHead>{t('eventRegistrations.table.email')}</TableHead>
+                      <TableHead>{t('eventRegistrations.table.event')}</TableHead>
+                      <TableHead>{t('eventRegistrations.table.status')}</TableHead>
+                      <TableHead>{t('eventRegistrations.table.companions')}</TableHead>
+                      <TableHead>{t('eventRegistrations.table.registrationDate')}</TableHead>
+                      <TableHead className="text-right">{t('eventRegistrations.table.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedItems.map((inscricao) => (
+                      <TableRow key={inscricao.id}>
+                        <TableCell className="font-medium">{inscricao.nome}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <span>{inscricao.whatsApp}</span>
+                            {inscricao.whatsApp && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(`https://wa.me/55${inscricao.whatsApp.replace(/\D/g, '')}`)}
+                              >
+                                <Phone className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <span>{inscricao.email || '-'}</span>
+                            {inscricao.email && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(`mailto:${inscricao.email}`)}
+                              >
+                                <Mail className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{inscricao.eventoTitulo || '-'}</TableCell>
+                        <TableCell>
+                          <StatusBadge tone={STATUS_TONES[inscricao.status] || 'neutral'}>
+                            {STATUS_LABELS(t)[inscricao.status] || inscricao.statusDescricao}
+                          </StatusBadge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            {inscricao.quantidadeAcompanhantes || 0}
+                          </div>
+                        </TableCell>
+                        <TableCell>{formatDateTime(inscricao.dataInscricao)}</TableCell>
+                        <TableCell className="text-right">
+                          <TableRowActions className="space-x-1">
+                            <RowIconLinkAction>
+                              <Link to={`/inscricoes-eventos/${inscricao.id}`}>
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                            </RowIconLinkAction>
+                            {inscricao.status === 1 && (
+                              <RowIconButtonAction onClick={() => handleConfirmar(inscricao.id)} title={t('eventRegistrations.confirmAction')}>
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              </RowIconButtonAction>
+                            )}
+                            {(inscricao.status === 1 || inscricao.status === 2) && (
+                              <RowIconButtonAction onClick={() => handleCancelar(inscricao.id)} title={t('eventRegistrations.cancelAction')}>
+                                <XCircle className="h-4 w-4 text-red-600" />
+                              </RowIconButtonAction>
+                            )}
+                            <RowIconLinkAction>
+                              <Link to={`/inscricoes-eventos/${inscricao.id}/editar`}>
+                                <Edit className="h-4 w-4" />
+                              </Link>
+                            </RowIconLinkAction>
+                            <RowIconButtonAction onClick={() => handleDelete(inscricao.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </RowIconButtonAction>
+                          </TableRowActions>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
           {filtered.length > 0 && (
             <DataTablePagination
@@ -325,6 +407,5 @@ export default function InscricoesEventosList() {
     </div>
   );
 }
-
 
 

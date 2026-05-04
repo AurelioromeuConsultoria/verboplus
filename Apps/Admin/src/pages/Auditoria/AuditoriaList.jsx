@@ -768,7 +768,7 @@ export default function AuditoriaList() {
               <p className="text-muted-foreground">{t('audit.noLogsDescription')}</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>

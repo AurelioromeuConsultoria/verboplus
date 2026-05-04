@@ -11,6 +11,9 @@
     "audit": "Logs",
     "operations": "Operación",
     "accessProfiles": "Perfiles de acceso",
+    "administration": "Administración",
+    "platform": "Plataforma",
+    "tenants": "Tenants",
     "connect": "Connect",
     "people": "Personas",
     "birthdays": "Cumpleaños",
@@ -18,7 +21,8 @@
     "profiles": "Perfiles",
     "visitors": "Visitantes",
     "messageSettings": "Configuración de mensajes",
-    "scheduledMessages": "Mensajes programados",
+    "scheduledMessages": "Cola de Comunicación",
+    "communication": "Comunicación",
     "communicationCampaigns": "Campañas de comunicación",
     "communicationTemplates": "Plantillas de comunicación",
     "communicationSegments": "Segmentos de comunicación",
@@ -59,6 +63,7 @@
     "news": "Noticias",
     "polls": "Encuestas",
     "contacts": "Contactos",
+    "contactMessages": "Mensajes de Fale Conosco",
     "siteHighlights": "Destacados del sitio",
     "portalConfig": "Configuración",
     "media": "Medios",
@@ -73,7 +78,10 @@
   },
   "layout": {
     "expandAll": "Expandir todos los menús",
-    "collapseAll": "Colapsar todos los menús"
+    "collapseAll": "Colapsar todos los menús",
+    "expandSidebar": "Expandir menú lateral",
+    "collapseSidebar": "Replegar menú lateral",
+    "openMenu": "Abrir menú"
   },
   "header": {
     "dashboard": "Dashboard",
@@ -82,7 +90,7 @@
     "visitors": "Visitantes",
     "profiles": "Perfiles",
     "messageSettings": "Configuración de mensajes",
-    "scheduledMessages": "Mensajes programados",
+      "scheduledMessages": "Cola de Comunicación",
     "teams": "Equipos",
     "roles": "Cargos",
     "volunteers": "Voluntarios",

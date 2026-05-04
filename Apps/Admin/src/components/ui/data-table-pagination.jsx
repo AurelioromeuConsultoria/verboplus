@@ -21,8 +21,8 @@ export function DataTablePagination({
   const end = Math.min(page * pageSize, total);
 
   return (
-    <div className="flex items-center justify-between px-2 py-4">
-      <div className="flex items-center space-x-2">
+    <div className="flex flex-col gap-3 px-0 py-4 sm:px-2 md:flex-row md:items-center md:justify-between">
+      <div className="flex items-center justify-between gap-2 sm:justify-start">
         <p className="text-sm font-medium">Itens por página</p>
         <Select
           value={pageSize.toString()}
@@ -43,16 +43,14 @@ export function DataTablePagination({
           </SelectContent>
         </Select>
       </div>
-      <div className="flex items-center space-x-6 lg:space-x-8">
-        <div className="flex items-center justify-center text-sm font-medium">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between md:gap-6 lg:gap-8">
+        <div className="flex items-center justify-between gap-3 text-sm font-medium sm:justify-center">
           Página {page} de {totalPages || 1}
-        </div>
-        <div className="flex items-center space-x-2">
           <p className="text-sm text-muted-foreground">
             {total === 0 ? 'Nenhum item' : `${start}-${end} de ${total}`}
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center justify-end gap-2">
           <Button
             variant="outline"
             className="hidden h-8 w-8 p-0 lg:flex"

@@ -191,6 +191,7 @@ export function AuthProvider({ children }) {
 
   const can = (resource, action = 'view') => {
     if (!usuario) return false;
+    if (isPlatformAdmin) return true;
     const perm = usuario.permissoes?.find((p) => String(p.recurso).toLowerCase() === String(resource).toLowerCase());
     if (!perm) return false;
     if (action === 'view') return !!perm.podeVer;

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Play, Mail, MessageSquare, AlertTriangle, CheckCircle2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Play, Mail, MessageSquare, AlertTriangle, CheckCircle2, RotateCcw, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -68,7 +68,32 @@ export default function ComunicacaoCampanhaDetails() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [scheduleDraft, setScheduleDraft] = useState('');
   const [error, setError] = useState(null);
+
+  const toDateTimeInputValue = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const offsetMs = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+  };
+
+  const toApiDateTimeValue = (value) => (value ? `${value}:00` : null);
+
+  const buildUpdatePayload = (campanhaAtual, dataAgendamento) => ({
+    nome: campanhaAtual.nome,
+    objetivo: campanhaAtual.objetivo,
+    publicoAlvo: campanhaAtual.publicoAlvo,
+    dataAgendamento,
+    status: dataAgendamento ? 2 : campanhaAtual.status,
+    canais: (campanhaAtual.canais || []).map((canal) => ({
+      canal: canal.canal,
+      templateId: canal.templateId,
+      prioridade: canal.prioridade,
+    })),
+  });
 
   const load = useCallback(async ({ silent = false } = {}) => {
     try {
@@ -82,6 +107,7 @@ export default function ComunicacaoCampanhaDetails() {
       ]);
 
       setCampanha(campanhaResponse.data || null);
+      setScheduleDraft(toDateTimeInputValue(campanhaResponse.data?.dataAgendamento));
       setEntregas(entregasResponse.data || []);
 
       try {
@@ -110,6 +136,50 @@ export default function ComunicacaoCampanhaDetails() {
       await load({ silent: true });
     } catch (err) {
       toast.error(getApiErrorMessage(err, t('communicationCampaignDetails.processPendingError')));
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const salvarAgendamento = async () => {
+    if (!campanha) return;
+
+    try {
+      setSavingSchedule(true);
+      const dataAgendamento = toApiDateTimeValue(scheduleDraft);
+      const response = await comunicacaoCampanhasApi.update(
+        campanha.id,
+        buildUpdatePayload(campanha, dataAgendamento)
+      );
+      setCampanha(response.data || campanha);
+      toast.success('Agendamento atualizado.');
+      await load({ silent: true });
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Erro ao atualizar agendamento.'));
+    } finally {
+      setSavingSchedule(false);
+    }
+  };
+
+  const processarCampanhaAgora = async () => {
+    if (!campanha) return;
+
+    try {
+      setProcessing(true);
+      const now = new Date();
+      const offsetMs = now.getTimezoneOffset() * 60000;
+      const nowLocal = new Date(now.getTime() - offsetMs).toISOString().slice(0, 19);
+
+      await comunicacaoCampanhasApi.update(
+        campanha.id,
+        buildUpdatePayload(campanha, nowLocal)
+      );
+
+      const response = await comunicacaoEntregasApi.processarPendentes(100);
+      toast.success(`${response.data?.processadas ?? 0} entrega(s) processada(s).`);
+      await load({ silent: true });
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Erro ao processar campanha agora.'));
     } finally {
       setProcessing(false);
     }
@@ -195,6 +265,36 @@ export default function ComunicacaoCampanhaDetails() {
         <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">{t('communicationCampaignDetails.cards.failures')}</div><div className="text-2xl font-bold mt-1">{campanha.totalFalhas}</div></CardContent></Card>
         <Card><CardContent className="p-5"><div className="text-sm text-muted-foreground">{t('communicationCampaignDetails.cards.scheduling')}</div><div className="text-sm font-medium mt-1">{campanha.dataAgendamento ? formatDateTime(campanha.dataAgendamento) : t('communicationCampaignDetails.cards.immediateDraft')}</div></CardContent></Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Agendamento</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-3 md:flex-row md:items-end">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground" htmlFor="campanha-data-agendamento">
+                Data e hora de envio
+              </label>
+              <input
+                id="campanha-data-agendamento"
+                type="datetime-local"
+                value={scheduleDraft}
+                onChange={(event) => setScheduleDraft(event.target.value)}
+                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+            <Button onClick={salvarAgendamento} disabled={savingSchedule}>
+              <Save className="w-4 h-4 mr-2" />
+              {savingSchedule ? 'Salvando...' : 'Salvar agendamento'}
+            </Button>
+            <Button variant="outline" onClick={processarCampanhaAgora} disabled={processing}>
+              <Play className="w-4 h-4 mr-2" />
+              Processar esta campanha agora
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

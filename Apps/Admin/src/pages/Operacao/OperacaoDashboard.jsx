@@ -460,7 +460,7 @@ export default function OperacaoDashboard() {
           {schedulers.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t('operation.schedulers.empty')}</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>

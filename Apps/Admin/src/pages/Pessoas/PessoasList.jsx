@@ -292,14 +292,14 @@ export default function PessoasList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{t('people.title')}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold sm:text-3xl">{t('people.title')}</h1>
           <p className="text-muted-foreground">
             {t('people.subtitle')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <PageRefreshButton onClick={() => loadPessoas({ silent: true })} refreshing={refreshing} />
           {canEdit && (
             <Button asChild>
@@ -360,10 +360,10 @@ export default function PessoasList() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>{t('people.listTitle')} ({total})</CardTitle>
             {total > 0 && (
-              <Button variant="outline" size="sm" onClick={handleExport}>
+              <Button variant="outline" size="sm" onClick={handleExport} className="w-full sm:w-auto">
                 <Download className="h-4 w-4 mr-2" />
                 {t('people.export.button')}
               </Button>
@@ -372,11 +372,11 @@ export default function PessoasList() {
         </CardHeader>
         <CardContent>
           {selectedIds.size > 0 && canDelete && (
-            <div className="flex items-center justify-between rounded-md border bg-muted/50 px-4 py-2 mb-4">
+            <div className="mb-4 flex flex-col gap-3 rounded-md border bg-muted/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:py-2">
               <span className="text-sm font-medium">
                 {t('people.selectedCount', { count: selectedIds.size })}
               </span>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
                   {t('people.clearSelection')}
                 </Button>
@@ -401,147 +401,262 @@ export default function PessoasList() {
               ) : null}
             />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {canDelete && (
-                    <TableHead className="w-12">
-                      <Checkbox
-                        checked={allPageSelected}
-                        onCheckedChange={toggleSelectAll}
-                        aria-label={t('people.selectAll')}
-                      />
-                    </TableHead>
-                  )}
-                  <SortableTableHeader field="nome" onSort={handleSort} sortConfig={sortConfig}>
-                    {t('people.fields.name')}
-                  </SortableTableHeader>
-                  <SortableTableHeader field="email" onSort={handleSort} sortConfig={sortConfig}>
-                    {t('people.fields.email')}
-                  </SortableTableHeader>
-                  <SortableTableHeader field="telefone" onSort={handleSort} sortConfig={sortConfig}>
-                    {t('people.fields.phone')}
-                  </SortableTableHeader>
-                  <SortableTableHeader field="whatsApp" onSort={handleSort} sortConfig={sortConfig}>
-                    {t('people.fields.whatsapp')}
-                  </SortableTableHeader>
-                  <SortableTableHeader field="tipoPessoa" onSort={handleSort} sortConfig={sortConfig}>
-                    {t('people.table.type')}
-                  </SortableTableHeader>
-                  <TableHead>{t('people.table.profiles')}</TableHead>
-                  <SortableTableHeader field="ativo" onSort={handleSort} sortConfig={sortConfig}>
-                    {t('people.table.active')}
-                  </SortableTableHeader>
-                  <TableHead className="text-right">{t('people.table.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="space-y-3 md:hidden">
+                {canDelete && (
+                  <div className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2">
+                    <span className="text-sm font-medium">{t('people.selectAll')}</span>
+                    <Checkbox
+                      checked={allPageSelected}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label={t('people.selectAll')}
+                    />
+                  </div>
+                )}
+
                 {pessoas.map((pessoa) => (
-                  <TableRow key={pessoa.id}>
-                    {canDelete && (
-                      <TableCell>
+                  <div key={pessoa.id} className="rounded-lg border bg-background p-3 shadow-xs">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <div className="font-medium leading-snug">{pessoa.nome}</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          <Badge variant="outline">{pessoa.tipoPessoa || '-'}</Badge>
+                          <Badge variant={pessoa.ativo ? 'default' : 'secondary'}>
+                            {pessoa.ativo ? t('people.boolean.yes') : t('people.boolean.no')}
+                          </Badge>
+                        </div>
+                      </div>
+                      {canDelete && (
                         <Checkbox
                           checked={selectedIds.has(pessoa.id)}
                           onCheckedChange={() => toggleSelect(pessoa.id)}
                           aria-label={t('people.selectOne', { name: pessoa.nome })}
                         />
-                      </TableCell>
-                    )}
-                    <TableCell className="font-medium">
-                      {pessoa.nome}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <span>{pessoa.email || '-'}</span>
+                      )}
+                    </div>
+
+                    <div className="mt-3 space-y-2 text-sm">
+                      <div className="flex min-w-0 items-center justify-between gap-2">
+                        <span className="min-w-0 truncate text-muted-foreground">{pessoa.email || '-'}</span>
                         {pessoa.email && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => window.open(`mailto:${pessoa.email}`)}
                           >
                             <Mail className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {pessoa.telefone || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <span>{pessoa.whatsApp || '-'}</span>
+                      <div className="flex min-w-0 items-center justify-between gap-2">
+                        <span className="text-muted-foreground">{pessoa.whatsApp || pessoa.telefone || '-'}</span>
                         {pessoa.whatsApp && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => window.open(`https://wa.me/55${pessoa.whatsApp.replace(/\D/g, '')}`)}
                           >
                             <Phone className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {pessoa.tipoPessoa || '-'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {pessoa.perfis && pessoa.perfis.length > 0 ? (
-                          pessoa.perfis
-                            .filter(p => !p.dataFim) // Apenas perfis ativos
-                            .map((perfil, idx) => (
-                              <Badge key={idx} variant="secondary">
-                                {perfil.perfil}
-                              </Badge>
-                            ))
-                        ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={pessoa.ativo ? 'default' : 'secondary'}>
-                        {pessoa.ativo ? t('people.boolean.yes') : t('people.boolean.no')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/pessoas/${pessoa.id}`}>
-                            <Eye className="h-4 w-4" />
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {pessoa.perfis && pessoa.perfis.length > 0 ? (
+                        pessoa.perfis
+                          .filter(p => !p.dataFim)
+                          .map((perfil, idx) => (
+                            <Badge key={idx} variant="secondary">
+                              {perfil.perfil}
+                            </Badge>
+                          ))
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                        <Link to={`/pessoas/${pessoa.id}`}>
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      {canEdit && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                          <Link to={`/pessoas/${pessoa.id}/editar`}>
+                            <Edit className="h-4 w-4" />
                           </Link>
                         </Button>
-                        {canEdit && (
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/pessoas/${pessoa.id}/editar`}>
-                              <Edit className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                        )}
-                        {canCreateUsuario && (
-                          <Button variant="ghost" size="sm" asChild title={t('people.actions.createAccess')}>
-                            <Link to={`/usuarios?pessoaId=${pessoa.id}`}>
-                              <UserPlus className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                        )}
-                        {canDelete && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteClick(pessoa)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                      )}
+                      {canCreateUsuario && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild title={t('people.actions.createAccess')}>
+                          <Link to={`/usuarios?pessoaId=${pessoa.id}`}>
+                            <UserPlus className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleDeleteClick(pessoa)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {canDelete && (
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={allPageSelected}
+                            onCheckedChange={toggleSelectAll}
+                            aria-label={t('people.selectAll')}
+                          />
+                        </TableHead>
+                      )}
+                      <SortableTableHeader field="nome" onSort={handleSort} sortConfig={sortConfig}>
+                        {t('people.fields.name')}
+                      </SortableTableHeader>
+                      <SortableTableHeader field="email" onSort={handleSort} sortConfig={sortConfig}>
+                        {t('people.fields.email')}
+                      </SortableTableHeader>
+                      <SortableTableHeader field="telefone" onSort={handleSort} sortConfig={sortConfig}>
+                        {t('people.fields.phone')}
+                      </SortableTableHeader>
+                      <SortableTableHeader field="whatsApp" onSort={handleSort} sortConfig={sortConfig}>
+                        {t('people.fields.whatsapp')}
+                      </SortableTableHeader>
+                      <SortableTableHeader field="tipoPessoa" onSort={handleSort} sortConfig={sortConfig}>
+                        {t('people.table.type')}
+                      </SortableTableHeader>
+                      <TableHead>{t('people.table.profiles')}</TableHead>
+                      <SortableTableHeader field="ativo" onSort={handleSort} sortConfig={sortConfig}>
+                        {t('people.table.active')}
+                      </SortableTableHeader>
+                      <TableHead className="text-right">{t('people.table.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pessoas.map((pessoa) => (
+                      <TableRow key={pessoa.id}>
+                        {canDelete && (
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedIds.has(pessoa.id)}
+                              onCheckedChange={() => toggleSelect(pessoa.id)}
+                              aria-label={t('people.selectOne', { name: pessoa.nome })}
+                            />
+                          </TableCell>
+                        )}
+                        <TableCell className="font-medium">
+                          {pessoa.nome}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <span>{pessoa.email || '-'}</span>
+                            {pessoa.email && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(`mailto:${pessoa.email}`)}
+                              >
+                                <Mail className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {pessoa.telefone || '-'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <span>{pessoa.whatsApp || '-'}</span>
+                            {pessoa.whatsApp && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(`https://wa.me/55${pessoa.whatsApp.replace(/\D/g, '')}`)}
+                              >
+                                <Phone className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {pessoa.tipoPessoa || '-'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {pessoa.perfis && pessoa.perfis.length > 0 ? (
+                              pessoa.perfis
+                                .filter(p => !p.dataFim) // Apenas perfis ativos
+                                .map((perfil, idx) => (
+                                  <Badge key={idx} variant="secondary">
+                                    {perfil.perfil}
+                                  </Badge>
+                                ))
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={pessoa.ativo ? 'default' : 'secondary'}>
+                            {pessoa.ativo ? t('people.boolean.yes') : t('people.boolean.no')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link to={`/pessoas/${pessoa.id}`}>
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                            {canEdit && (
+                              <Button variant="ghost" size="sm" asChild>
+                                <Link to={`/pessoas/${pessoa.id}/editar`}>
+                                  <Edit className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            )}
+                            {canCreateUsuario && (
+                              <Button variant="ghost" size="sm" asChild title={t('people.actions.createAccess')}>
+                                <Link to={`/usuarios?pessoaId=${pessoa.id}`}>
+                                  <UserPlus className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteClick(pessoa)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
           {total > 0 && (
             <DataTablePagination

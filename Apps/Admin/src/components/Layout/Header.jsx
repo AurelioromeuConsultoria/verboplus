@@ -1,4 +1,4 @@
-import { Bell, User, LogOut, Settings, Sun, Moon, Globe, CheckCheck, Building2, ShieldCheck, ArrowLeftRight } from 'lucide-react';
+import { Bell, User, LogOut, Settings, Sun, Moon, Globe, CheckCheck, Building2, ShieldCheck, ArrowLeftRight, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
@@ -98,7 +98,7 @@ function generateBreadcrumbs(pathname, t, locationState) {
   return breadcrumbs;
 }
 
-export function Header() {
+export function Header({ onMenuClick }) {
   const {
     usuario,
     logout,
@@ -235,9 +235,19 @@ export function Header() {
 
   return (
     <header className="border-b border-border bg-background">
-      <div className="flex h-16 items-center justify-between px-6">
-        <div className="flex items-center space-x-4 flex-1 min-w-0">
-          <h1 className="text-xl font-semibold text-foreground hidden md:block">
+      <div className="flex h-14 items-center justify-between gap-2 px-3 sm:px-4 md:h-16 md:px-6">
+        <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={onMenuClick}
+            aria-label={t('layout.openMenu', { defaultValue: 'Abrir menu' })}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+
+          <h1 className="truncate text-base font-semibold text-foreground sm:text-lg md:text-xl">
             {t('app.name')}
           </h1>
 
@@ -263,7 +273,7 @@ export function Header() {
           )}
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {isPlatformAdmin && availableTenants.length > 0 && (
             <div className="hidden h-10 items-center gap-2 rounded-full border border-border bg-card px-2.5 md:flex">
               {currentTenant?.logoUrl ? (
@@ -354,7 +364,7 @@ export function Header() {
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-96">
+            <DropdownMenuContent align="end" className="w-[calc(100vw-1rem)] max-w-sm sm:w-96">
               <DropdownMenuLabel className="flex items-center justify-between gap-2">
                 <span>{t('notifications.title')}</span>
                 {unreadCount > 0 && (
@@ -381,7 +391,7 @@ export function Header() {
                         <span className="font-medium">{item.titulo}</span>
                         {!item.dataLeitura && <span className="h-2 w-2 rounded-full bg-red-500" />}
                       </div>
-                      <p className="max-w-[300px] text-xs text-muted-foreground whitespace-normal">
+                      <p className="max-w-[min(300px,calc(100vw-5rem))] text-xs text-muted-foreground whitespace-normal">
                         {item.mensagem}
                       </p>
                       <p className="text-[11px] text-muted-foreground">
@@ -444,7 +454,7 @@ export function Header() {
       </div>
 
       {isPlatformAdmin && (
-        <div className={`border-t px-6 py-3 ${operandoTenantRemoto ? 'border-amber-200 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/30' : 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/40 dark:bg-emerald-950/20'}`}>
+        <div className={`border-t px-3 py-3 sm:px-4 md:px-6 ${operandoTenantRemoto ? 'border-amber-200 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/30' : 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/40 dark:bg-emerald-950/20'}`}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-col gap-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -459,7 +469,8 @@ export function Header() {
               </div>
               <div className="text-sm text-muted-foreground">
                 {t('header.homeTenant')}: <span className="font-medium text-foreground">{homeTenant?.nomeExibicao || homeTenant?.nome || homeTenant?.slug || t('header.notAvailable')}</span>
-                {' · '}
+                <span className="hidden sm:inline">{' · '}</span>
+                <br className="sm:hidden" />
                 {t('header.currentTenant')}: <span className="font-medium text-foreground">{currentTenant?.nomeExibicao || currentTenant?.nome || currentTenant?.slug || t('header.notAvailable')}</span>
               </div>
             </div>
@@ -467,7 +478,7 @@ export function Header() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               {availableTenants.length > 0 && (
                 <Select value={String(currentTenant?.id || '')} onValueChange={handleTenantChange}>
-                  <SelectTrigger className="w-full min-w-[240px] bg-background sm:w-[280px]">
+                  <SelectTrigger className="w-full bg-background sm:w-[280px]">
                     <SelectValue placeholder={t('header.selectTenant')} />
                   </SelectTrigger>
                   <SelectContent>

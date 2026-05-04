@@ -11,6 +11,9 @@
     "audit": "Logs",
     "operations": "Operação",
     "accessProfiles": "Perfis de Acesso",
+    "administration": "Administração",
+    "platform": "Plataforma",
+    "tenants": "Tenants",
     "connect": "Connect",
     "people": "Pessoas",
     "birthdays": "Aniversariantes",
@@ -18,7 +21,8 @@
     "profiles": "Perfis",
     "visitors": "Visitantes",
     "messageSettings": "Configurações de Mensagens",
-    "scheduledMessages": "Mensagens Agendadas",
+    "scheduledMessages": "Fila de Comunicação",
+    "communication": "Comunicação",
     "communicationCampaigns": "Campanhas de Comunicação",
     "communicationTemplates": "Templates de Comunicação",
     "communicationSegments": "Segmentos de Comunicação",
@@ -59,6 +63,7 @@
     "news": "Notícias",
     "polls": "Enquetes",
     "contacts": "Contatos",
+    "contactMessages": "Mensagens do Fale Conosco",
     "siteHighlights": "Destaques do Site",
     "portalConfig": "Configuração",
     "media": "Mídia",
@@ -73,7 +78,10 @@
   },
   "layout": {
     "expandAll": "Expandir todos os menus",
-    "collapseAll": "Colapsar todos os menus"
+    "collapseAll": "Colapsar todos os menus",
+    "expandSidebar": "Expandir menu lateral",
+    "collapseSidebar": "Recolher menu lateral",
+    "openMenu": "Abrir menu"
   },
   "header": {
     "dashboard": "Dashboard",
@@ -2387,7 +2395,7 @@
       "visitData": "Dados da Visita",
       "personData": "Dados da Pessoa",
       "profiles": "Perfis",
-      "scheduledMessages": "Mensagens Agendadas",
+      "scheduledMessages": "Fila de Comunicação",
       "noScheduledMessages": "Nenhuma mensagem agendada para este visitante.",
       "messageFallback": "Mensagem",
       "messagesUnavailableLog": "Mensagens não disponíveis",

@@ -11,6 +11,9 @@
     "audit": "Logs",
     "operations": "Operations",
     "accessProfiles": "Access Profiles",
+    "administration": "Administration",
+    "platform": "Platform",
+    "tenants": "Tenants",
     "connect": "Connect",
     "people": "People",
     "birthdays": "Birthdays",
@@ -18,7 +21,8 @@
     "profiles": "Profiles",
     "visitors": "Visitors",
     "messageSettings": "Message Settings",
-    "scheduledMessages": "Scheduled Messages",
+    "scheduledMessages": "Communication Queue",
+    "communication": "Communication",
     "communicationCampaigns": "Communication Campaigns",
     "communicationTemplates": "Communication Templates",
     "communicationSegments": "Communication Segments",
@@ -59,6 +63,7 @@
     "news": "News",
     "polls": "Polls",
     "contacts": "Contacts",
+    "contactMessages": "Contact Form Messages",
     "siteHighlights": "Site Highlights",
     "portalConfig": "Configuration",
     "media": "Media",
@@ -73,7 +78,10 @@
   },
   "layout": {
     "expandAll": "Expand all menus",
-    "collapseAll": "Collapse all menus"
+    "collapseAll": "Collapse all menus",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar",
+    "openMenu": "Open menu"
   },
   "header": {
     "dashboard": "Dashboard",
@@ -2388,7 +2396,7 @@
       "visitData": "Visit Data",
       "personData": "Person Data",
       "profiles": "Profiles",
-      "scheduledMessages": "Scheduled Messages",
+      "scheduledMessages": "Communication Queue",
       "noScheduledMessages": "No scheduled messages for this visitor.",
       "messageFallback": "Message",
       "messagesUnavailableLog": "Messages unavailable",

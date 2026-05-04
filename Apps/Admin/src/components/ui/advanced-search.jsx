@@ -103,17 +103,17 @@ export function AdvancedSearch({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="flex min-w-0 items-center gap-2 text-base">
             <Search className="h-4 w-4" />
-            {t('advancedSearch.title')}
+            <span className="truncate">{t('advancedSearch.title')}</span>
             {activeFiltersCount > 0 && (
-              <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+              <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
                 {activeFiltersCount}
               </span>
             )}
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {hasActiveFilters() && (
               <Button
                 variant="ghost"
@@ -150,7 +150,7 @@ export function AdvancedSearch({
       <CardContent className="space-y-4">
         {/* Campos de busca */}
         {searchFields.length > 0 && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {searchFields.map((field) => (
               <div key={field.key} className="space-y-2">
                 <Label className="text-sm font-medium flex items-center gap-2">
@@ -206,7 +206,7 @@ export function AdvancedSearch({
                   <Filter className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium text-muted-foreground">{t('advancedSearch.advancedFilters')}</span>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {filterFields.map((field) => (
                     <div key={field.key} className="space-y-2">
                       <Label className="text-sm font-medium">{field.label}</Label>
@@ -228,7 +228,7 @@ export function AdvancedSearch({
                           </SelectContent>
                         </Select>
                       ) : field.type === 'date-range' ? (
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid gap-2 sm:grid-cols-2">
                           <div className="space-y-1">
                             <Label className="text-xs text-muted-foreground">{t('advancedSearch.from')}</Label>
                             <Input
