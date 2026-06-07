@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 const TIPOS_EVENTO = [1, 2, 3, 4];
 const DIAS_SEMANA = [0, 1, 2, 3, 4, 5, 6];
 const PERIODICIDADE = [1, 2, 3];
+const SEMANAS_MES = [1, 2, 3, 4, 5];
 const CAMPOS_FORMULARIO_PADRAO = [
   { slug: 'nome', labelKey: 'name', tipo: 'texto', obrigatorio: true },
   { slug: 'whatsApp', labelKey: 'whatsapp', tipo: 'texto', obrigatorio: true },
@@ -25,6 +26,51 @@ const CAMPOS_FORMULARIO_PADRAO = [
   { slug: 'observacoes', labelKey: 'notes', tipo: 'texto', obrigatorio: false },
 ];
 const TIPOS_CAMPO = ['texto', 'numero', 'email', 'tel'];
+
+const parseDateOnly = (value) => {
+  if (!value) return null;
+  const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+};
+
+const formatDateOnly = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getWeekdayOrdinalFromDate = (value, diaSemana) => {
+  const date = parseDateOnly(value);
+  if (!date || date.getDay() !== Number(diaSemana)) return 1;
+  return Math.floor((date.getDate() - 1) / 7) + 1;
+};
+
+const getDateForWeekdayOrdinal = (year, monthIndex, diaSemana, semanaDoMes) => {
+  const first = new Date(year, monthIndex, 1);
+  const offset = (Number(diaSemana) - first.getDay() + 7) % 7;
+  const date = new Date(year, monthIndex, 1 + offset + (Number(semanaDoMes) - 1) * 7);
+  return date.getMonth() === monthIndex ? date : null;
+};
+
+const getMonthlyAnchorDate = (dataInicioVigencia, diaSemana, semanaDoMes) => {
+  const start = parseDateOnly(dataInicioVigencia) || new Date();
+  let year = start.getFullYear();
+  let monthIndex = start.getMonth();
+
+  for (let i = 0; i < 24; i += 1) {
+    const candidate = getDateForWeekdayOrdinal(year, monthIndex, diaSemana, semanaDoMes);
+    if (candidate && candidate >= start) return formatDateOnly(candidate);
+    monthIndex += 1;
+    if (monthIndex > 11) {
+      monthIndex = 0;
+      year += 1;
+    }
+  }
+
+  return formatDateOnly(start);
+};
 
 export default function EventoForm() {
   const navigate = useNavigate();
@@ -58,6 +104,7 @@ export default function EventoForm() {
     horaInicio: '10:00',
     horaFim: '',
     periodicidade: 1,
+    semanaDoMes: 1,
     dataInicioVigencia: new Date().toISOString().slice(0, 10),
     dataFimVigencia: '',
     ativo: true,
@@ -74,6 +121,10 @@ export default function EventoForm() {
   const periodicidades = PERIODICIDADE.map((value) => ({
     value,
     label: t(`events.form.recurrence.frequency.${value === 1 ? 'weekly' : value === 2 ? 'biweekly' : 'monthly'}`),
+  }));
+  const semanasMes = SEMANAS_MES.map((value) => ({
+    value,
+    label: t(`events.form.recurrence.monthWeek.${value}`),
   }));
   const tiposCampo = TIPOS_CAMPO.map((value) => ({
     value,
@@ -208,6 +259,7 @@ export default function EventoForm() {
       horaInicio: '10:00',
       horaFim: '',
       periodicidade: 1,
+      semanaDoMes: 1,
       dataInicioVigencia: new Date().toISOString().slice(0, 10),
       dataFimVigencia: '',
       ativo: true,
@@ -222,6 +274,7 @@ export default function EventoForm() {
       horaInicio: r.horaInicio || '10:00',
       horaFim: r.horaFim || '',
       periodicidade: r.periodicidade,
+      semanaDoMes: getWeekdayOrdinalFromDate(r.dataInicioVigencia, r.diaSemana),
       dataInicioVigencia: r.dataInicioVigencia?.slice(0, 10) || new Date().toISOString().slice(0, 10),
       dataFimVigencia: r.dataFimVigencia?.slice(0, 10) || '',
       ativo: r.ativo ?? true,
@@ -235,12 +288,16 @@ export default function EventoForm() {
   };
 
   const saveRecorrencia = async () => {
+    const periodicidade = Number(recorrenciaForm.periodicidade);
+    const dataInicioVigencia = periodicidade === 3
+      ? getMonthlyAnchorDate(recorrenciaForm.dataInicioVigencia, recorrenciaForm.diaSemana, recorrenciaForm.semanaDoMes)
+      : recorrenciaForm.dataInicioVigencia;
     const base = {
       diaSemana: Number(recorrenciaForm.diaSemana),
       horaInicio: recorrenciaForm.horaInicio || '10:00',
       horaFim: recorrenciaForm.horaFim || null,
-      periodicidade: Number(recorrenciaForm.periodicidade),
-      dataInicioVigencia: recorrenciaForm.dataInicioVigencia ? new Date(recorrenciaForm.dataInicioVigencia).toISOString() : new Date().toISOString(),
+      periodicidade,
+      dataInicioVigencia: dataInicioVigencia ? new Date(`${dataInicioVigencia}T00:00:00`).toISOString() : new Date().toISOString(),
       dataFimVigencia: recorrenciaForm.dataFimVigencia ? new Date(recorrenciaForm.dataFimVigencia).toISOString() : null,
       ativo: recorrenciaForm.ativo,
     };
@@ -257,6 +314,19 @@ export default function EventoForm() {
     } catch (err) {
       toast.error(err.response?.data || t('events.form.recurrence.errorSave'));
     }
+  };
+
+  const getPeriodicidadeRecorrenciaLabel = (recorrencia) => {
+    if (Number(recorrencia.periodicidade) !== 3) {
+      return recorrencia.periodicidadeDescricao ?? periodicidades.find((p) => p.value === recorrencia.periodicidade)?.label;
+    }
+
+    const semanaDoMes = getWeekdayOrdinalFromDate(recorrencia.dataInicioVigencia, recorrencia.diaSemana);
+    const diaSemana = recorrencia.diaSemanaDescricao ?? diasSemana.find((d) => d.value === recorrencia.diaSemana)?.label;
+    return t('events.form.recurrence.frequency.monthlyOrdinal', {
+      week: t(`events.form.recurrence.monthWeek.${semanaDoMes}`),
+      day: diaSemana,
+    });
   };
 
   const deleteRecorrencia = async (recId) => {
@@ -581,6 +651,19 @@ export default function EventoForm() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {Number(recorrenciaForm.periodicidade) === 3 && (
+                    <div className="space-y-2">
+                      <Label>{t('events.form.recurrence.monthWeekLabel')}</Label>
+                      <Select value={String(recorrenciaForm.semanaDoMes)} onValueChange={(v) => setRecorrenciaForm((p) => ({ ...p, semanaDoMes: Number(v) }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {semanasMes.map((week) => (
+                            <SelectItem key={week.value} value={String(week.value)}>{week.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>{t('events.form.recurrence.validFrom')}</Label>
                     <Input type="date" value={recorrenciaForm.dataInicioVigencia} onChange={(e) => setRecorrenciaForm((p) => ({ ...p, dataInicioVigencia: e.target.value }))} />
@@ -624,7 +707,7 @@ export default function EventoForm() {
                       <TableCell>{r.diaSemanaDescricao ?? diasSemana.find((d) => d.value === r.diaSemana)?.label}</TableCell>
                       <TableCell>{r.horaInicio}</TableCell>
                       <TableCell>{r.horaFim || t('events.form.recurrence.noEndTime')}</TableCell>
-                      <TableCell>{r.periodicidadeDescricao ?? periodicidades.find((p) => p.value === r.periodicidade)?.label}</TableCell>
+                      <TableCell>{getPeriodicidadeRecorrenciaLabel(r)}</TableCell>
                       <TableCell>
                         {r.dataInicioVigencia?.slice(0, 10)} {r.dataFimVigencia ? t('events.form.recurrence.validityUntil', { date: r.dataFimVigencia.slice(0, 10) }) : t('events.form.recurrence.noEndDate')}
                       </TableCell>
@@ -650,4 +733,3 @@ export default function EventoForm() {
     </div>
   );
 }
-

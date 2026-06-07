@@ -1,4 +1,4 @@
-import { Bell, User, LogOut, Settings, Sun, Moon, Globe, CheckCheck, Building2, ShieldCheck, ArrowLeftRight, Menu } from 'lucide-react';
+import { Bell, LogOut, Settings, Sun, Moon, Globe, CheckCheck, Building2, ShieldCheck, ArrowLeftRight, Menu, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
@@ -29,6 +29,8 @@ import { notificacoesApi } from '@/lib/api';
 import { formatDateTime } from '@/lib/formatters';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AVATAR_EVENT, getProfileAvatar } from '@/lib/profileAvatar';
 
 // Mapeamento de rotas para chaves de i18n
 const routeLabelKeys = {
@@ -47,6 +49,8 @@ const routeLabelKeys = {
   'patrimonio': 'header.patrimony',
   'categorias': 'header.patrimonyCategories',
   'relatorio-geral': 'header.patrimonyReport',
+  'doacoes': 'Doações',
+  'finalidades': 'Finalidades',
   'destaques-site': 'header.siteHighlights',
   'categorias-noticias': 'header.newsCategories',
   'noticias': 'header.news',
@@ -111,13 +115,14 @@ export function Header({ onMenuClick }) {
     operandoTenantRemoto,
     isOperatingHomeTenant,
   } = useAuth();
-  const { toggleTheme, isDark } = useTheme();
+  const { toggleTheme, isDark, isVerbo } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const breadcrumbs = generateBreadcrumbs(location.pathname, t, location.state);
   const [notificacoes, setNotificacoes] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const confirmDialog = useConfirmDialog();
 
   const handleChangeLanguage = (lng) => {
@@ -133,6 +138,28 @@ export function Header({ onMenuClick }) {
     if (!text) return '';
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };
+
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase();
+  };
+
+  useEffect(() => {
+    setAvatarUrl(getProfileAvatar(usuario));
+
+    const handleAvatarUpdate = () => {
+      setAvatarUrl(getProfileAvatar(usuario));
+    };
+
+    window.addEventListener(AVATAR_EVENT, handleAvatarUpdate);
+    return () => window.removeEventListener(AVATAR_EVENT, handleAvatarUpdate);
+  }, [usuario]);
 
   useEffect(() => {
     if (!usuario) return;
@@ -345,11 +372,11 @@ export function Header({ onMenuClick }) {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" onClick={toggleTheme}>
-                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                {isVerbo ? <Sparkles className="h-5 w-5" /> : isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {isDark ? t('header.useLightTheme') : t('header.useDarkTheme')}
+              {isVerbo ? t('header.currentVerboTheme') : isDark ? t('header.useLightTheme') : t('header.useDarkTheme')}
             </TooltipContent>
           </Tooltip>
 
@@ -412,7 +439,12 @@ export function Header({ onMenuClick }) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2">
-                  <User className="h-5 w-5" />
+                  <Avatar className="size-8">
+                    <AvatarImage src={avatarUrl || undefined} alt={usuario.nome} />
+                    <AvatarFallback className="text-xs font-semibold">
+                      {getInitials(usuario.nome)}
+                    </AvatarFallback>
+                  </Avatar>
                   <span className="hidden md:inline max-w-[150px] truncate">
                     {truncateText(usuario.nome)}
                   </span>

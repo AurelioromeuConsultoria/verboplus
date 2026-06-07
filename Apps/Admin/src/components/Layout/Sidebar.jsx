@@ -35,6 +35,7 @@ import {
   Package,
   Activity,
   Building2,
+  HeartHandshake,
   PanelLeftClose,
   PanelLeftOpen
 } from 'lucide-react';
@@ -258,6 +259,12 @@ const menuGroups = [
         permission: RESOURCES.KIDS,
       },
       {
+        titleKey: 'menu.kidsLessonContent',
+        href: '/kids/conteudos',
+        icon: Folder,
+        permission: RESOURCES.KIDS,
+      },
+      {
         titleKey: 'menu.kidsStructure',
         href: '/kids/estrutura',
         icon: Cog,
@@ -302,6 +309,24 @@ const menuGroups = [
         titleKey: 'menu.financeReports',
         href: '/financeiro/relatorios',
         icon: BarChart3,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        title: 'Doações recebidas',
+        href: '/doacoes',
+        icon: HeartHandshake,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        title: 'Finalidades de doação',
+        href: '/doacoes/finalidades',
+        icon: HeartHandshake,
+        permission: RESOURCES.FINANCEIRO,
+      },
+      {
+        title: 'Configuração Asaas',
+        href: '/doacoes/configuracao-asaas',
+        icon: Shield,
         permission: RESOURCES.FINANCEIRO,
       },
       {
@@ -715,9 +740,9 @@ export function Sidebar({
                           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                           : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                       )}
-                    >
-                      <ItemIcon className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span>{t(item.titleKey)}</span>
+                      >
+                        <ItemIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>{item.title ?? t(item.titleKey)}</span>
                     </Link>
                   );
                 })}

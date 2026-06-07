@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, PlusCircle, Settings } from 'lucide-react';
+import { CalendarDays, PlusCircle, Settings, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -126,6 +126,25 @@ export default function OcorrenciasList() {
     }
   };
 
+  const handleDeleteOcorrencia = async (item) => {
+    if (item.possuiEscala) {
+      toast.error(t('events.occurrencesDeleteHasScales'));
+      return;
+    }
+
+    if (!window.confirm(t('events.occurrencesDeleteConfirm'))) return;
+
+    try {
+      await eventosOcorrenciasApi.delete(item.id);
+      toast.success(t('events.occurrencesDeleteSuccess'));
+      await loadOcorrencias();
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.message ?? err.response?.data;
+      toast.error(typeof msg === 'string' ? msg : t('events.occurrencesDeleteError'));
+    }
+  };
+
   const sorted = [...ocorrencias].sort((a, b) => new Date(a.dataHoraInicio) - new Date(b.dataHoraInicio));
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(sorted, 20);
 
@@ -238,12 +257,27 @@ export default function OcorrenciasList() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/voluntariado/escalas/ocorrencia/${item.id}`}>
-                          <Settings className="h-4 w-4 mr-2" />
-                          {t('events.occurrencesTable.buildScales')}
-                        </Link>
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to={`/voluntariado/escalas/ocorrencia/${item.id}`}>
+                            <Settings className="h-4 w-4 mr-2" />
+                            {t('events.occurrencesTable.buildScales')}
+                          </Link>
+                        </Button>
+                        {canEdit && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteOcorrencia(item)}
+                            disabled={item.possuiEscala}
+                            title={item.possuiEscala ? t('events.occurrencesDeleteHasScales') : t('events.occurrencesTable.delete')}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2 text-destructive" />
+                            {t('events.occurrencesTable.delete')}
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

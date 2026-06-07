@@ -17,6 +17,7 @@ export * from '../api/auditoria';
 export * from '../api/operacao';
 export * from '../api/notificacoes';
 export * from '../api/comunicacao';
+export * from '../api/doacoes';
 export * from '../api/financeiro/cadastros';
 export * from '../api/financeiro/lancamentos';
 export * from '../api/financeiro/relatorios';

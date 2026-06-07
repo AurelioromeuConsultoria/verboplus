@@ -1,35 +1,33 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
 const ThemeContext = createContext(null);
+const THEME_STORAGE_KEY = 'admin-theme';
+const THEMES = ['light', 'dark', 'verbo'];
+
+function normalizeTheme(theme) {
+  return THEMES.includes(theme) ? theme : 'light';
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  root.classList.toggle('dark', theme === 'dark');
+  root.dataset.theme = theme;
+}
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState('light');
 
   useEffect(() => {
-    // Carregar tema do localStorage
-    const savedTheme = localStorage.getItem('admin-theme') || 'light';
+    const savedTheme = normalizeTheme(localStorage.getItem(THEME_STORAGE_KEY));
     setTheme(savedTheme);
-    
-    // Aplicar tema no HTML
-    const root = document.documentElement;
-    if (savedTheme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
+    applyTheme(savedTheme);
   }, []);
 
   const updateTheme = (newTheme) => {
-    setTheme(newTheme);
-    localStorage.setItem('admin-theme', newTheme);
-    
-    // Aplicar tema no HTML
-    const root = document.documentElement;
-    if (newTheme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
+    const nextTheme = normalizeTheme(newTheme);
+    setTheme(nextTheme);
+    localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    applyTheme(nextTheme);
   };
 
   const toggleTheme = () => {
@@ -41,7 +39,9 @@ export function ThemeProvider({ children }) {
     theme,
     setTheme: updateTheme,
     isDark: theme === 'dark',
+    isVerbo: theme === 'verbo',
     toggleTheme,
+    themes: THEMES,
   };
 
   return (

@@ -101,6 +101,10 @@ const CategoriasReceitasList = lazy(() => import('./pages/Financeiro/CategoriasR
 const CategoriaReceitaForm = lazy(() => import('./pages/Financeiro/CategoriasReceitas/CategoriaReceitaForm'));
 const DashboardFinanceiro = lazy(() => import('./pages/Financeiro/DashboardFinanceiro'));
 const RelatoriosFinanceiros = lazy(() => import('./pages/Financeiro/RelatoriosFinanceiros'));
+const DoacoesList = lazy(() => import('./pages/Doacoes/DoacoesList'));
+const FinalidadesDoacaoList = lazy(() => import('./pages/Doacoes/FinalidadesDoacaoList'));
+const FinalidadeDoacaoForm = lazy(() => import('./pages/Doacoes/FinalidadeDoacaoForm'));
+const DoacoesConfigAsaas = lazy(() => import('./pages/Doacoes/DoacoesConfigAsaas'));
 const PerfisAcessoList = lazy(() => import('./pages/PerfisAcesso/PerfisAcessoList'));
 const PerfilAcessoForm = lazy(() => import('./pages/PerfisAcesso/PerfilAcessoForm'));
 const TenantsPage = lazy(() => import('./pages/Platform/TenantsPage'));
@@ -613,6 +617,11 @@ function App() {
               <KidsCheckinsList section="historico" />
             </RequirePermission>
           } />
+          <Route path="kids/conteudos" element={
+            <RequirePermission resource={RESOURCES.KIDS}>
+              <KidsCheckinsList section="conteudos" />
+            </RequirePermission>
+          } />
           <Route path="kids/checkins" element={
             <RequirePermission resource={RESOURCES.KIDS}>
               <KidsCheckinsList section="overview" />
@@ -822,6 +831,31 @@ function App() {
           <Route path="financeiro/relatorios" element={
             <RequirePermission resource={RESOURCES.FINANCEIRO}>
               <RelatoriosFinanceiros />
+            </RequirePermission>
+          } />
+          <Route path="doacoes" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO}>
+              <DoacoesList />
+            </RequirePermission>
+          } />
+          <Route path="doacoes/finalidades" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO}>
+              <FinalidadesDoacaoList />
+            </RequirePermission>
+          } />
+          <Route path="doacoes/finalidades/novo" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO} action={ACTIONS.EDIT}>
+              <FinalidadeDoacaoForm />
+            </RequirePermission>
+          } />
+          <Route path="doacoes/finalidades/:id/editar" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO} action={ACTIONS.EDIT}>
+              <FinalidadeDoacaoForm />
+            </RequirePermission>
+          } />
+          <Route path="doacoes/configuracao-asaas" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO} action={ACTIONS.EDIT}>
+              <DoacoesConfigAsaas />
             </RequirePermission>
           } />
         </Route>

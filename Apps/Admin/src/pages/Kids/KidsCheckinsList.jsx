@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  BadgeCheck,
+  Ban,
   Building2,
   Eye,
   Filter,
@@ -7,15 +9,18 @@ import {
   MessageSquareWarning,
   Pencil,
   PlusCircle,
+  Send,
   Search,
   ShieldAlert,
+  Ticket,
   TriangleAlert,
   Users,
   Layers3,
+  UserPlus,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { kidsApi } from '../../lib/api';
+import { kidsApi, pessoasApi } from '../../lib/api';
 import Loading from '../../components/ui/loading';
 import ErrorMessage from '../../components/ui/error-message';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,10 +30,11 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CriancaDialog, HistoricoDialog, OcorrenciaDialog, SalaDialog, TurmaDialog } from './components/KidsDialogs';
+import { ConteudoAulaDialog, CriancaDialog, HistoricoDialog, OcorrenciaDialog, ResponsavelDialog, SalaDialog, TurmaDialog } from './components/KidsDialogs';
 import { CheckPanelIcon, EstadoVazio, IndicadorLinha, PainelCriancaCard, ResumoCard } from './components/KidsShared';
 import { buildCriticalDescription, formatOcorrenciaTipo, getOcorrenciaStatusConfig } from './components/kidsHelpers';
 import { formatDateTime } from '@/lib/formatters';
+import { getAbsoluteUrl } from '@/lib/utils';
 
 const FORMULARIO_INICIAL = {
   criancaPessoaId: '',
@@ -65,6 +71,25 @@ const CRIANCA_FORM_INICIAL = {
   observacoes: '',
 };
 
+const RESPONSAVEL_FORM_INICIAL = {
+  parentesco: '',
+  podeRetirar: true,
+};
+
+const CONTEUDO_AULA_FORM_INICIAL = {
+  id: null,
+  titulo: '',
+  tema: '',
+  versiculo: '',
+  resumo: '',
+  atividadeEmCasa: '',
+  observacaoResponsavel: '',
+  dataReferencia: '',
+  salaId: '',
+  turmaId: '',
+  anexos: [],
+};
+
 const KidsCheckinsList = ({ section = 'overview' }) => {
   const { t } = useTranslation();
   const [painel, setPainel] = useState(null);
@@ -74,6 +99,8 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
   const [salas, setSalas] = useState([]);
   const [turmas, setTurmas] = useState([]);
   const [ocorrenciasAbertas, setOcorrenciasAbertas] = useState([]);
+  const [preCheckinsPendentes, setPreCheckinsPendentes] = useState([]);
+  const [conteudosAula, setConteudosAula] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState('painel');
@@ -102,6 +129,22 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
   const [salaSaving, setSalaSaving] = useState(false);
   const [turmaSaving, setTurmaSaving] = useState(false);
   const [criancaSaving, setCriancaSaving] = useState(false);
+  const [responsavelDialogOpen, setResponsavelDialogOpen] = useState(false);
+  const [criancaResponsavel, setCriancaResponsavel] = useState(null);
+  const [responsavelForm, setResponsavelForm] = useState(RESPONSAVEL_FORM_INICIAL);
+  const [responsavelQuery, setResponsavelQuery] = useState('');
+  const [responsavelResultados, setResponsavelResultados] = useState([]);
+  const [responsavelSelecionado, setResponsavelSelecionado] = useState(null);
+  const [buscandoResponsavel, setBuscandoResponsavel] = useState(false);
+  const [responsavelSaving, setResponsavelSaving] = useState(false);
+  const [desvinculandoResponsavelId, setDesvinculandoResponsavelId] = useState(null);
+  const [confirmandoPreCheckinId, setConfirmandoPreCheckinId] = useState(null);
+  const [cancelandoPreCheckinId, setCancelandoPreCheckinId] = useState(null);
+  const [conteudoDialogOpen, setConteudoDialogOpen] = useState(false);
+  const [conteudoForm, setConteudoForm] = useState(CONTEUDO_AULA_FORM_INICIAL);
+  const [conteudoSaving, setConteudoSaving] = useState(false);
+  const [publicandoConteudoId, setPublicandoConteudoId] = useState(null);
+  const [arquivandoConteudoId, setArquivandoConteudoId] = useState(null);
 
   const sectionConfig = {
     title: t(`kids.sections.${section}.title`, { defaultValue: t('kids.sections.overview.title') }),
@@ -112,6 +155,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
   const showCriancas = isOverview || section === 'criancas';
   const showEstrutura = isOverview || section === 'estrutura';
   const showHistorico = isOverview || section === 'historico';
+  const showConteudos = isOverview || section === 'conteudos';
 
   const fetchData = useCallback(async () => {
     try {
@@ -119,7 +163,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
       setError(null);
 
       const salaFiltro = filtros.salaId && filtros.salaId !== 'todas' ? filtros.salaId : undefined;
-      const [painelResponse, indicadoresResponse, checkinsResponse, criancasResponse, ocorrenciasAbertasResponse, salasResponse, turmasResponse] = await Promise.all([
+      const [painelResponse, indicadoresResponse, checkinsResponse, criancasResponse, ocorrenciasAbertasResponse, salasResponse, turmasResponse, preCheckinsResponse, conteudosAulaResponse] = await Promise.all([
         kidsApi.getPainelOperacional(salaFiltro ? { salaId: salaFiltro } : {}),
         kidsApi.getIndicadores({ dias: 30 }),
         kidsApi.getCheckins(),
@@ -127,6 +171,8 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
         kidsApi.getOcorrenciasAbertas(),
         kidsApi.getSalas(),
         kidsApi.getTurmas(),
+        kidsApi.getPreCheckinsPendentes(salaFiltro ? { salaId: salaFiltro } : {}),
+        kidsApi.getConteudosAula({ limit: 8 }),
       ]);
 
       setPainel(painelResponse.data);
@@ -136,6 +182,8 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
       setOcorrenciasAbertas(ocorrenciasAbertasResponse.data || []);
       setSalas(salasResponse.data || []);
       setTurmas(turmasResponse.data || []);
+      setPreCheckinsPendentes(preCheckinsResponse.data || []);
+      setConteudosAula(conteudosAulaResponse.data || []);
     } catch (err) {
       setError(t('kids.errorLoad', 'Erro ao carregar dados do Kids'));
       console.error('Erro ao buscar dados do painel Kids:', err);
@@ -259,6 +307,14 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
     return `${horas}h ${minutos}m`;
   };
 
+  const getConteudoAnexoIconLabel = (tipo) => {
+    const normalized = (tipo || '').toLowerCase();
+    if (normalized === 'imagem') return 'IMG';
+    if (normalized === 'pdf') return 'PDF';
+    if (normalized === 'link') return 'LINK';
+    return 'ARQ';
+  };
+
   const getStatusBadge = (status) => {
     const statusLower = status?.toLowerCase() || '';
     if (statusLower === 'checked_in' || statusLower === 'checkedin' || statusLower === 'ativo') {
@@ -349,6 +405,203 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
         [name]: value,
       };
     });
+  };
+
+  const handleResponsavelFormChange = (name, value) => {
+    setResponsavelForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleConteudoFormChange = (name, value) => {
+    setConteudoForm((prev) => {
+      if (name === 'salaId') {
+        const turmaAtual = prev.turmaId;
+        const turmaAindaValida = turmas.some((item) => item.id === turmaAtual && item.salaId === value);
+        return {
+          ...prev,
+          salaId: value,
+          turmaId: turmaAindaValida ? turmaAtual : '',
+        };
+      }
+
+      return {
+        ...prev,
+        [name]: value,
+      };
+    });
+  };
+
+  const handleConteudoAnexoChange = (index, field, value) => {
+    setConteudoForm((prev) => ({
+      ...prev,
+      anexos: prev.anexos.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item)),
+    }));
+  };
+
+  const adicionarConteudoAnexo = () => {
+    setConteudoForm((prev) => ({
+      ...prev,
+      anexos: [
+        ...prev.anexos,
+        {
+          tipo: 'Pdf',
+          nomeExibicao: '',
+          url: '',
+        },
+      ],
+    }));
+  };
+
+  const removerConteudoAnexo = (index) => {
+    setConteudoForm((prev) => ({
+      ...prev,
+      anexos: prev.anexos.filter((_, itemIndex) => itemIndex !== index),
+    }));
+  };
+
+  const abrirResponsavelDialog = (crianca) => {
+    setCriancaResponsavel(crianca);
+    setResponsavelDialogOpen(true);
+    setResponsavelForm(RESPONSAVEL_FORM_INICIAL);
+    setResponsavelQuery('');
+    setResponsavelResultados([]);
+    setResponsavelSelecionado(null);
+  };
+
+  const abrirNovoConteudoDialog = () => {
+    setConteudoForm({
+      ...CONTEUDO_AULA_FORM_INICIAL,
+      dataReferencia: new Date().toISOString().slice(0, 10),
+    });
+    setConteudoDialogOpen(true);
+  };
+
+  const abrirEditarConteudoDialog = (conteudo) => {
+    setConteudoForm({
+      id: conteudo.id,
+      titulo: conteudo.titulo || '',
+      tema: conteudo.tema || '',
+      versiculo: conteudo.versiculo || '',
+      resumo: conteudo.resumo || '',
+      atividadeEmCasa: conteudo.atividadeEmCasa || '',
+      observacaoResponsavel: conteudo.observacaoResponsavel || '',
+      dataReferencia: conteudo.dataReferencia ? new Date(conteudo.dataReferencia).toISOString().slice(0, 10) : '',
+      salaId: conteudo.salaId || '',
+      turmaId: conteudo.turmaId || '',
+      anexos: (conteudo.anexos || []).map((anexo) => ({
+        tipo: anexo.tipo || 'Pdf',
+        nomeExibicao: anexo.nomeExibicao || '',
+        url: anexo.url || anexo.storagePath || '',
+      })),
+    });
+    setConteudoDialogOpen(true);
+  };
+
+  const buscarResponsaveis = async () => {
+    const query = responsavelQuery.trim();
+    if (query.length < 2) {
+      toast.error(t('kids.children.guardianSearchMinChars', { defaultValue: 'Digite pelo menos 2 caracteres para buscar.' }));
+      return;
+    }
+
+    try {
+      setBuscandoResponsavel(true);
+      const queryDigits = query.replace(/\D/g, '');
+      const looksLikeEmail = query.includes('@');
+      const looksLikePhone = queryDigits.length >= 8;
+      const requests = looksLikePhone
+        ? [
+            pessoasApi.getPaged({
+              page: 1,
+              pageSize: 8,
+              sort: 'nome',
+              direction: 'asc',
+              telefone: queryDigits,
+            }),
+            pessoasApi.getPaged({
+              page: 1,
+              pageSize: 8,
+              sort: 'nome',
+              direction: 'asc',
+              whatsApp: queryDigits,
+            }),
+          ]
+        : [
+            pessoasApi.getPaged({
+              page: 1,
+              pageSize: 8,
+              sort: 'nome',
+              direction: 'asc',
+              nome: !looksLikeEmail ? query : undefined,
+              email: looksLikeEmail ? query : undefined,
+            }),
+          ];
+
+      const responses = await Promise.all(requests);
+      const merged = responses.flatMap((response) => response.data?.items || []);
+      const deduped = Array.from(new Map(merged.map((item) => [item.id, item])).values());
+      setResponsavelResultados(deduped.slice(0, 8));
+    } catch (err) {
+      console.error('Erro ao buscar responsáveis:', err);
+      toast.error(t('kids.children.guardianSearchError', { defaultValue: 'Erro ao buscar pessoas.' }));
+    } finally {
+      setBuscandoResponsavel(false);
+    }
+  };
+
+  const selecionarResponsavel = (pessoa) => {
+    setResponsavelSelecionado(pessoa);
+    setResponsavelResultados([]);
+    setResponsavelQuery(pessoa.nome || String(pessoa.id));
+  };
+
+  const vincularResponsavel = async () => {
+    if (!criancaResponsavel || !responsavelSelecionado) {
+      toast.error(t('kids.children.guardianSelectFirst', { defaultValue: 'Selecione um responsável antes de salvar.' }));
+      return;
+    }
+
+    try {
+      setResponsavelSaving(true);
+      await kidsApi.vincularResponsavel(criancaResponsavel.pessoaId, {
+        responsavelPessoaId: Number(responsavelSelecionado.id),
+        parentesco: responsavelForm.parentesco?.trim() || null,
+        podeRetirar: responsavelForm.podeRetirar,
+      });
+      toast.success(t('kids.children.guardianLinkedSuccess', { defaultValue: 'Responsável vinculado com sucesso.' }));
+      setResponsavelDialogOpen(false);
+      await fetchData();
+    } catch (err) {
+      console.error('Erro ao vincular responsável:', err);
+      toast.error(err.response?.data?.message || t('kids.children.guardianLinkedError', { defaultValue: 'Erro ao vincular responsável.' }));
+    } finally {
+      setResponsavelSaving(false);
+    }
+  };
+
+  const desvincularResponsavel = async (responsavel) => {
+    if (!responsavel?.id) return;
+
+    try {
+      setDesvinculandoResponsavelId(responsavel.id);
+      await kidsApi.desvincularResponsavel(responsavel.id);
+      toast.success(t('kids.children.guardianUnlinkedSuccess', { defaultValue: 'Responsável removido com sucesso.' }));
+      await fetchData();
+      setCriancaResponsavel((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          responsaveis: (prev.responsaveis || []).filter((item) => item.id !== responsavel.id),
+        };
+      });
+    } catch (err) {
+      console.error('Erro ao desvincular responsável:', err);
+      toast.error(err.response?.data?.message || t('kids.children.guardianUnlinkedError', { defaultValue: 'Erro ao remover responsável.' }));
+    } finally {
+      setDesvinculandoResponsavelId(null);
+    }
   };
 
   const handleCriarOcorrencia = async () => {
@@ -485,6 +738,146 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
     }
   };
 
+  const handleSalvarConteudo = async () => {
+    if (!conteudoForm.titulo.trim() || !conteudoForm.resumo.trim() || !conteudoForm.dataReferencia) {
+      toast.error(t('kids.lessonContent.validationRequired', { defaultValue: 'Título, resumo e data são obrigatórios.' }));
+      return;
+    }
+
+    const anexosInvalidos = conteudoForm.anexos.some((anexo) => !anexo.nomeExibicao.trim() || !anexo.url.trim());
+    if (anexosInvalidos) {
+      toast.error(t('kids.lessonContent.validationAttachment', { defaultValue: 'Preencha nome e referência de todos os materiais anexos.' }));
+      return;
+    }
+
+    const payload = {
+      titulo: conteudoForm.titulo.trim(),
+      tema: conteudoForm.tema.trim() || null,
+      versiculo: conteudoForm.versiculo.trim() || null,
+      resumo: conteudoForm.resumo.trim(),
+      atividadeEmCasa: conteudoForm.atividadeEmCasa.trim() || null,
+      observacaoResponsavel: conteudoForm.observacaoResponsavel.trim() || null,
+      dataReferencia: new Date(`${conteudoForm.dataReferencia}T12:00:00`).toISOString(),
+      salaId: conteudoForm.salaId || null,
+      turmaId: conteudoForm.turmaId || null,
+      anexos: conteudoForm.anexos.map((anexo, index) => ({
+        tipo: anexo.tipo,
+        nomeExibicao: anexo.nomeExibicao.trim(),
+        url: anexo.url.trim(),
+        ordem: index + 1,
+      })),
+    };
+
+    try {
+      setConteudoSaving(true);
+      if (conteudoForm.id) {
+        await kidsApi.updateConteudoAula(conteudoForm.id, payload);
+        toast.success(t('kids.lessonContent.updateSuccess', { defaultValue: 'Conteúdo da aula atualizado.' }));
+      } else {
+        await kidsApi.createConteudoAula(payload);
+        toast.success(t('kids.lessonContent.createSuccess', { defaultValue: 'Conteúdo da aula criado.' }));
+      }
+
+      setConteudoDialogOpen(false);
+      setConteudoForm(CONTEUDO_AULA_FORM_INICIAL);
+      await fetchData();
+    } catch (err) {
+      console.error('Error saving lesson content:', err);
+      toast.error(err.response?.data?.message || t('kids.lessonContent.saveError', { defaultValue: 'Erro ao salvar conteúdo da aula.' }));
+    } finally {
+      setConteudoSaving(false);
+    }
+  };
+
+  const handlePublicarConteudo = async (conteudoId) => {
+    try {
+      setPublicandoConteudoId(conteudoId);
+      await kidsApi.publicarConteudoAula(conteudoId);
+      toast.success(t('kids.lessonContent.publishSuccess', { defaultValue: 'Conteúdo publicado no AppKids.' }));
+      await fetchData();
+    } catch (err) {
+      console.error('Error publishing lesson content:', err);
+      toast.error(err.response?.data?.message || t('kids.lessonContent.publishError', { defaultValue: 'Erro ao publicar conteúdo da aula.' }));
+    } finally {
+      setPublicandoConteudoId(null);
+    }
+  };
+
+  const handleArquivarConteudo = async (conteudoId) => {
+    try {
+      setArquivandoConteudoId(conteudoId);
+      await kidsApi.arquivarConteudoAula(conteudoId);
+      toast.success(t('kids.lessonContent.archiveSuccess', { defaultValue: 'Conteúdo arquivado.' }));
+      await fetchData();
+    } catch (err) {
+      console.error('Error archiving lesson content:', err);
+      toast.error(err.response?.data?.message || t('kids.lessonContent.archiveError', { defaultValue: 'Erro ao arquivar conteúdo da aula.' }));
+    } finally {
+      setArquivandoConteudoId(null);
+    }
+  };
+
+  const handleConfirmarPreCheckin = async (preCheckin) => {
+    const canProceed = window.confirm(
+      t('kids.preCheckins.confirmPrompt', {
+        defaultValue: 'Confirmar o pré-check-in de {{name}} e concluir o check-in operacional agora?',
+        name: preCheckin.criancaNome,
+      }),
+    );
+
+    if (!canProceed) return;
+
+    try {
+      setConfirmandoPreCheckinId(preCheckin.id);
+      await kidsApi.confirmarPreCheckin(preCheckin.id, {
+        salaId: preCheckin.salaId || null,
+        turmaId: preCheckin.turmaId || null,
+      });
+      toast.success(
+        t('kids.preCheckins.confirmSuccess', {
+          defaultValue: 'Pré-check-in confirmado para {{name}}.',
+          name: preCheckin.criancaNome,
+        }),
+      );
+      await fetchData();
+    } catch (err) {
+      console.error('Erro ao confirmar pré-check-in:', err);
+      toast.error(err.response?.data?.message || t('kids.preCheckins.confirmError', { defaultValue: 'Erro ao confirmar pré-check-in.' }));
+    } finally {
+      setConfirmandoPreCheckinId(null);
+    }
+  };
+
+  const handleCancelarPreCheckin = async (preCheckin) => {
+    const canProceed = window.confirm(
+      t('kids.preCheckins.cancelPrompt', {
+        defaultValue: 'Cancelar o pré-check-in de {{name}}?',
+        name: preCheckin.criancaNome,
+      }),
+    );
+
+    if (!canProceed) return;
+
+    try {
+      setCancelandoPreCheckinId(preCheckin.id);
+      await kidsApi.cancelarPreCheckin(preCheckin.id, {
+        motivo: 'Cancelado pela equipe no painel operacional.',
+      });
+      toast.success(
+        t('kids.preCheckins.cancelSuccess', {
+          defaultValue: 'Pré-check-in cancelado para {{name}}.',
+          name: preCheckin.criancaNome,
+        }),
+      );
+      await fetchData();
+    } catch (err) {
+      console.error('Erro ao cancelar pré-check-in:', err);
+      toast.error(err.response?.data?.message || t('kids.preCheckins.cancelError', { defaultValue: 'Erro ao cancelar pré-check-in.' }));
+    } finally {
+      setCancelandoPreCheckinId(null);
+    }
+  };
+
   if (loading) {
     return <Loading text={t('kids.loading', 'Carregando...')} />;
   }
@@ -524,9 +917,16 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
           icon={MessageSquareWarning}
           valueClassName="text-rose-600"
         />
+        <ResumoCard
+          title={t('kids.preCheckins.pendingTitle', { defaultValue: 'Pré-check-ins pendentes' })}
+          value={preCheckinsPendentes.length}
+          description={t('kids.preCheckins.pendingDescription', { defaultValue: 'Famílias aguardando confirmação na recepção' })}
+          icon={Ticket}
+          valueClassName="text-indigo-600"
+        />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t('kids.panel.indicators30Days')}</CardTitle>
@@ -557,6 +957,29 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
             <IndicadorLinha label={t('kids.panel.activeChildren')} value={indicadores?.totalCriancasAtivas ?? 0} />
             <IndicadorLinha label={t('kids.panel.activeGuardians')} value={indicadores?.totalResponsaveisAtivos ?? 0} />
             <IndicadorLinha label={t('kids.panel.roomsClasses')} value={`${indicadores?.totalSalasAtivas ?? 0} / ${indicadores?.totalTurmasAtivas ?? 0}`} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t('kids.preCheckins.operationalQueue', { defaultValue: 'Fila de recepção' })}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 text-sm">
+            <IndicadorLinha
+              label={t('kids.preCheckins.waitingNow', { defaultValue: 'Aguardando agora' })}
+              value={preCheckinsPendentes.length}
+            />
+            <IndicadorLinha
+              label={t('kids.preCheckins.withRoom', { defaultValue: 'Com sala sugerida' })}
+              value={preCheckinsPendentes.filter((item) => item.salaId).length}
+            />
+            <IndicadorLinha
+              label={t('kids.preCheckins.expiringSoon', { defaultValue: 'Expirando em 15 min' })}
+              value={preCheckinsPendentes.filter((item) => {
+                const expiration = new Date(item.expiraEm).getTime();
+                return expiration - Date.now() <= 15 * 60 * 1000;
+              }).length}
+            />
           </CardContent>
         </Card>
       </div>
@@ -618,6 +1041,71 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
                 ))
               ) : (
                 <EstadoVazio texto={t('kids.panel.noRooms')} />
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('kids.preCheckins.pendingList', { defaultValue: 'Pré-check-ins aguardando recepção' })}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {preCheckinsPendentes.length ? (
+                preCheckinsPendentes.map((item) => (
+                  <div key={item.id} className="rounded-xl border border-border bg-background p-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-foreground">{item.criancaNome}</span>
+                          <Badge variant="outline">
+                            {t('kids.preCheckins.codeLabel', { defaultValue: 'Código {{code}}', code: item.codigoCurto })}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {t('kids.preCheckins.guardianLabel', { defaultValue: 'Responsável: {{name}}', name: item.responsavelNome })}
+                        </div>
+                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                          <span>{t('kids.preCheckins.createdAt', { defaultValue: 'Criado em {{value}}', value: formatDate(item.criadoEm) })}</span>
+                          <span>{t('kids.preCheckins.expiresAt', { defaultValue: 'Expira em {{value}}', value: formatDate(item.expiraEm) })}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {item.salaId ? <Badge variant="secondary">{t('kids.common.room')}: {item.salaId}</Badge> : null}
+                          {item.turmaId ? <Badge variant="secondary">{t('kids.common.class')}: {item.turmaId}</Badge> : null}
+                        </div>
+                        {item.observacoesResponsavel ? (
+                          <p className="text-sm text-foreground/80">
+                            {t('kids.preCheckins.familyNote', { defaultValue: 'Observação da família: {{value}}', value: item.observacoesResponsavel })}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleConfirmarPreCheckin(item)}
+                          disabled={confirmandoPreCheckinId === item.id || cancelandoPreCheckinId === item.id}
+                        >
+                          <BadgeCheck className="mr-2 h-4 w-4" />
+                          {confirmandoPreCheckinId === item.id
+                            ? t('kids.preCheckins.confirming', { defaultValue: 'Confirmando...' })
+                            : t('kids.preCheckins.confirmAction', { defaultValue: 'Confirmar entrada' })}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCancelarPreCheckin(item)}
+                          disabled={confirmandoPreCheckinId === item.id || cancelandoPreCheckinId === item.id}
+                        >
+                          <Ban className="mr-2 h-4 w-4" />
+                          {cancelandoPreCheckinId === item.id
+                            ? t('kids.preCheckins.cancelling', { defaultValue: 'Cancelando...' })
+                            : t('kids.preCheckins.cancelAction', { defaultValue: 'Cancelar' })}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <EstadoVazio texto={t('kids.preCheckins.empty', { defaultValue: 'Nenhum pré-check-in pendente no momento.' })} />
               )}
             </CardContent>
           </Card>
@@ -692,6 +1180,124 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
     </div>
   );
 
+  const conteudosContent = (
+    <Card>
+      <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <CardTitle>{t('kids.lessonContent.panelTitle', { defaultValue: 'Conteúdo da aula' })}</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {t('kids.lessonContent.panelDescription', {
+              defaultValue: 'Publique resumo, atividade em casa e materiais para os responsáveis no AppKids.',
+            })}
+          </p>
+        </div>
+        <Button onClick={abrirNovoConteudoDialog}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          {t('kids.lessonContent.new', { defaultValue: 'Novo conteúdo' })}
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {conteudosAula.length ? (
+          conteudosAula.map((conteudo) => {
+            const statusLower = (conteudo.status || '').toLowerCase();
+            const isPublished = statusLower === 'published';
+            const isArchived = statusLower === 'archived';
+
+            return (
+              <div key={conteudo.id} className="rounded-xl border border-border bg-background p-4 shadow-sm">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-foreground">{conteudo.titulo}</span>
+                      <Badge className={isPublished ? 'bg-emerald-600 hover:bg-emerald-700' : isArchived ? 'bg-slate-500 hover:bg-slate-600' : 'bg-amber-500 hover:bg-amber-600'}>
+                        {conteudo.status}
+                      </Badge>
+                      {conteudo.tema ? <Badge variant="outline">{conteudo.tema}</Badge> : null}
+                      {conteudo.turmaId ? <Badge variant="outline">{conteudo.turmaId}</Badge> : null}
+                      {!conteudo.turmaId && conteudo.salaId ? <Badge variant="outline">{conteudo.salaId}</Badge> : null}
+                      {!conteudo.turmaId && !conteudo.salaId ? (
+                        <Badge variant="outline">{t('kids.lessonContent.generalAudience', { defaultValue: 'Geral do Kids' })}</Badge>
+                      ) : null}
+                    </div>
+                    <p className="max-w-3xl text-sm text-muted-foreground">{conteudo.resumo}</p>
+                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                      <span>{t('kids.lessonContent.referenceDateShort', { defaultValue: 'Data' })}: {formatDate(conteudo.dataReferencia)}</span>
+                      <span>{t('kids.lessonContent.materialCount', { defaultValue: '{{count}} materiais', count: conteudo.anexos?.length || 0 })}</span>
+                      {conteudo.publicadoEm ? (
+                        <span>{t('kids.lessonContent.publishedAt', { defaultValue: 'Publicado em {{date}}', date: formatDate(conteudo.publicadoEm) })}</span>
+                      ) : null}
+                    </div>
+                    {conteudo.anexos?.length ? (
+                      <div className="flex flex-wrap gap-2">
+                        {conteudo.anexos.slice(0, 4).map((anexo) => {
+                          const normalized = (anexo.tipo || '').toLowerCase();
+                          const previewUrl = anexo.url ? getAbsoluteUrl(anexo.url) : null;
+                          return (
+                            <button
+                              key={`${conteudo.id}-${anexo.id}`}
+                              type="button"
+                              className="flex items-center gap-2 rounded-lg border border-border bg-muted/20 px-2 py-1 text-left"
+                              onClick={() => {
+                                const target = anexo.url || anexo.storagePath;
+                                if (target) {
+                                  window.open(getAbsoluteUrl(target), '_blank');
+                                }
+                              }}
+                            >
+                              {normalized === 'imagem' && previewUrl ? (
+                                <img src={previewUrl} alt={anexo.nomeExibicao} className="h-10 w-10 rounded object-cover" />
+                              ) : (
+                                <div className="flex h-10 w-10 items-center justify-center rounded bg-background text-[10px] font-bold text-muted-foreground">
+                                  {getConteudoAnexoIconLabel(anexo.tipo)}
+                                </div>
+                              )}
+                              <div className="max-w-[140px]">
+                                <div className="truncate text-sm font-medium text-foreground">{anexo.nomeExibicao}</div>
+                                <div className="text-xs text-muted-foreground">{anexo.tipo}</div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={() => abrirEditarConteudoDialog(conteudo)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      {t('actions.edit')}
+                    </Button>
+                    {!isPublished ? (
+                      <Button size="sm" onClick={() => handlePublicarConteudo(conteudo.id)} disabled={publicandoConteudoId === conteudo.id}>
+                        <Send className="mr-2 h-4 w-4" />
+                        {publicandoConteudoId === conteudo.id
+                          ? t('kids.lessonContent.publishing', { defaultValue: 'Publicando...' })
+                          : t('kids.lessonContent.publish', { defaultValue: 'Publicar' })}
+                      </Button>
+                    ) : null}
+                    {!isArchived ? (
+                      <Button variant="ghost" size="sm" onClick={() => handleArquivarConteudo(conteudo.id)} disabled={arquivandoConteudoId === conteudo.id}>
+                        <Ban className="mr-2 h-4 w-4" />
+                        {arquivandoConteudoId === conteudo.id
+                          ? t('kids.lessonContent.archiving', { defaultValue: 'Arquivando...' })
+                          : t('kids.lessonContent.archive', { defaultValue: 'Arquivar' })}
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <EstadoVazio
+            texto={t('kids.lessonContent.empty', {
+              defaultValue: 'Nenhum conteúdo da aula foi criado ainda.',
+            })}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+
   const criancasContent = (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
@@ -753,8 +1359,25 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
                       <span>{t('kids.children.classLabel', { value: crianca.turmaId || t('kids.children.noClass') })}</span>
                       <span>{t('kids.children.guardiansLabel', { count: crianca.responsaveis?.length || 0 })}</span>
                     </div>
+                    {crianca.responsaveis?.length ? (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {crianca.responsaveis.map((responsavel) => (
+                          <Badge key={responsavel.id} variant="outline" className="gap-1">
+                            <span>{responsavel.responsavelNome}</span>
+                            {responsavel.parentesco ? <span>• {responsavel.parentesco}</span> : null}
+                            {responsavel.podeRetirar ? (
+                              <span>• {t('kids.children.guardianPickupAllowedShort', { defaultValue: 'retira' })}</span>
+                            ) : null}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={() => abrirResponsavelDialog(crianca)}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      {t('kids.children.linkGuardianAction', { defaultValue: 'Vincular responsável' })}
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => carregarHistoricoCrianca({ criancaPessoaId: crianca.pessoaId, nome: crianca.nome })}>
                       <Eye className="mr-2 h-4 w-4" />
                       {t('kids.history.view')}
@@ -1109,6 +1732,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
             {showCriancas && criancasContent}
             {showEstrutura && estruturaContent}
             {showHistorico && historicoContent}
+            {showConteudos && conteudosContent}
           </div>
         )}
       </div>
@@ -1122,6 +1746,40 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
         saving={criancaSaving}
         salas={salas}
         turmas={turmas}
+      />
+
+      <ResponsavelDialog
+        open={responsavelDialogOpen}
+        onOpenChange={setResponsavelDialogOpen}
+        crianca={criancaResponsavel}
+        query={responsavelQuery}
+        onQueryChange={setResponsavelQuery}
+        onBuscar={buscarResponsaveis}
+        searching={buscandoResponsavel}
+        resultados={responsavelResultados}
+        onSelecionarPessoa={selecionarResponsavel}
+        pessoaSelecionada={responsavelSelecionado}
+        form={responsavelForm}
+        onChange={handleResponsavelFormChange}
+        onSave={vincularResponsavel}
+        saving={responsavelSaving}
+        onDesvincular={desvincularResponsavel}
+        desvinculandoId={desvinculandoResponsavelId}
+      />
+
+      <ConteudoAulaDialog
+        open={conteudoDialogOpen}
+        onOpenChange={setConteudoDialogOpen}
+        form={conteudoForm}
+        onChange={handleConteudoFormChange}
+        onAnexoChange={handleConteudoAnexoChange}
+        onAddAnexo={adicionarConteudoAnexo}
+        onRemoveAnexo={removerConteudoAnexo}
+        onSave={handleSalvarConteudo}
+        saving={conteudoSaving}
+        salas={salas}
+        turmas={turmas}
+        isEditing={Boolean(conteudoForm.id)}
       />
 
       <OcorrenciaDialog

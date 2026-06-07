@@ -8,6 +8,20 @@ export const api = axios.create({
   },
 });
 
+let refreshPromise = null;
+
+function clearAuthSession() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('usuario');
+}
+
+function redirectToLogin() {
+  if (window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+}
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -43,14 +57,63 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     console.error('Erro na API:', error);
 
-    if (error.response?.status === 401 && !error.config.url?.includes('/auth/login')) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('usuario');
-      window.location.href = '/login';
+    const originalRequest = error.config || {};
+    const requestUrl = String(originalRequest.url || '').toLowerCase();
+    const isLoginRequest = requestUrl.includes('/auth/login');
+    const isRefreshRequest = requestUrl.includes('/auth/refresh');
+
+    if (error.response?.status === 401 && !isLoginRequest) {
+      if (isRefreshRequest || originalRequest._retry) {
+        clearAuthSession();
+        redirectToLogin();
+        return Promise.reject(error);
+      }
+
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!refreshToken) {
+        clearAuthSession();
+        redirectToLogin();
+        return Promise.reject(error);
+      }
+
+      originalRequest._retry = true;
+
+      try {
+        if (!refreshPromise) {
+          refreshPromise = api
+            .post('/auth/refresh', { refreshToken })
+            .then((response) => response.data)
+            .finally(() => {
+              refreshPromise = null;
+            });
+        }
+
+        const result = await refreshPromise;
+        if (!result?.token) {
+          clearAuthSession();
+          redirectToLogin();
+          return Promise.reject(error);
+        }
+
+        localStorage.setItem('token', result.token);
+        if (result.refreshToken) {
+          localStorage.setItem('refreshToken', result.refreshToken);
+        }
+        if (result.usuario) {
+          localStorage.setItem('usuario', JSON.stringify(result.usuario));
+        }
+
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${result.token}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        clearAuthSession();
+        redirectToLogin();
+        return Promise.reject(refreshError);
+      }
     }
 
     return Promise.reject(error);
