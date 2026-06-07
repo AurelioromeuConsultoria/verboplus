@@ -754,8 +754,8 @@ public class EscalaService : IEscalaService
         }
 
         var rows = rowsByPessoa.Values
-            .OrderByDescending(v => v.TotalEscalas)
-            .ThenBy(v => v.Nome)
+            .OrderBy(v => v.Nome)
+            .ThenBy(v => v.PessoaId)
             .ToList();
 
         return new PlanejamentoMensalEscalaDto

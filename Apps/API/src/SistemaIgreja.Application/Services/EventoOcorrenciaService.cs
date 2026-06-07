@@ -189,7 +189,12 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
             var fimFaixa = dataFim.Date < fimVigencia ? dataFim.Date : fimVigencia;
             if (fimFaixa < inicioFaixa) continue;
 
-            var datasOcorrencia = GerarDatasRecorrencia(inicioFaixa, fimFaixa, recorrencia.DiaSemana, recorrencia.Periodicidade);
+            var datasOcorrencia = GerarDatasRecorrencia(
+                inicioFaixa,
+                fimFaixa,
+                recorrencia.DiaSemana,
+                recorrencia.Periodicidade,
+                inicioVigencia);
 
             foreach (var dataBase in datasOcorrencia)
             {
@@ -225,27 +230,77 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
         DateTime dataInicio,
         DateTime dataFim,
         DayOfWeek diaSemana,
-        PeriodicidadeRecorrencia periodicidade)
+        PeriodicidadeRecorrencia periodicidade,
+        DateTime dataInicioVigencia)
     {
-        var primeiraData = dataInicio;
-        while (primeiraData.DayOfWeek != diaSemana)
+        if (periodicidade == PeriodicidadeRecorrencia.Mensal)
         {
-            primeiraData = primeiraData.AddDays(1);
+            foreach (var data in GerarDatasMensais(dataInicio, dataFim, diaSemana, dataInicioVigencia))
+            {
+                yield return data;
+            }
+
+            yield break;
         }
 
         var saltoDias = periodicidade switch
         {
             PeriodicidadeRecorrencia.Quinzenal => 14,
-            PeriodicidadeRecorrencia.Mensal => 28, // aproximação semanal para geração inicial
             _ => 7
         };
 
-        var atual = primeiraData;
+        var atual = ProximaDataNoDiaSemana(dataInicioVigencia, diaSemana);
+        while (atual < dataInicio)
+        {
+            atual = atual.AddDays(saltoDias);
+        }
+
         while (atual <= dataFim)
         {
             yield return atual;
             atual = atual.AddDays(saltoDias);
         }
+    }
+
+    private static IEnumerable<DateTime> GerarDatasMensais(
+        DateTime dataInicio,
+        DateTime dataFim,
+        DayOfWeek diaSemana,
+        DateTime dataInicioVigencia)
+    {
+        var dataReferencia = ProximaDataNoDiaSemana(dataInicioVigencia, diaSemana);
+        var semanaDoMes = ((dataReferencia.Day - 1) / 7) + 1;
+        var mesAtual = new DateTime(dataInicio.Year, dataInicio.Month, 1);
+        var fimMes = new DateTime(dataFim.Year, dataFim.Month, 1);
+
+        while (mesAtual <= fimMes)
+        {
+            var data = ObterDataPorSemanaDoMes(mesAtual.Year, mesAtual.Month, diaSemana, semanaDoMes);
+            if (data.HasValue && data.Value >= dataInicio && data.Value <= dataFim)
+            {
+                yield return data.Value;
+            }
+
+            mesAtual = mesAtual.AddMonths(1);
+        }
+    }
+
+    private static DateTime ProximaDataNoDiaSemana(DateTime data, DayOfWeek diaSemana)
+    {
+        var atual = data.Date;
+        while (atual.DayOfWeek != diaSemana)
+        {
+            atual = atual.AddDays(1);
+        }
+
+        return atual;
+    }
+
+    private static DateTime? ObterDataPorSemanaDoMes(int ano, int mes, DayOfWeek diaSemana, int semanaDoMes)
+    {
+        var primeira = ProximaDataNoDiaSemana(new DateTime(ano, mes, 1), diaSemana);
+        var data = primeira.AddDays((semanaDoMes - 1) * 7);
+        return data.Month == mes ? data : null;
     }
 
     private static EventoOcorrenciaDto MapToDto(EventoOcorrencia o)

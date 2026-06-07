@@ -10,6 +10,8 @@ namespace SistemaIgreja.API.Tests.Controllers;
 public class KidsControllerTests
 {
     private readonly Mock<IKidsService> _kidsServiceMock = new();
+    private readonly Mock<IKidsPreCheckinService> _preCheckinServiceMock = new();
+    private readonly Mock<IKidsConteudoAulaService> _conteudoAulaServiceMock = new();
     private readonly Mock<IKidsNotificacaoService> _notificacaoServiceMock = new();
     private readonly Mock<IKidsRetiradaService> _retiradaServiceMock = new();
     private readonly Mock<IKidsPainelService> _painelServiceMock = new();
@@ -22,6 +24,8 @@ public class KidsControllerTests
     private KidsController CreateController() =>
         new(
             _kidsServiceMock.Object,
+            _preCheckinServiceMock.Object,
+            _conteudoAulaServiceMock.Object,
             _notificacaoServiceMock.Object,
             _retiradaServiceMock.Object,
             _painelServiceMock.Object,
@@ -156,6 +160,73 @@ public class KidsControllerTests
 
         (await controller.GetMeusCheckins()).Result.Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>();
         (await controller.GetMeusAvisos(true, "ALERTA", 2, 5)).Result.Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task ConteudoAulaEndpoints_ReturnExpectedResponses()
+    {
+        _conteudoAulaServiceMock.Setup(s => s.GetAsync("Published", "S1", "T1", null, 10))
+            .ReturnsAsync(new List<KidsConteudoAulaAdminDto>());
+        _conteudoAulaServiceMock.Setup(s => s.GetByIdAsync(8))
+            .ReturnsAsync(new KidsConteudoAulaAdminDto { Id = 8, Titulo = "Aula 8" });
+        _conteudoAulaServiceMock.Setup(s => s.GetMeuConteudoPorCriancaAsync(10, 5))
+            .ReturnsAsync(new List<MeuConteudoAulaDto>());
+        _conteudoAulaServiceMock.Setup(s => s.CreateAsync(It.IsAny<CreateKidsConteudoAulaRequest>()))
+            .ReturnsAsync(new KidsConteudoAulaAdminDto { Id = 12, Titulo = "Nova aula", Status = "Draft" });
+        _conteudoAulaServiceMock.Setup(s => s.UpdateAsync(12, It.IsAny<UpdateKidsConteudoAulaRequest>()))
+            .ReturnsAsync(new KidsConteudoAulaAdminDto { Id = 12, Titulo = "Aula atualizada", Status = "Draft" });
+        _conteudoAulaServiceMock.Setup(s => s.PublicarAsync(12))
+            .ReturnsAsync(new KidsConteudoAulaAdminDto { Id = 12, Titulo = "Aula atualizada", Status = "Published" });
+        _conteudoAulaServiceMock.Setup(s => s.ArquivarAsync(12))
+            .ReturnsAsync(new KidsConteudoAulaAdminDto { Id = 12, Titulo = "Aula atualizada", Status = "Archived" });
+
+        var controller = CreateController();
+
+        (await controller.GetConteudosAula("Published", "S1", "T1", null, 10)).Result
+            .Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>();
+        (await controller.GetConteudoAulaById(8)).Result
+            .Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>();
+        (await controller.GetMeuConteudoPorCrianca(10, 5)).Result
+            .Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>();
+        (await controller.CreateConteudoAula(new CreateKidsConteudoAulaRequest
+        {
+            Titulo = "Nova aula",
+            Resumo = "Resumo",
+            DataReferencia = new DateTime(2026, 5, 6)
+        })).Result.Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>();
+        (await controller.UpdateConteudoAula(12, new UpdateKidsConteudoAulaRequest
+        {
+            Titulo = "Aula atualizada",
+            Resumo = "Resumo",
+            DataReferencia = new DateTime(2026, 5, 6)
+        })).Result.Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>();
+        (await controller.PublicarConteudoAula(12)).Result
+            .Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>();
+        (await controller.ArquivarConteudoAula(12)).Result
+            .Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task MeusPreCheckinsEndpoints_ReturnOk()
+    {
+        _preCheckinServiceMock.Setup(s => s.CriarMeuPreCheckinAsync(It.IsAny<CreateKidsPreCheckinRequest>()))
+            .ReturnsAsync(new KidsPreCheckinDto { Id = 1, CriancaPessoaId = 10, ResponsavelPessoaId = 30, Status = "Pending", QrToken = "TOKEN", CodigoCurto = "ABCD1234" });
+        _preCheckinServiceMock.Setup(s => s.GetMeusPreCheckinsAsync("Pending", true))
+            .ReturnsAsync(new List<KidsPreCheckinDto>());
+        _preCheckinServiceMock.Setup(s => s.CancelarMeuPreCheckinAsync(1, It.IsAny<CancelKidsPreCheckinRequest>()))
+            .ReturnsAsync(new KidsPreCheckinDto { Id = 1, CriancaPessoaId = 10, ResponsavelPessoaId = 30, Status = "Cancelled", QrToken = "TOKEN", CodigoCurto = "ABCD1234" });
+        _preCheckinServiceMock.Setup(s => s.GetPendentesAsync(5, "S1", "T1"))
+            .ReturnsAsync(new List<KidsPreCheckinDto>());
+        var controller = CreateController();
+
+        (await controller.CreateMeuPreCheckin(new CreateKidsPreCheckinRequest { CriancaPessoaId = 10 })).Result
+            .Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>();
+        (await controller.GetMeusPreCheckins("Pending", true)).Result
+            .Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>();
+        (await controller.CancelarMeuPreCheckin(1, new CancelKidsPreCheckinRequest { Motivo = "Mudança de planos" })).Result
+            .Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>();
+        (await controller.GetPreCheckinsPendentes(5, "S1", "T1")).Result
+            .Should().BeOfType<Microsoft.AspNetCore.Mvc.OkObjectResult>();
     }
 
     [Fact]

@@ -13,6 +13,8 @@ namespace SistemaIgreja.API.Controllers;
 public class KidsController : ControllerBase
 {
     private readonly IKidsService _service;
+    private readonly IKidsPreCheckinService _preCheckinService;
+    private readonly IKidsConteudoAulaService _conteudoAulaService;
     private readonly IKidsNotificacaoService _notificacaoService;
     private readonly IKidsRetiradaService _retiradaService;
     private readonly IKidsPainelService _painelService;
@@ -24,6 +26,8 @@ public class KidsController : ControllerBase
 
     public KidsController(
         IKidsService service,
+        IKidsPreCheckinService preCheckinService,
+        IKidsConteudoAulaService conteudoAulaService,
         IKidsNotificacaoService notificacaoService,
         IKidsRetiradaService retiradaService,
         IKidsPainelService painelService,
@@ -34,6 +38,8 @@ public class KidsController : ControllerBase
         IKidsDeviceTokenRepository deviceTokenRepository)
     {
         _service = service;
+        _preCheckinService = preCheckinService;
+        _conteudoAulaService = conteudoAulaService;
         _notificacaoService = notificacaoService;
         _retiradaService = retiradaService;
         _painelService = painelService;
@@ -295,6 +301,218 @@ public class KidsController : ControllerBase
     }
 
     /// <summary>
+    /// Lista os conteúdos publicados aplicáveis a uma criança vinculada ao responsável autenticado.
+    /// </summary>
+    [HttpGet("me/criancas/{criancaPessoaId}/conteudos-aula")]
+    public async Task<ActionResult<IEnumerable<MeuConteudoAulaDto>>> GetMeuConteudoPorCrianca(int criancaPessoaId, [FromQuery] int? limit = null)
+    {
+        try
+        {
+            var items = await _conteudoAulaService.GetMeuConteudoPorCriancaAsync(criancaPessoaId, limit);
+            return Ok(items);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar conteúdos da aula", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Cria um pré-check-in para uma criança vinculada ao responsável autenticado.
+    /// </summary>
+    [HttpPost("me/precheckins")]
+    public async Task<ActionResult<KidsPreCheckinDto>> CreateMeuPreCheckin([FromBody] CreateKidsPreCheckinRequest request)
+    {
+        try
+        {
+            var created = await _preCheckinService.CriarMeuPreCheckinAsync(request);
+            return Ok(created);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao criar meu pré-check-in", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lista os pré-check-ins do responsável autenticado.
+    /// </summary>
+    [HttpGet("me/precheckins")]
+    public async Task<ActionResult<IEnumerable<KidsPreCheckinDto>>> GetMeusPreCheckins([FromQuery] string? status = null, [FromQuery] bool somenteAtivos = false)
+    {
+        try
+        {
+            var items = await _preCheckinService.GetMeusPreCheckinsAsync(status, somenteAtivos);
+            return Ok(items);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar meus pré-check-ins", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Cancela um pré-check-in do responsável autenticado.
+    /// </summary>
+    [HttpPost("me/precheckins/{id}/cancelar")]
+    public async Task<ActionResult<KidsPreCheckinDto>> CancelarMeuPreCheckin(int id, [FromBody] CancelKidsPreCheckinRequest request)
+    {
+        try
+        {
+            var item = await _preCheckinService.CancelarMeuPreCheckinAsync(id, request);
+            return Ok(item);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao cancelar meu pré-check-in", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lista os pré-check-ins pendentes para conferência operacional.
+    /// </summary>
+    [HttpGet("precheckins/pendentes")]
+    public async Task<ActionResult<IEnumerable<KidsPreCheckinDto>>> GetPreCheckinsPendentes([FromQuery] int? eventoOcorrenciaId = null, [FromQuery] string? salaId = null, [FromQuery] string? turmaId = null)
+    {
+        try
+        {
+            var items = await _preCheckinService.GetPendentesAsync(eventoOcorrenciaId, salaId, turmaId);
+            return Ok(items);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar pré-check-ins pendentes", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Valida um pré-check-in por token ou código curto.
+    /// </summary>
+    [HttpPost("precheckins/validar")]
+    public async Task<ActionResult<KidsPreCheckinDto>> ValidarPreCheckin([FromBody] ValidarKidsPreCheckinRequest request)
+    {
+        try
+        {
+            var item = await _preCheckinService.ValidarAsync(request);
+            return Ok(item);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao validar pré-check-in", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Confirma um pré-check-in e realiza o check-in operacional.
+    /// </summary>
+    [HttpPost("precheckins/{id}/confirmar")]
+    public async Task<ActionResult<KidsPreCheckinDto>> ConfirmarPreCheckin(int id, [FromBody] ConfirmKidsPreCheckinRequest request)
+    {
+        try
+        {
+            var item = await _preCheckinService.ConfirmarAsync(id, request);
+            return Ok(item);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao confirmar pré-check-in", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Cancela um pré-check-in pendente.
+    /// </summary>
+    [HttpPost("precheckins/{id}/cancelar")]
+    public async Task<ActionResult<KidsPreCheckinDto>> CancelarPreCheckin(int id, [FromBody] CancelKidsPreCheckinRequest request)
+    {
+        try
+        {
+            var item = await _preCheckinService.CancelarAsync(id, request);
+            return Ok(item);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao cancelar pré-check-in", error = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Lista os avisos do responsável autenticado
     /// </summary>
     [HttpGet("me/avisos")]
@@ -312,6 +530,169 @@ public class KidsController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "Erro ao buscar meus avisos", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lista os conteúdos administrativos de aula do Kids.
+    /// </summary>
+    [HttpGet("conteudos-aula")]
+    public async Task<ActionResult<IEnumerable<KidsConteudoAulaAdminDto>>> GetConteudosAula([FromQuery] string? status = null, [FromQuery] string? salaId = null, [FromQuery] string? turmaId = null, [FromQuery] DateTime? dataReferencia = null, [FromQuery] int? limit = null)
+    {
+        try
+        {
+            var items = await _conteudoAulaService.GetAsync(status, salaId, turmaId, dataReferencia, limit);
+            return Ok(items);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar conteúdos da aula", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Obtém um conteúdo de aula do Kids por identificador.
+    /// </summary>
+    [HttpGet("conteudos-aula/{id}")]
+    public async Task<ActionResult<KidsConteudoAulaAdminDto>> GetConteudoAulaById(int id)
+    {
+        try
+        {
+            var item = await _conteudoAulaService.GetByIdAsync(id);
+            if (item == null)
+            {
+                return NotFound(new { message = "Conteúdo da aula não encontrado" });
+            }
+
+            return Ok(item);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar conteúdo da aula", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Cria um novo conteúdo de aula do Kids.
+    /// </summary>
+    [HttpPost("conteudos-aula")]
+    public async Task<ActionResult<KidsConteudoAulaAdminDto>> CreateConteudoAula([FromBody] CreateKidsConteudoAulaRequest request)
+    {
+        try
+        {
+            var created = await _conteudoAulaService.CreateAsync(request);
+            return Ok(created);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao criar conteúdo da aula", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Atualiza um conteúdo de aula do Kids.
+    /// </summary>
+    [HttpPut("conteudos-aula/{id}")]
+    public async Task<ActionResult<KidsConteudoAulaAdminDto>> UpdateConteudoAula(int id, [FromBody] UpdateKidsConteudoAulaRequest request)
+    {
+        try
+        {
+            var updated = await _conteudoAulaService.UpdateAsync(id, request);
+            return Ok(updated);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao atualizar conteúdo da aula", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Publica um conteúdo de aula do Kids.
+    /// </summary>
+    [HttpPost("conteudos-aula/{id}/publicar")]
+    public async Task<ActionResult<KidsConteudoAulaAdminDto>> PublicarConteudoAula(int id)
+    {
+        try
+        {
+            var updated = await _conteudoAulaService.PublicarAsync(id);
+            return Ok(updated);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao publicar conteúdo da aula", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Arquiva um conteúdo de aula do Kids.
+    /// </summary>
+    [HttpPost("conteudos-aula/{id}/arquivar")]
+    public async Task<ActionResult<KidsConteudoAulaAdminDto>> ArquivarConteudoAula(int id)
+    {
+        try
+        {
+            var updated = await _conteudoAulaService.ArquivarAsync(id);
+            return Ok(updated);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao arquivar conteúdo da aula", error = ex.Message });
         }
     }
 

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SistemaIgreja.Infrastructure.Data;
@@ -11,9 +12,11 @@ using SistemaIgreja.Infrastructure.Data;
 namespace SistemaIgreja.Infrastructure.Migrations
 {
     [DbContext(typeof(SistemaIgrejaDbContext))]
-    partial class SistemaIgrejaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260505230553_AdicionarKidsPreCheckins")]
+    partial class AdicionarKidsPreCheckins
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2369,145 +2372,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.ToTable("KidsCheckins");
                 });
 
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.KidsConteudoAula", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AtividadeEmCasa")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<DateTime?>("AtualizadoEm")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime>("CriadoEm")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime>("DataReferencia")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<int?>("EventoOcorrenciaId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ObservacaoResponsavel")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<DateTime?>("PublicadoEm")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<int?>("PublicadoPorPessoaId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Resumo")
-                        .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
-
-                    b.Property<string>("SalaId")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("Tema")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("TenantId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Titulo")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("TurmaId")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Versiculo")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EventoOcorrenciaId");
-
-                    b.HasIndex("PublicadoPorPessoaId");
-
-                    b.HasIndex("TenantId", "Status", "DataReferencia");
-
-                    b.HasIndex("TenantId", "SalaId", "Status", "DataReferencia");
-
-                    b.HasIndex("TenantId", "TurmaId", "Status", "DataReferencia");
-
-                    b.ToTable("KidsConteudosAula");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.KidsConteudoAulaAnexo", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ConteudoAulaId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CriadoEm")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("MimeType")
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
-                    b.Property<string>("NomeExibicao")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("Ordem")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("StoragePath")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<long?>("TamanhoBytes")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("TenantId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Tipo")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("Url")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ConteudoAulaId");
-
-                    b.HasIndex("TenantId", "Tipo");
-
-                    b.HasIndex("TenantId", "ConteudoAulaId", "Ordem");
-
-                    b.ToTable("KidsConteudosAulaAnexos");
-                });
-
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.KidsDeviceToken", b =>
                 {
                     b.Property<int>("Id")
@@ -2723,9 +2587,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<int?>("CheckinId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("CodigoCurto")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -2781,8 +2642,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasIndex("CanceladoPorPessoaId");
 
-                    b.HasIndex("CheckinId");
-
                     b.HasIndex("ConfirmadoPorPessoaId");
 
                     b.HasIndex("CriancaPessoaId");
@@ -2790,8 +2649,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasIndex("EventoOcorrenciaId");
 
                     b.HasIndex("ResponsavelPessoaId");
-
-                    b.HasIndex("TenantId", "CheckinId");
 
                     b.HasIndex("TenantId", "CodigoCurto")
                         .IsUnique();
@@ -4669,50 +4526,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Tenant");
                 });
 
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.KidsConteudoAula", b =>
-                {
-                    b.HasOne("SistemaIgreja.Domain.Entities.EventoOcorrencia", "EventoOcorrencia")
-                        .WithMany()
-                        .HasForeignKey("EventoOcorrenciaId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.Pessoa", "PublicadoPor")
-                        .WithMany("ConteudosAulaPublicados")
-                        .HasForeignKey("PublicadoPorPessoaId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("EventoOcorrencia");
-
-                    b.Navigation("PublicadoPor");
-
-                    b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.KidsConteudoAulaAnexo", b =>
-                {
-                    b.HasOne("SistemaIgreja.Domain.Entities.KidsConteudoAula", "ConteudoAula")
-                        .WithMany("Anexos")
-                        .HasForeignKey("ConteudoAulaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("ConteudoAula");
-
-                    b.Navigation("Tenant");
-                });
-
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.KidsDeviceToken", b =>
                 {
                     b.HasOne("SistemaIgreja.Domain.Entities.Pessoa", "Pessoa")
@@ -4813,11 +4626,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasForeignKey("CanceladoPorPessoaId")
                         .OnDelete(DeleteBehavior.NoAction);
 
-                    b.HasOne("SistemaIgreja.Domain.Entities.KidsCheckin", "Checkin")
-                        .WithMany()
-                        .HasForeignKey("CheckinId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("SistemaIgreja.Domain.Entities.Pessoa", "ConfirmadoPor")
                         .WithMany("PreCheckinsConfirmadosPor")
                         .HasForeignKey("ConfirmadoPorPessoaId")
@@ -4847,8 +4655,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("CanceladoPor");
-
-                    b.Navigation("Checkin");
 
                     b.Navigation("ConfirmadoPor");
 
@@ -5411,11 +5217,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Itens");
                 });
 
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.KidsConteudoAula", b =>
-                {
-                    b.Navigation("Anexos");
-                });
-
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.KidsSala", b =>
                 {
                     b.Navigation("Turmas");
@@ -5440,8 +5241,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("CheckinsRealizadosPor");
 
                     b.Navigation("CheckoutsRealizadosPor");
-
-                    b.Navigation("ConteudosAulaPublicados");
 
                     b.Navigation("CriancaDetalhe");
 

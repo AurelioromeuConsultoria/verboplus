@@ -555,6 +555,223 @@ public class MeuCheckinResumoDto
     public DateTime? TokenRetiradaExpiraEm { get; set; }
 }
 
+public class CreateKidsPreCheckinRequest
+{
+    [Required(ErrorMessage = "CriancaPessoaId é obrigatório")]
+    public int CriancaPessoaId { get; set; }
+
+    public int? EventoOcorrenciaId { get; set; }
+
+    [MaxLength(50)]
+    public string? SalaId { get; set; }
+
+    [MaxLength(50)]
+    public string? TurmaId { get; set; }
+
+    [MaxLength(500)]
+    public string? Observacoes { get; set; }
+}
+
+public class ConfirmKidsPreCheckinRequest
+{
+    [MaxLength(50)]
+    public string? SalaId { get; set; }
+
+    [MaxLength(50)]
+    public string? TurmaId { get; set; }
+
+    [MaxLength(500)]
+    public string? ObservacoesEquipe { get; set; }
+}
+
+public class CancelKidsPreCheckinRequest
+{
+    [MaxLength(500)]
+    public string? Motivo { get; set; }
+}
+
+public class ValidarKidsPreCheckinRequest
+{
+    [MaxLength(80)]
+    public string? QrToken { get; set; }
+
+    [MaxLength(20)]
+    public string? CodigoCurto { get; set; }
+}
+
+public class KidsPreCheckinDto
+{
+    public int Id { get; set; }
+    public int CriancaPessoaId { get; set; }
+    public string CriancaNome { get; set; } = string.Empty;
+    public int ResponsavelPessoaId { get; set; }
+    public string ResponsavelNome { get; set; } = string.Empty;
+    public int? EventoOcorrenciaId { get; set; }
+    public int? CheckinId { get; set; }
+    public DateTime? EventoDataHoraInicio { get; set; }
+    public string? SalaId { get; set; }
+    public string? TurmaId { get; set; }
+    public string QrToken { get; set; } = string.Empty;
+    public string CodigoCurto { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public DateTime ExpiraEm { get; set; }
+    public string? ObservacoesResponsavel { get; set; }
+    public DateTime CriadoEm { get; set; }
+    public DateTime? ConfirmadoEm { get; set; }
+    public string? ConfirmadoPorNome { get; set; }
+    public DateTime? CanceladoEm { get; set; }
+    public string? CanceladoPorNome { get; set; }
+    public string? CancelamentoMotivo { get; set; }
+}
+
+public class KidsConteudoAulaAnexoDto
+{
+    public int Id { get; set; }
+    public string Tipo { get; set; } = string.Empty;
+    public string NomeExibicao { get; set; } = string.Empty;
+    public string? Url { get; set; }
+    public string? StoragePath { get; set; }
+    public string? MimeType { get; set; }
+    public long? TamanhoBytes { get; set; }
+    public int Ordem { get; set; }
+}
+
+public class CreateKidsConteudoAulaAnexoRequest
+{
+    [Required(ErrorMessage = "Tipo é obrigatório")]
+    [MaxLength(20)]
+    public string Tipo { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Nome de exibição é obrigatório")]
+    [MaxLength(200)]
+    public string NomeExibicao { get; set; } = string.Empty;
+
+    [MaxLength(1000)]
+    public string? Url { get; set; }
+
+    [MaxLength(500)]
+    public string? StoragePath { get; set; }
+
+    [MaxLength(120)]
+    public string? MimeType { get; set; }
+
+    public long? TamanhoBytes { get; set; }
+    public int Ordem { get; set; }
+}
+
+public class CreateKidsConteudoAulaRequest
+{
+    [Required(ErrorMessage = "Título é obrigatório")]
+    [MaxLength(200)]
+    public string Titulo { get; set; } = string.Empty;
+
+    [MaxLength(200)]
+    public string? Tema { get; set; }
+
+    [MaxLength(300)]
+    public string? Versiculo { get; set; }
+
+    [Required(ErrorMessage = "Resumo é obrigatório")]
+    [MaxLength(4000)]
+    public string Resumo { get; set; } = string.Empty;
+
+    [MaxLength(2000)]
+    public string? AtividadeEmCasa { get; set; }
+
+    [MaxLength(1000)]
+    public string? ObservacaoResponsavel { get; set; }
+
+    [Required(ErrorMessage = "Data de referência é obrigatória")]
+    public DateTime DataReferencia { get; set; }
+
+    public int? EventoOcorrenciaId { get; set; }
+
+    [MaxLength(50)]
+    public string? SalaId { get; set; }
+
+    [MaxLength(50)]
+    public string? TurmaId { get; set; }
+
+    public List<CreateKidsConteudoAulaAnexoRequest> Anexos { get; set; } = new();
+}
+
+public class UpdateKidsConteudoAulaRequest
+{
+    [Required(ErrorMessage = "Título é obrigatório")]
+    [MaxLength(200)]
+    public string Titulo { get; set; } = string.Empty;
+
+    [MaxLength(200)]
+    public string? Tema { get; set; }
+
+    [MaxLength(300)]
+    public string? Versiculo { get; set; }
+
+    [Required(ErrorMessage = "Resumo é obrigatório")]
+    [MaxLength(4000)]
+    public string Resumo { get; set; } = string.Empty;
+
+    [MaxLength(2000)]
+    public string? AtividadeEmCasa { get; set; }
+
+    [MaxLength(1000)]
+    public string? ObservacaoResponsavel { get; set; }
+
+    [Required(ErrorMessage = "Data de referência é obrigatória")]
+    public DateTime DataReferencia { get; set; }
+
+    public int? EventoOcorrenciaId { get; set; }
+
+    [MaxLength(50)]
+    public string? SalaId { get; set; }
+
+    [MaxLength(50)]
+    public string? TurmaId { get; set; }
+
+    public List<CreateKidsConteudoAulaAnexoRequest> Anexos { get; set; } = new();
+}
+
+public class KidsConteudoAulaAdminDto
+{
+    public int Id { get; set; }
+    public string Titulo { get; set; } = string.Empty;
+    public string? Tema { get; set; }
+    public string? Versiculo { get; set; }
+    public string Resumo { get; set; } = string.Empty;
+    public string? AtividadeEmCasa { get; set; }
+    public string? ObservacaoResponsavel { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public DateTime DataReferencia { get; set; }
+    public int? EventoOcorrenciaId { get; set; }
+    public DateTime? EventoDataHoraInicio { get; set; }
+    public string? SalaId { get; set; }
+    public string? TurmaId { get; set; }
+    public DateTime? PublicadoEm { get; set; }
+    public int? PublicadoPorPessoaId { get; set; }
+    public string? PublicadoPorNome { get; set; }
+    public DateTime CriadoEm { get; set; }
+    public DateTime? AtualizadoEm { get; set; }
+    public List<KidsConteudoAulaAnexoDto> Anexos { get; set; } = new();
+}
+
+public class MeuConteudoAulaDto
+{
+    public int Id { get; set; }
+    public int CriancaPessoaId { get; set; }
+    public string CriancaNome { get; set; } = string.Empty;
+    public string Titulo { get; set; } = string.Empty;
+    public string? Tema { get; set; }
+    public string? Versiculo { get; set; }
+    public string Resumo { get; set; } = string.Empty;
+    public string? AtividadeEmCasa { get; set; }
+    public string? ObservacaoResponsavel { get; set; }
+    public DateTime DataReferencia { get; set; }
+    public string? SalaId { get; set; }
+    public string? TurmaId { get; set; }
+    public DateTime? PublicadoEm { get; set; }
+    public List<KidsConteudoAulaAnexoDto> Anexos { get; set; } = new();
+}
+
 // DTOs para Notificações
 public class KidsNotificacaoDto
 {

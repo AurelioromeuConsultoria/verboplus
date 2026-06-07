@@ -48,6 +48,11 @@ public class Pessoa : ITenantEntity
     public virtual ICollection<KidsCheckin> Checkins { get; set; } = new List<KidsCheckin>();
     public virtual ICollection<KidsCheckin> CheckinsRealizadosPor { get; set; } = new List<KidsCheckin>();
     public virtual ICollection<KidsCheckin> CheckoutsRealizadosPor { get; set; } = new List<KidsCheckin>();
+    public virtual ICollection<KidsPreCheckin> PreCheckinsComoCrianca { get; set; } = new List<KidsPreCheckin>();
+    public virtual ICollection<KidsPreCheckin> PreCheckinsComoResponsavel { get; set; } = new List<KidsPreCheckin>();
+    public virtual ICollection<KidsPreCheckin> PreCheckinsConfirmadosPor { get; set; } = new List<KidsPreCheckin>();
+    public virtual ICollection<KidsPreCheckin> PreCheckinsCanceladosPor { get; set; } = new List<KidsPreCheckin>();
+    public virtual ICollection<KidsConteudoAula> ConteudosAulaPublicados { get; set; } = new List<KidsConteudoAula>();
     public virtual ICollection<KidsNotificacao> NotificacoesComoCrianca { get; set; } = new List<KidsNotificacao>();
     public virtual ICollection<KidsNotificacao> NotificacoesComoResponsavel { get; set; } = new List<KidsNotificacao>();
     public virtual ICollection<KidsDeviceToken> KidsDeviceTokens { get; set; } = new List<KidsDeviceToken>();

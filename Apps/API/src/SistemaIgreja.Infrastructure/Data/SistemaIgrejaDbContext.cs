@@ -42,6 +42,9 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<Fornecedor> Fornecedores { get; set; }
     public DbSet<CategoriaDespesa> CategoriasDespesas { get; set; }
     public DbSet<CategoriaReceita> CategoriasReceitas { get; set; }
+    public DbSet<FinalidadeDoacao> FinalidadesDoacao { get; set; }
+    public DbSet<DoacaoOnline> DoacoesOnline { get; set; }
+    public DbSet<GivingProviderConfig> GivingProviderConfigs { get; set; }
     public DbSet<ContaBancaria> ContasBancarias { get; set; }
     public DbSet<CentroCusto> CentrosCustos { get; set; }
     public DbSet<Projeto> Projetos { get; set; }
@@ -84,6 +87,9 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<CriancaDetalhe> CriancasDetalhes { get; set; }
     public DbSet<ResponsavelCrianca> ResponsaveisCriancas { get; set; }
     public DbSet<KidsCheckin> KidsCheckins { get; set; }
+    public DbSet<KidsPreCheckin> KidsPreCheckins { get; set; }
+    public DbSet<KidsConteudoAula> KidsConteudosAula { get; set; }
+    public DbSet<KidsConteudoAulaAnexo> KidsConteudosAulaAnexos { get; set; }
     public DbSet<KidsNotificacao> KidsNotificacoes { get; set; }
     public DbSet<KidsDeviceToken> KidsDeviceTokens { get; set; }
     public DbSet<KidsOcorrencia> KidsOcorrencias { get; set; }
@@ -646,6 +652,122 @@ public class SistemaIgrejaDbContext : DbContext
                 new CategoriaPatrimonio { Id = 12, TenantId = Tenant.InitialTenantId, Nome = "Utensilios gerais", Descricao = "Itens de apoio e uso geral", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) },
                 new CategoriaPatrimonio { Id = 13, TenantId = Tenant.InitialTenantId, Nome = "Patrimonio administrativo", Descricao = "Bens de escritorio e administracao", Ativo = true, DataCriacao = new DateTime(2026, 4, 1, 0, 0, 0) }
             );
+        });
+
+        modelBuilder.Entity<FinalidadeDoacao>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(120);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(140);
+            entity.Property(e => e.DescricaoPublica).HasMaxLength(500);
+            entity.Property(e => e.ImagemUrl).HasMaxLength(500);
+            entity.Property(e => e.CorHex).HasMaxLength(40);
+            entity.Property(e => e.ValoresSugeridos).HasMaxLength(300);
+            entity.Property(e => e.ValorMinimo).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Ordem).IsRequired();
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.VisivelPortal).IsRequired();
+            entity.Property(e => e.PermiteAnonimo).IsRequired();
+            entity.Property(e => e.PermitePix).IsRequired();
+            entity.Property(e => e.PermiteCartaoCredito).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasIndex(e => new { e.TenantId, e.Slug }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.Ativo, e.VisivelPortal, e.Ordem });
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.CategoriaReceita)
+                .WithMany()
+                .HasForeignKey(e => e.CategoriaReceitaId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ContaBancaria)
+                .WithMany()
+                .HasForeignKey(e => e.ContaBancariaId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.CentroCusto)
+                .WithMany()
+                .HasForeignKey(e => e.CentroCustoId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Projeto)
+                .WithMany()
+                .HasForeignKey(e => e.ProjetoId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<DoacaoOnline>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.NomeDoador).IsRequired().HasMaxLength(120);
+            entity.Property(e => e.WhatsApp).HasMaxLength(30);
+            entity.Property(e => e.Email).HasMaxLength(120);
+            entity.Property(e => e.Documento).HasMaxLength(20);
+            entity.Property(e => e.Anonima).IsRequired();
+            entity.Property(e => e.Valor).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.MetodoPagamento).IsRequired();
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.Provider).IsRequired().HasMaxLength(40);
+            entity.Property(e => e.ExternalPaymentId).HasMaxLength(120);
+            entity.Property(e => e.ReciboToken).HasMaxLength(64);
+            entity.Property(e => e.PixCopiaECola).HasMaxLength(2000);
+            entity.Property(e => e.PixQrCodeUrl);
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasIndex(e => new { e.TenantId, e.Status, e.DataCriacao });
+            entity.HasIndex(e => new { e.TenantId, e.ExternalPaymentId });
+            entity.HasIndex(e => new { e.TenantId, e.ReciboToken }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.FinalidadeDoacao)
+                .WithMany()
+                .HasForeignKey(e => e.FinalidadeDoacaoId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Pessoa)
+                .WithMany()
+                .HasForeignKey(e => e.PessoaId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Receita)
+                .WithMany()
+                .HasForeignKey(e => e.ReceitaId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<GivingProviderConfig>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.Provider).IsRequired();
+            entity.Property(e => e.Environment).IsRequired();
+            entity.Property(e => e.ApiKeyProtegida).HasMaxLength(4000);
+            entity.Property(e => e.ApiKeyUltimosDigitos).HasMaxLength(40);
+            entity.Property(e => e.WebhookUrl).HasMaxLength(500);
+            entity.Property(e => e.WebhookSecretProtegido).HasMaxLength(200);
+            entity.Property(e => e.PixEnabled).IsRequired();
+            entity.Property(e => e.CreditCardEnabled).IsRequired();
+            entity.Property(e => e.BoletoEnabled).IsRequired();
+            entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.DataCriacao).IsRequired();
+
+            entity.HasIndex(e => new { e.TenantId, e.Provider }).IsUnique();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<PatrimonioItem>(entity =>
@@ -1562,6 +1684,126 @@ public class SistemaIgrejaDbContext : DbContext
             entity.HasIndex(c => new { c.TenantId, c.TokenRetirada });
             entity.HasIndex(c => new { c.TenantId, c.PinRetirada });
             entity.HasIndex(c => new { c.TenantId, c.CriancaPessoaId, c.Status });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<KidsPreCheckin>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.CriancaPessoaId).IsRequired();
+            entity.Property(e => e.ResponsavelPessoaId).IsRequired();
+            entity.Property(e => e.SalaId).HasMaxLength(50);
+            entity.Property(e => e.TurmaId).HasMaxLength(50);
+            entity.Property(e => e.QrToken).IsRequired().HasMaxLength(80);
+            entity.Property(e => e.CodigoCurto).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.ObservacoesResponsavel).HasMaxLength(500);
+            entity.Property(e => e.CriadoEm).IsRequired();
+            entity.Property(e => e.CancelamentoMotivo).HasMaxLength(500);
+
+            entity.HasOne(e => e.Crianca)
+                  .WithMany(p => p.PreCheckinsComoCrianca)
+                  .HasForeignKey(e => e.CriancaPessoaId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Responsavel)
+                  .WithMany(p => p.PreCheckinsComoResponsavel)
+                  .HasForeignKey(e => e.ResponsavelPessoaId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.EventoOcorrencia)
+                  .WithMany()
+                  .HasForeignKey(e => e.EventoOcorrenciaId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Checkin)
+                  .WithMany()
+                  .HasForeignKey(e => e.CheckinId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ConfirmadoPor)
+                  .WithMany(p => p.PreCheckinsConfirmadosPor)
+                  .HasForeignKey(e => e.ConfirmadoPorPessoaId)
+                  .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.CanceladoPor)
+                  .WithMany(p => p.PreCheckinsCanceladosPor)
+                  .HasForeignKey(e => e.CanceladoPorPessoaId)
+                  .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(e => new { e.TenantId, e.QrToken }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.CodigoCurto }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.CriancaPessoaId, e.EventoOcorrenciaId, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.ResponsavelPessoaId, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.ExpiraEm, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.CheckinId });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<KidsConteudoAula>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.Titulo).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Tema).HasMaxLength(200);
+            entity.Property(e => e.Versiculo).HasMaxLength(300);
+            entity.Property(e => e.Resumo).IsRequired().HasMaxLength(4000);
+            entity.Property(e => e.AtividadeEmCasa).HasMaxLength(2000);
+            entity.Property(e => e.ObservacaoResponsavel).HasMaxLength(1000);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.DataReferencia).IsRequired();
+            entity.Property(e => e.SalaId).HasMaxLength(50);
+            entity.Property(e => e.TurmaId).HasMaxLength(50);
+            entity.Property(e => e.CriadoEm).IsRequired();
+
+            entity.HasOne(e => e.EventoOcorrencia)
+                  .WithMany()
+                  .HasForeignKey(e => e.EventoOcorrenciaId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.PublicadoPor)
+                  .WithMany(p => p.ConteudosAulaPublicados)
+                  .HasForeignKey(e => e.PublicadoPorPessoaId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => new { e.TenantId, e.Status, e.DataReferencia });
+            entity.HasIndex(e => new { e.TenantId, e.SalaId, e.Status, e.DataReferencia });
+            entity.HasIndex(e => new { e.TenantId, e.TurmaId, e.Status, e.DataReferencia });
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<KidsConteudoAulaAnexo>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.ConteudoAulaId).IsRequired();
+            entity.Property(e => e.Tipo).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.NomeExibicao).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Url).HasMaxLength(1000);
+            entity.Property(e => e.StoragePath).HasMaxLength(500);
+            entity.Property(e => e.MimeType).HasMaxLength(120);
+            entity.Property(e => e.CriadoEm).IsRequired();
+
+            entity.HasOne(e => e.ConteudoAula)
+                  .WithMany(c => c.Anexos)
+                  .HasForeignKey(e => e.ConteudoAulaId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.TenantId, e.ConteudoAulaId, e.Ordem });
+            entity.HasIndex(e => new { e.TenantId, e.Tipo });
 
             entity.HasOne(e => e.Tenant)
                   .WithMany()

@@ -130,4 +130,42 @@ public class EventoOcorrenciaServiceTests
         total.Should().BeGreaterThan(0);
         _repositoryMock.Verify(r => r.CreateAsync(It.IsAny<EventoOcorrencia>()), Times.AtLeastOnce);
     }
+
+    [Fact]
+    public async Task GerarPorRecorrenciaAsync_MonthlyUsesSameWeekdayOrdinalFromVigencia()
+    {
+        var evento = new Evento { Id = 1, Titulo = "Ceia do Senhor" };
+        var recorrencia = new EventoRecorrencia
+        {
+            Id = 3,
+            EventoId = 1,
+            DiaSemana = DayOfWeek.Sunday,
+            HoraInicio = new TimeSpan(19, 30, 0),
+            Periodicidade = PeriodicidadeRecorrencia.Mensal,
+            DataInicioVigencia = new DateTime(2026, 5, 10),
+            Ativo = true
+        };
+        var criadas = new List<EventoOcorrencia>();
+
+        _eventoRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(evento);
+        _repositoryMock.Setup(r => r.GetRecorrenciasAtivasByEventoAsync(1))
+            .ReturnsAsync(new List<EventoRecorrencia> { recorrencia });
+        _repositoryMock.Setup(r => r.ExistsOcorrenciaNoHorarioAsync(1, It.IsAny<DateTime>()))
+            .ReturnsAsync(false);
+        _repositoryMock.Setup(r => r.CreateAsync(It.IsAny<EventoOcorrencia>()))
+            .ReturnsAsync((EventoOcorrencia ocorrencia) =>
+            {
+                criadas.Add(ocorrencia);
+                return ocorrencia;
+            });
+
+        var total = await _service.GerarPorRecorrenciaAsync(1, new DateTime(2026, 6, 1), new DateTime(2026, 7, 31));
+
+        total.Should().Be(2);
+        criadas.Select(o => o.DataHoraInicio).Should().BeEquivalentTo(new[]
+        {
+            new DateTime(2026, 6, 14, 19, 30, 0),
+            new DateTime(2026, 7, 12, 19, 30, 0)
+        }, options => options.WithStrictOrdering());
+    }
 }

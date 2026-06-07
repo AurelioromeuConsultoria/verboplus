@@ -513,4 +513,100 @@ public class EscalaServiceTests
             lista.First().PessoaId == 101 &&
             lista.First().Titulo == "Lembrete: escala em 24 horas"), It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task GetPlanejamentoMensalAsync_OrdenaVoluntariosPorNomeMesmoComTotaisDiferentes()
+    {
+        var equipe = new Equipe { Id = 3, Nome = "Hospitalidade" };
+        var cargo = new Cargo { Id = 7, Nome = "Membro" };
+        var ocorrencia1 = new EventoOcorrencia
+        {
+            Id = 501,
+            EventoId = 11,
+            Evento = new Evento { Id = 11, Titulo = "Culto" },
+            DataHoraInicio = new DateTime(2026, 6, 7, 19, 30, 0)
+        };
+        var ocorrencia2 = new EventoOcorrencia
+        {
+            Id = 502,
+            EventoId = 11,
+            Evento = new Evento { Id = 11, Titulo = "Culto" },
+            DataHoraInicio = new DateTime(2026, 6, 14, 19, 30, 0)
+        };
+        var ana = new Voluntario
+        {
+            Id = 10,
+            PessoaId = 100,
+            Pessoa = new Pessoa { Id = 100, Nome = "Ana Souza" },
+            EquipeId = 3,
+            Equipe = equipe,
+            CargoId = 7,
+            Cargo = cargo
+        };
+        var bruno = new Voluntario
+        {
+            Id = 11,
+            PessoaId = 101,
+            Pessoa = new Pessoa { Id = 101, Nome = "Bruno Lima" },
+            EquipeId = 3,
+            Equipe = equipe,
+            CargoId = 7,
+            Cargo = cargo
+        };
+        var itens = new List<EscalaItem>
+        {
+            new()
+            {
+                Id = 1,
+                EscalaId = 20,
+                EquipeId = 3,
+                Equipe = equipe,
+                CargoId = 7,
+                Cargo = cargo,
+                Voluntario = bruno,
+                Escala = new Escala { Id = 20, EventoOcorrenciaId = 501, EventoOcorrencia = ocorrencia1 }
+            },
+            new()
+            {
+                Id = 2,
+                EscalaId = 21,
+                EquipeId = 3,
+                Equipe = equipe,
+                CargoId = 7,
+                Cargo = cargo,
+                Voluntario = bruno,
+                Escala = new Escala { Id = 21, EventoOcorrenciaId = 502, EventoOcorrencia = ocorrencia2 }
+            },
+            new()
+            {
+                Id = 3,
+                EscalaId = 20,
+                EquipeId = 3,
+                Equipe = equipe,
+                CargoId = 7,
+                Cargo = cargo,
+                Voluntario = ana,
+                Escala = new Escala { Id = 20, EventoOcorrenciaId = 501, EventoOcorrencia = ocorrencia1 }
+            }
+        };
+
+        _eventoOcorrenciaRepositoryMock.Setup(r => r.GetByPeriodoAsync(
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                null))
+            .ReturnsAsync(new List<EventoOcorrencia> { ocorrencia1, ocorrencia2 });
+        _escalaRepositoryMock.Setup(r => r.GetItensComOcorrenciaNoPeriodoAsync(
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                null,
+                null))
+            .ReturnsAsync(itens);
+        _voluntarioRepositoryMock.Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<Voluntario> { bruno, ana });
+
+        var result = await _service.GetPlanejamentoMensalAsync(1, true, 2026, 6);
+
+        result.Voluntarios.Select(v => v.Nome).Should().Equal("Ana Souza", "Bruno Lima");
+        result.Voluntarios.Select(v => v.TotalEscalas).Should().Equal(1, 2);
+    }
 }

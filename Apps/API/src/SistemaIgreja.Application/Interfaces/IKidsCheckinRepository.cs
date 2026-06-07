@@ -17,3 +17,18 @@ public interface IKidsCheckinRepository
     Task<KidsCheckin> UpdateAsync(KidsCheckin checkin);
     Task UpdateWithoutSaveAsync(KidsCheckin checkin);
 }
+
+public interface IKidsPreCheckinRepository
+{
+    Task<KidsPreCheckin?> GetByIdAsync(int id);
+    Task<KidsPreCheckin?> GetByQrTokenAsync(string qrToken);
+    Task<KidsPreCheckin?> GetByCodigoCurtoAsync(string codigoCurto);
+    Task<KidsPreCheckin?> GetAtivoPorCriancaESessaoAsync(int criancaPessoaId, int? eventoOcorrenciaId);
+    Task<IEnumerable<KidsPreCheckin>> GetByResponsavelIdAsync(int responsavelPessoaId, string? status = null, bool somenteAtivos = false);
+    Task<IEnumerable<KidsPreCheckin>> GetPendentesAsync(int? eventoOcorrenciaId = null, string? salaId = null, string? turmaId = null);
+    Task<IEnumerable<KidsPreCheckin>> GetExpiradosPendentesAsync(DateTime referenciaUtc);
+    Task<KidsPreCheckin> CreateAsync(KidsPreCheckin preCheckin);
+    Task<KidsPreCheckin> CreateWithoutSaveAsync(KidsPreCheckin preCheckin);
+    Task<KidsPreCheckin> UpdateAsync(KidsPreCheckin preCheckin);
+    Task UpdateWithoutSaveAsync(KidsPreCheckin preCheckin);
+}
