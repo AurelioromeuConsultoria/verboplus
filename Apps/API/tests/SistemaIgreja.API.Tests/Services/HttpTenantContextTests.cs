@@ -46,6 +46,27 @@ public class HttpTenantContextTests
         sut.TenantSlug.Should().Be("campus-sul");
     }
 
+    // E3 — caso negativo crítico: sem a claim IsPlatformAdmin, os headers X-Tenant-* não podem
+    // sobrescrever o tenant resolvido pelas claims (impede que um usuário comum acesse outro tenant).
+    [Fact]
+    public void NonPlatformAdmin_CannotOverrideTenantViaHeader()
+    {
+        var httpContext = BuildHttpContext(
+            [
+                new Claim("TenantId", "8"),
+                new Claim("TenantSlug", "campus-oeste")
+            ]);
+        httpContext.Request.Headers["X-Tenant-Id"] = "21";
+        httpContext.Request.Headers["X-Tenant-Slug"] = "campus-sul";
+
+        var sut = new HttpTenantContext(
+            new HttpContextAccessor { HttpContext = httpContext },
+            new TenantScopeOverride());
+
+        sut.TenantId.Should().Be(8, "o header X-Tenant-Id deve ser ignorado para quem não é platform admin");
+        sut.TenantSlug.Should().Be("campus-oeste");
+    }
+
     [Fact]
     public void ScopeOverride_HasHighestPriority()
     {

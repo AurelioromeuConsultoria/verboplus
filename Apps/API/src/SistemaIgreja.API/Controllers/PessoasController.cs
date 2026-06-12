@@ -18,13 +18,15 @@ public class PessoasController : ControllerBase
     private readonly ICurrentUserContext _currentUser;
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly ILogger<PessoasController> _logger;
+    private readonly IDadosPessoaisService? _dadosPessoais;
 
-    public PessoasController(IPessoaService service, ICurrentUserContext currentUser, IUsuarioRepository usuarioRepository, ILogger<PessoasController> logger)
+    public PessoasController(IPessoaService service, ICurrentUserContext currentUser, IUsuarioRepository usuarioRepository, ILogger<PessoasController> logger, IDadosPessoaisService? dadosPessoais = null)
     {
         _service = service;
         _currentUser = currentUser;
         _usuarioRepository = usuarioRepository;
         _logger = logger;
+        _dadosPessoais = dadosPessoais;
     }
 
     /// <summary>
@@ -73,6 +75,40 @@ public class PessoasController : ControllerBase
             return NotFound();
 
         return Ok(pessoa);
+    }
+
+    /// <summary>
+    /// Exporta os dados pessoais do titular (LGPD, Art. 18 — acesso e portabilidade).
+    /// </summary>
+    [HttpGet("{id}/dados-pessoais")]
+    public async Task<ActionResult<DadosPessoaisExportDto>> ExportarDadosPessoais(int id)
+    {
+        if (_dadosPessoais == null)
+            return StatusCode(501, new { message = "Serviço de dados pessoais não disponível." });
+
+        var dados = await _dadosPessoais.ExportarAsync(id);
+        if (dados == null)
+            return NotFound();
+
+        return Ok(dados);
+    }
+
+    /// <summary>
+    /// Anonimiza os dados do titular (LGPD — direito ao esquecimento), preservando
+    /// vínculos e agregados (financeiro/presença) e revogando consentimentos ativos.
+    /// </summary>
+    [HttpPost("{id}/anonimizar")]
+    public async Task<ActionResult<AnonimizacaoResultadoDto>> Anonimizar(int id)
+    {
+        if (_dadosPessoais == null)
+            return StatusCode(501, new { message = "Serviço de dados pessoais não disponível." });
+
+        var resultado = await _dadosPessoais.AnonimizarAsync(id);
+        if (resultado == null)
+            return NotFound();
+
+        _logger.LogInformation("Pessoa {PessoaId} anonimizada (LGPD) pelo usuário {UserId}", id, _currentUser.UserId);
+        return Ok(resultado);
     }
 
     [HttpGet("me")]

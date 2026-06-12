@@ -132,6 +132,12 @@ public class ProvisionTenantDto
     public string? AdminWhatsApp { get; set; }
     public string AdminEmailLogin { get; set; } = string.Empty;
     public string AdminSenha { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Quando false (signup self-service), tenant e usuário admin nascem inativos até a
+    /// verificação de e-mail. Default true (provisionamento por platform admin).
+    /// </summary>
+    public bool AtivarImediatamente { get; set; } = true;
 }
 
 public class ProvisionTenantResultDto

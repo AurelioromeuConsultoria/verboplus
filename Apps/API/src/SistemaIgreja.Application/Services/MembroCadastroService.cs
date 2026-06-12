@@ -7,7 +7,7 @@ namespace SistemaIgreja.Application.Services;
 
 public interface IMembroCadastroService
 {
-    Task<CadastroMembroResultadoDto> CadastrarAsync(CadastroMembroDto dto);
+    Task<CadastroMembroResultadoDto> CadastrarAsync(CadastroMembroDto dto, string? ipOrigem = null);
 }
 
 public class CadastroMembroResultadoDto
@@ -26,6 +26,7 @@ public class MembroCadastroService : IMembroCadastroService
     private readonly IPessoaPerfilRepository _perfilRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICadastroMembroNotificationService _notificationService;
+    private readonly IConsentimentoRegistroRepository? _consentimentoRepository;
     private readonly ITenantContext _tenantContext;
     private readonly ILogger<MembroCadastroService> _logger;
 
@@ -45,20 +46,25 @@ public class MembroCadastroService : IMembroCadastroService
         IUnitOfWork unitOfWork,
         ICadastroMembroNotificationService notificationService,
         ITenantContext tenantContext,
-        ILogger<MembroCadastroService> logger)
+        ILogger<MembroCadastroService> logger,
+        IConsentimentoRegistroRepository? consentimentoRepository = null)
     {
         _pessoaRepository = pessoaRepository;
         _perfilRepository = perfilRepository;
         _unitOfWork = unitOfWork;
         _notificationService = notificationService;
+        _consentimentoRepository = consentimentoRepository;
         _tenantContext = tenantContext;
         _logger = logger;
     }
 
-    public async Task<CadastroMembroResultadoDto> CadastrarAsync(CadastroMembroDto dto)
+    public async Task<CadastroMembroResultadoDto> CadastrarAsync(CadastroMembroDto dto, string? ipOrigem = null)
     {
         if (string.IsNullOrWhiteSpace(dto.Nome))
             return new CadastroMembroResultadoDto { Sucesso = false, Mensagem = "Nome é obrigatório" };
+
+        if (string.IsNullOrWhiteSpace(dto.AceiteTermosVersao))
+            return new CadastroMembroResultadoDto { Sucesso = false, Mensagem = "É necessário aceitar os Termos de Uso e a Política de Privacidade" };
 
         var whatsAppNormalizado = NormalizarTelefone(dto.WhatsApp);
         if (string.IsNullOrWhiteSpace(whatsAppNormalizado) || whatsAppNormalizado.Length < 10)
@@ -143,6 +149,28 @@ public class MembroCadastroService : IMembroCadastroService
                     DataFim = null
                 };
                 await _perfilRepository.CreateWithoutSaveAsync(novoPerfil);
+            }
+
+            // Trilha de consentimento LGPD: registra o aceite dos Termos e da Política de Privacidade.
+            if (_consentimentoRepository != null && !string.IsNullOrWhiteSpace(dto.AceiteTermosVersao))
+            {
+                var versao = dto.AceiteTermosVersao.Trim();
+                var tenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId;
+
+                foreach (var tipo in new[] { TipoConsentimento.PoliticaPrivacidade, TipoConsentimento.TermosDeUso })
+                {
+                    await _consentimentoRepository.CreateWithoutSaveAsync(new ConsentimentoRegistro
+                    {
+                        TenantId = tenantId,
+                        PessoaId = pessoa.Id,
+                        Tipo = tipo,
+                        VersaoDocumento = versao,
+                        AceitoEm = DateTime.UtcNow,
+                        IpOrigem = ipOrigem,
+                        Origem = "cadastro_publico",
+                        ConcedidoPorPessoaId = pessoa.Id
+                    });
+                }
             }
 
             await _unitOfWork.SaveChangesAsync();

@@ -45,20 +45,31 @@ public class UsuarioRepository : IUsuarioRepository
 
     public async Task<Usuario?> GetByEmailAsync(string email, string? tenantSlug = null)
     {
-        var query = _context.Set<Usuario>()
-            .Include(u => u.Tenant)
-            .Include(u => u.Pessoa)
-            .Include(u => u.PerfilAcesso)
-                .ThenInclude(p => p!.Permissoes)
-            .Where(u => u.EmailLogin.ToLower() == email.ToLower());
-
-        if (!string.IsNullOrWhiteSpace(tenantSlug))
+        // Login self-service é só por e-mail+senha: o e-mail é único globalmente, então a
+        // busca ignora o filtro de tenant para localizar o usuário em qualquer organização.
+        var previous = _context.IgnoreTenantFilters;
+        _context.IgnoreTenantFilters = true;
+        try
         {
-            var normalizedSlug = tenantSlug.Trim().ToLowerInvariant();
-            query = query.Where(u => u.Tenant.Slug.ToLower() == normalizedSlug);
-        }
+            var query = _context.Set<Usuario>()
+                .Include(u => u.Tenant)
+                .Include(u => u.Pessoa)
+                .Include(u => u.PerfilAcesso)
+                    .ThenInclude(p => p!.Permissoes)
+                .Where(u => u.EmailLogin.ToLower() == email.ToLower());
 
-        return await query.FirstOrDefaultAsync();
+            if (!string.IsNullOrWhiteSpace(tenantSlug))
+            {
+                var normalizedSlug = tenantSlug.Trim().ToLowerInvariant();
+                query = query.Where(u => u.Tenant.Slug.ToLower() == normalizedSlug);
+            }
+
+            return await query.FirstOrDefaultAsync();
+        }
+        finally
+        {
+            _context.IgnoreTenantFilters = previous;
+        }
     }
 
     public async Task<Usuario?> GetByPessoaIdAsync(int pessoaId)

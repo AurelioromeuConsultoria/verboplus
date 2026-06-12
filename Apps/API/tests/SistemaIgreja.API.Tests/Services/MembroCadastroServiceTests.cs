@@ -52,7 +52,8 @@ public class MembroCadastroServiceTests
             Nome = "Ana Souza",
             Email = "ana@email.com",
             WhatsApp = "(11) 98888-7777",
-            DataNascimento = nascimento
+            DataNascimento = nascimento,
+            AceiteTermosVersao = "v1"
         };
 
         _pessoaRepositoryMock.Setup(r => r.GetByEmailAsync(dto.Email)).ReturnsAsync((Pessoa?)null);
@@ -110,7 +111,8 @@ public class MembroCadastroServiceTests
             Nome = "Carlos",
             Email = "carlos@email.com",
             WhatsApp = "11977776666",
-            DataNascimento = DateTime.UtcNow.AddYears(-20)
+            DataNascimento = DateTime.UtcNow.AddYears(-20),
+            AceiteTermosVersao = "v1"
         };
 
         _pessoaRepositoryMock.Setup(r => r.GetByEmailAsync(dto.Email)).ReturnsAsync(pessoaExistente);
@@ -138,7 +140,8 @@ public class MembroCadastroServiceTests
             Nome = "Teste",
             Email = "teste@email.com",
             WhatsApp = "11999999999",
-            DataNascimento = DateTime.UtcNow.AddDays(1)
+            DataNascimento = DateTime.UtcNow.AddDays(1),
+            AceiteTermosVersao = "v1"
         });
 
         result.Sucesso.Should().BeFalse();
@@ -153,7 +156,8 @@ public class MembroCadastroServiceTests
             Nome = "Conflito",
             Email = "conflito@email.com",
             WhatsApp = "11911112222",
-            DataNascimento = DateTime.UtcNow.AddYears(-25)
+            DataNascimento = DateTime.UtcNow.AddYears(-25),
+            AceiteTermosVersao = "v1"
         };
 
         _pessoaRepositoryMock.Setup(r => r.GetByEmailAsync(dto.Email)).ReturnsAsync((Pessoa?)null);
@@ -171,5 +175,69 @@ public class MembroCadastroServiceTests
         result.Sucesso.Should().BeTrue();
         result.PessoaId.Should().Be(99);
         result.Mensagem.Should().Be("Cadastro realizado com sucesso!");
+    }
+
+    [Fact]
+    public async Task CadastrarAsync_RegistraConsentimentoLgpd_QuandoAceiteInformado()
+    {
+        var consentimentoRepo = new Mock<IConsentimentoRegistroRepository>();
+        var registros = new List<ConsentimentoRegistro>();
+        consentimentoRepo
+            .Setup(r => r.CreateWithoutSaveAsync(It.IsAny<ConsentimentoRegistro>()))
+            .ReturnsAsync((ConsentimentoRegistro c) => { registros.Add(c); return c; });
+
+        var service = new MembroCadastroService(
+            _pessoaRepositoryMock.Object,
+            _pessoaPerfilRepositoryMock.Object,
+            _unitOfWorkMock.Object,
+            _notificationServiceMock.Object,
+            new DefaultTenantContext(),
+            _loggerMock.Object,
+            consentimentoRepo.Object);
+
+        var dto = new CadastroMembroDto
+        {
+            Nome = "Ana Souza",
+            Email = "ana@email.com",
+            WhatsApp = "11988887777",
+            DataNascimento = DateTime.UtcNow.AddYears(-30),
+            AceiteTermosVersao = "v1"
+        };
+
+        _pessoaRepositoryMock.Setup(r => r.GetByEmailAsync(dto.Email)).ReturnsAsync((Pessoa?)null);
+        _pessoaRepositoryMock
+            .Setup(r => r.CreateWithoutSaveAsync(It.IsAny<Pessoa>()))
+            .ReturnsAsync((Pessoa pessoa) => { pessoa.Id = 42; return pessoa; });
+        _pessoaPerfilRepositoryMock.Setup(r => r.GetPerfilAtivoAsync(42, PerfilPessoa.Membro)).ReturnsAsync((PessoaPerfil?)null);
+
+        var result = await service.CadastrarAsync(dto, "203.0.113.5");
+
+        result.Sucesso.Should().BeTrue();
+        registros.Should().HaveCount(2);
+        registros.Should().Contain(c => c.Tipo == TipoConsentimento.PoliticaPrivacidade);
+        registros.Should().Contain(c => c.Tipo == TipoConsentimento.TermosDeUso);
+        registros.Should().OnlyContain(c =>
+            c.PessoaId == 42 &&
+            c.VersaoDocumento == "v1" &&
+            c.Origem == "cadastro_publico" &&
+            c.IpOrigem == "203.0.113.5");
+    }
+
+    [Fact]
+    public async Task CadastrarAsync_RetornaErro_QuandoSemAceiteDeTermos()
+    {
+        var dto = new CadastroMembroDto
+        {
+            Nome = "Sem Aceite",
+            Email = "semaceite@email.com",
+            WhatsApp = "11988887777",
+            DataNascimento = DateTime.UtcNow.AddYears(-30),
+            AceiteTermosVersao = ""
+        };
+
+        var result = await _service.CadastrarAsync(dto);
+
+        result.Sucesso.Should().BeFalse();
+        result.Mensagem.Should().Contain("aceitar");
     }
 }

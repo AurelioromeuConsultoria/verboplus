@@ -172,7 +172,7 @@ public class TenantManagementService : ITenantManagementService
                 CorPrimaria = NormalizeColor(dto.CorPrimaria),
                 CorSecundaria = NormalizeColor(dto.CorSecundaria),
                 IsRootTenant = false,
-                Ativo = true,
+                Ativo = dto.AtivarImediatamente,
                 DataCriacao = DateTime.UtcNow
             };
 
@@ -233,7 +233,7 @@ public class TenantManagementService : ITenantManagementService
                 SenhaHash = BCrypt.Net.BCrypt.HashPassword(dto.AdminSenha),
                 TipoUsuario = TipoUsuario.Admin,
                 IsPlatformAdmin = false,
-                Ativo = true,
+                Ativo = dto.AtivarImediatamente,
                 PerfilAcessoId = perfilAdmin.Id,
                 DataCriacao = DateTime.Now
             };

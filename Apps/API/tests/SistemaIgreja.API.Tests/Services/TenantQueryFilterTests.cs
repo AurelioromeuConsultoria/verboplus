@@ -105,6 +105,187 @@ public class TenantQueryFilterTests
         visitantes[0].TenantId.Should().Be(2);
     }
 
+    // E1 — Cobertura de isolamento para entidades sensíveis hoje não testadas:
+    // dados de crianças (Kids), doações e contatos/fornecedores.
+    [Fact]
+    public async Task SensitiveEntities_AreIsolatedByTenant()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await using (var seedContext = CreateContext(connection, new FixedTenantContext(Tenant.InitialTenantId)))
+        {
+            await seedContext.Database.EnsureCreatedAsync();
+            seedContext.IgnoreTenantFilters = true;
+
+            seedContext.Tenants.Add(new Tenant
+            {
+                Id = 2,
+                Nome = "Outra Igreja",
+                Slug = "outra-igreja",
+                Ativo = true,
+                DataCriacao = DateTime.UtcNow
+            });
+
+            var crianca1 = NovaPessoa(Tenant.InitialTenantId, "Crianca Tenant 1", TipoPessoa.Crianca);
+            var crianca2 = NovaPessoa(2, "Crianca Tenant 2", TipoPessoa.Crianca);
+            seedContext.Pessoas.AddRange(crianca1, crianca2);
+            await seedContext.SaveChangesAsync();
+
+            seedContext.CriancasDetalhes.AddRange(
+                new CriancaDetalhe
+                {
+                    TenantId = Tenant.InitialTenantId,
+                    PessoaId = crianca1.Id,
+                    Alergias = "Amendoim",
+                    DataCadastro = DateTime.UtcNow
+                },
+                new CriancaDetalhe
+                {
+                    TenantId = 2,
+                    PessoaId = crianca2.Id,
+                    Alergias = "Lactose",
+                    DataCadastro = DateTime.UtcNow
+                });
+
+            seedContext.KidsCheckins.AddRange(
+                new KidsCheckin { TenantId = Tenant.InitialTenantId, CriancaPessoaId = crianca1.Id, CodigoSessao = "S1" },
+                new KidsCheckin { TenantId = 2, CriancaPessoaId = crianca2.Id, CodigoSessao = "S2" });
+
+            seedContext.KidsOcorrencias.AddRange(
+                new KidsOcorrencia
+                {
+                    TenantId = Tenant.InitialTenantId,
+                    CriancaPessoaId = crianca1.Id,
+                    RegistradoPorPessoaId = crianca1.Id,
+                    Tipo = "Saude",
+                    Titulo = "Ocorrencia T1",
+                    Descricao = "Detalhe sensivel T1",
+                    DataCriacao = DateTime.UtcNow
+                },
+                new KidsOcorrencia
+                {
+                    TenantId = 2,
+                    CriancaPessoaId = crianca2.Id,
+                    RegistradoPorPessoaId = crianca2.Id,
+                    Tipo = "Saude",
+                    Titulo = "Ocorrencia T2",
+                    Descricao = "Detalhe sensivel T2",
+                    DataCriacao = DateTime.UtcNow
+                });
+
+            seedContext.DoacoesOnline.AddRange(
+                new DoacaoOnline { TenantId = Tenant.InitialTenantId, NomeDoador = "Doador T1", Valor = 10m },
+                new DoacaoOnline { TenantId = 2, NomeDoador = "Doador T2", Valor = 20m });
+
+            seedContext.Contatos.AddRange(
+                new Contato { TenantId = Tenant.InitialTenantId, Nome = "Contato T1", WhatsApp = "111", Mensagem = "Ola", Membro = false },
+                new Contato { TenantId = 2, Nome = "Contato T2", WhatsApp = "222", Mensagem = "Ola", Membro = false });
+
+            seedContext.Fornecedores.AddRange(
+                new Fornecedor { TenantId = Tenant.InitialTenantId, Nome = "Fornecedor T1" },
+                new Fornecedor { TenantId = 2, Nome = "Fornecedor T2" });
+
+            await seedContext.SaveChangesAsync();
+        }
+
+        await using var tenant2Context = CreateContext(connection, new FixedTenantContext(2));
+
+        // Exatamente 1 registro por conjunto (o do tenant 1 foi filtrado) e todos pertencem ao tenant 2.
+        var criancasDetalhes = await tenant2Context.CriancasDetalhes.ToListAsync();
+        criancasDetalhes.Should().ContainSingle().Which.TenantId.Should().Be(2);
+
+        var checkins = await tenant2Context.KidsCheckins.ToListAsync();
+        checkins.Should().ContainSingle().Which.TenantId.Should().Be(2);
+
+        var ocorrencias = await tenant2Context.KidsOcorrencias.ToListAsync();
+        ocorrencias.Should().ContainSingle().Which.TenantId.Should().Be(2);
+
+        var doacoes = await tenant2Context.DoacoesOnline.ToListAsync();
+        doacoes.Should().ContainSingle().Which.TenantId.Should().Be(2);
+
+        var contatos = await tenant2Context.Contatos.ToListAsync();
+        contatos.Should().ContainSingle().Which.TenantId.Should().Be(2);
+
+        var fornecedores = await tenant2Context.Fornecedores.ToListAsync();
+        fornecedores.Should().ContainSingle().Which.TenantId.Should().Be(2);
+    }
+
+    // E2 — Travessia por FK não vaza entre tenants: um registro de outro tenant que
+    // aponta (via FK) para uma entidade do tenant atual não pode aparecer, nem direto
+    // no DbSet nem por navegação (Include).
+    [Fact]
+    public async Task ForeignKeyNavigation_DoesNotLeakAcrossTenants()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        int criancaId;
+        await using (var seedContext = CreateContext(connection, new FixedTenantContext(Tenant.InitialTenantId)))
+        {
+            await seedContext.Database.EnsureCreatedAsync();
+            seedContext.IgnoreTenantFilters = true;
+
+            seedContext.Tenants.Add(new Tenant
+            {
+                Id = 2,
+                Nome = "Outra Igreja",
+                Slug = "outra-igreja",
+                Ativo = true,
+                DataCriacao = DateTime.UtcNow
+            });
+
+            var crianca = NovaPessoa(2, "Crianca Tenant 2", TipoPessoa.Crianca);
+            seedContext.Pessoas.Add(crianca);
+            await seedContext.SaveChangesAsync();
+            criancaId = crianca.Id;
+
+            // Check-in legítimo do tenant 2.
+            seedContext.KidsCheckins.Add(new KidsCheckin
+            {
+                TenantId = 2,
+                CriancaPessoaId = criancaId,
+                CodigoSessao = "S-T2"
+            });
+
+            // Check-in "malicioso": pertence ao tenant 1, mas a FK aponta para a criança do tenant 2.
+            seedContext.KidsCheckins.Add(new KidsCheckin
+            {
+                TenantId = Tenant.InitialTenantId,
+                CriancaPessoaId = criancaId,
+                CodigoSessao = "S-VAZAMENTO"
+            });
+
+            await seedContext.SaveChangesAsync();
+        }
+
+        await using var tenant2Context = CreateContext(connection, new FixedTenantContext(2));
+
+        // Acesso direto ao DbSet: só o check-in do tenant 2.
+        var checkins = await tenant2Context.KidsCheckins.ToListAsync();
+        checkins.Should().ContainSingle();
+        checkins[0].TenantId.Should().Be(2);
+        checkins[0].CodigoSessao.Should().Be("S-T2");
+
+        // Travessia por navegação: o registro do tenant 1 não aparece, mesmo apontando
+        // para a criança do tenant 2.
+        var criancaCarregada = await tenant2Context.Pessoas
+            .Include(p => p.Checkins)
+            .SingleAsync(p => p.Id == criancaId);
+
+        criancaCarregada.Checkins.Should().ContainSingle();
+        criancaCarregada.Checkins.Single().TenantId.Should().Be(2);
+    }
+
+    private static Pessoa NovaPessoa(int tenantId, string nome, TipoPessoa tipo) => new()
+    {
+        TenantId = tenantId,
+        Nome = nome,
+        TipoPessoa = tipo,
+        Ativo = true,
+        DataCriacao = DateTime.UtcNow
+    };
+
     private static SistemaIgrejaDbContext CreateContext(SqliteConnection connection, ITenantContext tenantContext)
     {
         var options = new DbContextOptionsBuilder<SistemaIgrejaDbContext>()

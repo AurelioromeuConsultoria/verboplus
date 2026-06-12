@@ -64,6 +64,14 @@ public class CreateCriancaRequest
     public string? TurmaId { get; set; }
 
     public List<ResponsavelRequest>? Responsaveis { get; set; }
+
+    /// <summary>
+    /// Versão do termo de consentimento parental concedido por um responsável (ex.: "v1").
+    /// Obrigatório para LGPD (dado sensível de menor): sem consentimento parental não há cadastro.
+    /// </summary>
+    [Required(ErrorMessage = "É necessário o consentimento parental para cadastrar uma criança")]
+    [MaxLength(20)]
+    public string ConsentimentoParentalVersao { get; set; } = string.Empty;
 }
 
 public class ResponsavelRequest

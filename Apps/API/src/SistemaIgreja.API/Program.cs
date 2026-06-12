@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -88,6 +90,12 @@ builder.Services
 // Repositories
 builder.Services.AddScoped<IPessoaRepository, PessoaRepository>();
 builder.Services.AddScoped<IPessoaPerfilRepository, PessoaPerfilRepository>();
+builder.Services.AddScoped<IConsentimentoRegistroRepository, ConsentimentoRegistroRepository>();
+builder.Services.AddScoped<IDadosPessoaisService, DadosPessoaisService>();
+builder.Services.AddScoped<ISolicitacaoTitularService, SolicitacaoTitularService>();
+builder.Services.AddScoped<IBillingService, BillingService>();
+builder.Services.AddScoped<IBillingCycleService, BillingCycleService>();
+builder.Services.AddScoped<ISignupService, SignupService>();
 builder.Services.AddScoped<IVisitanteRepository, VisitanteRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IConfiguracaoMensagemRepository, ConfiguracaoMensagemRepository>();
@@ -182,6 +190,7 @@ builder.Services.AddScoped<ICategoriaDespesaService, CategoriaDespesaService>();
 builder.Services.AddScoped<ICategoriaReceitaService, CategoriaReceitaService>();
 builder.Services.AddScoped<IDoacoesService, DoacoesService>();
 builder.Services.AddHttpClient<IAsaasPaymentService, AsaasPaymentService>();
+builder.Services.AddHttpClient<IAsaasBillingClient, AsaasBillingClient>();
 builder.Services.AddScoped<IContaBancariaService, ContaBancariaService>();
 builder.Services.AddScoped<ICentroCustoService, CentroCustoService>();
 builder.Services.AddScoped<IProjetoService, ProjetoService>();
@@ -240,6 +249,10 @@ builder.Services.Configure<EvolutionApiSettings>(
 
 builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection(EmailSettings.SectionName));
+builder.Services.Configure<BillingSettings>(
+    builder.Configuration.GetSection(BillingSettings.SectionName));
+builder.Services.Configure<AsaasBillingSettings>(
+    builder.Configuration.GetSection(AsaasBillingSettings.SectionName));
 
 builder.Services.Configure<MessageSchedulerSettings>(
     builder.Configuration.GetSection(MessageSchedulerSettings.SectionName));
@@ -270,8 +283,14 @@ if (builder.Configuration.GetValue<bool>("Scheduler:Enabled"))
 // JWT AUTH
 // ==========================
 
-var jwtKey = builder.Configuration["Jwt:Key"]
-             ?? throw new InvalidOperationException("JWT Key não configurada");
+var jwtKey = builder.Configuration["Jwt:Key"];
+// Recusa subir com chave ausente, vazia ou com o placeholder conhecido (segurança).
+const string jwtPlaceholder = "sua-chave-secreta-super-segura-com-pelo-menos-32-caracteres-para-jwt";
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey == jwtPlaceholder)
+{
+    throw new InvalidOperationException(
+        "Jwt:Key não configurada ou usando o valor placeholder. Defina a variável de ambiente Jwt__Key com uma chave forte (ex.: openssl rand -base64 48).");
+}
 
 builder.Services.AddAuthentication(options =>
 {
@@ -294,6 +313,21 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+
+// Rate limiting (anti-abuso) — política por IP para o signup público.
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("signup", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -495,8 +529,10 @@ app.UseStaticFiles(new StaticFileOptions
     }
 });
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<SistemaIgreja.API.Middleware.SubscriptionGatingMiddleware>();
 app.UseMiddleware<SistemaIgreja.API.Permissions.PermissionMiddleware>();
 
 app.MapHealthChecks("/health", new HealthCheckOptions

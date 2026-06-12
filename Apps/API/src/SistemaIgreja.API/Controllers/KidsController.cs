@@ -749,7 +749,8 @@ public class KidsController : ControllerBase
     {
         try
         {
-            var crianca = await _service.CreateCriancaAsync(request);
+            var ipOrigem = HttpContext?.Connection?.RemoteIpAddress?.ToString();
+            var crianca = await _service.CreateCriancaAsync(request, ipOrigem);
             return CreatedAtAction(nameof(GetCriancaById), new { criancaPessoaId = crianca.PessoaId }, crianca);
         }
         catch (UnauthorizedAccessException ex)

@@ -28,7 +28,8 @@ public class MembrosController : ControllerBase
     {
         try
         {
-            var resultado = await _service.CadastrarAsync(dto);
+            var ipOrigem = HttpContext?.Connection?.RemoteIpAddress?.ToString();
+            var resultado = await _service.CadastrarAsync(dto, ipOrigem);
             if (!resultado.Sucesso)
                 return BadRequest(resultado);
 

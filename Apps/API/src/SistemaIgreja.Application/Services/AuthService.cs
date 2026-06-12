@@ -48,6 +48,13 @@ public class AuthService : IAuthService
             throw new UnauthorizedAccessException("Email ou senha inválidos");
         }
 
+        // Tenant inativo = signup self-service ainda não confirmado por e-mail.
+        if (usuario.Tenant is { Ativo: false })
+        {
+            _logger.LogWarning("Login bloqueado: tenant não ativado. UsuarioId={UsuarioId}", usuario.Id);
+            throw new UnauthorizedAccessException("Confirme seu e-mail para ativar o acesso da sua organização.");
+        }
+
         if (!usuario.Ativo)
         {
             _logger.LogWarning("Tentativa de login com usuário inativo. UsuarioId={UsuarioId} Email={EmailLogin}", usuario.Id, usuario.EmailLogin);

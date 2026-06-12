@@ -6,6 +6,7 @@ public static class PermissionResourceMap
     {
         ["/api/dashboard"] = "dashboard",
         ["/api/usuarios"] = "usuarios",
+        ["/api/solicitacoestitular"] = "pessoas",
         ["/api/pessoas"] = "pessoas",
         ["/api/pessoasperfis"] = "perfis",
         ["/api/visitantes"] = "visitantes",

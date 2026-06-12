@@ -22,4 +22,12 @@ public class CadastroMembroDto
 
     [Required(ErrorMessage = "Data de nascimento é obrigatória")]
     public DateTime? DataNascimento { get; set; }
+
+    /// <summary>
+    /// Versão dos Termos de Uso / Política de Privacidade aceitos pelo titular (ex.: "v1").
+    /// Obrigatório para LGPD — sem aceite não há cadastro.
+    /// </summary>
+    [Required(ErrorMessage = "É necessário aceitar os Termos de Uso e a Política de Privacidade")]
+    [MaxLength(20)]
+    public string AceiteTermosVersao { get; set; } = string.Empty;
 }

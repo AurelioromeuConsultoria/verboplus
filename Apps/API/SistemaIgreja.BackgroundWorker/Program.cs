@@ -85,9 +85,20 @@ var host = Host.CreateDefaultBuilder(args)
 
         services.AddHttpClient<IEvolutionApiService, EvolutionApiService>();
 
+        // Billing (ciclo automático: trial→inadimplente→suspensa)
+        services.Configure<EmailSettings>(
+            ctx.Configuration.GetSection(EmailSettings.SectionName));
+        services.Configure<BillingSettings>(
+            ctx.Configuration.GetSection(BillingSettings.SectionName));
+        services.Configure<BillingSchedulerSettings>(
+            ctx.Configuration.GetSection(BillingSchedulerSettings.SectionName));
+        services.AddScoped<IEmailService, SmtpEmailService>();
+        services.AddScoped<IBillingCycleService, BillingCycleService>();
+
         services.AddHostedService<MessageSchedulerService>();
         services.AddHostedService<EscalaSchedulerService>();
         services.AddHostedService<BirthdayCampaignSchedulerService>();
+        services.AddHostedService<BillingSchedulerService>();
     })
     .ConfigureLogging(log => log.AddConsole())
     .Build();

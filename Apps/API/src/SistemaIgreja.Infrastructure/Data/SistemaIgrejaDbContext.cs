@@ -71,6 +71,13 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<CategoriaNoticia> CategoriasNoticias { get; set; }
     public DbSet<Noticia> Noticias { get; set; }
     public DbSet<Contato> Contatos { get; set; }
+    public DbSet<ConsentimentoRegistro> ConsentimentosRegistros { get; set; }
+    public DbSet<SolicitacaoTitular> SolicitacoesTitular { get; set; }
+    public DbSet<Plano> Planos { get; set; }
+    public DbSet<Assinatura> Assinaturas { get; set; }
+    public DbSet<Fatura> Faturas { get; set; }
+    public DbSet<EventoWebhookBilling> EventosWebhookBilling { get; set; }
+    public DbSet<VerificacaoEmail> VerificacoesEmail { get; set; }
     public DbSet<InscricaoEvento> InscricoesEventos { get; set; }
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<NotificacaoUsuario> NotificacoesUsuarios { get; set; }
@@ -1415,6 +1422,152 @@ public class SistemaIgrejaDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        // Configuração da entidade ConsentimentoRegistro (trilha de consentimento LGPD)
+        modelBuilder.Entity<ConsentimentoRegistro>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.Tipo).IsRequired();
+            entity.Property(e => e.VersaoDocumento).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.AceitoEm).IsRequired();
+            entity.Property(e => e.IpOrigem).HasMaxLength(64);
+            entity.Property(e => e.Origem).HasMaxLength(60);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Pessoa)
+                .WithMany()
+                .HasForeignKey(e => e.PessoaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ConcedidoPor)
+                .WithMany()
+                .HasForeignKey(e => e.ConcedidoPorPessoaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => new { e.TenantId, e.PessoaId, e.Tipo });
+        });
+
+        // Configuração da entidade SolicitacaoTitular (requisições de titular - LGPD)
+        modelBuilder.Entity<SolicitacaoTitular>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.Tipo).IsRequired();
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.NomeSolicitante).HasMaxLength(150);
+            entity.Property(e => e.ContatoSolicitante).HasMaxLength(150);
+            entity.Property(e => e.Canal).HasMaxLength(40);
+            entity.Property(e => e.Descricao).HasMaxLength(2000);
+            entity.Property(e => e.ResultadoObservacao).HasMaxLength(2000);
+            entity.Property(e => e.SolicitadoEm).IsRequired();
+            entity.Property(e => e.PrazoLimite).IsRequired();
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Pessoa)
+                .WithMany()
+                .HasForeignKey(e => e.PessoaId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => new { e.TenantId, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.PrazoLimite });
+        });
+
+        // ===== Billing (assinatura da plataforma) =====
+        modelBuilder.Entity<Plano>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(60);
+            entity.Property(e => e.Descricao).HasMaxLength(500);
+            entity.Property(e => e.PrecoMensal).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.PrecoAnual).HasColumnType("decimal(18,2)");
+            entity.HasIndex(e => e.Slug).IsUnique();
+
+            // Seed dos planos da landing VerboPlus. PREÇOS SÃO PLACEHOLDERS — revisar.
+            entity.HasData(
+                new Plano { Id = 1, Nome = "Essencial", Slug = "essencial", Descricao = "Para igrejas começando a se organizar.", PrecoMensal = 49.90m, PrecoAnual = 499.00m, Ativo = true, Ordem = 1, DataCriacao = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new Plano { Id = 2, Nome = "Organização", Slug = "organizacao", Descricao = "Para igrejas em crescimento que precisam de gestão completa.", PrecoMensal = 99.90m, PrecoAnual = 999.00m, Ativo = true, Ordem = 2, DataCriacao = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new Plano { Id = 3, Nome = "Crescimento", Slug = "crescimento", Descricao = "Para igrejas com múltiplos ministérios e alto volume.", PrecoMensal = 199.90m, PrecoAnual = 1999.00m, Ativo = true, Ordem = 3, DataCriacao = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) }
+            );
+        });
+
+        modelBuilder.Entity<Assinatura>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.Ciclo).IsRequired();
+            entity.Property(e => e.Valor).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.GatewayCustomerId).HasMaxLength(120);
+            entity.Property(e => e.GatewaySubscriptionId).HasMaxLength(120);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Plano)
+                .WithMany()
+                .HasForeignKey(e => e.PlanoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => e.TenantId);
+            entity.HasIndex(e => e.GatewaySubscriptionId);
+        });
+
+        modelBuilder.Entity<Fatura>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.Valor).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.GatewayPaymentId).HasMaxLength(120);
+            entity.Property(e => e.LinkPagamento).HasMaxLength(500);
+            entity.Property(e => e.PixCopiaECola).HasMaxLength(2000);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Assinatura)
+                .WithMany()
+                .HasForeignKey(e => e.AssinaturaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => new { e.TenantId, e.Status });
+            entity.HasIndex(e => e.GatewayPaymentId);
+        });
+
+        modelBuilder.Entity<EventoWebhookBilling>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.GatewayEventId).HasMaxLength(120);
+            entity.Property(e => e.Evento).IsRequired().HasMaxLength(80);
+            entity.Property(e => e.GatewayPaymentId).HasMaxLength(120);
+            entity.Property(e => e.GatewaySubscriptionId).HasMaxLength(120);
+            entity.Property(e => e.Observacao).HasMaxLength(500);
+            entity.HasIndex(e => e.GatewayEventId);
+        });
+
+        modelBuilder.Entity<VerificacaoEmail>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.UsuarioId).IsRequired();
+            entity.Property(e => e.Token).IsRequired().HasMaxLength(80);
+            entity.Property(e => e.ExpiraEm).IsRequired();
+            entity.HasIndex(e => e.Token).IsUnique();
+        });
+
         // Configuração da entidade InscricaoEvento
         modelBuilder.Entity<InscricaoEvento>(entity =>
         {
@@ -1467,7 +1620,8 @@ public class SistemaIgrejaDbContext : DbContext
                 .HasForeignKey(u => u.TenantId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasIndex(e => new { e.TenantId, e.EmailLogin }).IsUnique();
+            // E-mail de login é único GLOBALMENTE (login self-service só por e-mail+senha).
+            entity.HasIndex(e => e.EmailLogin).IsUnique();
         });
 
         modelBuilder.Entity<NotificacaoUsuario>(entity =>

@@ -12,7 +12,7 @@ public interface IKidsService
     Task<IEnumerable<MinhaCriancaResumoDto>> GetMinhasCriancasAsync();
     Task<MinhaCriancaDetalheDto?> GetMinhaCriancaByIdAsync(int criancaPessoaId);
     Task<IEnumerable<MeuCheckinResumoDto>> GetMeusCheckinsAsync();
-    Task<CriancaDto> CreateCriancaAsync(CreateCriancaRequest request);
+    Task<CriancaDto> CreateCriancaAsync(CreateCriancaRequest request, string? ipOrigem = null);
     Task<CriancaDto> UpdateCriancaAsync(int criancaPessoaId, UpdateCriancaRequest request);
     Task DeleteCriancaAsync(int criancaPessoaId);
     
@@ -41,6 +41,7 @@ public class KidsService : IKidsService
     private readonly IComunicacaoAutomacaoService _comunicacaoAutomacaoService;
     private readonly ITenantContext _tenantContext;
     private readonly IKidsPushNotificationService? _pushService;
+    private readonly IConsentimentoRegistroRepository? _consentimentoRepository;
     private readonly ILogger<KidsService> _logger;
 
     public KidsService(
@@ -58,7 +59,8 @@ public class KidsService : IKidsService
         IComunicacaoAutomacaoService comunicacaoAutomacaoService,
         ITenantContext tenantContext,
         ILogger<KidsService> logger,
-        IKidsPushNotificationService? pushService = null)
+        IKidsPushNotificationService? pushService = null,
+        IConsentimentoRegistroRepository? consentimentoRepository = null)
     {
         _pessoaRepository = pessoaRepository;
         _criancaDetalheRepository = criancaDetalheRepository;
@@ -74,6 +76,7 @@ public class KidsService : IKidsService
         _comunicacaoAutomacaoService = comunicacaoAutomacaoService;
         _tenantContext = tenantContext;
         _pushService = pushService;
+        _consentimentoRepository = consentimentoRepository;
         _logger = logger;
     }
 
@@ -219,7 +222,7 @@ public class KidsService : IKidsService
         return resultado.OrderByDescending(c => c.CheckinTime).ToList();
     }
 
-    public async Task<CriancaDto> CreateCriancaAsync(CreateCriancaRequest request)
+    public async Task<CriancaDto> CreateCriancaAsync(CreateCriancaRequest request, string? ipOrigem = null)
     {
         await _authorizationService.EnsureLiderAsync();
         await ValidateSalaTurmaAsync(request.SalaId, request.TurmaId);
@@ -276,6 +279,9 @@ public class KidsService : IKidsService
 
                 await _perfilRepository.CreateWithoutSaveAsync(perfil);
 
+                // Responsável que concederá o consentimento parental (primeiro da lista).
+                int? consentidoPorId = null;
+
                 // Processar responsáveis se fornecidos
                 if (request.Responsaveis != null && request.Responsaveis.Any())
                 {
@@ -309,6 +315,8 @@ public class KidsService : IKidsService
                             await _unitOfWork.SaveChangesAsync();
                         }
 
+                        consentidoPorId ??= responsavelPessoa!.Id;
+
                         var responsavelCrianca = new ResponsavelCrianca
                         {
                             TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
@@ -322,6 +330,22 @@ public class KidsService : IKidsService
 
                         await _responsavelRepository.CreateWithoutSaveAsync(responsavelCrianca);
                     }
+                }
+
+                // Trilha de consentimento parental LGPD (dado sensível de menor).
+                if (_consentimentoRepository != null && !string.IsNullOrWhiteSpace(request.ConsentimentoParentalVersao))
+                {
+                    await _consentimentoRepository.CreateWithoutSaveAsync(new ConsentimentoRegistro
+                    {
+                        TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
+                        PessoaId = pessoaCriada.Id,
+                        Tipo = TipoConsentimento.ConsentimentoParental,
+                        VersaoDocumento = request.ConsentimentoParentalVersao.Trim(),
+                        AceitoEm = DateTime.UtcNow,
+                        IpOrigem = ipOrigem,
+                        Origem = "kids_cadastro",
+                        ConcedidoPorPessoaId = consentidoPorId
+                    });
                 }
 
                 await _unitOfWork.SaveChangesAsync();

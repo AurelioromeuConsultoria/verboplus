@@ -323,6 +323,68 @@ public class KidsServiceTests
     }
 
     [Fact]
+    public async Task CreateCriancaAsync_RegistraConsentimentoParental()
+    {
+        var consentimentoRepo = new Mock<IConsentimentoRegistroRepository>();
+        var registros = new List<ConsentimentoRegistro>();
+        consentimentoRepo
+            .Setup(r => r.CreateWithoutSaveAsync(It.IsAny<ConsentimentoRegistro>()))
+            .ReturnsAsync((ConsentimentoRegistro c) => { registros.Add(c); return c; });
+
+        _unitOfWork.Setup(u => u.ExecuteInTransactionAsync(It.IsAny<Func<Task<CriancaDto>>>()))
+            .Returns<Func<Task<CriancaDto>>>(async action => await action());
+
+        _pessoaRepository.Setup(r => r.CreateWithoutSaveAsync(It.IsAny<Pessoa>()))
+            .ReturnsAsync((Pessoa p) => { p.Id = 100; return p; });
+        _pessoaRepository.Setup(r => r.GetByIdAsync(100))
+            .ReturnsAsync(new Pessoa { Id = 100, Nome = "Ana", TipoPessoa = TipoPessoa.Crianca, Ativo = true, DataCriacao = DateTime.UtcNow });
+        _pessoaRepository.Setup(r => r.GetByIdAsync(50))
+            .ReturnsAsync(new Pessoa { Id = 50, Nome = "Mãe", TipoPessoa = TipoPessoa.Adulto, Ativo = true, DataCriacao = DateTime.UtcNow });
+        _responsavelRepository.Setup(r => r.GetByCriancaIdAsync(100))
+            .ReturnsAsync(new List<ResponsavelCrianca>());
+
+        var service = new KidsService(
+            _pessoaRepository.Object,
+            _criancaDetalheRepository.Object,
+            _kidsEstruturaRepository.Object,
+            _responsavelRepository.Object,
+            _checkinRepository.Object,
+            _notificacaoRepository.Object,
+            _perfilRepository.Object,
+            _unitOfWork.Object,
+            _usuarioRepository.Object,
+            _currentUserContext.Object,
+            _authorizationService.Object,
+            _comunicacaoAutomacaoService.Object,
+            new DefaultTenantContext(),
+            _logger.Object,
+            _pushService.Object,
+            consentimentoRepo.Object);
+
+        var request = new CreateCriancaRequest
+        {
+            Nome = "Ana",
+            DataNascimento = new DateTime(2020, 1, 1),
+            ConsentimentoParentalVersao = "v1",
+            Responsaveis = new List<ResponsavelRequest>
+            {
+                new() { ResponsavelPessoaId = 50, PodeRetirar = true, Parentesco = "Mãe" }
+            }
+        };
+
+        await service.CreateCriancaAsync(request, "203.0.113.9");
+
+        registros.Should().ContainSingle();
+        var consentimento = registros.Single();
+        consentimento.Tipo.Should().Be(TipoConsentimento.ConsentimentoParental);
+        consentimento.PessoaId.Should().Be(100);
+        consentimento.ConcedidoPorPessoaId.Should().Be(50);
+        consentimento.VersaoDocumento.Should().Be("v1");
+        consentimento.Origem.Should().Be("kids_cadastro");
+        consentimento.IpOrigem.Should().Be("203.0.113.9");
+    }
+
+    [Fact]
     public async Task CheckoutAsync_DeveBloquear_QuandoResponsavelNaoAutorizado()
     {
         var request = new CheckoutRequest
