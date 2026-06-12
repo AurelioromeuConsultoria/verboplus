@@ -61,6 +61,9 @@ const TURMA_FORM_INICIAL = {
   ativo: true,
 };
 
+// Versão do termo de consentimento parental vigente (LGPD).
+const CONSENTIMENTO_PARENTAL_VERSAO = 'v1';
+
 const CRIANCA_FORM_INICIAL = {
   nome: '',
   dataNascimento: '',
@@ -69,6 +72,7 @@ const CRIANCA_FORM_INICIAL = {
   alergias: '',
   restricoesAlimentares: '',
   observacoes: '',
+  consentimentoParental: false,
 };
 
 const RESPONSAVEL_FORM_INICIAL = {
@@ -715,6 +719,13 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
       return;
     }
 
+    if (!criancaForm.consentimentoParental) {
+      toast.error(t('kids.children.parentalConsentRequired', {
+        defaultValue: 'É necessário confirmar o consentimento parental para cadastrar a criança.',
+      }));
+      return;
+    }
+
     try {
       setCriancaSaving(true);
       await kidsApi.createCrianca({
@@ -725,6 +736,7 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
         alergias: criancaForm.alergias.trim() || null,
         restricoesAlimentares: criancaForm.restricoesAlimentares.trim() || null,
         observacoes: criancaForm.observacoes.trim() || null,
+        consentimentoParentalVersao: CONSENTIMENTO_PARENTAL_VERSAO,
       });
       toast.success(t('kids.children.createSuccess'));
       setCriancaDialogOpen(false);

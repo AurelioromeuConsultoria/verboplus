@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { RequirePermission } from './components/RequirePermission';
 import { Layout } from './components/Layout/Layout';
 import Login from './pages/Login/Login';
+const Signup = lazy(() => import('./pages/Signup/Signup'));
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const VisitantesList = lazy(() => import('./pages/Visitantes/VisitantesList'));
@@ -16,6 +17,9 @@ const PessoaForm = lazy(() => import('./pages/Pessoas/PessoaForm'));
 const PessoaDetails = lazy(() => import('./pages/Pessoas/PessoaDetails'));
 const Aniversariantes = lazy(() => import('./pages/Pessoas/Aniversariantes'));
 const CampanhaAniversario = lazy(() => import('./pages/Pessoas/CampanhaAniversario'));
+const SolicitacoesTitular = lazy(() => import('./pages/Pessoas/SolicitacoesTitular'));
+const MinhaAssinatura = lazy(() => import('./pages/Billing/MinhaAssinatura'));
+const AdminAssinaturas = lazy(() => import('./pages/Billing/AdminAssinaturas'));
 const PerfisList = lazy(() => import('./pages/Perfis/PerfisList'));
 const ConfiguracoesList = lazy(() => import('./pages/ConfiguracoesMensagens/ConfiguracoesList'));
 const ConfiguracaoForm = lazy(() => import('./pages/ConfiguracoesMensagens/ConfiguracaoForm'));
@@ -120,8 +124,9 @@ function App() {
         <Router>
         <Suspense fallback={<div className="p-6 text-muted-foreground">{i18n.t('common.loading')}</div>}>
         <Routes>
-          {/* Rota pública de login */}
+          {/* Rotas públicas */}
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           
           {/* Rotas protegidas */}
           <Route
@@ -149,6 +154,13 @@ function App() {
               <Aniversariantes />
             </RequirePermission>
           } />
+          <Route path="pessoas/solicitacoes-lgpd" element={
+            <RequirePermission resource={RESOURCES.PESSOAS}>
+              <SolicitacoesTitular />
+            </RequirePermission>
+          } />
+          <Route path="billing" element={<MinhaAssinatura />} />
+          <Route path="admin/assinaturas" element={<AdminAssinaturas />} />
           <Route path="pessoas/aniversariantes/campanha" element={
             <RequirePermission resource={RESOURCES.PESSOAS} action={ACTIONS.EDIT}>
               <CampanhaAniversario />

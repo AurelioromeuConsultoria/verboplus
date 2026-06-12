@@ -22,3 +22,5 @@ export * from '../api/financeiro/cadastros';
 export * from '../api/financeiro/lancamentos';
 export * from '../api/financeiro/relatorios';
 export * from '../api/tenants';
+export * from '../api/billing';
+export * from '../api/onboarding';

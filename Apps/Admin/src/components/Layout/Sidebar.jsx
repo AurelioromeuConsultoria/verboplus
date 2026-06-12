@@ -35,6 +35,7 @@ import {
   Package,
   Activity,
   Building2,
+  CreditCard,
   HeartHandshake,
   PanelLeftClose,
   PanelLeftOpen
@@ -57,6 +58,17 @@ const menuItems = [
     titleKey: 'menu.mySchedules',
     href: '/minhas-escalas',
     icon: ClipboardCheck,
+  },
+  {
+    title: 'Assinatura',
+    href: '/billing',
+    icon: CreditCard,
+  },
+  {
+    title: 'Assinaturas (plataforma)',
+    href: '/admin/assinaturas',
+    icon: CreditCard,
+    platformOnly: true,
   },
 ];
 
@@ -81,6 +93,12 @@ const menuGroups = [
         titleKey: 'menu.birthdayCampaign',
         href: '/pessoas/aniversariantes/campanha',
         icon: Gift,
+        permission: RESOURCES.PESSOAS,
+      },
+      {
+        title: 'Solicitações LGPD',
+        href: '/pessoas/solicitacoes-lgpd',
+        icon: Shield,
         permission: RESOURCES.PESSOAS,
       },
       {

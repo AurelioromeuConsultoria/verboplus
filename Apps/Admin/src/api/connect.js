@@ -14,6 +14,19 @@ export const pessoasApi = {
   create: (data) => api.post('/pessoas', data),
   update: (id, data) => api.put(`/pessoas/${id}`, data),
   delete: (id) => api.delete(`/pessoas/${id}`),
+  // LGPD — direitos do titular
+  exportarDados: (id) => api.get(`/pessoas/${id}/dados-pessoais`),
+  anonimizar: (id) => api.post(`/pessoas/${id}/anonimizar`),
+};
+
+// LGPD — requisições de titulares (Art. 18)
+export const solicitacoesTitularApi = {
+  listar: (status) => api.get('/solicitacoestitular', { params: status ? { status } : {} }),
+  obter: (id) => api.get(`/solicitacoestitular/${id}`),
+  criar: (data) => api.post('/solicitacoestitular', data),
+  atender: (id) => api.put(`/solicitacoestitular/${id}/atender`),
+  concluir: (id, observacao) => api.put(`/solicitacoestitular/${id}/concluir`, { observacao }),
+  recusar: (id, motivo) => api.put(`/solicitacoestitular/${id}/recusar`, { motivo }),
 };
 
 export const pessoasPerfisApi = {

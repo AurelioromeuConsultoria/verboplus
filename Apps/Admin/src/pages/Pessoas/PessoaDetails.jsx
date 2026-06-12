@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Edit, Phone, Mail, Plus, X, UserPlus, Users, CalendarClock, LogIn } from 'lucide-react';
+import { ArrowLeft, Edit, Phone, Mail, Plus, X, UserPlus, Users, CalendarClock, LogIn, Download, ShieldOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -154,6 +154,52 @@ export default function PessoaDetails() {
     });
   };
 
+  const handleExportarDados = async () => {
+    try {
+      setSaving(true);
+      const response = await pessoasApi.exportarDados(id);
+      const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `dados-pessoais-${id}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast.success(t('people.lgpd.exportSuccess', { defaultValue: 'Dados pessoais exportados com sucesso.' }));
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, t('people.lgpd.exportError', { defaultValue: 'Erro ao exportar os dados.' })));
+      console.error('Erro ao exportar dados pessoais:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAnonimizar = () => {
+    confirmDialog.show({
+      title: t('people.lgpd.anonymizeTitle', { defaultValue: 'Anonimizar dados do titular?' }),
+      description: t('people.lgpd.anonymizeDescription', {
+        defaultValue:
+          'Esta ação remove de forma irreversível os dados pessoais identificáveis (nome, contato, documento e dados de saúde), preservando registros financeiros e de presença de forma anonimizada. Use para atender ao direito ao esquecimento (LGPD).',
+      }),
+      confirmText: t('people.lgpd.anonymizeConfirm', { defaultValue: 'Anonimizar' }),
+      cancelText: t('actions.cancel'),
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await pessoasApi.anonimizar(id);
+          toast.success(t('people.lgpd.anonymizeSuccess', { defaultValue: 'Titular anonimizado com sucesso.' }));
+          await loadData();
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, t('people.lgpd.anonymizeError', { defaultValue: 'Erro ao anonimizar o titular.' })));
+          console.error('Erro ao anonimizar titular:', err);
+          throw err;
+        }
+      },
+    });
+  };
+
   const handleAddVisita = async () => {
     if (!visitaForm.dataVisita || !dados360?.pessoa) {
       toast.error(t('people.details.visitDateRequired'));
@@ -203,6 +249,8 @@ export default function PessoaDetails() {
   const voluntarios = dados360.voluntarios ?? [];
   const usuario = dados360.usuario;
   const canCreateUsuario = can(RESOURCES.USUARIOS, ACTIONS.EDIT);
+  const canExportarDados = can(RESOURCES.PESSOAS, ACTIONS.VIEW);
+  const canAnonimizar = can(RESOURCES.PESSOAS, ACTIONS.DELETE);
 
   return (
     <div className="space-y-6">
@@ -277,6 +325,22 @@ export default function PessoaDetails() {
               {t('actions.edit')}
             </Link>
           </Button>
+          {canExportarDados && (
+            <Button variant="outline" onClick={handleExportarDados} disabled={saving}>
+              <Download className="h-4 w-4 mr-2" />
+              {t('people.lgpd.export', { defaultValue: 'Exportar dados' })}
+            </Button>
+          )}
+          {canAnonimizar && (
+            <Button
+              variant="outline"
+              onClick={handleAnonimizar}
+              className="text-destructive hover:text-destructive"
+            >
+              <ShieldOff className="h-4 w-4 mr-2" />
+              {t('people.lgpd.anonymize', { defaultValue: 'Anonimizar' })}
+            </Button>
+          )}
         </div>
       </div>
 

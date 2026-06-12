@@ -22,6 +22,12 @@ function redirectToLogin() {
   }
 }
 
+function redirectToBilling() {
+  if (window.location.pathname !== '/billing') {
+    window.location.href = '/billing';
+  }
+}
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -114,6 +120,12 @@ api.interceptors.response.use(
         redirectToLogin();
         return Promise.reject(refreshError);
       }
+    }
+
+    // Assinatura suspensa/cancelada — leva o usuário para regularizar.
+    if (error.response?.status === 402) {
+      redirectToBilling();
+      return Promise.reject(error);
     }
 
     return Promise.reject(error);

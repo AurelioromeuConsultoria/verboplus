@@ -100,6 +100,21 @@ export function CriancaDialog({
             <Label htmlFor="criancaObservacoes">{t('kids.common.notes')}</Label>
             <Textarea id="criancaObservacoes" value={form.observacoes} onChange={(e) => onChange('observacoes', e.target.value)} rows={4} maxLength={1000} />
           </div>
+
+          <label htmlFor="criancaConsentimento" className="flex items-start gap-2 text-sm">
+            <input
+              id="criancaConsentimento"
+              type="checkbox"
+              className="mt-1"
+              checked={!!form.consentimentoParental}
+              onChange={(e) => onChange('consentimentoParental', e.target.checked)}
+            />
+            <span>
+              {t('kids.children.parentalConsent', {
+                defaultValue: 'Confirmo que obtive o consentimento parental do responsável para o tratamento dos dados desta criança (LGPD).',
+              })}
+            </span>
+          </label>
         </div>
 
         <DialogFooter>
