@@ -42,8 +42,25 @@ public class AuthService : IAuthService
             ? null
             : dto.TenantSlug.Trim();
         var usuario = await _usuarioRepository.GetByEmailAsync(dto.Email, tenantSlug);
-        if (usuario == null || !BCrypt.Net.BCrypt.Verify(dto.Senha, usuario.SenhaHash))
+
+        // Lockout (anti força-bruta), parametrizável via config "LoginLockout".
+        var lockoutHabilitado = !string.Equals(_configuration["LoginLockout:Habilitado"], "false", StringComparison.OrdinalIgnoreCase);
+        var maxTentativas = int.TryParse(_configuration["LoginLockout:MaxTentativas"], out var mt) ? mt : 5;
+        var bloqueioMinutos = int.TryParse(_configuration["LoginLockout:BloqueioMinutos"], out var bm) ? bm : 15;
+
+        if (lockoutHabilitado && usuario?.BloqueadoAte is { } bloqueadoAte && bloqueadoAte > DateTime.UtcNow)
         {
+            _logger.LogWarning("Login bloqueado por excesso de tentativas. UsuarioId={UsuarioId}", usuario.Id);
+            throw new UnauthorizedAccessException("Conta temporariamente bloqueada por excesso de tentativas. Tente novamente mais tarde.");
+        }
+
+        var senhaValida = usuario != null && BCrypt.Net.BCrypt.Verify(dto.Senha, usuario.SenhaHash);
+        if (!senhaValida)
+        {
+            if (lockoutHabilitado && usuario != null)
+            {
+                await RegistrarFalhaLoginAsync(usuario, maxTentativas, bloqueioMinutos);
+            }
             _logger.LogWarning("Falha de login. Email={Email} TenantSlug={TenantSlug}", dto.Email, tenantSlug);
             throw new UnauthorizedAccessException("Email ou senha inválidos");
         }
@@ -59,6 +76,13 @@ public class AuthService : IAuthService
         {
             _logger.LogWarning("Tentativa de login com usuário inativo. UsuarioId={UsuarioId} Email={EmailLogin}", usuario.Id, usuario.EmailLogin);
             throw new UnauthorizedAccessException("Usuário inativo");
+        }
+
+        // Login bem-sucedido: zera o lockout.
+        if (usuario.TentativasLoginFalhas != 0 || usuario.BloqueadoAte != null)
+        {
+            usuario.TentativasLoginFalhas = 0;
+            usuario.BloqueadoAte = null;
         }
 
         // Atualizar último acesso
@@ -160,6 +184,30 @@ public class AuthService : IAuthService
             usuarioId.ToString(),
             "AlterarSenha",
             new { UsuarioId = usuarioId });
+    }
+
+    private async Task RegistrarFalhaLoginAsync(Usuario usuario, int maxTentativas, int bloqueioMinutos)
+    {
+        var agora = DateTime.UtcNow;
+
+        // Se havia um bloqueio que já expirou, recomeça a contagem do zero.
+        if (usuario.BloqueadoAte is { } ate && ate <= agora)
+        {
+            usuario.TentativasLoginFalhas = 0;
+            usuario.BloqueadoAte = null;
+        }
+
+        usuario.TentativasLoginFalhas++;
+
+        if (usuario.TentativasLoginFalhas >= maxTentativas)
+        {
+            usuario.BloqueadoAte = agora.AddMinutes(bloqueioMinutos);
+            usuario.TentativasLoginFalhas = 0; // o bloqueio passa a governar
+            _logger.LogWarning("Conta bloqueada por {Minutos}min após {Max} tentativas. UsuarioId={UsuarioId}",
+                bloqueioMinutos, maxTentativas, usuario.Id);
+        }
+
+        await _usuarioRepository.UpdateAsync(usuario);
     }
 
     private string GenerateJwtToken(Usuario usuario)

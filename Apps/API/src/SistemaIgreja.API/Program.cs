@@ -22,6 +22,10 @@ using FinanceiroQueryService = SistemaIgreja.Infrastructure.Services.FinanceiroQ
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Observabilidade (Sentry). Lê a seção "Sentry" do config; se o DSN estiver vazio,
+// o SDK fica desligado (no-op). Não envia PII (SendDefaultPii=false).
+builder.WebHost.UseSentry();
+
 // ==========================
 // DATABASE CONFIGURATION
 // ==========================

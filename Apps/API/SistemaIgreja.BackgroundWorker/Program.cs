@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Sentry.Extensions.Logging;
 using SistemaIgreja.Application.Configuration;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Application.Services;
@@ -100,7 +101,19 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddHostedService<BirthdayCampaignSchedulerService>();
         services.AddHostedService<BillingSchedulerService>();
     })
-    .ConfigureLogging(log => log.AddConsole())
+    .ConfigureLogging((ctx, log) =>
+    {
+        log.AddConsole();
+        // Observabilidade: envia erros logados (LogError) dos jobs ao Sentry.
+        // No-op se "Sentry:Dsn" estiver vazio. Não envia PII.
+        log.AddSentry(o =>
+        {
+            o.Dsn = ctx.Configuration["Sentry:Dsn"] ?? string.Empty;
+            o.Environment = ctx.Configuration["Sentry:Environment"] ?? "Production";
+            o.SendDefaultPii = false;
+            o.MinimumEventLevel = LogLevel.Error;
+        });
+    })
     .Build();
 
 await host.RunAsync();

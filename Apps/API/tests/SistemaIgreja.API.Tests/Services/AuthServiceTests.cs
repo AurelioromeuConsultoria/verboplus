@@ -186,6 +186,82 @@ public class AuthServiceTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task LoginAsync_BloqueiaAposMaxTentativas()
+    {
+        var usuario = CriarUsuario();
+        _usuarioRepositoryMock.Setup(r => r.GetByEmailAsync(usuario.EmailLogin)).ReturnsAsync(usuario);
+        _usuarioRepositoryMock.Setup(r => r.UpdateAsync(usuario)).ReturnsAsync(usuario);
+        var service = BuildService(maxTentativas: 3);
+
+        for (var i = 0; i < 3; i++)
+        {
+            await service.Invoking(s => s.LoginAsync(new LoginDto { Email = usuario.EmailLogin, Senha = "errada" }))
+                .Should().ThrowAsync<UnauthorizedAccessException>().WithMessage("Email ou senha inválidos");
+        }
+
+        usuario.BloqueadoAte.Should().NotBeNull();
+
+        // Mesmo com a senha CORRETA, fica bloqueado
+        await service.Invoking(s => s.LoginAsync(new LoginDto { Email = usuario.EmailLogin, Senha = "123456" }))
+            .Should().ThrowAsync<UnauthorizedAccessException>().WithMessage("*bloqueada*");
+    }
+
+    [Fact]
+    public async Task LoginAsync_ResetaContador_AposLoginComSucesso()
+    {
+        var usuario = CriarUsuario();
+        _usuarioRepositoryMock.Setup(r => r.GetByEmailAsync(usuario.EmailLogin)).ReturnsAsync(usuario);
+        _usuarioRepositoryMock.Setup(r => r.UpdateAsync(usuario)).ReturnsAsync(usuario);
+        var service = BuildService(maxTentativas: 5);
+
+        for (var i = 0; i < 2; i++)
+        {
+            await service.Invoking(s => s.LoginAsync(new LoginDto { Email = usuario.EmailLogin, Senha = "errada" }))
+                .Should().ThrowAsync<UnauthorizedAccessException>();
+        }
+        usuario.TentativasLoginFalhas.Should().Be(2);
+
+        await service.LoginAsync(new LoginDto { Email = usuario.EmailLogin, Senha = "123456" });
+
+        usuario.TentativasLoginFalhas.Should().Be(0);
+        usuario.BloqueadoAte.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task LoginAsync_NaoBloqueia_QuandoDesabilitado()
+    {
+        var usuario = CriarUsuario();
+        _usuarioRepositoryMock.Setup(r => r.GetByEmailAsync(usuario.EmailLogin)).ReturnsAsync(usuario);
+        _usuarioRepositoryMock.Setup(r => r.UpdateAsync(usuario)).ReturnsAsync(usuario);
+        var service = BuildService(maxTentativas: 2, habilitado: false);
+
+        for (var i = 0; i < 4; i++)
+        {
+            await service.Invoking(s => s.LoginAsync(new LoginDto { Email = usuario.EmailLogin, Senha = "errada" }))
+                .Should().ThrowAsync<UnauthorizedAccessException>().WithMessage("Email ou senha inválidos");
+        }
+
+        usuario.BloqueadoAte.Should().BeNull();
+    }
+
+    private AuthService BuildService(int maxTentativas, int bloqueioMinutos = 15, bool habilitado = true)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Key"] = "uma-chave-super-segura-com-pelo-menos-32-caracteres",
+                ["Jwt:Issuer"] = "SistemaIgreja.Tests",
+                ["Jwt:Audience"] = "SistemaIgreja.Tests",
+                ["LoginLockout:Habilitado"] = habilitado ? "true" : "false",
+                ["LoginLockout:MaxTentativas"] = maxTentativas.ToString(),
+                ["LoginLockout:BloqueioMinutos"] = bloqueioMinutos.ToString()
+            })
+            .Build();
+
+        return new AuthService(_usuarioRepositoryMock.Object, configuration, _loggerMock.Object, _auditLogServiceMock.Object);
+    }
+
     private static Usuario CriarUsuario(bool ativo = true)
     {
         return new Usuario

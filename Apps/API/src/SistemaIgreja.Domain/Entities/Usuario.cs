@@ -36,5 +36,12 @@ public class Usuario : ITenantEntity
 
     public DateTime DataCriacao { get; set; } = DateTime.Now;
     public DateTime? UltimoAcesso { get; set; }
+
+    /// <summary>Tentativas de login malsucedidas consecutivas (lockout anti força-bruta).</summary>
+    public int TentativasLoginFalhas { get; set; }
+
+    /// <summary>Se preenchido e no futuro, o login está temporariamente bloqueado.</summary>
+    public DateTime? BloqueadoAte { get; set; }
+
     public virtual ICollection<NotificacaoUsuario> Notificacoes { get; set; } = new List<NotificacaoUsuario>();
 }
