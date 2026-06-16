@@ -112,9 +112,10 @@ export function AuthProvider({ children }) {
       return { success: true };
     } catch (error) {
       console.error('Erro no login:', error);
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error ||
-                          error.message ||
+      const data = error.response?.data;
+      const errorMessage = (typeof data === 'string' ? data : null) ||
+                          data?.message ||
+                          data?.error ||
                           'Email ou senha inválidos';
       return {
         success: false,
