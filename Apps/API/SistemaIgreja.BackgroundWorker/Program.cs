@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Sentry.Extensions.Logging;
+using SistemaIgreja.BackgroundWorker;
 using SistemaIgreja.Application.Configuration;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Application.Services;
@@ -12,6 +13,14 @@ using SistemaIgreja.Infrastructure.Repositories;
 using SistemaIgreja.Infrastructure.Services;
 
 var host = Host.CreateDefaultBuilder(args)
+    // Valida o grafo de DI no startup: se um serviço usado por um scheduler não
+    // puder ser construído (registro faltando), o Worker falha imediatamente e
+    // de forma visível (logado no Sentry), em vez de quebrar no meio de um job.
+    .UseDefaultServiceProvider((_, options) =>
+    {
+        options.ValidateOnBuild = true;
+        options.ValidateScopes = true;
+    })
     .ConfigureServices((ctx, services) =>
     {
         // ==========================
@@ -95,6 +104,33 @@ var host = Host.CreateDefaultBuilder(args)
             ctx.Configuration.GetSection(BillingSchedulerSettings.SectionName));
         services.AddScoped<IEmailService, SmtpEmailService>();
         services.AddScoped<IBillingCycleService, BillingCycleService>();
+
+        // ==========================
+        // Grafo do EscalaService (lembretes de escala no EscalaSchedulerService).
+        // O EscalaService depende de auditoria + automação de comunicação, que por
+        // sua vez puxam repositórios/serviços de comunicação. Sem isto, o scheduler
+        // falha ao resolver IEscalaService ("No constructor can be instantiated").
+        // O canal Push é exclusivo da API (Firebase) e não é registrado aqui.
+        // ==========================
+        services.AddScoped<ICurrentUserContext, WorkerCurrentUserContext>();
+        services.AddScoped<IAuditLogService, AuditLogService>();
+
+        services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+        services.AddScoped<IEscalaModeloRepository, EscalaModeloRepository>();
+        services.AddScoped<IIndisponibilidadeVoluntarioRepository, IndisponibilidadeVoluntarioRepository>();
+        services.AddScoped<INotificacaoUsuarioRepository, NotificacaoUsuarioRepository>();
+        services.AddScoped<IComunicacaoCampanhaRepository, ComunicacaoCampanhaRepository>();
+        services.AddScoped<IComunicacaoEntregaRepository, ComunicacaoEntregaRepository>();
+        services.AddScoped<IComunicacaoPreferenciaRepository, ComunicacaoPreferenciaRepository>();
+
+        services.AddScoped<INotificacaoUsuarioService, NotificacaoUsuarioService>();
+        services.AddScoped<IComunicacaoPreferenciaService, ComunicacaoPreferenciaService>();
+        services.AddScoped<IComunicacaoEntregaService, ComunicacaoEntregaService>();
+        services.AddScoped<IComunicacaoProcessamentoService, ComunicacaoProcessamentoService>();
+        services.AddScoped<IComunicacaoAutomacaoService, ComunicacaoAutomacaoService>();
+        services.AddScoped<IComunicacaoCanalProvider, ComunicacaoWhatsAppCanalProvider>();
+        services.AddScoped<IComunicacaoCanalProvider, ComunicacaoEmailCanalProvider>();
+        services.AddScoped<IComunicacaoCanalProvider, ComunicacaoNotificacaoInternaCanalProvider>();
 
         services.AddHostedService<MessageSchedulerService>();
         services.AddHostedService<EscalaSchedulerService>();

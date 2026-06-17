@@ -46,7 +46,7 @@ public class AuthControllerTests
         var result = await _controller.Login(new LoginDto());
 
         result.Result.Should().BeOfType<UnauthorizedObjectResult>()
-            .Which.Value.Should().Be("Email ou senha inválidos");
+            .Which.Value.Should().BeEquivalentTo(new { message = "Email ou senha inválidos" });
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class AuthControllerTests
         var result = await _controller.RefreshToken(new RefreshTokenDto { RefreshToken = "invalido" });
 
         result.Result.Should().BeOfType<UnauthorizedObjectResult>()
-            .Which.Value.Should().Be("Refresh token inválido");
+            .Which.Value.Should().BeEquivalentTo(new { message = "Refresh token inválido" });
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class AuthControllerTests
         var result = await _controller.AlterarSenha(new AlterarSenhaDto());
 
         result.Should().BeOfType<UnauthorizedObjectResult>()
-            .Which.Value.Should().Be("Senha atual incorreta");
+            .Which.Value.Should().BeEquivalentTo(new { message = "Senha atual incorreta" });
     }
 
     private void SetUser(int usuarioId)
