@@ -30,4 +30,11 @@ export default [
       ],
     },
   },
+  {
+    // Globais do Vitest (globals: true) nos arquivos de teste e setup.
+    files: ['**/*.test.{js,jsx}', 'src/test/**/*.{js,jsx}'],
+    languageOptions: {
+      globals: { ...globals.vitest },
+    },
+  },
 ]

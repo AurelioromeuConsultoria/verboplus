@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { signupApi } from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { primeiroErroSenha } from '@/lib/passwordPolicy';
+import { PasswordRequirements } from '@/components/PasswordRequirements';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -45,8 +47,9 @@ export default function Signup() {
       toast.error('Preencha todos os campos obrigatórios.');
       return;
     }
-    if (form.senha.length < 8) {
-      toast.error('A senha deve ter ao menos 8 caracteres.');
+    const erroSenha = primeiroErroSenha(form.senha);
+    if (erroSenha) {
+      toast.error(erroSenha);
       return;
     }
     if (!form.aceiteTermos) {
@@ -123,6 +126,7 @@ export default function Signup() {
             <div className="space-y-1.5">
               <Label htmlFor="senha">Senha * <span className="font-normal text-slate-400">(mín. 8 caracteres)</span></Label>
               <Input id="senha" type="password" value={form.senha} onChange={(e) => set('senha', e.target.value)} autoComplete="new-password" />
+              <PasswordRequirements senha={form.senha} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="plano">Plano</Label>

@@ -51,12 +51,17 @@ steps:
   env:
     PNPM_HOME: $(PNPM_HOME)
 
-# 5) Build do front
+# 5) Testes (falha o build se algum teste quebrar)
+- script: |
+    pnpm run test
+  displayName: 'Testes (Vitest)'
+
+# 6) Build do front
 - script: |
     pnpm run build
   displayName: 'Build do front'
 
-# 6) Deploy para Azure Static Web App
+# 7) Deploy para Azure Static Web App
 - task: AzureStaticWebApp@0
   displayName: 'Deploy para Azure Static Web App'
   inputs:

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { authApi } from '@/lib/api';
+import { primeiroErroSenha } from '@/lib/passwordPolicy';
+import { PasswordRequirements } from '@/components/PasswordRequirements';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -219,8 +221,9 @@ export default function Perfil() {
       return;
     }
 
-    if (senhaData.novaSenha.length < 6) {
-      toast.error(t('profile.minPasswordLength'));
+    const erroSenha = primeiroErroSenha(senhaData.novaSenha);
+    if (erroSenha) {
+      toast.error(erroSenha);
       return;
     }
 
@@ -441,8 +444,9 @@ export default function Perfil() {
                   onChange={(e) => setSenhaData((prev) => ({ ...prev, novaSenha: e.target.value }))}
                   placeholder={t('profile.newPasswordPlaceholder')}
                   required
-                  minLength={6}
+                  minLength={8}
                 />
+                <PasswordRequirements senha={senhaData.novaSenha} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmarSenha">{t('profile.confirmPassword')}</Label>
