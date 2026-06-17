@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Security;
 using SistemaIgreja.Domain.Entities;
 
 namespace SistemaIgreja.Application.Services;
@@ -175,6 +176,8 @@ public class AuthService : IAuthService
             _logger.LogWarning("Falha ao alterar senha por senha atual inválida. UsuarioId={UsuarioId}", usuarioId);
             throw new UnauthorizedAccessException("Senha atual incorreta");
         }
+
+        PasswordPolicy.Validar(dto.NovaSenha);
 
         usuario.SenhaHash = BCrypt.Net.BCrypt.HashPassword(dto.NovaSenha);
         await _usuarioRepository.UpdateAsync(usuario);

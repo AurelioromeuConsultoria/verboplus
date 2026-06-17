@@ -175,15 +175,32 @@ public class AuthServiceTests
         await _service.AlterarSenhaAsync(usuario.Id, new AlterarSenhaDto
         {
             SenhaAtual = "123456",
-            NovaSenha = "nova-senha"
+            NovaSenha = "NovaSenha1"
         });
 
         usuario.SenhaHash.Should().NotBe(senhaAnterior);
-        BCrypt.Net.BCrypt.Verify("nova-senha", usuario.SenhaHash).Should().BeTrue();
+        BCrypt.Net.BCrypt.Verify("NovaSenha1", usuario.SenhaHash).Should().BeTrue();
         _usuarioRepositoryMock.Verify(r => r.UpdateAsync(usuario), Times.Once);
         _auditLogServiceMock.Verify(
             a => a.RecordAsync("Usuario", usuario.Id.ToString(), "AlterarSenha", It.IsAny<object?>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task AlterarSenhaAsync_RejeitaSenhaFraca_AposValidarSenhaAtual()
+    {
+        var usuario = CriarUsuario();
+        _usuarioRepositoryMock.Setup(r => r.GetByIdAsync(usuario.Id))
+            .ReturnsAsync(usuario);
+
+        var act = () => _service.AlterarSenhaAsync(usuario.Id, new AlterarSenhaDto
+        {
+            SenhaAtual = "123456",
+            NovaSenha = "fraca"
+        });
+
+        await act.Should().ThrowAsync<ArgumentException>();
+        _usuarioRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<Usuario>()), Times.Never);
     }
 
     [Fact]

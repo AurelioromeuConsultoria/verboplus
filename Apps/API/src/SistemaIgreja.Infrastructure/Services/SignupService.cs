@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using SistemaIgreja.Application.Configuration;
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Security;
 using SistemaIgreja.Domain.Entities;
 using SistemaIgreja.Infrastructure.Data;
 
@@ -51,6 +52,8 @@ public class SignupService : ISignupService
     public async Task<SignupResultDto> SignupAsync(SignupDto dto)
     {
         var email = dto.Email.Trim().ToLowerInvariant();
+
+        PasswordPolicy.Validar(dto.Senha);
 
         var jaExiste = await _usuarioRepository.GetByEmailAsync(email);
         if (jaExiste != null)

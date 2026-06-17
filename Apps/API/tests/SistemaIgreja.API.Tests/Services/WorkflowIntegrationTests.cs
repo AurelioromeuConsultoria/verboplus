@@ -113,17 +113,17 @@ public class WorkflowIntegrationTests
         await service.AlterarSenhaAsync(usuario.Id, new AlterarSenhaDto
         {
             SenhaAtual = "senha-antiga",
-            NovaSenha = "senha-nova"
+            NovaSenha = "SenhaNova1"
         });
 
         var relido = await new UsuarioRepository(scope.Context, scope.TenantContext).GetByIdAsync(usuario.Id);
         relido.Should().NotBeNull();
-        BCrypt.Net.BCrypt.Verify("senha-nova", relido!.SenhaHash).Should().BeTrue();
+        BCrypt.Net.BCrypt.Verify("SenhaNova1", relido!.SenhaHash).Should().BeTrue();
 
         var login = await service.LoginAsync(new LoginDto
         {
             Email = usuario.EmailLogin,
-            Senha = "senha-nova",
+            Senha = "SenhaNova1",
             TenantSlug = Tenant.InitialTenantSlug
         });
 

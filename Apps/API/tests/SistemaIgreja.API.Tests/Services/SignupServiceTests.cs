@@ -114,7 +114,7 @@ public class SignupServiceTests
         NomeIgreja = "Igreja Nova",
         AdminNome = "Admin Teste",
         Email = email,
-        Senha = "senha12345",
+        Senha = "Senha12345",
         AceiteTermosVersao = "v1"
     };
 

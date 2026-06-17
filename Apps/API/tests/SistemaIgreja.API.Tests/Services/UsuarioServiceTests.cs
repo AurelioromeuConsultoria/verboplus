@@ -34,7 +34,7 @@ public class UsuarioServiceTests
         var act = () => _service.CreateAsync(new CriarUsuarioDto
         {
             EmailLogin = "admin@app.com",
-            Senha = "123456",
+            Senha = "Senha123",
             PerfilAcessoId = 1
         });
 
@@ -81,7 +81,7 @@ public class UsuarioServiceTests
             Nome = "Novo Usuario",
             Email = "novo@app.com",
             EmailLogin = "novo@app.com",
-            Senha = "123456",
+            Senha = "Senha123",
             TipoUsuario = TipoUsuario.Admin,
             PerfilAcessoId = 10
         });
@@ -113,7 +113,7 @@ public class UsuarioServiceTests
         {
             PessoaId = 20,
             EmailLogin = "novo@app.com",
-            Senha = "123456",
+            Senha = "Senha123",
             PerfilAcessoId = 10
         });
 

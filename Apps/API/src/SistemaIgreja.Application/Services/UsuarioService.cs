@@ -1,5 +1,6 @@
 using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
+using SistemaIgreja.Application.Security;
 using SistemaIgreja.Domain.Entities;
 using Microsoft.Extensions.Logging;
 
@@ -117,6 +118,8 @@ public class UsuarioService : IUsuarioService
         var perfilTenantId = perfil.TenantId == 0 ? Tenant.InitialTenantId : perfil.TenantId;
         if (perfilTenantId != targetTenantId)
             throw new ArgumentException("Perfil de acesso não pertence ao tenant informado");
+
+        PasswordPolicy.Validar(dto.Senha);
 
         // Criar usuário
         var entity = new Usuario
