@@ -277,6 +277,50 @@ public class TenantQueryFilterTests
         criancaCarregada.Checkins.Single().TenantId.Should().Be(2);
     }
 
+    [Fact]
+    public async Task ComunicacaoEntities_AreFilteredByTenant_AndTenantIdStampedOnInsert()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await using (var seed = CreateContext(connection, new FixedTenantContext(Tenant.InitialTenantId)))
+        {
+            await seed.Database.EnsureCreatedAsync();
+            seed.IgnoreTenantFilters = true;
+            seed.ComunicacaoCampanhas.AddRange(
+                new ComunicacaoCampanha { TenantId = Tenant.InitialTenantId, Nome = "Campanha T1", Objetivo = "x", PublicoAlvo = "membros" },
+                new ComunicacaoCampanha { TenantId = 2, Nome = "Campanha T2", Objetivo = "x", PublicoAlvo = "membros" });
+            seed.ComunicacaoTemplates.AddRange(
+                new ComunicacaoTemplate { TenantId = Tenant.InitialTenantId, Nome = "Tpl T1", Objetivo = "x", Corpo = "oi" },
+                new ComunicacaoTemplate { TenantId = 2, Nome = "Tpl T2", Objetivo = "x", Corpo = "oi" });
+            await seed.SaveChangesAsync();
+        }
+
+        // Leitura como tenant 2: só enxerga os registros do próprio tenant.
+        await using (var t2 = CreateContext(connection, new FixedTenantContext(2)))
+        {
+            (await t2.ComunicacaoCampanhas.ToListAsync()).Should().ContainSingle().Which.Nome.Should().Be("Campanha T2");
+            (await t2.ComunicacaoTemplates.ToListAsync()).Should().ContainSingle().Which.Nome.Should().Be("Tpl T2");
+        }
+
+        // Insert SEM setar TenantId é carimbado com o tenant atual (rede de segurança).
+        int novaId;
+        await using (var t2 = CreateContext(connection, new FixedTenantContext(2)))
+        {
+            var nova = new ComunicacaoCampanha { Nome = "Sem tenant explícito", Objetivo = "x", PublicoAlvo = "membros" };
+            t2.ComunicacaoCampanhas.Add(nova);
+            await t2.SaveChangesAsync();
+            novaId = nova.Id;
+            nova.TenantId.Should().Be(2);
+        }
+
+        // Tenant 1 não enxerga a campanha criada pelo tenant 2.
+        await using (var t1 = CreateContext(connection, new FixedTenantContext(Tenant.InitialTenantId)))
+        {
+            (await t1.ComunicacaoCampanhas.AnyAsync(c => c.Id == novaId)).Should().BeFalse();
+        }
+    }
+
     private static Pessoa NovaPessoa(int tenantId, string nome, TipoPessoa tipo) => new()
     {
         TenantId = tenantId,

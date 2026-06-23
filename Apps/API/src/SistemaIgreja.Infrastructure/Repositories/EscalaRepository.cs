@@ -22,96 +22,48 @@ public class EscalaRepository : IEscalaRepository
     {
     }
 
+    private static IQueryable<Escala> WithFullItensIncludes(IQueryable<Escala> q) =>
+        q.Include(e => e.EventoOcorrencia)
+             .ThenInclude(o => o.Evento)
+         .Include(e => e.Equipe)
+         .Include(e => e.CriadoPorUsuario)
+             .ThenInclude(u => u!.Pessoa)
+         .Include(e => e.Itens)
+             .ThenInclude(i => i.Pessoa)
+         .Include(e => e.Itens)
+             .ThenInclude(i => i.Equipe)
+         .Include(e => e.Itens)
+             .ThenInclude(i => i.Cargo)
+         .Include(e => e.Itens)
+             .ThenInclude(i => i.Voluntario)
+         .Include(e => e.Itens)
+             .ThenInclude(i => i.AprovadoPorUsuario)
+                 .ThenInclude(u => u!.Pessoa)
+         .Include(e => e.Itens)
+             .ThenInclude(i => i.RespondidoPorUsuario)
+                 .ThenInclude(u => u!.Pessoa);
+
     public async Task<Escala?> GetByIdAsync(int id)
     {
-        return await _context.Escalas
-            .Include(e => e.EventoOcorrencia)
-                .ThenInclude(o => o.Evento)
-            .Include(e => e.Equipe)
-            .Include(e => e.CriadoPorUsuario)
-                .ThenInclude(u => u!.Pessoa)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Equipe)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Cargo)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Voluntario)
-                    .ThenInclude(v => v.Pessoa)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.AprovadoPorUsuario)
-                    .ThenInclude(u => u!.Pessoa)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.RespondidoPorUsuario)
-                    .ThenInclude(u => u!.Pessoa)
+        return await WithFullItensIncludes(_context.Escalas)
             .FirstOrDefaultAsync(e => e.Id == id);
     }
 
     public async Task<Escala?> GetByEventoOcorrenciaIdAsync(int eventoOcorrenciaId)
     {
-        return await _context.Escalas
-            .Include(e => e.EventoOcorrencia)
-                .ThenInclude(o => o.Evento)
-            .Include(e => e.Equipe)
-            .Include(e => e.CriadoPorUsuario)
-                .ThenInclude(u => u!.Pessoa)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Equipe)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Cargo)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Voluntario)
-                    .ThenInclude(v => v.Pessoa)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.AprovadoPorUsuario)
-                    .ThenInclude(u => u!.Pessoa)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.RespondidoPorUsuario)
-                    .ThenInclude(u => u!.Pessoa)
+        return await WithFullItensIncludes(_context.Escalas)
             .FirstOrDefaultAsync(e => e.EventoOcorrenciaId == eventoOcorrenciaId);
     }
 
     public async Task<Escala?> GetByEventoOcorrenciaAndEquipeAsync(int eventoOcorrenciaId, int equipeId)
     {
-        return await _context.Escalas
-            .Include(e => e.EventoOcorrencia)
-                .ThenInclude(o => o.Evento)
-            .Include(e => e.Equipe)
-            .Include(e => e.CriadoPorUsuario)
-                .ThenInclude(u => u!.Pessoa)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Equipe)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Cargo)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Voluntario)
-                    .ThenInclude(v => v.Pessoa)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.AprovadoPorUsuario)
-                    .ThenInclude(u => u!.Pessoa)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.RespondidoPorUsuario)
-                    .ThenInclude(u => u!.Pessoa)
+        return await WithFullItensIncludes(_context.Escalas)
             .FirstOrDefaultAsync(e => e.EventoOcorrenciaId == eventoOcorrenciaId && e.EquipeId == equipeId);
     }
 
     public async Task<IEnumerable<Escala>> GetAllByEventoOcorrenciaAsync(int eventoOcorrenciaId)
     {
-        return await _context.Escalas
-            .Include(e => e.EventoOcorrencia)
-                .ThenInclude(o => o.Evento)
-            .Include(e => e.Equipe)
-            .Include(e => e.CriadoPorUsuario)
-                .ThenInclude(u => u!.Pessoa)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Equipe)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Cargo)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Voluntario)
-                    .ThenInclude(v => v.Pessoa)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.RespondidoPorUsuario)
-                    .ThenInclude(u => u!.Pessoa)
+        return await WithFullItensIncludes(_context.Escalas)
             .Where(e => e.EventoOcorrenciaId == eventoOcorrenciaId)
             .OrderBy(e => e.EquipeId)
             .ToListAsync();
@@ -119,26 +71,8 @@ public class EscalaRepository : IEscalaRepository
 
     public async Task<IEnumerable<Escala>> GetByPessoaIdAsync(int pessoaId, bool somenteFuturas = false)
     {
-        var query = _context.Escalas
-            .Include(e => e.EventoOcorrencia)
-                .ThenInclude(o => o.Evento)
-            .Include(e => e.Equipe)
-            .Include(e => e.CriadoPorUsuario)
-                .ThenInclude(u => u!.Pessoa)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Equipe)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Cargo)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.Voluntario)
-                    .ThenInclude(v => v.Pessoa)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.AprovadoPorUsuario)
-                    .ThenInclude(u => u!.Pessoa)
-            .Include(e => e.Itens)
-                .ThenInclude(i => i.RespondidoPorUsuario)
-                    .ThenInclude(u => u!.Pessoa)
-            .Where(e => e.Itens.Any(i => i.Voluntario.PessoaId == pessoaId));
+        var query = WithFullItensIncludes(_context.Escalas)
+            .Where(e => e.Itens.Any(i => i.PessoaId == pessoaId));
 
         if (somenteFuturas)
         {
@@ -184,8 +118,8 @@ public class EscalaRepository : IEscalaRepository
                 .ThenInclude(e => e.Equipe)
             .Include(i => i.Equipe)
             .Include(i => i.Cargo)
+            .Include(i => i.Pessoa)
             .Include(i => i.Voluntario)
-                .ThenInclude(v => v.Pessoa)
             .Include(i => i.AprovadoPorUsuario)
                 .ThenInclude(u => u!.Pessoa)
             .Include(i => i.RespondidoPorUsuario)
@@ -201,8 +135,8 @@ public class EscalaRepository : IEscalaRepository
                     .ThenInclude(o => o.Evento)
             .Include(i => i.Equipe)
             .Include(i => i.Cargo)
+            .Include(i => i.Pessoa)
             .Include(i => i.Voluntario)
-                .ThenInclude(v => v.Pessoa)
             .Where(i =>
                 i.Escala.EventoOcorrencia.DataHoraInicio >= dataInicio &&
                 i.Escala.EventoOcorrencia.DataHoraInicio <= dataFim);
@@ -261,12 +195,12 @@ public class EscalaRepository : IEscalaRepository
         // Conflito: mesma pessoa já escalada em qualquer equipe desta ocorrência
         return await _context.EscalasItens
             .Include(i => i.Equipe)
-            .Include(i => i.Voluntario)
-                .ThenInclude(v => v.Pessoa)
+            .Include(i => i.Pessoa)
             .Where(i =>
                 i.Escala.EventoOcorrenciaId == escala.EventoOcorrenciaId &&
+                i.PessoaId == pessoaId &&
                 (!ignorarEscalaItemId.HasValue || i.Id != ignorarEscalaItemId.Value))
-            .FirstOrDefaultAsync(i => i.Voluntario.PessoaId == pessoaId);
+            .FirstOrDefaultAsync();
     }
 
     public async Task<HashSet<int>> GetPessoaIdsJaEscaladasAsync(int escalaId)
@@ -277,7 +211,7 @@ public class EscalaRepository : IEscalaRepository
         // Pessoas já escaladas em qualquer equipe desta ocorrência
         var pessoaIds = await _context.EscalasItens
             .Where(i => i.Escala.EventoOcorrenciaId == escala.EventoOcorrenciaId)
-            .Select(i => i.Voluntario.PessoaId)
+            .Select(i => i.PessoaId)
             .Distinct()
             .ToListAsync();
 
@@ -289,8 +223,9 @@ public class EscalaRepository : IEscalaRepository
         return await _context.EscalasItens
             .Where(i =>
                 i.EquipeId == equipeId &&
+                i.VoluntarioId != null &&
                 i.Escala.EventoOcorrencia.DataHoraInicio >= dataMinima)
-            .GroupBy(i => i.VoluntarioId)
+            .GroupBy(i => i.VoluntarioId!.Value)
             .Select(g => new { VoluntarioId = g.Key, Quantidade = g.Count() })
             .ToDictionaryAsync(x => x.VoluntarioId, x => x.Quantidade);
     }
@@ -307,9 +242,10 @@ public class EscalaRepository : IEscalaRepository
         return await _context.EscalasItens
             .Where(i =>
                 i.EquipeId == equipeId &&
+                i.VoluntarioId != null &&
                 i.Escala.EventoOcorrencia.DataHoraInicio >= dataInicio &&
                 i.Escala.EventoOcorrencia.DataHoraInicio <= dataFim)
-            .GroupBy(i => i.VoluntarioId)
+            .GroupBy(i => i.VoluntarioId!.Value)
             .Select(g => new { VoluntarioId = g.Key, Quantidade = g.Count() })
             .ToDictionaryAsync(x => x.VoluntarioId, x => x.Quantidade);
     }

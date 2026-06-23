@@ -32,7 +32,7 @@ public class SolicitacaoTrocaEscalaRepositoryTests
         var escala = new Escala { EventoOcorrenciaId = ocorrencia.Id, EquipeId = equipe.Id, Status = StatusEscala.Publicada };
         context.Set<Escala>().Add(escala);
         await context.SaveChangesAsync();
-        var item = new EscalaItem { EscalaId = escala.Id, EquipeId = equipe.Id, CargoId = cargo.Id, VoluntarioId = solicitante.Id, Ordem = 1, Status = StatusEscalaItem.Pendente };
+        var item = new EscalaItem { EscalaId = escala.Id, EquipeId = equipe.Id, CargoId = cargo.Id, PessoaId = solicitante.PessoaId, VoluntarioId = solicitante.Id, Ordem = 1, Status = StatusEscalaItem.Pendente };
         context.Set<EscalaItem>().Add(item);
         await context.SaveChangesAsync();
 
@@ -78,7 +78,7 @@ public class SolicitacaoTrocaEscalaRepositoryTests
         var escala = new Escala { EventoOcorrenciaId = ocorrencia.Id, EquipeId = equipe.Id, Status = StatusEscala.Publicada };
         context.Set<Escala>().Add(escala);
         await context.SaveChangesAsync();
-        var item = new EscalaItem { EscalaId = escala.Id, EquipeId = equipe.Id, CargoId = cargo.Id, VoluntarioId = solicitante.Id, Ordem = 1, Status = StatusEscalaItem.Pendente };
+        var item = new EscalaItem { EscalaId = escala.Id, EquipeId = equipe.Id, CargoId = cargo.Id, PessoaId = solicitante.PessoaId, VoluntarioId = solicitante.Id, Ordem = 1, Status = StatusEscalaItem.Pendente };
         context.Set<EscalaItem>().Add(item);
         await context.SaveChangesAsync();
         var repository = new SolicitacaoTrocaEscalaRepository(context);

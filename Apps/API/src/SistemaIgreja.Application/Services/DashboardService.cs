@@ -7,6 +7,7 @@ namespace SistemaIgreja.Application.Services;
 public interface IDashboardService
 {
     Task<DashboardDto> GetEstatisticasAsync();
+    Task<List<DashboardSeriePontoDto>> GetSerieAsync(int meses = 6);
 }
 
 public class DashboardService : IDashboardService
@@ -62,6 +63,44 @@ public class DashboardService : IDashboardService
             TotalAniversariantesProximos = aniversariantes.Count,
             ProximosAniversariantes = aniversariantes
         };
+    }
+
+    public async Task<List<DashboardSeriePontoDto>> GetSerieAsync(int meses = 6)
+    {
+        if (meses <= 0 || meses > 24) meses = 6;
+
+        var pessoas = await _pessoaRepository.GetAllAsync();
+        var visitantes = await _visitanteRepository.GetAllAsync();
+        var voluntarios = await _voluntarioRepository.GetAllAsync();
+        var eventos = await _eventoRepository.GetAllAsync();
+        var inscricoes = await _inscricaoEventoRepository.GetAllAsync();
+        var enviadas = await _mensagemAgendadaRepository.GetMensagensPorStatusAsync(StatusMensagem.Enviada);
+
+        string[] abrev = { "jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez" };
+        var hoje = DateTime.Today;
+        var primeiroMesAtual = new DateTime(hoje.Year, hoje.Month, 1);
+
+        var pontos = new List<DashboardSeriePontoDto>();
+        for (var i = meses - 1; i >= 0; i--)
+        {
+            var inicioMes = primeiroMesAtual.AddMonths(-i);
+            var inicioProximo = inicioMes.AddMonths(1);
+
+            pontos.Add(new DashboardSeriePontoDto
+            {
+                Mes = $"{abrev[inicioMes.Month - 1]}/{inicioMes.Year % 100:00}",
+                // Cumulativo (total até o fim do mês) — bate com os totais dos cards no último ponto.
+                Pessoas = pessoas.Count(p => p.DataCriacao < inicioProximo),
+                Visitantes = visitantes.Count(v => v.DataCadastro < inicioProximo),
+                Voluntarios = voluntarios.Where(v => v.DataCadastro < inicioProximo).Select(v => v.PessoaId).Distinct().Count(),
+                Eventos = eventos.Count(e => e.DataCriacao < inicioProximo),
+                Inscricoes = inscricoes.Count(x => x.DataInscricao < inicioProximo),
+                // Por mês (atividade do período).
+                MensagensEnviadas = enviadas.Count(m => m.DataEnvio >= inicioMes && m.DataEnvio < inicioProximo)
+            });
+        }
+
+        return pontos;
     }
 
     private static IEnumerable<AniversarianteDto> CalcularAniversariantes(IEnumerable<Pessoa> pessoas, int dias, int limite)

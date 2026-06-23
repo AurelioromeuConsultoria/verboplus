@@ -119,7 +119,7 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
         {
             TenantId = _tenantContext.TenantId ?? Tenant.InitialTenantId,
             EscalaItemId = escalaItemId,
-            VoluntarioSolicitanteId = item.VoluntarioId,
+            VoluntarioSolicitanteId = item.VoluntarioId ?? throw new InvalidOperationException("Este item de escala não possui mais um voluntário vinculado e não pode ser usado para solicitar troca."),
             Motivo = dto.Motivo?.Trim(),
             Status = StatusSolicitacaoTrocaEscala.Pendente,
             DataSolicitacao = DateTime.Now
@@ -176,6 +176,7 @@ public class SolicitacaoTrocaEscalaService : ISolicitacaoTrocaEscalaService
             EscalaId = item.EscalaId,
             EquipeId = item.EquipeId,
             CargoId = item.CargoId,
+            PessoaId = substituto.PessoaId,
             VoluntarioId = substituto.Id,
             Ordem = item.Ordem,
             Status = StatusEscalaItem.Pendente,

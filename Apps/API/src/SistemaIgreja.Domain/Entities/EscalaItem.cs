@@ -21,9 +21,14 @@ public class EscalaItem : ITenantEntity
     public int? CargoId { get; set; }
     public virtual Cargo? Cargo { get; set; }
 
+    // Ancora histórica: mantém quem serviu mesmo após remoção do vínculo de equipe
     [Required]
-    public int VoluntarioId { get; set; }
-    public virtual Voluntario Voluntario { get; set; } = null!;
+    public int PessoaId { get; set; }
+    public virtual Pessoa Pessoa { get; set; } = null!;
+
+    // Nullable: quando o voluntário é removido da equipe, vira null via ON DELETE SET NULL
+    public int? VoluntarioId { get; set; }
+    public virtual Voluntario? Voluntario { get; set; }
 
     [Required]
     public int Ordem { get; set; } = 0;

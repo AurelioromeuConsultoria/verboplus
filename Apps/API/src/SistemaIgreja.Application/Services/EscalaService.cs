@@ -278,6 +278,7 @@ public class EscalaService : IEscalaService
             EscalaId = escalaId,
             EquipeId = escala.EquipeId,
             CargoId = dto.CargoId,
+            PessoaId = voluntario.PessoaId,
             VoluntarioId = dto.VoluntarioId,
             Ordem = proximaOrdem,
             ConflitoAprovado = dto.ForcarConflito,
@@ -321,6 +322,7 @@ public class EscalaService : IEscalaService
 
         item.EquipeId = escala.EquipeId;
         item.CargoId = dto.CargoId;
+        item.PessoaId = voluntario.PessoaId;
         item.VoluntarioId = dto.VoluntarioId;
         item.Ordem = dto.Ordem;
         item.ConflitoAprovado = dto.ForcarConflito;
@@ -482,6 +484,7 @@ public class EscalaService : IEscalaService
                     EscalaId = escala.Id,
                     EquipeId = equipeId,
                     CargoId = vol.CargoId,
+                    PessoaId = vol.PessoaId,
                     VoluntarioId = vol.Id,
                     Ordem = ordemGlobal++,
                     ConflitoAprovado = false,
@@ -630,12 +633,12 @@ public class EscalaService : IEscalaService
         var fimMesAtual = inicioMesAtual.AddMonths(1).AddTicks(-1);
 
         return itens
-            .Where(i => i.Voluntario?.Pessoa != null)
-            .GroupBy(i => i.Voluntario.PessoaId)
+            .Where(i => i.Pessoa != null)
+            .GroupBy(i => i.PessoaId)
             .Select(g => new HistoricoVoluntarioDto
             {
                 PessoaId = g.Key,
-                VoluntarioNome = g.Select(x => x.Voluntario.Pessoa.Nome).FirstOrDefault() ?? string.Empty,
+                VoluntarioNome = g.Select(x => x.Pessoa.Nome).FirstOrDefault() ?? string.Empty,
                 Equipes = g.Select(x => x.Equipe?.Nome ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().OrderBy(x => x).ToList(),
                 TotalEscalas = g.Count(),
                 Confirmados = g.Count(x => x.Status == StatusEscalaItem.Confirmado),
@@ -695,8 +698,8 @@ public class EscalaService : IEscalaService
                 });
 
         var rowsByPessoa = itens
-            .Where(i => i.Voluntario?.Pessoa != null)
-            .GroupBy(i => i.Voluntario.PessoaId)
+            .Where(i => i.Pessoa != null)
+            .GroupBy(i => i.PessoaId)
             .ToDictionary(g => g.Key, g =>
             {
                 pessoasBase.TryGetValue(g.Key, out var pessoaBase);
@@ -711,8 +714,8 @@ public class EscalaService : IEscalaService
                 return new PlanejamentoMensalVoluntarioDto
                 {
                     PessoaId = g.Key,
-                    Nome = pessoaBase?.Nome ?? g.Select(i => i.Voluntario.Pessoa.Nome).FirstOrDefault() ?? string.Empty,
-                    WhatsApp = pessoaBase?.WhatsApp ?? g.Select(i => i.Voluntario.Pessoa.WhatsApp).FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)),
+                    Nome = pessoaBase?.Nome ?? g.Select(i => i.Pessoa.Nome).FirstOrDefault() ?? string.Empty,
+                    WhatsApp = pessoaBase?.WhatsApp ?? g.Select(i => i.Pessoa.WhatsApp).FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)),
                     Equipes = pessoaBase?.Equipes ?? g.Select(i => i.Equipe?.Nome ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().OrderBy(x => x).ToList(),
                     Cargos = pessoaBase?.Cargos ?? g.Select(i => i.Cargo?.Nome ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().OrderBy(x => x).ToList(),
                     TotalEscalas = g.Count(),
@@ -1157,8 +1160,8 @@ public class EscalaService : IEscalaService
             CargoId = i.CargoId,
             CargoNome = i.Cargo?.Nome,
             VoluntarioId = i.VoluntarioId,
-            VoluntarioPessoaId = i.Voluntario?.PessoaId ?? 0,
-            VoluntarioNome = i.Voluntario?.Pessoa?.Nome ?? string.Empty,
+            VoluntarioPessoaId = i.PessoaId,
+            VoluntarioNome = i.Pessoa?.Nome ?? string.Empty,
             Ordem = i.Ordem,
             ConflitoAprovado = i.ConflitoAprovado,
             MotivoExcecao = i.MotivoExcecao,

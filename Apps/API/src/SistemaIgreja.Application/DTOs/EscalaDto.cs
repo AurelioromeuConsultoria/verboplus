@@ -27,7 +27,7 @@ public class EscalaItemDto
     public string EquipeNome { get; set; } = string.Empty;
     public int? CargoId { get; set; }
     public string? CargoNome { get; set; }
-    public int VoluntarioId { get; set; }
+    public int? VoluntarioId { get; set; }
     public int VoluntarioPessoaId { get; set; }
     public string VoluntarioNome { get; set; } = string.Empty;
     public int Ordem { get; set; }

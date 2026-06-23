@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SistemaIgreja.Infrastructure.Data;
@@ -11,9 +12,11 @@ using SistemaIgreja.Infrastructure.Data;
 namespace SistemaIgreja.Infrastructure.Migrations
 {
     [DbContext(typeof(SistemaIgrejaDbContext))]
-    partial class SistemaIgrejaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260618213103_AdicionarTenantIdComunicacaoNotificacoes")]
+    partial class AdicionarTenantIdComunicacaoNotificacoes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1682,9 +1685,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("Ordem")
                         .HasColumnType("integer");
 
-                    b.Property<int>("PessoaId")
-                        .HasColumnType("integer");
-
                     b.Property<int?>("RespondidoPorUsuarioId")
                         .HasColumnType("integer");
 
@@ -1696,7 +1696,7 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int>("TenantId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("VoluntarioId")
+                    b.Property<int>("VoluntarioId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -1709,15 +1709,11 @@ namespace SistemaIgreja.Infrastructure.Migrations
 
                     b.HasIndex("EscalaId");
 
-                    b.HasIndex("PessoaId");
-
                     b.HasIndex("RespondidoPorUsuarioId");
 
                     b.HasIndex("VoluntarioId");
 
                     b.HasIndex("TenantId", "EscalaId", "EquipeId");
-
-                    b.HasIndex("TenantId", "EscalaId", "PessoaId");
 
                     b.HasIndex("TenantId", "EscalaId", "VoluntarioId");
 
@@ -4812,12 +4808,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SistemaIgreja.Domain.Entities.Pessoa", "Pessoa")
-                        .WithMany()
-                        .HasForeignKey("PessoaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("SistemaIgreja.Domain.Entities.Usuario", "RespondidoPorUsuario")
                         .WithMany()
                         .HasForeignKey("RespondidoPorUsuarioId")
@@ -4832,7 +4822,8 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasOne("SistemaIgreja.Domain.Entities.Voluntario", "Voluntario")
                         .WithMany()
                         .HasForeignKey("VoluntarioId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("AprovadoPorUsuario");
 
@@ -4841,8 +4832,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Equipe");
 
                     b.Navigation("Escala");
-
-                    b.Navigation("Pessoa");
 
                     b.Navigation("RespondidoPorUsuario");
 

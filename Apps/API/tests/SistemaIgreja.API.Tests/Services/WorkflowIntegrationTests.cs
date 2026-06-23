@@ -3345,6 +3345,7 @@ public class WorkflowIntegrationTests
                 EscalaId = escala.Id,
                 EquipeId = equipe.Id,
                 CargoId = cargo.Id,
+                PessoaId = voluntario.PessoaId,
                 VoluntarioId = voluntario.Id,
                 Ordem = 1,
                 Status = status,

@@ -563,6 +563,8 @@ public class EscalaServiceTests
                 Equipe = equipe,
                 CargoId = 7,
                 Cargo = cargo,
+                PessoaId = bruno.PessoaId,
+                Pessoa = bruno.Pessoa,
                 Voluntario = bruno,
                 Escala = new Escala { Id = 20, EventoOcorrenciaId = 501, EventoOcorrencia = ocorrencia1 }
             },
@@ -574,6 +576,8 @@ public class EscalaServiceTests
                 Equipe = equipe,
                 CargoId = 7,
                 Cargo = cargo,
+                PessoaId = bruno.PessoaId,
+                Pessoa = bruno.Pessoa,
                 Voluntario = bruno,
                 Escala = new Escala { Id = 21, EventoOcorrenciaId = 502, EventoOcorrencia = ocorrencia2 }
             },
@@ -585,6 +589,8 @@ public class EscalaServiceTests
                 Equipe = equipe,
                 CargoId = 7,
                 Cargo = cargo,
+                PessoaId = ana.PessoaId,
+                Pessoa = ana.Pessoa,
                 Voluntario = ana,
                 Escala = new Escala { Id = 20, EventoOcorrenciaId = 501, EventoOcorrencia = ocorrencia1 }
             }

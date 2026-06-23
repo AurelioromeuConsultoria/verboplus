@@ -23,4 +23,11 @@ public class DashboardController : ControllerBase
         var estatisticas = await _service.GetEstatisticasAsync();
         return Ok(estatisticas);
     }
+
+    [HttpGet("series")]
+    public async Task<ActionResult<List<DashboardSeriePontoDto>>> GetSerie([FromQuery] int meses = 6)
+    {
+        var serie = await _service.GetSerieAsync(meses);
+        return Ok(serie);
+    }
 }

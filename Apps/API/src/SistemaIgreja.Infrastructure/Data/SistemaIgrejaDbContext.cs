@@ -22,6 +22,33 @@ public class SistemaIgrejaDbContext : DbContext
     public int CurrentTenantId => _tenantContext.TenantId ?? Tenant.InitialTenantId;
     public bool IgnoreTenantFilters { get; set; }
 
+    // Carimba TenantId no INSERT de qualquer ITenantEntity que não teve o tenant
+    // setado explicitamente (TenantId == 0). Rede de segurança contra vazamento
+    // entre igrejas — vale para API e Worker (ambos usam este DbContext).
+    private void StampTenantId()
+    {
+        var tenantId = CurrentTenantId;
+        foreach (var entry in ChangeTracker.Entries<ITenantEntity>())
+        {
+            if (entry.State == EntityState.Added && entry.Entity.TenantId == 0)
+            {
+                entry.Entity.TenantId = tenantId;
+            }
+        }
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        StampTenantId();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        StampTenantId();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
     public DbSet<Tenant> Tenants { get; set; }
     public DbSet<TenantDomain> TenantDomains { get; set; }
     public DbSet<Pessoa> Pessoas { get; set; }
@@ -1196,10 +1223,16 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(e => e.CargoId)
                   .OnDelete(DeleteBehavior.SetNull);
 
+            entity.HasOne(e => e.Pessoa)
+                  .WithMany()
+                  .HasForeignKey(e => e.PessoaId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.Property(e => e.VoluntarioId).IsRequired(false);
             entity.HasOne(e => e.Voluntario)
                   .WithMany()
                   .HasForeignKey(e => e.VoluntarioId)
-                  .OnDelete(DeleteBehavior.Restrict);
+                  .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasOne(e => e.AprovadoPorUsuario)
                   .WithMany()
@@ -1211,6 +1244,7 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(e => e.RespondidoPorUsuarioId)
                   .OnDelete(DeleteBehavior.SetNull);
 
+            entity.HasIndex(e => new { e.TenantId, e.EscalaId, e.PessoaId });
             entity.HasIndex(e => new { e.TenantId, e.EscalaId, e.VoluntarioId });
             entity.HasIndex(e => new { e.TenantId, e.EscalaId, e.EquipeId });
 

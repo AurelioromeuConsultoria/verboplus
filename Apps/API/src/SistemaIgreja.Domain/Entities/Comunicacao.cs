@@ -2,9 +2,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class ComunicacaoTemplate
+public class ComunicacaoTemplate : ITenantEntity
 {
     public int Id { get; set; }
+    public int TenantId { get; set; }
 
     [Required]
     [MaxLength(150)]
@@ -38,9 +39,10 @@ public class ComunicacaoTemplate
     public DateTime? DataAtualizacao { get; set; }
 }
 
-public class ComunicacaoCampanha
+public class ComunicacaoCampanha : ITenantEntity
 {
     public int Id { get; set; }
+    public int TenantId { get; set; }
 
     [Required]
     [MaxLength(150)]
@@ -71,9 +73,10 @@ public class ComunicacaoCampanha
     public virtual ICollection<ComunicacaoEntrega> Entregas { get; set; } = new List<ComunicacaoEntrega>();
 }
 
-public class ComunicacaoCampanhaCanal
+public class ComunicacaoCampanhaCanal : ITenantEntity
 {
     public int Id { get; set; }
+    public int TenantId { get; set; }
     public int ComunicacaoCampanhaId { get; set; }
     public virtual ComunicacaoCampanha ComunicacaoCampanha { get; set; } = null!;
 
@@ -83,9 +86,10 @@ public class ComunicacaoCampanhaCanal
     public int Prioridade { get; set; }
 }
 
-public class ComunicacaoEntrega
+public class ComunicacaoEntrega : ITenantEntity
 {
     public int Id { get; set; }
+    public int TenantId { get; set; }
 
     public int? ComunicacaoCampanhaId { get; set; }
     public virtual ComunicacaoCampanha? ComunicacaoCampanha { get; set; }
@@ -132,9 +136,10 @@ public class ComunicacaoEntrega
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 }
 
-public class ComunicacaoAutomacao
+public class ComunicacaoAutomacao : ITenantEntity
 {
     public int Id { get; set; }
+    public int TenantId { get; set; }
 
     [Required]
     [MaxLength(150)]
@@ -155,9 +160,10 @@ public class ComunicacaoAutomacao
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 }
 
-public class ComunicacaoPreferencia
+public class ComunicacaoPreferencia : ITenantEntity
 {
     public int Id { get; set; }
+    public int TenantId { get; set; }
 
     [Required]
     public int PessoaId { get; set; }
@@ -176,9 +182,10 @@ public class ComunicacaoPreferencia
     public DateTime? DataAtualizacao { get; set; }
 }
 
-public class ComunicacaoSegmento
+public class ComunicacaoSegmento : ITenantEntity
 {
     public int Id { get; set; }
+    public int TenantId { get; set; }
 
     [Required]
     [MaxLength(120)]

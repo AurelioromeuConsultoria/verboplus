@@ -2,9 +2,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SistemaIgreja.Domain.Entities;
 
-public class NotificacaoUsuario
+public class NotificacaoUsuario : ITenantEntity
 {
     public int Id { get; set; }
+    public int TenantId { get; set; }
 
     [Required]
     public int UsuarioId { get; set; }

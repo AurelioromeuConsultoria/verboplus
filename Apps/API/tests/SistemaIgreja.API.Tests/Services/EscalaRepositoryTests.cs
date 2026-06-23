@@ -50,7 +50,7 @@ public class EscalaRepositoryTests
 
         var conflito = await repository.GetConflitoPessoaNaEscalaAsync(setup.EscalaAudio.Id, setup.VoluntarioLouvor.Id);
         conflito.Should().NotBeNull();
-        conflito!.Voluntario.PessoaId.Should().Be(setup.PessoaVoluntario.Id);
+        conflito!.PessoaId.Should().Be(setup.PessoaVoluntario.Id);
 
         var pessoaIds = await repository.GetPessoaIdsJaEscaladasAsync(setup.EscalaAudio.Id);
         pessoaIds.Should().Contain(setup.PessoaVoluntario.Id);
@@ -81,6 +81,7 @@ public class EscalaRepositoryTests
             EscalaId = setup.EscalaAudio.Id,
             EquipeId = setup.EquipeAudio.Id,
             CargoId = setup.CargoAudio.Id,
+            PessoaId = setup.PessoaAudio.Id,
             VoluntarioId = setup.VoluntarioAudio.Id,
             Ordem = 2
         });
@@ -193,6 +194,7 @@ public class EscalaRepositoryTests
                 EscalaId = escalaLouvor.Id,
                 EquipeId = equipeLouvor.Id,
                 CargoId = cargoLouvor.Id,
+                PessoaId = pessoaVoluntario.Id,
                 VoluntarioId = voluntarioLouvor.Id,
                 Ordem = 1
             },
@@ -201,6 +203,7 @@ public class EscalaRepositoryTests
                 EscalaId = escalaPassada.Id,
                 EquipeId = equipeLouvor.Id,
                 CargoId = cargoLouvor.Id,
+                PessoaId = pessoaVoluntario.Id,
                 VoluntarioId = voluntarioLouvor.Id,
                 Ordem = 1
             },
@@ -209,6 +212,7 @@ public class EscalaRepositoryTests
                 EscalaId = escalaAudio.Id,
                 EquipeId = equipeAudio.Id,
                 CargoId = cargoAudio.Id,
+                PessoaId = pessoaAudio.Id,
                 VoluntarioId = voluntarioAudio.Id,
                 Ordem = 1
             });
@@ -216,6 +220,7 @@ public class EscalaRepositoryTests
 
         return new EscalaSetup(
             pessoaVoluntario,
+            pessoaAudio,
             equipeLouvor,
             equipeAudio,
             cargoAudio,
@@ -250,6 +255,7 @@ public class EscalaRepositoryTests
 
     private sealed record EscalaSetup(
         Pessoa PessoaVoluntario,
+        Pessoa PessoaAudio,
         Equipe EquipeLouvor,
         Equipe EquipeAudio,
         Cargo CargoAudio,

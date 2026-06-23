@@ -77,8 +77,11 @@ public class EquipeCargoVoluntarioServicesTests
     }
 
     [Fact]
-    public async Task VoluntarioService_Delete_Throws_WhenHasEscalasRelacionadas()
+    public async Task VoluntarioService_Delete_Succeeds_EvenWhenHasEscalasRelacionadas()
     {
+        // EscalaItem.VoluntarioId agora é nullable (ON DELETE SET NULL), então remover
+        // um voluntário da equipe é sempre permitido. O histórico de escalas é preservado
+        // via EscalaItem.PessoaId, que permanece intacto.
         var volRepo = new Mock<IVoluntarioRepository>();
         var eqRepo = new Mock<IEquipeRepository>();
         var cgRepo = new Mock<ICargoRepository>();
@@ -94,14 +97,12 @@ public class EquipeCargoVoluntarioServicesTests
             Equipe = new Equipe { Id = 1, Nome = "Recepcao" },
             Cargo = new Cargo { Id = 2, Nome = "Recepcionista" }
         });
-        volRepo.Setup(r => r.HasEscalasRelacionadasAsync(10)).ReturnsAsync(true);
+        volRepo.Setup(r => r.DeleteAsync(10)).Returns(Task.CompletedTask);
 
         var service = new VoluntarioService(volRepo.Object, eqRepo.Object, cgRepo.Object, pessoaRepo.Object);
 
-        await service.Invoking(s => s.DeleteAsync(10))
-            .Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*já possui escalas vinculadas*");
+        await service.Invoking(s => s.DeleteAsync(10)).Should().NotThrowAsync();
 
-        volRepo.Verify(r => r.DeleteAsync(It.IsAny<int>()), Times.Never);
+        volRepo.Verify(r => r.DeleteAsync(10), Times.Once);
     }
 }
