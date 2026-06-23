@@ -5,7 +5,6 @@ import {
   Users, 
   MessageSquare, 
   Calendar,
-  Church,
   Group,
   Briefcase,
   Handshake,
@@ -640,21 +639,26 @@ export function Sidebar({
     >
       {/* Logo */}
       <div className={cn(
-        'flex h-16 items-center border-b border-sidebar-border',
-        isIconOnly ? 'justify-center px-3' : 'justify-between px-4'
+        'relative flex h-16 items-center justify-center border-b border-sidebar-border px-3'
       )}>
-        <div className={cn('flex items-center min-w-0 space-x-2', isIconOnly && 'hidden')}>
-          <Church className="h-8 w-8 shrink-0 text-sidebar-primary" />
-          <span className="truncate text-lg font-semibold text-sidebar-foreground">
-            {t('app.name')}
-          </span>
+        <div className="flex items-center min-w-0 gap-2">
+          <img
+            src="/verbo-brand/verbo-mark-transparent.png"
+            alt={t('app.name')}
+            className={cn('shrink-0 object-contain', isIconOnly ? 'h-9 w-9' : 'h-10 w-10')}
+          />
+          {!isIconOnly && (
+            <span className="truncate text-xl font-semibold text-sidebar-foreground">
+              {t('app.name')}
+            </span>
+          )}
         </div>
         {showCollapseControl && (
           <Button
             variant="ghost"
             size="sm"
             onClick={toggleSidebar}
-            className="h-8 w-8 p-0 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+            className={cn('h-8 w-8 p-0 text-sidebar-foreground/60 hover:text-sidebar-foreground', !isIconOnly && 'absolute right-2 top-1/2 -translate-y-1/2')}
             title={isCollapsed ? t('layout.expandSidebar') : t('layout.collapseSidebar')}
             aria-label={isCollapsed ? t('layout.expandSidebar') : t('layout.collapseSidebar')}
           >

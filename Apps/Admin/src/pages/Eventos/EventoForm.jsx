@@ -11,6 +11,8 @@ import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { ImageUpload } from '@/components/ImageUpload';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { eventosApi, eventosRecorrenciasApi, normalizeEvento } from '@/lib/api';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -77,6 +79,7 @@ export default function EventoForm() {
   const { id } = useParams();
   const isEditing = Boolean(id);
   const { t } = useTranslation();
+  const confirmDialog = useConfirmDialog();
 
   const [formData, setFormData] = useState({
     titulo: '',
@@ -329,15 +332,24 @@ export default function EventoForm() {
     });
   };
 
-  const deleteRecorrencia = async (recId) => {
-    if (!window.confirm(t('events.form.recurrence.confirmDelete'))) return;
-    try {
-      await eventosRecorrenciasApi.delete(id, recId);
-      toast.success(t('events.form.recurrence.deleted'));
-      await loadRecorrencias();
-    } catch (err) {
-      toast.error(err.response?.data || t('events.form.recurrence.errorDelete'));
-    }
+  const deleteRecorrencia = (recId) => {
+    confirmDialog.show({
+      title: t('events.form.recurrence.confirmDeleteTitle'),
+      description: t('events.form.recurrence.confirmDelete'),
+      confirmText: t('actions.remove'),
+      cancelText: t('actions.cancel'),
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await eventosRecorrenciasApi.delete(id, recId);
+          toast.success(t('events.form.recurrence.deleted'));
+          await loadRecorrencias();
+        } catch (err) {
+          toast.error(err.response?.data || t('events.form.recurrence.errorDelete'));
+          throw err;
+        }
+      },
+    });
   };
 
   // Função para normalizar URL (adiciona https:// se não tiver protocolo, mas preserva URLs relativas)
@@ -730,6 +742,18 @@ export default function EventoForm() {
           </CardContent>
         </Card>
       )}
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={confirmDialog.hide}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

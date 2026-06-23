@@ -143,6 +143,7 @@
   "actions": {
     "save": "Guardar",
     "saving": "Guardando...",
+    "confirm": "Confirmar",
     "cancel": "Cancelar",
     "back": "Volver",
     "edit": "Editar",
@@ -2650,6 +2651,7 @@
       "empty": "Todavía no hay voluntarios vinculados.",
       "linkSuccess": "Voluntario vinculado",
       "linkError": "Error al vincular",
+      "removeTitle": "Eliminar voluntario",
       "removeConfirm": "¿Eliminar este voluntario del equipo?",
       "removeSuccess": "Voluntario eliminado",
       "removeError": "Error al eliminar",
@@ -3066,7 +3068,13 @@
           "declineReason": "Motivo del rechazo de {{name}}:",
           "rejectExchangeReason": "Motivo del rechazo de la solicitud de {{name}}:",
           "attendanceNote": "Observación de presencia para {{name}}:",
-          "absenceNote": "Observación de falta para {{name}}:"
+          "absenceNote": "Observación de falta para {{name}}:",
+          "exceptionReasonTitle": "Agregar con excepción",
+          "declineReasonTitle": "Rechazar voluntario",
+          "rejectExchangeReasonTitle": "Rechazar solicitud de cambio",
+          "attendanceNoteTitle": "Registrar presencia",
+          "absenceNoteTitle": "Registrar falta",
+          "optionalHint": "Opcional"
         },
         "logs": {
           "errorLoadModel": "Error al cargar el modelo de escala:",
@@ -3334,6 +3342,8 @@
       "errorDecline": "Error al rechazar turno",
       "errorSwapRequest": "Error al solicitar cambio",
       "declinePrompt": "Motivo del rechazo para {{team}}:",
+      "declineTitle": "Rechazar escala",
+      "declineOptionalHint": "Opcional",
       "labels": {
         "status": "Estado",
         "declineReason": "Motivo del rechazo",
@@ -3495,6 +3505,7 @@
     "form.recurrence.deleted": "Recurrencia eliminada.",
     "form.recurrence.errorSave": "Error al guardar recurrencia",
     "form.recurrence.errorDelete": "Error al eliminar",
+    "form.recurrence.confirmDeleteTitle": "Eliminar recurrencia",
     "form.recurrence.confirmDelete": "¿Eliminar esta recurrencia?",
     "form.recurrence.noEndTime": "—",
     "form.recurrence.noEndDate": "(sin fin)",
@@ -3546,6 +3557,7 @@
     "occurrencesGenerateCreated": "{{count}} ocurrencia(s) creada(s)",
     "occurrencesGenerateNone": "No se creó ninguna ocurrencia nueva. Verifique si el evento tiene recurrencias configuradas (Editar evento → Recurrencias) y si la vigencia cubre el período elegido.",
     "occurrencesGenerateError": "Error al generar ocurrencias",
+    "occurrencesDeleteTitle": "Eliminar ocurrencia",
     "occurrencesDeleteConfirm": "¿Eliminar esta ocurrencia?",
     "occurrencesDeleteSuccess": "Ocurrencia eliminada.",
     "occurrencesDeleteError": "Error al eliminar ocurrencia",

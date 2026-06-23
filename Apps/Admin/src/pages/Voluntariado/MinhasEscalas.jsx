@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { PromptDialog } from '@/components/ui/prompt-dialog';
+import { usePromptDialog } from '@/hooks/usePromptDialog';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { escalasApi, solicitacoesTrocasEscalasApi } from '@/lib/api';
@@ -66,6 +68,7 @@ export default function MinhasEscalas() {
   const [trocaModalOpen, setTrocaModalOpen] = useState(false);
   const [trocaItem, setTrocaItem] = useState(null);
   const [trocaMotivo, setTrocaMotivo] = useState('');
+  const promptDialog = usePromptDialog();
 
   const load = async (futureOnly = somenteFuturas) => {
     try {
@@ -104,10 +107,14 @@ export default function MinhasEscalas() {
   };
 
   const handleRecusar = async (escalaId, item) => {
-    const motivoRecusa = window.prompt(
-      t('volunteer.mySchedules.declinePrompt', { team: item.equipeNome }),
-      item.motivoRecusa || ''
-    );
+    const motivoRecusa = await promptDialog.prompt({
+      title: t('volunteer.mySchedules.declineTitle'),
+      label: t('volunteer.mySchedules.declinePrompt', { team: item.equipeNome }),
+      description: t('volunteer.mySchedules.declineOptionalHint'),
+      defaultValue: item.motivoRecusa || '',
+      confirmText: t('confirmDialog.confirm'),
+      cancelText: t('actions.cancel'),
+    });
     if (motivoRecusa === null) return;
 
     try {
@@ -301,6 +308,15 @@ export default function MinhasEscalas() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PromptDialog
+        open={promptDialog.open}
+        onOpenChange={promptDialog.onOpenChange}
+        value={promptDialog.value}
+        onValueChange={promptDialog.setValue}
+        onConfirm={promptDialog.handleConfirm}
+        config={promptDialog.config}
+      />
     </div>
   );
 }

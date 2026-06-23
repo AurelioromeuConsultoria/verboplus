@@ -9,6 +9,8 @@ const Toaster = ({
     <Sonner
       theme={theme === "dark" ? "dark" : "light"}
       className="toaster group"
+      duration={8000}
+      closeButton
       style={
         {
           "--normal-bg": "var(--popover)",

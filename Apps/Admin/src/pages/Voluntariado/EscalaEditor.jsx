@@ -9,6 +9,8 @@ import { ErrorPage } from '@/components/ui/error-message';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { PromptDialog } from '@/components/ui/prompt-dialog';
+import { usePromptDialog } from '@/hooks/usePromptDialog';
 import { equipesApi, escalasApi, escalasModelosApi, eventosOcorrenciasApi, solicitacoesTrocasEscalasApi, voluntariosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
@@ -114,6 +116,7 @@ export default function EscalaEditor() {
   const { ocorrenciaId, equipeId } = useParams();
   const { isAdmin } = useAuth();
   const confirmDialog = useConfirmDialog();
+  const promptDialog = usePromptDialog();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -303,7 +306,13 @@ export default function EscalaEditor() {
       let motivoExcecao = null;
 
       if (forcarConflito) {
-        motivoExcecao = window.prompt(t('volunteer.schedules.editor.prompts.exceptionReason', { name: voluntario.nome }), '')?.trim();
+        motivoExcecao = (await promptDialog.prompt({
+          title: t('volunteer.schedules.editor.prompts.exceptionReasonTitle'),
+          label: t('volunteer.schedules.editor.prompts.exceptionReason', { name: voluntario.nome }),
+          confirmText: t('confirmDialog.confirm'),
+          cancelText: t('actions.cancel'),
+          required: true,
+        }))?.trim();
         if (!motivoExcecao) {
           return;
         }
@@ -407,7 +416,14 @@ export default function EscalaEditor() {
   const handleRecusarItem = async (item) => {
     if (!escala) return;
 
-    const motivoRecusa = window.prompt(t('volunteer.schedules.editor.prompts.declineReason', { name: item.voluntarioNome }), item.motivoRecusa || '');
+    const motivoRecusa = await promptDialog.prompt({
+      title: t('volunteer.schedules.editor.prompts.declineReasonTitle'),
+      label: t('volunteer.schedules.editor.prompts.declineReason', { name: item.voluntarioNome }),
+      description: t('volunteer.schedules.editor.prompts.optionalHint'),
+      defaultValue: item.motivoRecusa || '',
+      confirmText: t('confirmDialog.confirm'),
+      cancelText: t('actions.cancel'),
+    });
     if (motivoRecusa === null) return;
 
     try {
@@ -461,9 +477,15 @@ export default function EscalaEditor() {
   };
 
   const handleRejeitarTroca = async (solicitacao) => {
-    const observacaoResposta = window.prompt(t('volunteer.schedules.editor.prompts.rejectExchangeReason', {
-      name: solicitacao.voluntarioSolicitanteNome,
-    }), '');
+    const observacaoResposta = await promptDialog.prompt({
+      title: t('volunteer.schedules.editor.prompts.rejectExchangeReasonTitle'),
+      label: t('volunteer.schedules.editor.prompts.rejectExchangeReason', {
+        name: solicitacao.voluntarioSolicitanteNome,
+      }),
+      description: t('volunteer.schedules.editor.prompts.optionalHint'),
+      confirmText: t('confirmDialog.confirm'),
+      cancelText: t('actions.cancel'),
+    });
     if (observacaoResposta === null) return;
 
     try {
@@ -482,12 +504,18 @@ export default function EscalaEditor() {
   const handleRegistrarPresenca = async (item, compareceu) => {
     if (!escala) return;
 
-    const observacaoOperacional = window.prompt(
-      compareceu
+    const observacaoOperacional = await promptDialog.prompt({
+      title: compareceu
+        ? t('volunteer.schedules.editor.prompts.attendanceNoteTitle')
+        : t('volunteer.schedules.editor.prompts.absenceNoteTitle'),
+      label: compareceu
         ? t('volunteer.schedules.editor.prompts.attendanceNote', { name: item.voluntarioNome })
         : t('volunteer.schedules.editor.prompts.absenceNote', { name: item.voluntarioNome }),
-      item.observacaoOperacional || ''
-    );
+      description: t('volunteer.schedules.editor.prompts.optionalHint'),
+      defaultValue: item.observacaoOperacional || '',
+      confirmText: t('confirmDialog.confirm'),
+      cancelText: t('actions.cancel'),
+    });
 
     if (observacaoOperacional === null) return;
 
@@ -839,6 +867,15 @@ export default function EscalaEditor() {
         cancelText={confirmDialog.config.cancelText}
         variant={confirmDialog.config.variant}
         loading={confirmDialog.loading}
+      />
+
+      <PromptDialog
+        open={promptDialog.open}
+        onOpenChange={promptDialog.onOpenChange}
+        value={promptDialog.value}
+        onValueChange={promptDialog.setValue}
+        onConfirm={promptDialog.handleConfirm}
+        config={promptDialog.config}
       />
     </div>
   );

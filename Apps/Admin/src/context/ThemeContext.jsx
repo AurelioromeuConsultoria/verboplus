@@ -2,10 +2,12 @@ import { createContext, useContext, useState, useEffect } from 'react';
 
 const ThemeContext = createContext(null);
 const THEME_STORAGE_KEY = 'admin-theme';
-const THEMES = ['light', 'dark', 'verbo'];
+// Ordem do rodízio do botão de tema. Verbo+ é o padrão (marca em primeiro).
+const THEMES = ['verbo', 'light', 'dark'];
+const DEFAULT_THEME = 'verbo';
 
 function normalizeTheme(theme) {
-  return THEMES.includes(theme) ? theme : 'light';
+  return THEMES.includes(theme) ? theme : DEFAULT_THEME;
 }
 
 function applyTheme(theme) {
@@ -15,7 +17,7 @@ function applyTheme(theme) {
 }
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState(DEFAULT_THEME);
 
   useEffect(() => {
     const savedTheme = normalizeTheme(localStorage.getItem(THEME_STORAGE_KEY));
@@ -31,8 +33,10 @@ export function ThemeProvider({ children }) {
   };
 
   const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    updateTheme(newTheme);
+    // Rodízio entre os três temas: verbo → light → dark → verbo.
+    const currentIndex = THEMES.indexOf(theme);
+    const nextTheme = THEMES[(currentIndex + 1) % THEMES.length];
+    updateTheme(nextTheme);
   };
 
   const value = {

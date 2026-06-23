@@ -32,6 +32,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConteudoAulaDialog, CriancaDialog, HistoricoDialog, OcorrenciaDialog, ResponsavelDialog, SalaDialog, TurmaDialog } from './components/KidsDialogs';
 import { CheckPanelIcon, EstadoVazio, IndicadorLinha, PainelCriancaCard, ResumoCard } from './components/KidsShared';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { buildCriticalDescription, formatOcorrenciaTipo, getOcorrenciaStatusConfig } from './components/kidsHelpers';
 import { formatDateTime } from '@/lib/formatters';
 import { getAbsoluteUrl } from '@/lib/utils';
@@ -96,6 +98,7 @@ const CONTEUDO_AULA_FORM_INICIAL = {
 
 const KidsCheckinsList = ({ section = 'overview' }) => {
   const { t } = useTranslation();
+  const confirmDialog = useConfirmDialog();
   const [painel, setPainel] = useState(null);
   const [indicadores, setIndicadores] = useState(null);
   const [checkins, setCheckins] = useState([]);
@@ -829,65 +832,72 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
     }
   };
 
-  const handleConfirmarPreCheckin = async (preCheckin) => {
-    const canProceed = window.confirm(
-      t('kids.preCheckins.confirmPrompt', {
+  const handleConfirmarPreCheckin = (preCheckin) => {
+    confirmDialog.show({
+      title: t('kids.preCheckins.confirmTitle', { defaultValue: 'Confirmar pré-check-in' }),
+      description: t('kids.preCheckins.confirmPrompt', {
         defaultValue: 'Confirmar o pré-check-in de {{name}} e concluir o check-in operacional agora?',
         name: preCheckin.criancaNome,
       }),
-    );
-
-    if (!canProceed) return;
-
-    try {
-      setConfirmandoPreCheckinId(preCheckin.id);
-      await kidsApi.confirmarPreCheckin(preCheckin.id, {
-        salaId: preCheckin.salaId || null,
-        turmaId: preCheckin.turmaId || null,
-      });
-      toast.success(
-        t('kids.preCheckins.confirmSuccess', {
-          defaultValue: 'Pré-check-in confirmado para {{name}}.',
-          name: preCheckin.criancaNome,
-        }),
-      );
-      await fetchData();
-    } catch (err) {
-      console.error('Erro ao confirmar pré-check-in:', err);
-      toast.error(err.response?.data?.message || t('kids.preCheckins.confirmError', { defaultValue: 'Erro ao confirmar pré-check-in.' }));
-    } finally {
-      setConfirmandoPreCheckinId(null);
-    }
+      confirmText: t('actions.confirm', { defaultValue: 'Confirmar' }),
+      cancelText: t('actions.cancel'),
+      onConfirm: async () => {
+        try {
+          setConfirmandoPreCheckinId(preCheckin.id);
+          await kidsApi.confirmarPreCheckin(preCheckin.id, {
+            salaId: preCheckin.salaId || null,
+            turmaId: preCheckin.turmaId || null,
+          });
+          toast.success(
+            t('kids.preCheckins.confirmSuccess', {
+              defaultValue: 'Pré-check-in confirmado para {{name}}.',
+              name: preCheckin.criancaNome,
+            }),
+          );
+          await fetchData();
+        } catch (err) {
+          console.error('Erro ao confirmar pré-check-in:', err);
+          toast.error(err.response?.data?.message || t('kids.preCheckins.confirmError', { defaultValue: 'Erro ao confirmar pré-check-in.' }));
+          throw err;
+        } finally {
+          setConfirmandoPreCheckinId(null);
+        }
+      },
+    });
   };
 
-  const handleCancelarPreCheckin = async (preCheckin) => {
-    const canProceed = window.confirm(
-      t('kids.preCheckins.cancelPrompt', {
+  const handleCancelarPreCheckin = (preCheckin) => {
+    confirmDialog.show({
+      title: t('kids.preCheckins.cancelTitle', { defaultValue: 'Cancelar pré-check-in' }),
+      description: t('kids.preCheckins.cancelPrompt', {
         defaultValue: 'Cancelar o pré-check-in de {{name}}?',
         name: preCheckin.criancaNome,
       }),
-    );
-
-    if (!canProceed) return;
-
-    try {
-      setCancelandoPreCheckinId(preCheckin.id);
-      await kidsApi.cancelarPreCheckin(preCheckin.id, {
-        motivo: 'Cancelado pela equipe no painel operacional.',
-      });
-      toast.success(
-        t('kids.preCheckins.cancelSuccess', {
-          defaultValue: 'Pré-check-in cancelado para {{name}}.',
-          name: preCheckin.criancaNome,
-        }),
-      );
-      await fetchData();
-    } catch (err) {
-      console.error('Erro ao cancelar pré-check-in:', err);
-      toast.error(err.response?.data?.message || t('kids.preCheckins.cancelError', { defaultValue: 'Erro ao cancelar pré-check-in.' }));
-    } finally {
-      setCancelandoPreCheckinId(null);
-    }
+      confirmText: t('actions.confirm', { defaultValue: 'Confirmar' }),
+      cancelText: t('actions.cancel'),
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          setCancelandoPreCheckinId(preCheckin.id);
+          await kidsApi.cancelarPreCheckin(preCheckin.id, {
+            motivo: 'Cancelado pela equipe no painel operacional.',
+          });
+          toast.success(
+            t('kids.preCheckins.cancelSuccess', {
+              defaultValue: 'Pré-check-in cancelado para {{name}}.',
+              name: preCheckin.criancaNome,
+            }),
+          );
+          await fetchData();
+        } catch (err) {
+          console.error('Erro ao cancelar pré-check-in:', err);
+          toast.error(err.response?.data?.message || t('kids.preCheckins.cancelError', { defaultValue: 'Erro ao cancelar pré-check-in.' }));
+          throw err;
+        } finally {
+          setCancelandoPreCheckinId(null);
+        }
+      },
+    });
   };
 
   if (loading) {
@@ -1832,6 +1842,18 @@ const KidsCheckinsList = ({ section = 'overview' }) => {
         historicoUpdatingId={historicoUpdatingId}
         onAtualizarOcorrencia={handleAtualizarOcorrencia}
         formatDate={formatDate}
+      />
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={confirmDialog.hide}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
       />
     </>
   );

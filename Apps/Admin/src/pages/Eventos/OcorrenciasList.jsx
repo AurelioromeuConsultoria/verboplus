@@ -11,6 +11,8 @@ import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
 import { PageEmptyState, PageRefreshButton } from '@/components/ui/page-state';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { usePagination } from '@/hooks/usePagination';
 import { eventosApi, eventosOcorrenciasApi } from '@/lib/api';
 import { toast } from 'sonner';
@@ -30,6 +32,7 @@ function getStatusOcorrenciaLabel(status, t) {
 export default function OcorrenciasList() {
   const { t } = useTranslation();
   const { can } = useAuth();
+  const confirmDialog = useConfirmDialog();
   const [initialLoad, setInitialLoad] = useState(true);
   const [loadingOcorrencias, setLoadingOcorrencias] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -126,23 +129,31 @@ export default function OcorrenciasList() {
     }
   };
 
-  const handleDeleteOcorrencia = async (item) => {
+  const handleDeleteOcorrencia = (item) => {
     if (item.possuiEscala) {
       toast.error(t('events.occurrencesDeleteHasScales'));
       return;
     }
 
-    if (!window.confirm(t('events.occurrencesDeleteConfirm'))) return;
-
-    try {
-      await eventosOcorrenciasApi.delete(item.id);
-      toast.success(t('events.occurrencesDeleteSuccess'));
-      await loadOcorrencias();
-    } catch (err) {
-      console.error(err);
-      const msg = err.response?.data?.message ?? err.response?.data;
-      toast.error(typeof msg === 'string' ? msg : t('events.occurrencesDeleteError'));
-    }
+    confirmDialog.show({
+      title: t('events.occurrencesDeleteTitle'),
+      description: t('events.occurrencesDeleteConfirm'),
+      confirmText: t('actions.remove'),
+      cancelText: t('actions.cancel'),
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await eventosOcorrenciasApi.delete(item.id);
+          toast.success(t('events.occurrencesDeleteSuccess'));
+          await loadOcorrencias();
+        } catch (err) {
+          console.error(err);
+          const msg = err.response?.data?.message ?? err.response?.data;
+          toast.error(typeof msg === 'string' ? msg : t('events.occurrencesDeleteError'));
+          throw err;
+        }
+      },
+    });
   };
 
   const sorted = [...ocorrencias].sort((a, b) => new Date(a.dataHoraInicio) - new Date(b.dataHoraInicio));
@@ -295,6 +306,18 @@ export default function OcorrenciasList() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={confirmDialog.hide}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

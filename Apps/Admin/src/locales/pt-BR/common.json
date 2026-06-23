@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "Sistema Igreja",
-    "tagline": "Sistema de Gestão para Igrejas",
+    "name": "Verbo+",
+    "tagline": "Organize sua igreja. Transforme vidas.",
     "developedBy": "Desenvolvido por Malach Digital"
   },
   "menu": {
@@ -143,6 +143,7 @@
   "actions": {
     "save": "Salvar",
     "saving": "Salvando...",
+    "confirm": "Confirmar",
     "cancel": "Cancelar",
     "back": "Voltar",
     "edit": "Editar",
@@ -419,7 +420,7 @@
       "days_other": "{{count}} dias"
     },
     "welcome": {
-      "title": "Bem-vindo ao Sistema Igreja",
+      "title": "Bem-vindo ao Verbo+",
       "description": "Este sistema permite gerenciar visitantes, eventos, voluntários e automatizar o envio de mensagens de boas-vindas via WhatsApp. Use o menu lateral para navegar entre as diferentes funcionalidades."
     }
   },
@@ -2649,6 +2650,7 @@
       "empty": "Nenhum voluntário vinculado ainda.",
       "linkSuccess": "Voluntário vinculado",
       "linkError": "Erro ao vincular",
+      "removeTitle": "Remover voluntário",
       "removeConfirm": "Remover este voluntário da equipe?",
       "removeSuccess": "Voluntário removido",
       "removeError": "Erro ao remover",
@@ -2837,7 +2839,7 @@
         "title": "Escala mensal",
         "badge": "VOLUNTARIADO",
         "subtitle": "Distribuição de voluntários por data",
-        "footer": "Gerado pelo Sistema Igreja",
+        "footer": "Gerado pelo Verbo+",
         "allTeams": "Todas as equipes",
         "preview": "Ver imagem",
         "previewing": "Gerando...",
@@ -3065,7 +3067,13 @@
           "declineReason": "Motivo da recusa de {{name}}:",
           "rejectExchangeReason": "Motivo da rejeição da solicitação de {{name}}:",
           "attendanceNote": "Observação de presença para {{name}}:",
-          "absenceNote": "Observação de falta para {{name}}:"
+          "absenceNote": "Observação de falta para {{name}}:",
+          "exceptionReasonTitle": "Adicionar com exceção",
+          "declineReasonTitle": "Recusar voluntário",
+          "rejectExchangeReasonTitle": "Rejeitar solicitação de troca",
+          "attendanceNoteTitle": "Registrar presença",
+          "absenceNoteTitle": "Registrar falta",
+          "optionalHint": "Opcional"
         },
         "logs": {
           "errorLoadModel": "Erro ao carregar modelo da escala:",
@@ -3333,6 +3341,8 @@
       "errorDecline": "Erro ao recusar escala",
       "errorSwapRequest": "Erro ao solicitar troca",
       "declinePrompt": "Motivo da recusa para {{team}}:",
+      "declineTitle": "Recusar escala",
+      "declineOptionalHint": "Opcional",
       "labels": {
         "status": "Status",
         "declineReason": "Motivo da recusa",
@@ -3494,6 +3504,7 @@
     "form.recurrence.deleted": "Recorrência excluída.",
     "form.recurrence.errorSave": "Erro ao salvar recorrência",
     "form.recurrence.errorDelete": "Erro ao excluir",
+    "form.recurrence.confirmDeleteTitle": "Excluir recorrência",
     "form.recurrence.confirmDelete": "Excluir esta recorrência?",
     "form.recurrence.noEndTime": "—",
     "form.recurrence.noEndDate": "(sem fim)",
@@ -3545,6 +3556,7 @@
     "occurrencesGenerateCreated": "{{count}} ocorrência(s) criada(s)",
     "occurrencesGenerateNone": "Nenhuma ocorrência nova foi criada. Verifique se o evento tem recorrências configuradas (Editar evento → Recorrências) e se a vigência cobre o período escolhido.",
     "occurrencesGenerateError": "Erro ao gerar ocorrências",
+    "occurrencesDeleteTitle": "Excluir ocorrência",
     "occurrencesDeleteConfirm": "Excluir esta ocorrência?",
     "occurrencesDeleteSuccess": "Ocorrência excluída.",
     "occurrencesDeleteError": "Erro ao excluir ocorrência",

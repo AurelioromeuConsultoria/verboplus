@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { equipesApi, voluntariosApi, pessoasApi, cargosApi, usuariosApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
@@ -17,6 +19,7 @@ export default function EquipeForm() {
   const { id } = useParams();
   const isEditing = Boolean(id);
   const { t } = useTranslation();
+  const confirmDialog = useConfirmDialog();
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -104,16 +107,25 @@ export default function EquipeForm() {
     }
   };
 
-  const handleRemoverVinculo = async (voluntarioId) => {
-    if (!confirm(t('teamForm.links.removeConfirm'))) return;
-    try {
-      await voluntariosApi.delete(voluntarioId);
-      toast.success(t('teamForm.links.removeSuccess'));
-      const res = await voluntariosApi.getByEquipe(id);
-      setVoluntarios(res.data || []);
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, t('teamForm.links.removeError')));
-    }
+  const handleRemoverVinculo = (voluntarioId) => {
+    confirmDialog.show({
+      title: t('teamForm.links.removeTitle'),
+      description: t('teamForm.links.removeConfirm'),
+      confirmText: t('actions.remove'),
+      cancelText: t('actions.cancel'),
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await voluntariosApi.delete(voluntarioId);
+          toast.success(t('teamForm.links.removeSuccess'));
+          const res = await voluntariosApi.getByEquipe(id);
+          setVoluntarios(res.data || []);
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, t('teamForm.links.removeError')));
+          throw err;
+        }
+      },
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -286,6 +298,18 @@ export default function EquipeForm() {
           </CardContent>
         </Card>
       )}
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={confirmDialog.hide}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.config.title}
+        description={confirmDialog.config.description}
+        confirmText={confirmDialog.config.confirmText}
+        cancelText={confirmDialog.config.cancelText}
+        variant={confirmDialog.config.variant}
+        loading={confirmDialog.loading}
+      />
     </div>
   );
 }

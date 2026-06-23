@@ -1,6 +1,5 @@
-import { Bell, LogOut, Settings, Sun, Moon, Globe, CheckCheck, Building2, ShieldCheck, ArrowLeftRight, Menu, Sparkles } from 'lucide-react';
+import { Bell, LogOut, Settings, Sun, Moon, Globe, CheckCheck, Building2, ShieldCheck, ArrowLeftRight, Menu, Sparkles, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
@@ -303,6 +302,7 @@ export function Header({ onMenuClick }) {
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {isPlatformAdmin && availableTenants.length > 0 && (
             <div className="hidden h-10 items-center gap-2 rounded-full border border-border bg-card px-2.5 md:flex">
+              <ShieldCheck className="h-4 w-4 shrink-0 text-primary" title={t('header.platformMode')} />
               {currentTenant?.logoUrl ? (
                 <img
                   src={currentTenant.logoUrl}
@@ -372,11 +372,11 @@ export function Header({ onMenuClick }) {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" onClick={toggleTheme}>
-                {isVerbo ? <Sparkles className="h-5 w-5" /> : isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                {isVerbo ? <Sparkles className="h-5 w-5" /> : isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {isVerbo ? t('header.currentVerboTheme') : isDark ? t('header.useLightTheme') : t('header.useDarkTheme')}
+              {t('header.switchTheme', { defaultValue: 'Alternar tema' })} · {isVerbo ? 'Verbo+' : isDark ? t('header.useDarkTheme') : t('header.useLightTheme')}
             </TooltipContent>
           </Tooltip>
 
@@ -485,50 +485,29 @@ export function Header({ onMenuClick }) {
         </div>
       </div>
 
-      {isPlatformAdmin && (
-        <div className={`border-t px-3 py-3 sm:px-4 md:px-6 ${operandoTenantRemoto ? 'border-amber-200 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/30' : 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/40 dark:bg-emerald-950/20'}`}>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="gap-1 border-current/20 bg-background/70">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  {t('header.platformMode')}
-                </Badge>
-                <Badge variant={operandoTenantRemoto ? 'secondary' : 'default'} className="gap-1">
-                  <ArrowLeftRight className="h-3.5 w-3.5" />
-                  {operandoTenantRemoto ? t('header.operatingRemoteTenant') : t('header.operatingHomeTenant')}
-                </Badge>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {t('header.homeTenant')}: <span className="font-medium text-foreground">{homeTenant?.nomeExibicao || homeTenant?.nome || homeTenant?.slug || t('header.notAvailable')}</span>
-                <span className="hidden sm:inline">{' · '}</span>
-                <br className="sm:hidden" />
-                {t('header.currentTenant')}: <span className="font-medium text-foreground">{currentTenant?.nomeExibicao || currentTenant?.nome || currentTenant?.slug || t('header.notAvailable')}</span>
-              </div>
+      {/* Alerta só quando operando uma igreja que NÃO é a sua (estado de risco). */}
+      {operandoTenantRemoto && (
+        <div className="border-t border-amber-300 bg-amber-50 px-3 py-2.5 sm:px-4 md:px-6 dark:border-amber-900/50 dark:bg-amber-950/30">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>
+                {t('header.remoteWarningPrefix', { defaultValue: 'Você está operando a igreja' })}{' '}
+                <span className="font-semibold">
+                  {currentTenant?.nomeExibicao || currentTenant?.nome || currentTenant?.slug || t('header.notAvailable')}
+                </span>
+                {t('header.remoteWarningSuffix', { defaultValue: ' — não é a sua.' })}
+              </span>
             </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              {availableTenants.length > 0 && (
-                <Select value={String(currentTenant?.id || '')} onValueChange={handleTenantChange}>
-                  <SelectTrigger className="w-full bg-background sm:w-[280px]">
-                    <SelectValue placeholder={t('header.selectTenant')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableTenants.map((tenant) => (
-                      <SelectItem key={tenant.id} value={String(tenant.id)}>
-                        {tenant.nomeExibicao || tenant.nome || tenant.slug}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-              {operandoTenantRemoto && (
-                <Button variant="outline" onClick={handleReturnToHomeTenant}>
-                  {t('header.returnToHomeTenant')}
-                </Button>
-              )}
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReturnToHomeTenant}
+              className="shrink-0 border-amber-400 bg-background text-amber-800 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-900/40"
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" />
+              {t('header.returnToHomeTenant')}
+            </Button>
           </div>
         </div>
       )}
