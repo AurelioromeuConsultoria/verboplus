@@ -1,4 +1,4 @@
-package com.example.app_kids
+package com.verboplus.kids
 
 import io.flutter.embedding.android.FlutterActivity
 
