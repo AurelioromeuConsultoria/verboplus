@@ -845,3 +845,10 @@ public class RegisterDeviceTokenRequest
     [MaxLength(20)]
     public string Platform { get; set; } = "Android"; // "Android" ou "iOS"
 }
+
+public class UnregisterDeviceTokenRequest
+{
+    [Required(ErrorMessage = "Token é obrigatório")]
+    [MaxLength(500)]
+    public string Token { get; set; } = string.Empty;
+}

@@ -12,8 +12,12 @@ public class FirebaseKidsPushOptions
 {
     public const string SectionName = "Firebase";
     /// <summary>
-    /// Caminho para o arquivo JSON da conta de serviço (Service Account) do Firebase.
-    /// Se vazio, push não é enviado.
+    /// Conteúdo JSON da Service Account do Firebase (preferido em containers/Coolify).
+    /// Se definido, CredentialsPath é ignorado.
+    /// </summary>
+    public string? CredentialsJson { get; set; }
+    /// <summary>
+    /// Caminho para o arquivo JSON da Service Account. Usado quando CredentialsJson está vazio.
     /// </summary>
     public string? CredentialsPath { get; set; }
 }
@@ -81,17 +85,29 @@ public class KidsPushNotificationService : IKidsPushNotificationService
     private bool EnsureFirebaseApp()
     {
         if (_firebaseInitialized) return true;
-        var path = _options?.CredentialsPath?.Trim();
-        if (string.IsNullOrEmpty(path) || !File.Exists(path))
-            return false;
 
         lock (_initLock)
         {
             if (_firebaseInitialized) return true;
             try
             {
+                GoogleCredential? credential = null;
+
+                var json = _options?.CredentialsJson?.Trim();
+                if (!string.IsNullOrEmpty(json))
+                {
+                    credential = GoogleCredential.FromJson(json);
+                }
+                else
+                {
+                    var path = _options?.CredentialsPath?.Trim();
+                    if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                        return false;
+                    credential = GoogleCredential.FromFile(path);
+                }
+
                 if (FirebaseApp.DefaultInstance == null)
-                    FirebaseApp.Create(new AppOptions { Credential = GoogleCredential.FromFile(path) });
+                    FirebaseApp.Create(new AppOptions { Credential = credential });
                 _firebaseInitialized = true;
                 _logger.LogInformation("Firebase App inicializado para push.");
                 return true;

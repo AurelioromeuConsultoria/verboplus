@@ -1266,4 +1266,24 @@ public class KidsController : ControllerBase
             return StatusCode(500, new { message = "Erro ao registrar token", error = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Remove o token FCM do dispositivo ao fazer logout, evitando push após desconexão.
+    /// </summary>
+    [HttpDelete("me/device-token")]
+    public async Task<IActionResult> UnregisterDeviceToken([FromBody] UnregisterDeviceTokenRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request.Token))
+                return BadRequest(new { message = "Token é obrigatório" });
+
+            await _deviceTokenRepository.DeleteByTokenAsync(request.Token.Trim());
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao remover token", error = ex.Message });
+        }
+    }
 }

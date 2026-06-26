@@ -59,4 +59,14 @@ public class KidsDeviceTokenRepository : IKidsDeviceTokenRepository
             .Select(t => t.FcmToken)
             .ToListAsync();
     }
+
+    public async Task DeleteByTokenAsync(string fcmToken)
+    {
+        var rows = await _context.Set<KidsDeviceToken>()
+            .Where(t => t.FcmToken == fcmToken)
+            .ToListAsync();
+        if (rows.Count == 0) return;
+        _context.Set<KidsDeviceToken>().RemoveRange(rows);
+        await _context.SaveChangesAsync();
+    }
 }
