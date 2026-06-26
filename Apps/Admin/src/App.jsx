@@ -105,6 +105,11 @@ const CategoriasReceitasList = lazy(() => import('./pages/Financeiro/CategoriasR
 const CategoriaReceitaForm = lazy(() => import('./pages/Financeiro/CategoriasReceitas/CategoriaReceitaForm'));
 const DashboardFinanceiro = lazy(() => import('./pages/Financeiro/DashboardFinanceiro'));
 const RelatoriosFinanceiros = lazy(() => import('./pages/Financeiro/RelatoriosFinanceiros'));
+const LancamentoDizimos = lazy(() => import('./pages/Financeiro/Dizimos/LancamentoDizimos'));
+const RelatorioContribuicoes = lazy(() => import('./pages/Financeiro/Dizimos/RelatorioContribuicoes'));
+const ContasAPagar = lazy(() => import('./pages/Financeiro/ContasAPagar'));
+const OrcamentoAnual = lazy(() => import('./pages/Financeiro/OrcamentoAnual'));
+const DRE = lazy(() => import('./pages/Financeiro/DRE'));
 const DoacoesList = lazy(() => import('./pages/Doacoes/DoacoesList'));
 const FinalidadesDoacaoList = lazy(() => import('./pages/Doacoes/FinalidadesDoacaoList'));
 const FinalidadeDoacaoForm = lazy(() => import('./pages/Doacoes/FinalidadeDoacaoForm'));
@@ -815,6 +820,31 @@ function App() {
           <Route path="financeiro/receitas/:id/editar" element={
             <RequirePermission resource={RESOURCES.FINANCEIRO} action={ACTIONS.EDIT}>
               <ReceitaForm />
+            </RequirePermission>
+          } />
+          <Route path="financeiro/dizimos" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO} action={ACTIONS.EDIT}>
+              <LancamentoDizimos />
+            </RequirePermission>
+          } />
+          <Route path="financeiro/relatorio-contribuicoes" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO}>
+              <RelatorioContribuicoes />
+            </RequirePermission>
+          } />
+          <Route path="financeiro/contas-a-pagar" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO}>
+              <ContasAPagar />
+            </RequirePermission>
+          } />
+          <Route path="financeiro/orcamento" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO}>
+              <OrcamentoAnual />
+            </RequirePermission>
+          } />
+          <Route path="financeiro/dre" element={
+            <RequirePermission resource={RESOURCES.FINANCEIRO}>
+              <DRE />
             </RequirePermission>
           } />
           {/* Rotas de Financeiro - Categorias de Receitas */}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, User, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { LoadingPage } from '@/components/ui/loading';
 import { ErrorPage } from '@/components/ui/error-message';
-import { receitasApi, contasBancariasApi, centrosCustosApi, projetosApi, categoriasReceitasApi } from '@/lib/api';
+import { receitasApi, contasBancariasApi, centrosCustosApi, projetosApi, categoriasReceitasApi, pessoasApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
@@ -25,6 +25,12 @@ export default function ReceitaForm() {
   const [projetos, setProjetos] = useState([]);
   const [categoriasReceitas, setCategoriasReceitas] = useState([]);
 
+  // busca de membro
+  const [pessoaBusca, setPessoaBusca] = useState('');
+  const [pessoaSelecionada, setPessoaSelecionada] = useState(null);
+  const [resultadosBusca, setResultadosBusca] = useState([]);
+  const [buscandoPessoa, setBuscandoPessoa] = useState(false);
+
   const [formData, setFormData] = useState({
     descricao: '',
     valor: '',
@@ -36,6 +42,9 @@ export default function ReceitaForm() {
     contaBancariaId: '',
     centroCustoId: '',
     projetoId: '',
+    pessoaId: null,
+    recorrente: false,
+    tipoRecorrencia: null,
   });
 
   const loadDependencies = async () => {
@@ -74,7 +83,13 @@ export default function ReceitaForm() {
         contaBancariaId: r.contaBancariaId ? String(r.contaBancariaId) : '',
         centroCustoId: r.centroCustoId ? String(r.centroCustoId) : '',
         projetoId: r.projetoId ? String(r.projetoId) : '',
+        pessoaId: r.pessoaId || null,
+        recorrente: r.recorrente || false,
+        tipoRecorrencia: r.tipoRecorrencia || null,
       });
+      if (r.pessoaId && r.pessoaNome) {
+        setPessoaSelecionada({ id: r.pessoaId, nome: r.pessoaNome });
+      }
     } catch (err) {
       setError(t('finance.revenues.form.saveError'));
       console.error(err);
@@ -84,6 +99,38 @@ export default function ReceitaForm() {
   };
 
   useEffect(() => { load(); }, [id]);
+
+  // Busca de pessoa com debounce
+  useEffect(() => {
+    if (!pessoaBusca.trim() || pessoaBusca.length < 2) {
+      setResultadosBusca([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setBuscandoPessoa(true);
+      try {
+        const res = await pessoasApi.getPaged({ nome: pessoaBusca, pageSize: 8, ativo: true });
+        setResultadosBusca(res.data?.items || []);
+      } catch {
+        setResultadosBusca([]);
+      } finally {
+        setBuscandoPessoa(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [pessoaBusca]);
+
+  const selecionarPessoa = (pessoa) => {
+    setPessoaSelecionada(pessoa);
+    setFormData((prev) => ({ ...prev, pessoaId: pessoa.id }));
+    setPessoaBusca('');
+    setResultadosBusca([]);
+  };
+
+  const limparPessoa = () => {
+    setPessoaSelecionada(null);
+    setFormData((prev) => ({ ...prev, pessoaId: null }));
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -118,6 +165,9 @@ export default function ReceitaForm() {
         contaBancariaId: formData.contaBancariaId ? Number(formData.contaBancariaId) : null,
         centroCustoId: formData.centroCustoId ? Number(formData.centroCustoId) : null,
         projetoId: formData.projetoId ? Number(formData.projetoId) : null,
+        pessoaId: formData.pessoaId || null,
+        recorrente: formData.recorrente,
+        tipoRecorrencia: formData.recorrente && formData.tipoRecorrencia ? Number(formData.tipoRecorrencia) : null,
       };
       if (isEditing) await receitasApi.update(id, payload);
       else await receitasApi.create(payload);
@@ -185,6 +235,50 @@ export default function ReceitaForm() {
                   ))}
                 </select>
               </div>
+
+              {/* Campo de membro/contribuinte */}
+              <div className="space-y-2 md:col-span-2">
+                <Label className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Membro contribuinte <span className="text-muted-foreground text-xs font-normal">(opcional — para rastrear dízimos)</span>
+                </Label>
+                {pessoaSelecionada ? (
+                  <div className="flex items-center gap-2 rounded border px-3 py-2 bg-muted/40">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="flex-1 text-sm font-medium">{pessoaSelecionada.nome}</span>
+                    <Button type="button" variant="ghost" size="sm" onClick={limparPessoa} className="h-6 w-6 p-0">
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <Input
+                      value={pessoaBusca}
+                      onChange={(e) => setPessoaBusca(e.target.value)}
+                      placeholder="Buscar membro pelo nome..."
+                    />
+                    {buscandoPessoa && (
+                      <div className="absolute right-3 top-2.5 text-xs text-muted-foreground">Buscando...</div>
+                    )}
+                    {resultadosBusca.length > 0 && (
+                      <div className="absolute z-10 mt-1 w-full rounded border bg-white shadow-lg">
+                        {resultadosBusca.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => selecionarPessoa(p)}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted"
+                          >
+                            <User className="h-3 w-3 text-muted-foreground" />
+                            {p.nome}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="contaBancariaId">{t('finance.revenues.form.fields.bankAccount')}</Label>
                 <select id="contaBancariaId" name="contaBancariaId" value={formData.contaBancariaId} onChange={handleChange} className="w-full px-3 py-2 border rounded">
@@ -212,6 +306,38 @@ export default function ReceitaForm() {
                   ))}
                 </select>
               </div>
+              {/* Recorrência */}
+              <div className="space-y-3 md:col-span-2 rounded border p-3 bg-muted/20">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="recorrente"
+                    checked={formData.recorrente}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, recorrente: e.target.checked, tipoRecorrencia: e.target.checked ? prev.tipoRecorrencia || '3' : null }))}
+                    className="h-4 w-4 cursor-pointer"
+                  />
+                  <Label htmlFor="recorrente" className="cursor-pointer">Esta é uma receita recorrente</Label>
+                </div>
+                {formData.recorrente && (
+                  <div className="space-y-1">
+                    <Label className="text-sm">Periodicidade *</Label>
+                    <select
+                      value={formData.tipoRecorrencia || '3'}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, tipoRecorrencia: e.target.value }))}
+                      className="px-3 py-2 border rounded text-sm"
+                    >
+                      <option value="1">Semanal</option>
+                      <option value="2">Quinzenal</option>
+                      <option value="3">Mensal</option>
+                      <option value="4">Bimestral</option>
+                      <option value="5">Trimestral</option>
+                      <option value="6">Semestral</option>
+                      <option value="7">Anual</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="observacoes">{t('finance.revenues.form.fields.notes')}</Label>
                 <Textarea id="observacoes" name="observacoes" value={formData.observacoes} onChange={handleChange} placeholder={t('finance.revenues.form.fields.notesPlaceholder')} rows={3} />

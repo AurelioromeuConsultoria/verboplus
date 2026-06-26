@@ -38,6 +38,8 @@ export default function DespesaForm() {
     contaBancariaId: '',
     centroCustoId: '',
     projetoId: '',
+    recorrente: false,
+    tipoRecorrencia: null,
   });
 
   const loadDependencies = async () => {
@@ -79,6 +81,8 @@ export default function DespesaForm() {
         contaBancariaId: d.contaBancariaId ? String(d.contaBancariaId) : '',
         centroCustoId: d.centroCustoId ? String(d.centroCustoId) : '',
         projetoId: d.projetoId ? String(d.projetoId) : '',
+        recorrente: d.recorrente || false,
+        tipoRecorrencia: d.tipoRecorrencia || null,
       });
     } catch (err) {
       setError(t('finance.expenses.form.saveError'));
@@ -124,6 +128,8 @@ export default function DespesaForm() {
         contaBancariaId: formData.contaBancariaId ? Number(formData.contaBancariaId) : null,
         centroCustoId: formData.centroCustoId ? Number(formData.centroCustoId) : null,
         projetoId: formData.projetoId ? Number(formData.projetoId) : null,
+        recorrente: formData.recorrente,
+        tipoRecorrencia: formData.recorrente && formData.tipoRecorrencia ? Number(formData.tipoRecorrencia) : null,
       };
       if (isEditing) await despesasApi.update(id, payload);
       else await despesasApi.create(payload);
@@ -227,6 +233,38 @@ export default function DespesaForm() {
                   ))}
                 </select>
               </div>
+              {/* Recorrência */}
+              <div className="space-y-3 md:col-span-2 rounded border p-3 bg-muted/20">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="recorrente"
+                    checked={formData.recorrente}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, recorrente: e.target.checked, tipoRecorrencia: e.target.checked ? prev.tipoRecorrencia || '3' : null }))}
+                    className="h-4 w-4 cursor-pointer"
+                  />
+                  <Label htmlFor="recorrente" className="cursor-pointer">Esta é uma despesa recorrente</Label>
+                </div>
+                {formData.recorrente && (
+                  <div className="space-y-1">
+                    <Label className="text-sm">Periodicidade *</Label>
+                    <select
+                      value={formData.tipoRecorrencia || '3'}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, tipoRecorrencia: e.target.value }))}
+                      className="px-3 py-2 border rounded text-sm"
+                    >
+                      <option value="1">Semanal</option>
+                      <option value="2">Quinzenal</option>
+                      <option value="3">Mensal</option>
+                      <option value="4">Bimestral</option>
+                      <option value="5">Trimestral</option>
+                      <option value="6">Semestral</option>
+                      <option value="7">Anual</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="observacoes">{t('finance.expenses.form.fields.notes')}</Label>
                 <Textarea id="observacoes" name="observacoes" value={formData.observacoes} onChange={handleChange} placeholder={t('finance.expenses.form.fields.notesPlaceholder')} rows={3} />

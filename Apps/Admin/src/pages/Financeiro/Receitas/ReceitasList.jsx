@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, RefreshCw, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -91,8 +91,13 @@ export default function ReceitasList() {
   };
 
   const filtered = items.filter((r) => {
-    if (busca && !String(r.descricao || '').toLowerCase().includes(busca.toLowerCase())) return false;
-    return true;
+    if (!busca) return true;
+    const termo = busca.toLowerCase();
+    return (
+      String(r.descricao || '').toLowerCase().includes(termo) ||
+      String(r.pessoaNome || '').toLowerCase().includes(termo) ||
+      String(r.categoriaReceitaNome || '').toLowerCase().includes(termo)
+    );
   });
 
   const { page, pageSize, total, paginatedItems, setPage, setPageSize } = usePagination(filtered, 20);
@@ -163,11 +168,10 @@ export default function ReceitasList() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('finance.revenues.table.description')}</TableHead>
+                  <TableHead>Membro</TableHead>
                   <TableHead>{t('finance.revenues.table.value')}</TableHead>
                   <TableHead>{t('finance.revenues.table.date')}</TableHead>
-                  <TableHead>{t('finance.revenues.table.bankAccount')}</TableHead>
-                  <TableHead>{t('finance.revenues.table.costCenter')}</TableHead>
-                  <TableHead>{t('finance.revenues.table.project')}</TableHead>
+                  <TableHead>Categoria</TableHead>
                   <TableHead>{t('finance.revenues.table.status')}</TableHead>
                   <TableHead className="text-right">{t('finance.revenues.table.actions')}</TableHead>
                 </TableRow>
@@ -175,12 +179,27 @@ export default function ReceitasList() {
               <TableBody>
                 {paginatedItems.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.descricao}</TableCell>
-                    <TableCell>{formatCurrency(r.valor)}</TableCell>
+                    <TableCell className="font-medium">
+                      <div>{r.descricao}</div>
+                      {r.recorrente && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <RefreshCw className="h-3 w-3" /> {r.tipoRecorrenciaDescricao}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {r.pessoaNome ? (
+                        <span className="flex items-center gap-1 text-sm">
+                          <User className="h-3 w-3 text-muted-foreground" />
+                          {r.pessoaNome}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-semibold">{formatCurrency(r.valor)}</TableCell>
                     <TableCell>{formatDate(r.dataRecebimento)}</TableCell>
-                    <TableCell>{r.contaBancaria?.nome || '-'}</TableCell>
-                    <TableCell>{r.centroCusto?.nome || '-'}</TableCell>
-                    <TableCell>{r.projeto?.nome || '-'}</TableCell>
+                    <TableCell>{r.categoriaReceitaNome || '-'}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs ${getStatusColor(r.status)}`}>
                         {getStatusLabel(r.status)}

@@ -13,5 +13,7 @@ export const relatoriosFinanceirosApi = {
     api.get('/relatoriosfinanceiros/por-centro-custo', { params: { dataInicio, dataFim } }),
   getPorProjeto: (dataInicio, dataFim) =>
     api.get('/relatoriosfinanceiros/por-projeto', { params: { dataInicio, dataFim } }),
+  getDre: (ano) =>
+    api.get('/relatoriosfinanceiros/dre', { params: { ano } }),
 };
 
