@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "688207605272",
+    "project_id": "verboplus",
+    "storage_bucket": "verboplus.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:688207605272:android:0d956e7b0799918bd15d6d",
+        "android_client_info": {
+          "package_name": "com.verboplus.kids"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBBbVscGKuOzneSL6m7fSq_zkcMLYzA5Pw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
