@@ -157,6 +157,7 @@ public class ComunicacaoCampanhaRepositoryTests
             Origem = TipoOrigemComunicacao.Manual,
             DataCriacao = DateTime.UtcNow
         };
+        // campanha2: DataAgendamento no futuro + entrega Pendente → CalcularStatusOperacional retorna Agendada
         var campanha2 = new ComunicacaoCampanha
         {
             Nome = "Campanha Agendada",
@@ -164,15 +165,18 @@ public class ComunicacaoCampanhaRepositoryTests
             PublicoAlvo = "membros",
             Status = StatusComunicacaoCampanha.Agendada,
             Origem = TipoOrigemComunicacao.Manual,
+            DataAgendamento = DateTime.UtcNow.AddDays(1),
             DataCriacao = DateTime.UtcNow
         };
         context.ComunicacaoCampanhas.AddRange(campanha1, campanha2);
         await context.SaveChangesAsync();
 
+        // campanha1 fica sem entregas → CalcularStatusOperacional retorna Rascunho
+        // campanha2 tem as 3 entregas (Pendente presente → Agendada pois DataAgendamento > now)
         context.ComunicacaoEntregas.AddRange(
             new ComunicacaoEntrega
             {
-                ComunicacaoCampanhaId = campanha1.Id,
+                ComunicacaoCampanhaId = campanha2.Id,
                 Canal = CanalComunicacao.WhatsApp,
                 DestinoResolvido = "1",
                 ConteudoFinal = "a",

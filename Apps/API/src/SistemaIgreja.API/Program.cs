@@ -123,6 +123,7 @@ builder.Services.AddScoped<IPatrimonioItemRepository, PatrimonioItemRepository>(
 builder.Services.AddScoped<IPatrimonioMovimentacaoRepository, PatrimonioMovimentacaoRepository>();
 builder.Services.AddScoped<IDespesaRepository, DespesaRepository>();
 builder.Services.AddScoped<IReceitaRepository, ReceitaRepository>();
+builder.Services.AddScoped<IOrcamentoCategoriaRepository, OrcamentoCategoriaRepository>();
 builder.Services.AddScoped<ICargoRepository, CargoRepository>();
 builder.Services.AddScoped<IVoluntarioRepository, VoluntarioRepository>();
 builder.Services.AddScoped<IEventoRepository, EventoRepository>();
@@ -203,6 +204,7 @@ builder.Services.AddScoped<IPatrimonioItemService, PatrimonioItemService>();
 builder.Services.AddScoped<IPatrimonioMovimentacaoService, PatrimonioMovimentacaoService>();
 builder.Services.AddScoped<IDespesaService, DespesaService>();
 builder.Services.AddScoped<IReceitaService, ReceitaService>();
+builder.Services.AddScoped<IOrcamentoCategoriaService, OrcamentoCategoriaService>();
 builder.Services.AddScoped<ICargoService, CargoService>();
 builder.Services.AddScoped<IVoluntarioService, VoluntarioService>();
 builder.Services.AddScoped<IEventoService, EventoService>();
@@ -276,12 +278,20 @@ builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<NoticiaUrlExtractorService>();
 
-if (builder.Configuration.GetValue<bool>("Scheduler:Enabled"))
-{
-    builder.Services.AddHostedService<MessageSchedulerService>();
-    builder.Services.AddHostedService<BirthdayCampaignSchedulerService>();
-    builder.Services.AddHostedService<EscalaSchedulerService>();
-}
+// ==========================
+// STORAGE DE ARQUIVOS
+// ==========================
+
+builder.Services.Configure<SistemaIgreja.Application.Services.StorageSettings>(
+    builder.Configuration.GetSection(SistemaIgreja.Application.Services.StorageSettings.SectionName));
+
+var storageProvider = builder.Configuration["Storage:Provider"] ?? "local";
+if (string.Equals(storageProvider, "s3", StringComparison.OrdinalIgnoreCase))
+    builder.Services.AddSingleton<SistemaIgreja.Application.Interfaces.IFileStorageService,
+        SistemaIgreja.Infrastructure.Services.S3FileStorageService>();
+else
+    builder.Services.AddSingleton<SistemaIgreja.Application.Interfaces.IFileStorageService,
+        SistemaIgreja.Infrastructure.Services.LocalFileStorageService>();
 
 // ==========================
 // JWT AUTH
@@ -318,7 +328,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// Rate limiting (anti-abuso) — política por IP para o signup público.
+// Rate limiting por IP — signup (anti-abuso) e login (anti brute-force).
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("signup", httpContext =>
@@ -327,6 +337,15 @@ builder.Services.AddRateLimiter(options =>
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+    options.AddPolicy("login", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
@@ -474,39 +493,21 @@ app.Use(async (context, next) =>
 
 app.UseRouting();
 app.UseCors(CorsPolicyName);
-app.UseSwagger();
-app.UseSwaggerUI();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 app.UseStaticFiles();
 
 // ==========================
-// UPLOADS FIX DEFINITIVO
+// UPLOADS — arquivos estáticos (storage local)
+// Quando Storage:Provider=s3, este bloco é ignorado:
+// os arquivos são servidos diretamente pelo bucket (CDN ou URL pré-assinada).
 // ==========================
 
-bool IsRunningOnAzure()
-{
-    return !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID"));
-}
-
-string GetUploadsPath(IWebHostEnvironment env, IConfiguration config)
-{
-    // Permite override em produção (ex.: storage compartilhado ou path diferente)
-    var configuredPath = config["Uploads:Path"] ?? Environment.GetEnvironmentVariable("UPLOADS_PATH");
-    if (!string.IsNullOrWhiteSpace(configuredPath))
-        return Path.GetFullPath(configuredPath.Trim());
-
-    if (IsRunningOnAzure())
-    {
-        var home = Environment.GetEnvironmentVariable("HOME");
-        if (string.IsNullOrWhiteSpace(home))
-            home = @"D:\home";
-
-        return Path.Combine(home, "data", "uploads");
-    }
-
-    return Path.Combine(env.ContentRootPath, "uploads");
-}
-
-var uploadsPath = GetUploadsPath(app.Environment, app.Configuration);
+var uploadsPath = SistemaIgreja.Infrastructure.Services.LocalFileStorageService
+    .ResolveUploadsPath(app.Environment.ContentRootPath, app.Configuration);
 
 try
 {

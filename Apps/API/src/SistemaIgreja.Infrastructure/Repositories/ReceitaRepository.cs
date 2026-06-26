@@ -22,28 +22,70 @@ public class ReceitaRepository : IReceitaRepository
     {
     }
 
-    public async Task<IEnumerable<Receita>> GetAllAsync()
+    private IQueryable<Receita> WithIncludes()
     {
-        return await _context.Set<Receita>()
+        return _context.Set<Receita>()
             .Include(r => r.CategoriaReceita)
             .Include(r => r.ContaBancaria)
             .Include(r => r.CentroCusto)
             .Include(r => r.Projeto)
+            .Include(r => r.Pessoa)
             .Include(r => r.Usuario)
-                .ThenInclude(u => u!.Pessoa)
+                .ThenInclude(u => u!.Pessoa);
+    }
+
+    public async Task<IEnumerable<Receita>> GetAllAsync()
+    {
+        return await WithIncludes()
             .OrderByDescending(r => r.DataRecebimento)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Receita>> GetByPessoaIdAsync(int pessoaId)
+    {
+        return await WithIncludes()
+            .Where(r => r.PessoaId == pessoaId)
+            .OrderByDescending(r => r.DataRecebimento)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Receita>> GetContribuicoesNoPeriodoAsync(DateTime dataInicio, DateTime dataFim, int? categoriaId = null)
+    {
+        var query = WithIncludes()
+            .Where(r => r.PessoaId != null
+                     && r.DataRecebimento >= dataInicio
+                     && r.DataRecebimento <= dataFim
+                     && r.Status != StatusReceita.Cancelada);
+
+        if (categoriaId.HasValue)
+            query = query.Where(r => r.CategoriaReceitaId == categoriaId.Value);
+
+        return await query.OrderByDescending(r => r.DataRecebimento).ToListAsync();
+    }
+
+    public async Task<IEnumerable<Receita>> GetPorPeriodoAsync(DateTime dataInicio, DateTime dataFim)
+    {
+        return await WithIncludes()
+            .Where(r => r.DataRecebimento >= dataInicio
+                     && r.DataRecebimento <= dataFim
+                     && r.Status != StatusReceita.Cancelada)
+            .OrderBy(r => r.DataRecebimento)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Receita>> GetInformeAnualAsync(int pessoaId, int ano)
+    {
+        return await WithIncludes()
+            .Where(r => r.PessoaId == pessoaId
+                     && r.DataRecebimento.Year == ano
+                     && r.Status != StatusReceita.Cancelada)
+            .OrderBy(r => r.DataRecebimento)
             .ToListAsync();
     }
 
     public async Task<Receita?> GetByIdAsync(int id)
     {
-        return await _context.Set<Receita>()
-            .Include(r => r.CategoriaReceita)
-            .Include(r => r.ContaBancaria)
-            .Include(r => r.CentroCusto)
-            .Include(r => r.Projeto)
-            .Include(r => r.Usuario)
-                .ThenInclude(u => u!.Pessoa)
+        return await WithIncludes()
             .FirstOrDefaultAsync(r => r.Id == id);
     }
 

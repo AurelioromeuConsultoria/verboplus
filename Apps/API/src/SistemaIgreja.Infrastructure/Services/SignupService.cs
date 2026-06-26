@@ -232,9 +232,8 @@ public class SignupService : ISignupService
             await _emailService.SendAsync(new EmailMessage
             {
                 To = email,
-                Subject = "Confirme seu e-mail — VerboPlus",
-                HtmlBody = $"<p>Olá, {nome}!</p><p>Para ativar a sua organização na plataforma, confirme seu e-mail:</p>" +
-                           $"<p><a href=\"{link}\">Confirmar meu e-mail</a></p><p>O link expira em {VerificacaoValidaHoras} horas.</p>"
+                Subject = "Confirme seu e-mail — Verbo+",
+                HtmlBody = EmailTemplates.VerificacaoEmail(nome, link, VerificacaoValidaHoras)
             });
         }
         catch (Exception ex)

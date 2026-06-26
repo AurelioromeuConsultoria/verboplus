@@ -54,5 +54,13 @@ public class Receita : ITenantEntity
     public int? UsuarioId { get; set; }
     public virtual Usuario? Usuario { get; set; }
 
+    public int? PessoaId { get; set; }
+    public virtual Pessoa? Pessoa { get; set; }
+
+    public bool Recorrente { get; set; } = false;
+    public TipoRecorrencia? TipoRecorrencia { get; set; }
+    public int? RecorrenciaOriginalId { get; set; }
+    public virtual Receita? RecorrenciaOriginal { get; set; }
+
     public DateTime DataCriacao { get; set; } = DateTime.Now;
 }

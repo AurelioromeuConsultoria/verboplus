@@ -10,11 +10,12 @@ namespace SistemaIgreja.API.Tests.Services;
 public class ReceitaServiceTests
 {
     private readonly Mock<IReceitaRepository> _repositoryMock = new();
+    private readonly Mock<IPessoaRepository> _pessoaRepositoryMock = new();
     private readonly ReceitaService _service;
 
     public ReceitaServiceTests()
     {
-        _service = new ReceitaService(_repositoryMock.Object);
+        _service = new ReceitaService(_repositoryMock.Object, _pessoaRepositoryMock.Object);
     }
 
     [Fact]

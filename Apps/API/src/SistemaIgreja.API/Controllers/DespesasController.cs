@@ -70,4 +70,29 @@ public class DespesasController : ControllerBase
         await _service.DeleteAsync(id);
         return NoContent();
     }
+
+    [HttpGet("vencimentos")]
+    public async Task<ActionResult<VencimentosResumoDto>> GetVencimentos()
+    {
+        var result = await _service.GetVencimentosAsync();
+        return Ok(result);
+    }
+
+    [HttpPost("{id}/gerar-proxima")]
+    public async Task<ActionResult<DespesaDto>> GerarProxima(int id)
+    {
+        try
+        {
+            var result = await _service.GerarProximaRecorrenciaAsync(id);
+            return Ok(result);
+        }
+        catch (ArgumentException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
 }

@@ -52,4 +52,12 @@ public class RelatoriosFinanceirosController : ControllerBase
         var relatorio = await _service.GetRelatorioPorProjetoAsync(dataInicio, dataFim);
         return Ok(relatorio);
     }
+
+    [HttpGet("dre")]
+    public async Task<ActionResult<DreDto>> GetDre([FromQuery] int ano)
+    {
+        if (ano == 0) ano = DateTime.Now.Year;
+        var result = await _service.GetDreAsync(ano);
+        return Ok(result);
+    }
 }

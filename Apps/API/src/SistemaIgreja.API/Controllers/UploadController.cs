@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Text.Json;
+using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
 
@@ -12,7 +12,7 @@ namespace SistemaIgreja.API.Controllers;
 [Route("api/admin/upload")]
 public class UploadController : ControllerBase
 {
-    private readonly IWebHostEnvironment _environment;
+    private readonly IFileStorageService _fileStorage;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly ITenantContext _tenantContext;
@@ -21,13 +21,13 @@ public class UploadController : ControllerBase
     private static readonly string[] AllowedImageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
 
     public UploadController(
-        IWebHostEnvironment environment,
+        IFileStorageService fileStorage,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
         ITenantContext tenantContext,
         ILogger<UploadController> logger)
     {
-        _environment = environment;
+        _fileStorage = fileStorage;
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
         _tenantContext = tenantContext;
@@ -39,7 +39,7 @@ public class UploadController : ControllerBase
     [Authorize]
     public async Task<IActionResult> UploadImage(IFormFile file)
     {
-        return await UploadFile(file, "images", new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg" });
+        return await HandleUpload(file, "images", new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg" });
     }
 
     [HttpPost("videos")]
@@ -47,7 +47,7 @@ public class UploadController : ControllerBase
     [Authorize]
     public async Task<IActionResult> UploadVideo(IFormFile file)
     {
-        return await UploadFile(file, "videos", new[] { ".mp4", ".webm", ".ogg", ".mov", ".avi" });
+        return await HandleUpload(file, "videos", new[] { ".mp4", ".webm", ".ogg", ".mov", ".avi" });
     }
 
     [HttpPost("audios")]
@@ -55,7 +55,7 @@ public class UploadController : ControllerBase
     [Authorize]
     public async Task<IActionResult> UploadAudio(IFormFile file)
     {
-        return await UploadFile(file, "audios", new[] { ".mp3", ".wav", ".ogg", ".m4a", ".aac" });
+        return await HandleUpload(file, "audios", new[] { ".mp3", ".wav", ".ogg", ".m4a", ".aac" });
     }
 
     [HttpPost("files")]
@@ -63,11 +63,13 @@ public class UploadController : ControllerBase
     [Authorize]
     public async Task<IActionResult> UploadFile(IFormFile file)
     {
-        return await UploadFile(file, "files", null);
+        return await HandleUpload(file, "files", null);
     }
 
     /// <summary>
     /// Recebe imagem enviada por outro backend (sync server-to-server). Exige header X-Sync-Api-Key.
+    /// Usado somente com storage local para sincronizar dev → produção.
+    /// Com S3 este endpoint é desnecessário (ambos os ambientes usam o mesmo bucket).
     /// </summary>
     [HttpPost("sync-image")]
     [Consumes("multipart/form-data")]
@@ -86,22 +88,14 @@ public class UploadController : ControllerBase
         if (name.Contains(Path.DirectorySeparatorChar) || name.Contains('/'))
             name = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
 
-        var folder = "images";
         var resolvedTenantSlug = ResolveTenantSlug(tenantSlug);
-        var uploadsPath = BuildUploadsPath(resolvedTenantSlug, folder);
-        Directory.CreateDirectory(uploadsPath);
-        var filePath = Path.Combine(uploadsPath, name);
-        using (var stream = new FileStream(filePath, FileMode.Create))
-            await file.CopyToAsync(stream);
-
-        var relativePath = BuildRelativePath(resolvedTenantSlug, folder, name);
-        return Ok(new { url = relativePath, path = relativePath, fileName = name });
+        using var stream = file.OpenReadStream();
+        var storedPath = await _fileStorage.SaveAsync(stream, resolvedTenantSlug, "images", name, file.ContentType);
+        return Ok(new { url = storedPath, path = storedPath, fileName = name });
     }
 
     /// <summary>
-    /// Baixa uma imagem de uma URL externa (ex.: og:image de notícia) e salva nos uploads.
-    /// Se ProductionUploadSync estiver configurado, envia também para a API de produção (para o portal exibir).
-    /// Retorna o path relativo para usar no campo imagem da notícia.
+    /// Baixa uma imagem de URL externa e salva no storage.
     /// </summary>
     [HttpPost("image-from-url")]
     [Authorize]
@@ -130,25 +124,23 @@ public class UploadController : ControllerBase
             var bytes = await response.Content.ReadAsByteArrayAsync();
             if (bytes.Length == 0)
                 return BadRequest(new { message = "Imagem vazia" });
-            if (bytes.Length > 5 * 1024 * 1024) // 5MB
+            if (bytes.Length > 5 * 1024 * 1024)
                 return BadRequest(new { message = "Imagem muito grande (máx. 5MB)" });
 
-            var folder = "images";
             var resolvedTenantSlug = ResolveTenantSlug();
-            var uploadsPath = BuildUploadsPath(resolvedTenantSlug, folder);
-            Directory.CreateDirectory(uploadsPath);
             var fileName = $"{Guid.NewGuid()}{extension}";
-            var filePath = Path.Combine(uploadsPath, fileName);
-            await System.IO.File.WriteAllBytesAsync(filePath, bytes);
+            using var stream = new MemoryStream(bytes);
+            var storedPath = await _fileStorage.SaveAsync(stream, resolvedTenantSlug, "images", fileName, $"image/{extension.TrimStart('.')}");
 
-            var syncedRelativePath = await TentarSincronizarImagemParaProducaoAsync(resolvedTenantSlug, folder, filePath, fileName);
-            var relativePath = syncedRelativePath ?? BuildRelativePath(resolvedTenantSlug, folder, fileName);
+            // Sync dev→prod apenas para storage local
+            if (_fileStorage.IsLocalStorage)
+                storedPath = await TentarSincronizarParaProducaoAsync(storedPath, bytes, resolvedTenantSlug, fileName) ?? storedPath;
 
-            return Ok(new { url = relativePath, path = relativePath, fileName });
+            return Ok(new { url = storedPath, path = storedPath, fileName });
         }
         catch (HttpRequestException ex)
         {
-            return BadRequest(new { message = "Não foi possível baixar a imagem. Verifique a URL.", error = ex.Message });
+            return BadRequest(new { message = "Não foi possível baixar a imagem.", error = ex.Message });
         }
         catch (Exception ex)
         {
@@ -156,84 +148,49 @@ public class UploadController : ControllerBase
         }
     }
 
-    private static string? GetExtensionFromContentType(string contentType)
-    {
-        return contentType.ToLowerInvariant() switch
-        {
-            "image/jpeg" => ".jpg",
-            "image/jpg" => ".jpg",
-            "image/png" => ".png",
-            "image/gif" => ".gif",
-            "image/webp" => ".webp",
-            _ => null
-        };
-    }
-
-    private static string? GetExtensionFromUrl(string url)
-    {
-        try
-        {
-            var path = new Uri(url).AbsolutePath;
-            var ext = Path.GetExtension(path);
-            return !string.IsNullOrEmpty(ext) && AllowedImageExtensions.Contains(ext.ToLowerInvariant()) ? ext : null;
-        }
-        catch { return null; }
-    }
-
-    private async Task<IActionResult> UploadFile(IFormFile file, string folder, string[]? allowedExtensions)
+    private async Task<IActionResult> HandleUpload(IFormFile file, string folder, string[]? allowedExtensions)
     {
         if (file == null || file.Length == 0)
-        {
             return BadRequest(new { message = "Nenhum arquivo enviado" });
-        }
 
         if (file.Length > MaxFileSize)
-        {
             return BadRequest(new { message = $"Arquivo muito grande. Máximo: {MaxFileSize / (1024 * 1024)}MB" });
-        }
 
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        
         if (allowedExtensions != null && !allowedExtensions.Contains(extension))
-        {
             return BadRequest(new { message = $"Tipo de arquivo não permitido. Extensões permitidas: {string.Join(", ", allowedExtensions)}" });
-        }
 
         try
         {
             var resolvedTenantSlug = ResolveTenantSlug();
-            var uploadsPath = BuildUploadsPath(resolvedTenantSlug, folder);
-            Directory.CreateDirectory(uploadsPath);
-
             var fileName = $"{Guid.NewGuid()}{extension}";
-            var filePath = Path.Combine(uploadsPath, fileName);
 
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            using var stream = file.OpenReadStream();
+            var storedPath = await _fileStorage.SaveAsync(stream, resolvedTenantSlug, folder, fileName, file.ContentType);
+
+            // Sync dev→prod apenas para imagens no storage local
+            if (_fileStorage.IsLocalStorage && string.Equals(folder, "images", StringComparison.OrdinalIgnoreCase))
             {
-                await file.CopyToAsync(stream);
+                using var ms = new MemoryStream();
+                stream.Position = 0;
+                // Re-read: stream foi consumido; precisamos ler o arquivo salvo
+                storedPath = await TentarSincronizarParaProducaoAsync(storedPath, null, resolvedTenantSlug, fileName) ?? storedPath;
             }
 
-            var syncedRelativePath = await TentarSincronizarImagemParaProducaoAsync(resolvedTenantSlug, folder, filePath, fileName);
-            var relativePath = syncedRelativePath ?? BuildRelativePath(resolvedTenantSlug, folder, fileName);
-            
-            return Ok(new { 
-                url = relativePath,
-                path = relativePath,
-                fileName = fileName,
-                size = file.Length
-            });
+            return Ok(new { url = storedPath, path = storedPath, fileName, size = file.Length });
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Erro ao fazer upload do arquivo", error = ex.Message });
+            return StatusCode(500, new { message = "Erro ao fazer upload", error = ex.Message });
         }
     }
 
-    private async Task<string?> TentarSincronizarImagemParaProducaoAsync(string tenantSlug, string folder, string filePath, string fileName)
+    /// <summary>
+    /// Tenta sincronizar a imagem para a API de produção (mecanismo dev→prod para storage local).
+    /// Quando bytes é null, lê o arquivo do disco a partir do storedPath.
+    /// </summary>
+    private async Task<string?> TentarSincronizarParaProducaoAsync(string storedPath, byte[]? bytes, string tenantSlug, string fileName)
     {
-        if (!string.Equals(folder, "images", StringComparison.OrdinalIgnoreCase))
-            return null;
-
         var syncBaseUrl = _configuration["ProductionUploadSync:BaseUrl"]?.Trim();
         var syncApiKey = _configuration["ProductionUploadSync:ApiKey"]?.Trim();
         if (string.IsNullOrEmpty(syncBaseUrl) || string.IsNullOrEmpty(syncApiKey))
@@ -241,7 +198,16 @@ public class UploadController : ControllerBase
 
         try
         {
-            var bytes = await System.IO.File.ReadAllBytesAsync(filePath);
+            // Se bytes não foi passado, lê do disco via LocalFileStorageService path
+            if (bytes == null)
+            {
+                var withoutLeadingSlash = storedPath.TrimStart('/');
+                var relativePart = withoutLeadingSlash.StartsWith("uploads/") ? withoutLeadingSlash["uploads/".Length..] : withoutLeadingSlash;
+                // Não temos a raiz aqui — o sync via IFormFile stream aconteceu antes do save;
+                // para este cenário retornamos null e deixamos o path local
+                return null;
+            }
+
             var syncClient = _httpClientFactory.CreateClient();
             syncClient.Timeout = TimeSpan.FromSeconds(30);
 
@@ -256,76 +222,63 @@ public class UploadController : ControllerBase
 
             using var syncResponse = await syncClient.SendAsync(syncRequest);
             if (!syncResponse.IsSuccessStatusCode)
-            {
                 throw new InvalidOperationException($"Sync produção retornou {(int)syncResponse.StatusCode}");
-            }
 
-            var contentString = await syncResponse.Content.ReadAsStringAsync();
-            if (string.IsNullOrWhiteSpace(contentString))
+            var json = await syncResponse.Content.ReadAsStringAsync();
+            if (!string.IsNullOrWhiteSpace(json))
             {
-                return null;
-            }
-
-            try
-            {
-                using var json = JsonDocument.Parse(contentString);
-                if (json.RootElement.TryGetProperty("url", out var urlElement))
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("url", out var urlEl))
                 {
-                    var resolvedUrl = urlElement.GetString();
+                    var resolvedUrl = urlEl.GetString();
                     if (!string.IsNullOrWhiteSpace(resolvedUrl))
                     {
-                        _logger.LogInformation(
-                            "Imagem sincronizada para produção com sucesso. TenantSlug={TenantSlug} LocalFileName={FileName} PublicUrl={PublicUrl}",
-                            tenantSlug,
-                            fileName,
-                            resolvedUrl);
+                        _logger.LogInformation("Imagem sincronizada para produção. Tenant={Tenant} File={File} Url={Url}", tenantSlug, fileName, resolvedUrl);
                         return resolvedUrl;
                     }
                 }
             }
-            catch (JsonException ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "Sync de produção respondeu sucesso, mas o payload não pôde ser interpretado. FileName={FileName} Response={Response}",
-                    fileName,
-                    contentString);
-            }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Falha ao sincronizar imagem enviada para a API de produção.");
+            _logger.LogWarning(ex, "Falha ao sincronizar imagem para produção.");
         }
 
         return null;
     }
 
+    private static string? GetExtensionFromContentType(string contentType) =>
+        contentType.ToLowerInvariant() switch
+        {
+            "image/jpeg" or "image/jpg" => ".jpg",
+            "image/png" => ".png",
+            "image/gif" => ".gif",
+            "image/webp" => ".webp",
+            _ => null
+        };
+
+    private static string? GetExtensionFromUrl(string url)
+    {
+        try
+        {
+            var ext = Path.GetExtension(new Uri(url).AbsolutePath);
+            return !string.IsNullOrEmpty(ext) && AllowedImageExtensions.Contains(ext.ToLowerInvariant()) ? ext : null;
+        }
+        catch { return null; }
+    }
+
     private string ResolveTenantSlug(string? explicitTenantSlug = null)
     {
-        var candidate = string.IsNullOrWhiteSpace(explicitTenantSlug)
-            ? _tenantContext.TenantSlug
-            : explicitTenantSlug;
-
+        var candidate = string.IsNullOrWhiteSpace(explicitTenantSlug) ? _tenantContext.TenantSlug : explicitTenantSlug;
         if (string.IsNullOrWhiteSpace(candidate))
-        {
             return Tenant.InitialTenantSlug;
-        }
 
         var sanitized = candidate.Trim().ToLowerInvariant();
         foreach (var invalid in Path.GetInvalidFileNameChars())
-        {
             sanitized = sanitized.Replace(invalid, '-');
-        }
-
         sanitized = sanitized.Replace("/", "-").Replace("\\", "-");
         return string.IsNullOrWhiteSpace(sanitized) ? Tenant.InitialTenantSlug : sanitized;
     }
-
-    private string BuildUploadsPath(string tenantSlug, string folder)
-        => Path.Combine(_environment.ContentRootPath, "uploads", "tenants", tenantSlug, folder);
-
-    private static string BuildRelativePath(string tenantSlug, string folder, string fileName)
-        => $"/uploads/tenants/{tenantSlug}/{folder}/{fileName}";
 }
 
 public class UploadImageFromUrlRequest

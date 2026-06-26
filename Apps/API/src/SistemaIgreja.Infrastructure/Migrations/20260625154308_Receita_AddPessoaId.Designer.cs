@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SistemaIgreja.Infrastructure.Data;
@@ -11,9 +12,11 @@ using SistemaIgreja.Infrastructure.Data;
 namespace SistemaIgreja.Infrastructure.Migrations
 {
     [DbContext(typeof(SistemaIgrejaDbContext))]
-    partial class SistemaIgrejaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260625154308_Receita_AddPessoaId")]
+    partial class Receita_AddPessoaId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1195,19 +1198,10 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int?>("ProjetoId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("RecorrenciaOriginalId")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("Recorrente")
-                        .HasColumnType("boolean");
-
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.Property<int>("TenantId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("TipoRecorrencia")
                         .HasColumnType("integer");
 
                     b.Property<int?>("UsuarioId")
@@ -1227,8 +1221,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasIndex("FornecedorId");
 
                     b.HasIndex("ProjetoId");
-
-                    b.HasIndex("RecorrenciaOriginalId");
 
                     b.HasIndex("UsuarioId");
 
@@ -3292,43 +3284,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.ToTable("NotificacoesUsuarios");
                 });
 
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.OrcamentoCategoria", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("Ano")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("CategoriaDespesaId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("CategoriaReceitaId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TenantId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Tipo")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("ValorOrcado")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoriaDespesaId");
-
-                    b.HasIndex("CategoriaReceitaId");
-
-                    b.HasIndex("TenantId", "Ano", "Tipo");
-
-                    b.ToTable("OrcamentoCategorias");
-                });
-
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.PatrimonioItem", b =>
                 {
                     b.Property<int>("Id")
@@ -3866,19 +3821,10 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Property<int?>("ProjetoId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("RecorrenciaOriginalId")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("Recorrente")
-                        .HasColumnType("boolean");
-
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.Property<int>("TenantId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("TipoRecorrencia")
                         .HasColumnType("integer");
 
                     b.Property<int?>("UsuarioId")
@@ -3898,8 +3844,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.HasIndex("PessoaId");
 
                     b.HasIndex("ProjetoId");
-
-                    b.HasIndex("RecorrenciaOriginalId");
 
                     b.HasIndex("UsuarioId");
 
@@ -4650,10 +4594,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasForeignKey("ProjetoId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("SistemaIgreja.Domain.Entities.Despesa", "RecorrenciaOriginal")
-                        .WithMany()
-                        .HasForeignKey("RecorrenciaOriginalId");
-
                     b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
@@ -4674,8 +4614,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Fornecedor");
 
                     b.Navigation("Projeto");
-
-                    b.Navigation("RecorrenciaOriginal");
 
                     b.Navigation("Tenant");
 
@@ -5540,31 +5478,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("SistemaIgreja.Domain.Entities.OrcamentoCategoria", b =>
-                {
-                    b.HasOne("SistemaIgreja.Domain.Entities.CategoriaDespesa", "CategoriaDespesa")
-                        .WithMany()
-                        .HasForeignKey("CategoriaDespesaId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.CategoriaReceita", "CategoriaReceita")
-                        .WithMany()
-                        .HasForeignKey("CategoriaReceitaId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CategoriaDespesa");
-
-                    b.Navigation("CategoriaReceita");
-
-                    b.Navigation("Tenant");
-                });
-
             modelBuilder.Entity("SistemaIgreja.Domain.Entities.PatrimonioItem", b =>
                 {
                     b.HasOne("SistemaIgreja.Domain.Entities.CategoriaPatrimonio", "CategoriaPatrimonio")
@@ -5743,10 +5656,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                         .HasForeignKey("ProjetoId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("SistemaIgreja.Domain.Entities.Receita", "RecorrenciaOriginal")
-                        .WithMany()
-                        .HasForeignKey("RecorrenciaOriginalId");
-
                     b.HasOne("SistemaIgreja.Domain.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
@@ -5767,8 +5676,6 @@ namespace SistemaIgreja.Infrastructure.Migrations
                     b.Navigation("Pessoa");
 
                     b.Navigation("Projeto");
-
-                    b.Navigation("RecorrenciaOriginal");
 
                     b.Navigation("Tenant");
 

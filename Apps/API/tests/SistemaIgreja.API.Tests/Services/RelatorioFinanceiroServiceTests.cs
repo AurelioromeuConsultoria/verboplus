@@ -1,6 +1,5 @@
 using FluentAssertions;
 using Moq;
-using SistemaIgreja.Application.DTOs;
 using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Application.Services;
 using SistemaIgreja.Domain.Entities;
@@ -9,12 +8,13 @@ namespace SistemaIgreja.API.Tests.Services;
 
 public class RelatorioFinanceiroServiceTests
 {
-    private readonly Mock<IFinanceiroQueryService> _queryServiceMock = new();
+    private readonly Mock<IReceitaRepository> _receitaRepositoryMock = new();
+    private readonly Mock<IDespesaRepository> _despesaRepositoryMock = new();
     private readonly RelatorioFinanceiroService _service;
 
     public RelatorioFinanceiroServiceTests()
     {
-        _service = new RelatorioFinanceiroService(_queryServiceMock.Object);
+        _service = new RelatorioFinanceiroService(_receitaRepositoryMock.Object, _despesaRepositoryMock.Object);
     }
 
     [Fact]
@@ -22,10 +22,14 @@ public class RelatorioFinanceiroServiceTests
     {
         var inicio = new DateTime(2026, 4, 1);
         var fim = new DateTime(2026, 4, 30);
-        _queryServiceMock.Setup(s => s.GetMovimentacoesDiariasAsync(inicio, fim))
-            .ReturnsAsync(new List<MovimentacaoDiariaDto> { new() { Data = inicio, Receitas = 100, Despesas = 40, SaldoDia = 60 } });
-        _queryServiceMock.Setup(s => s.GetTotalReceitasAsync(inicio, fim, StatusReceita.Recebida)).ReturnsAsync(1000);
-        _queryServiceMock.Setup(s => s.GetTotalDespesasAsync(inicio, fim, StatusDespesa.Paga)).ReturnsAsync(400);
+
+        _receitaRepositoryMock
+            .Setup(r => r.GetPorPeriodoAsync(inicio, fim))
+            .ReturnsAsync([new Receita { Valor = 1000m, DataRecebimento = inicio, Status = StatusReceita.Recebida }]);
+
+        _despesaRepositoryMock
+            .Setup(r => r.GetPorPeriodoAsync(inicio, fim))
+            .ReturnsAsync([new Despesa { Valor = 400m, DataVencimento = inicio, Status = StatusDespesa.Paga }]);
 
         var result = await _service.GetFluxoCaixaAsync(inicio, fim);
 
@@ -40,16 +44,16 @@ public class RelatorioFinanceiroServiceTests
     {
         var inicio = new DateTime(2026, 4, 1);
         var fim = new DateTime(2026, 4, 30);
-        _queryServiceMock.Setup(s => s.GetRelatorioReceitasPorCategoriaAsync(inicio, fim))
-            .ReturnsAsync(new List<RelatorioPorCategoriaDto>
-            {
-                new() { CategoriaId = 1, CategoriaNome = "Dizimos", Valor = 500, Quantidade = 2, Percentual = 50 }
-            });
-        _queryServiceMock.Setup(s => s.GetRelatorioDespesasPorCategoriaAsync(inicio, fim))
-            .ReturnsAsync(new List<RelatorioPorCategoriaDto>
-            {
-                new() { CategoriaId = 2, CategoriaNome = "Infra", Valor = 200, Quantidade = 1, Percentual = 100 }
-            });
+        var catReceita = new CategoriaReceita { Id = 1, Nome = "Dizimos" };
+        var catDespesa = new CategoriaDespesa { Id = 2, Nome = "Infra" };
+
+        _receitaRepositoryMock
+            .Setup(r => r.GetPorPeriodoAsync(inicio, fim))
+            .ReturnsAsync([new Receita { Valor = 500m, DataRecebimento = inicio, CategoriaReceitaId = 1, CategoriaReceita = catReceita }]);
+
+        _despesaRepositoryMock
+            .Setup(r => r.GetPorPeriodoAsync(inicio, fim))
+            .ReturnsAsync([new Despesa { Valor = 200m, DataVencimento = inicio, CategoriaDespesaId = 2, CategoriaDespesa = catDespesa }]);
 
         var result = await _service.GetRelatorioPorCategoriaAsync(inicio, fim);
 

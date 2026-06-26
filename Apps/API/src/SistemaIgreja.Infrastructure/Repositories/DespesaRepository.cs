@@ -22,30 +22,46 @@ public class DespesaRepository : IDespesaRepository
     {
     }
 
-    public async Task<IEnumerable<Despesa>> GetAllAsync()
+    private IQueryable<Despesa> WithIncludes()
     {
-        return await _context.Set<Despesa>()
+        return _context.Set<Despesa>()
             .Include(d => d.Fornecedor)
             .Include(d => d.CategoriaDespesa)
             .Include(d => d.ContaBancaria)
             .Include(d => d.CentroCusto)
             .Include(d => d.Projeto)
             .Include(d => d.Usuario)
-                .ThenInclude(u => u!.Pessoa)
+                .ThenInclude(u => u!.Pessoa);
+    }
+
+    public async Task<IEnumerable<Despesa>> GetAllAsync()
+    {
+        return await WithIncludes()
             .OrderByDescending(d => d.DataVencimento)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Despesa>> GetPendentesAteDataAsync(DateTime ate)
+    {
+        return await WithIncludes()
+            .Where(d => d.Status == StatusDespesa.Pendente && d.DataVencimento.Date <= ate.Date)
+            .OrderBy(d => d.DataVencimento)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Despesa>> GetPorPeriodoAsync(DateTime dataInicio, DateTime dataFim)
+    {
+        return await WithIncludes()
+            .Where(d => d.Status != StatusDespesa.Cancelada
+                     && d.DataVencimento.Date >= dataInicio.Date
+                     && d.DataVencimento.Date <= dataFim.Date)
+            .OrderBy(d => d.DataVencimento)
             .ToListAsync();
     }
 
     public async Task<Despesa?> GetByIdAsync(int id)
     {
-        return await _context.Set<Despesa>()
-            .Include(d => d.Fornecedor)
-            .Include(d => d.CategoriaDespesa)
-            .Include(d => d.ContaBancaria)
-            .Include(d => d.CentroCusto)
-            .Include(d => d.Projeto)
-            .Include(d => d.Usuario)
-                .ThenInclude(u => u!.Pessoa)
+        return await WithIncludes()
             .FirstOrDefaultAsync(d => d.Id == id);
     }
 

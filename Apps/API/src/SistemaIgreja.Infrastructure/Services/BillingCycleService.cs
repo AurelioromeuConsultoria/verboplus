@@ -97,40 +97,36 @@ public class BillingCycleService : IBillingCycleService
     private async Task NotificarTrialAcabandoAsync(int tenantId, DateTime trialFim, CancellationToken cancellationToken)
     {
         await EnviarParaAdminAsync(tenantId,
-            "Seu período de teste está acabando",
-            $"<p>Olá,</p><p>Seu período de teste termina em <strong>{trialFim:dd/MM/yyyy}</strong>. " +
-            "Para continuar usando a plataforma sem interrupção, escolha a forma de pagamento na área de <strong>Assinatura</strong>.</p>",
+            "Seu período de teste está acabando — Verbo+",
+            nome => EmailTemplates.TrialAcabando(nome, trialFim),
             cancellationToken);
     }
 
     private async Task NotificarSuspensaoAsync(int tenantId, CancellationToken cancellationToken)
     {
         await EnviarParaAdminAsync(tenantId,
-            "Sua assinatura foi suspensa",
-            "<p>Olá,</p><p>A assinatura da sua organização na plataforma foi <strong>suspensa</strong> por falta de pagamento. " +
-            "Para reativar o acesso, regularize o pagamento na área de <strong>Assinatura</strong> do sistema.</p>",
+            "Sua assinatura foi suspensa — Verbo+",
+            EmailTemplates.AssinaturaSuspensa,
             cancellationToken);
     }
 
-    private async Task EnviarParaAdminAsync(int tenantId, string assunto, string html, CancellationToken cancellationToken)
+    private async Task EnviarParaAdminAsync(int tenantId, string assunto, Func<string, string> htmlBuilder, CancellationToken cancellationToken)
     {
         try
         {
-            var email = await _context.Usuarios
+            var dados = await _context.Usuarios
                 .Where(u => u.TenantId == tenantId && u.Ativo && u.TipoUsuario == TipoUsuario.Admin)
-                .Select(u => u.EmailLogin)
+                .Select(u => new { u.EmailLogin, TenantNome = u.Tenant.Nome })
                 .FirstOrDefaultAsync(cancellationToken);
 
-            if (string.IsNullOrWhiteSpace(email))
-            {
+            if (dados == null || string.IsNullOrWhiteSpace(dados.EmailLogin))
                 return;
-            }
 
             await _emailService.SendAsync(new EmailMessage
             {
-                To = email,
+                To = dados.EmailLogin,
                 Subject = assunto,
-                HtmlBody = html
+                HtmlBody = htmlBuilder(dados.TenantNome ?? "sua organização")
             }, cancellationToken);
         }
         catch (Exception ex)

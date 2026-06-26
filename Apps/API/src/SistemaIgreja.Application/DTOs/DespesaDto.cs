@@ -26,7 +26,23 @@ public class DespesaDto
     public string? ProjetoNome { get; set; }
     public int? UsuarioId { get; set; }
     public string? UsuarioNome { get; set; }
+    public bool Recorrente { get; set; }
+    public TipoRecorrencia? TipoRecorrencia { get; set; }
+    public string? TipoRecorrenciaDescricao { get; set; }
+    public int? RecorrenciaOriginalId { get; set; }
     public DateTime DataCriacao { get; set; }
+}
+
+public class VencimentosResumoDto
+{
+    public decimal TotalVencido { get; set; }
+    public decimal TotalHoje { get; set; }
+    public decimal TotalProximos7Dias { get; set; }
+    public decimal TotalProximos30Dias { get; set; }
+    public List<DespesaDto> Vencidas { get; set; } = new();
+    public List<DespesaDto> Hoje { get; set; } = new();
+    public List<DespesaDto> Proximos7Dias { get; set; } = new();
+    public List<DespesaDto> Proximos30Dias { get; set; } = new();
 }
 
 public class CriarDespesaDto
@@ -63,6 +79,8 @@ public class CriarDespesaDto
     public int? ProjetoId { get; set; }
 
     public int? UsuarioId { get; set; }
+    public bool Recorrente { get; set; } = false;
+    public TipoRecorrencia? TipoRecorrencia { get; set; }
 }
 
 public class AtualizarDespesaDto
@@ -99,4 +117,6 @@ public class AtualizarDespesaDto
     public int? ProjetoId { get; set; }
 
     public int? UsuarioId { get; set; }
+    public bool Recorrente { get; set; } = false;
+    public TipoRecorrencia? TipoRecorrencia { get; set; }
 }

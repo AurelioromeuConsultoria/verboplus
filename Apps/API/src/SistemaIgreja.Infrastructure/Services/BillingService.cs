@@ -487,12 +487,16 @@ public class BillingService : IBillingService
                 return;
             }
 
+            var nomeOrg = await _context.Tenants
+                .Where(t => t.Id == tenantId)
+                .Select(t => t.Nome)
+                .FirstOrDefaultAsync() ?? "sua organização";
+
             await _emailService.SendAsync(new EmailMessage
             {
                 To = email,
-                Subject = "Pagamento pendente na sua assinatura",
-                HtmlBody = "<p>Olá,</p><p>Identificamos uma <strong>pendência de pagamento</strong> na assinatura da sua organização. " +
-                           "Regularize na área de <strong>Assinatura</strong> para evitar a suspensão do acesso.</p>"
+                Subject = "Pagamento pendente na sua assinatura — Verbo+",
+                HtmlBody = EmailTemplates.PagamentoPendente(nomeOrg)
             });
         }
         catch (Exception ex)

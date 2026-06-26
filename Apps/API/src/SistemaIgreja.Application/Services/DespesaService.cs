@@ -11,6 +11,8 @@ public interface IDespesaService
     Task<DespesaDto> CreateAsync(CriarDespesaDto dto);
     Task<DespesaDto> UpdateAsync(int id, AtualizarDespesaDto dto);
     Task DeleteAsync(int id);
+    Task<VencimentosResumoDto> GetVencimentosAsync();
+    Task<DespesaDto> GerarProximaRecorrenciaAsync(int id);
 }
 
 public class DespesaService : IDespesaService
@@ -51,13 +53,14 @@ public class DespesaService : IDespesaService
             CentroCustoId = dto.CentroCustoId,
             ProjetoId = dto.ProjetoId,
             UsuarioId = dto.UsuarioId,
+            Recorrente = dto.Recorrente,
+            TipoRecorrencia = dto.TipoRecorrencia,
             DataCriacao = DateTime.Now,
         };
 
         var created = await _repository.CreateAsync(entity);
-        // Recarregar com relacionamentos para o DTO
-        var createdWithRelations = await _repository.GetByIdAsync(created.Id);
-        return MapToDto(createdWithRelations!);
+        var withRelations = await _repository.GetByIdAsync(created.Id);
+        return MapToDto(withRelations!);
     }
 
     public async Task<DespesaDto> UpdateAsync(int id, AtualizarDespesaDto dto)
@@ -78,17 +81,88 @@ public class DespesaService : IDespesaService
         entity.CentroCustoId = dto.CentroCustoId;
         entity.ProjetoId = dto.ProjetoId;
         entity.UsuarioId = dto.UsuarioId;
+        entity.Recorrente = dto.Recorrente;
+        entity.TipoRecorrencia = dto.TipoRecorrencia;
 
         var updated = await _repository.UpdateAsync(entity);
-        // Recarregar com relacionamentos para o DTO
-        var updatedWithRelations = await _repository.GetByIdAsync(updated.Id);
-        return MapToDto(updatedWithRelations!);
+        var withRelations = await _repository.GetByIdAsync(updated.Id);
+        return MapToDto(withRelations!);
     }
 
     public async Task DeleteAsync(int id)
     {
         await _repository.DeleteAsync(id);
     }
+
+    public async Task<VencimentosResumoDto> GetVencimentosAsync()
+    {
+        var hoje = DateTime.Today;
+        var em30Dias = hoje.AddDays(30);
+
+        var pendentes = await _repository.GetPendentesAteDataAsync(em30Dias);
+
+        var vencidas = pendentes.Where(d => d.DataVencimento.Date < hoje).ToList();
+        var venceHoje = pendentes.Where(d => d.DataVencimento.Date == hoje).ToList();
+        var proximos7 = pendentes.Where(d => d.DataVencimento.Date > hoje && d.DataVencimento.Date <= hoje.AddDays(7)).ToList();
+        var proximos30 = pendentes.Where(d => d.DataVencimento.Date > hoje.AddDays(7) && d.DataVencimento.Date <= em30Dias).ToList();
+
+        return new VencimentosResumoDto
+        {
+            TotalVencido = vencidas.Sum(d => d.Valor),
+            TotalHoje = venceHoje.Sum(d => d.Valor),
+            TotalProximos7Dias = proximos7.Sum(d => d.Valor),
+            TotalProximos30Dias = proximos30.Sum(d => d.Valor),
+            Vencidas = vencidas.Select(MapToDto).ToList(),
+            Hoje = venceHoje.Select(MapToDto).ToList(),
+            Proximos7Dias = proximos7.Select(MapToDto).ToList(),
+            Proximos30Dias = proximos30.Select(MapToDto).ToList(),
+        };
+    }
+
+    public async Task<DespesaDto> GerarProximaRecorrenciaAsync(int id)
+    {
+        var original = await _repository.GetByIdAsync(id);
+        if (original == null) throw new ArgumentException("Despesa não encontrada");
+        if (!original.Recorrente || original.TipoRecorrencia == null)
+            throw new InvalidOperationException("Esta despesa não está marcada como recorrente.");
+
+        var novaData = CalcularProximaData(original.DataVencimento, original.TipoRecorrencia.Value);
+
+        var nova = new Despesa
+        {
+            Descricao = original.Descricao,
+            Valor = original.Valor,
+            DataVencimento = novaData,
+            Status = StatusDespesa.Pendente,
+            Observacoes = original.Observacoes,
+            FornecedorId = original.FornecedorId,
+            CategoriaDespesaId = original.CategoriaDespesaId,
+            ContaBancariaId = original.ContaBancariaId,
+            CentroCustoId = original.CentroCustoId,
+            ProjetoId = original.ProjetoId,
+            UsuarioId = original.UsuarioId,
+            Recorrente = true,
+            TipoRecorrencia = original.TipoRecorrencia,
+            RecorrenciaOriginalId = original.RecorrenciaOriginalId ?? original.Id,
+            DataCriacao = DateTime.Now,
+        };
+
+        var created = await _repository.CreateAsync(nova);
+        var withRelations = await _repository.GetByIdAsync(created.Id);
+        return MapToDto(withRelations!);
+    }
+
+    private static DateTime CalcularProximaData(DateTime data, TipoRecorrencia tipo) => tipo switch
+    {
+        TipoRecorrencia.Semanal => data.AddDays(7),
+        TipoRecorrencia.Quinzenal => data.AddDays(15),
+        TipoRecorrencia.Mensal => data.AddMonths(1),
+        TipoRecorrencia.Bimestral => data.AddMonths(2),
+        TipoRecorrencia.Trimestral => data.AddMonths(3),
+        TipoRecorrencia.Semestral => data.AddMonths(6),
+        TipoRecorrencia.Anual => data.AddYears(1),
+        _ => data.AddMonths(1)
+    };
 
     private static DespesaDto MapToDto(Despesa d)
     {
@@ -115,18 +189,31 @@ public class DespesaService : IDespesaService
             ProjetoNome = d.Projeto?.Nome,
             UsuarioId = d.UsuarioId,
             UsuarioNome = d.Usuario?.Pessoa?.Nome,
+            Recorrente = d.Recorrente,
+            TipoRecorrencia = d.TipoRecorrencia,
+            TipoRecorrenciaDescricao = d.TipoRecorrencia.HasValue ? GetRecorrenciaDescricao(d.TipoRecorrencia.Value) : null,
+            RecorrenciaOriginalId = d.RecorrenciaOriginalId,
             DataCriacao = d.DataCriacao,
         };
     }
 
-    private static string GetStatusDescricao(StatusDespesa status)
+    private static string GetStatusDescricao(StatusDespesa status) => status switch
     {
-        return status switch
-        {
-            StatusDespesa.Pendente => "Pendente",
-            StatusDespesa.Paga => "Paga",
-            StatusDespesa.Cancelada => "Cancelada",
-            _ => status.ToString()
-        };
-    }
+        StatusDespesa.Pendente => "Pendente",
+        StatusDespesa.Paga => "Paga",
+        StatusDespesa.Cancelada => "Cancelada",
+        _ => status.ToString()
+    };
+
+    private static string GetRecorrenciaDescricao(TipoRecorrencia tipo) => tipo switch
+    {
+        TipoRecorrencia.Semanal => "Semanal",
+        TipoRecorrencia.Quinzenal => "Quinzenal",
+        TipoRecorrencia.Mensal => "Mensal",
+        TipoRecorrencia.Bimestral => "Bimestral",
+        TipoRecorrencia.Trimestral => "Trimestral",
+        TipoRecorrencia.Semestral => "Semestral",
+        TipoRecorrencia.Anual => "Anual",
+        _ => tipo.ToString()
+    };
 }

@@ -80,6 +80,7 @@ public class SistemaIgrejaDbContext : DbContext
     public DbSet<PatrimonioMovimentacao> PatrimonioMovimentacoes { get; set; }
     public DbSet<Despesa> Despesas { get; set; }
     public DbSet<Receita> Receitas { get; set; }
+    public DbSet<OrcamentoCategoria> OrcamentoCategorias { get; set; }
     public DbSet<Cargo> Cargos { get; set; }
     public DbSet<Voluntario> Voluntarios { get; set; }
     public DbSet<Evento> Eventos { get; set; }
@@ -987,12 +988,44 @@ public class SistemaIgrejaDbContext : DbContext
                   .HasForeignKey(e => e.UsuarioId)
                   .OnDelete(DeleteBehavior.SetNull);
 
+            entity.HasOne(e => e.Pessoa)
+                  .WithMany()
+                  .HasForeignKey(e => e.PessoaId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
             entity.HasIndex(e => new { e.TenantId, e.DataRecebimento, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.PessoaId, e.DataRecebimento });
 
             entity.HasOne(e => e.Tenant)
                   .WithMany()
                   .HasForeignKey(e => e.TenantId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<OrcamentoCategoria>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.Ano).IsRequired();
+            entity.Property(e => e.Tipo).IsRequired();
+            entity.Property(e => e.ValorOrcado).IsRequired().HasColumnType("decimal(18,2)");
+
+            entity.HasOne(e => e.CategoriaReceita)
+                  .WithMany()
+                  .HasForeignKey(e => e.CategoriaReceitaId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.CategoriaDespesa)
+                  .WithMany()
+                  .HasForeignKey(e => e.CategoriaDespesaId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Tenant)
+                  .WithMany()
+                  .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => new { e.TenantId, e.Ano, e.Tipo });
         });
 
         // Configuração da entidade Cargo
