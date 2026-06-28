@@ -9,7 +9,7 @@ O nginx **deve repassar** as requisições (incluindo OPTIONS/preflight) para a 
 ```nginx
 server {
     listen 80;
-    server_name api.kingdombr.com.br;
+    server_name api.verboplus.com.br;
 
     location / {
         proxy_pass http://localhost:7000;  # ou a porta da sua API
@@ -38,6 +38,6 @@ server {
 
 Se o CORS continuar falhando, confira no navegador (F12 > Network):
 
-- **Request URL**: deve ser `https://api.kingdombr.com.br/api/...`
-- **Origin**: deve ser a URL do Portal (ex.: `https://kingdombr.com.br`)
+- **Request URL**: deve ser `https://api.verboplus.com.br/api/...`
+- **Origin**: deve ser a URL do cliente (ex.: admin `https://app.verboplus.com.br`; Portal continua em `https://portal.kingdombr.com.br`)
 - **Access-Control-Allow-Origin** na resposta: deve ter a mesma origem do Portal
