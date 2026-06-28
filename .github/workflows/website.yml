@@ -1,0 +1,39 @@
+name: Website (Landing) CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Apps/Website/**'
+      - '.github/workflows/website.yml'
+  pull_request:
+    paths:
+      - 'Apps/Website/**'
+      - '.github/workflows/website.yml'
+
+defaults:
+  run:
+    working-directory: Apps/Website
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Build (valida o bundle antes do deploy)
+        run: npm run build
+
+      - name: Deploy no Coolify
+        if: github.event_name == 'push'
+        run: |
+          curl -fsSL -X GET \
+            "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_WEBSITE_UUID }}&force=false" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"

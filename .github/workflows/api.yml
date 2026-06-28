@@ -28,7 +28,14 @@ jobs:
       - name: Restore
         run: dotnet restore src/SistemaIgreja.API/SistemaIgreja.API.csproj
 
-      - name: Build
+      - name: Build (valida antes do deploy)
         run: dotnet build src/SistemaIgreja.API/SistemaIgreja.API.csproj -c Release --no-restore
 
-      # Deploy é feito pelo Coolify (pull do repositório). Este job apenas valida o build.
+      # Dispara o deploy no Coolify da API E do Worker (ambos vivem em Apps/API).
+      # Coolify aceita UUIDs separados por vírgula numa única chamada.
+      - name: Deploy no Coolify (API + Worker)
+        if: github.event_name == 'push'
+        run: |
+          curl -fsSL -X GET \
+            "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_API_UUID }},${{ secrets.COOLIFY_WORKER_UUID }}&force=false" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
