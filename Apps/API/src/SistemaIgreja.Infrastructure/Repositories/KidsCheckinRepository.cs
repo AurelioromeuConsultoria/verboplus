@@ -95,6 +95,21 @@ public class KidsCheckinRepository : IKidsCheckinRepository
         return await query.ToListAsync();
     }
 
+    public async Task<(IReadOnlyList<KidsCheckin> Items, int Total)> GetHistoricoPagedAsync(
+        IEnumerable<int> criancaIds, int page, int pageSize)
+    {
+        var ids = criancaIds.ToList();
+        var query = _context.Set<KidsCheckin>()
+            .Include(c => c.Crianca)
+            .Where(c => ids.Contains(c.CriancaPessoaId))
+            .OrderByDescending(c => c.CheckinTime);
+
+        var total = await query.CountAsync();
+        var skip = (page - 1) * pageSize;
+        var items = await query.Skip(skip).Take(pageSize).ToListAsync();
+        return ((IReadOnlyList<KidsCheckin>)items, total);
+    }
+
     public async Task<IEnumerable<KidsCheckin>> GetCheckinsAtivosAsync()
     {
         return await _context.Set<KidsCheckin>()

@@ -12,6 +12,7 @@ public interface IKidsService
     Task<IEnumerable<MinhaCriancaResumoDto>> GetMinhasCriancasAsync();
     Task<MinhaCriancaDetalheDto?> GetMinhaCriancaByIdAsync(int criancaPessoaId);
     Task<IEnumerable<MeuCheckinResumoDto>> GetMeusCheckinsAsync();
+    Task<MeuHistoricoPagedDto> GetMeuHistoricoAsync(int? criancaPessoaId, int page, int pageSize);
     Task<CriancaDto> CreateCriancaAsync(CreateCriancaRequest request, string? ipOrigem = null);
     Task<CriancaDto> UpdateCriancaAsync(int criancaPessoaId, UpdateCriancaRequest request);
     Task DeleteCriancaAsync(int criancaPessoaId);
@@ -220,6 +221,42 @@ public class KidsService : IKidsService
             resultado.Count);
 
         return resultado.OrderByDescending(c => c.CheckinTime).ToList();
+    }
+
+    public async Task<MeuHistoricoPagedDto> GetMeuHistoricoAsync(int? criancaPessoaId, int page, int pageSize)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var responsavelPessoaId = await GetRequiredCurrentUserPessoaIdAsync();
+        var todasCriancaIds = (await _responsavelRepository.GetCriancaIdsAtivosByResponsavelIdAsync(responsavelPessoaId)).ToHashSet();
+
+        if (criancaPessoaId.HasValue)
+        {
+            if (!todasCriancaIds.Contains(criancaPessoaId.Value))
+                throw new UnauthorizedAccessException("Criança não vinculada a este responsável.");
+            todasCriancaIds = [criancaPessoaId.Value];
+        }
+
+        if (todasCriancaIds.Count == 0)
+            return new MeuHistoricoPagedDto { Page = page, PageSize = pageSize };
+
+        var (items, total) = await _checkinRepository.GetHistoricoPagedAsync(todasCriancaIds, page, pageSize);
+
+        var salaLookup = new Dictionary<int, string?>();
+        foreach (var cid in todasCriancaIds)
+        {
+            var d = await _criancaDetalheRepository.GetByPessoaIdAsync(cid);
+            salaLookup[cid] = d?.SalaId;
+        }
+
+        return new MeuHistoricoPagedDto
+        {
+            Items = items.Select(c => MapToMeuCheckinResumoDto(c, salaLookup.GetValueOrDefault(c.CriancaPessoaId))).ToList(),
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 
     public async Task<CriancaDto> CreateCriancaAsync(CreateCriancaRequest request, string? ipOrigem = null)
@@ -903,7 +940,8 @@ public class KidsService : IKidsService
             EstaCheckedIn = checkinAtivo != null,
             CheckinAtual = checkinAtivo != null ? MapToMeuCheckinResumoDto(checkinAtivo, detalhe?.SalaId) : null,
             TemAlertaCritico = !string.IsNullOrWhiteSpace(detalhe?.Alergias) ||
-                               !string.IsNullOrWhiteSpace(detalhe?.RestricoesAlimentares)
+                               !string.IsNullOrWhiteSpace(detalhe?.RestricoesAlimentares),
+            FotoUrl = pessoa.FotoUrl
         };
     }
 
@@ -925,7 +963,8 @@ public class KidsService : IKidsService
             ObservacoesVisiveisAoResponsavel = null,
             EstaCheckedIn = checkinAtivo != null,
             CheckinAtual = checkinAtivo != null ? MapToMeuCheckinResumoDto(checkinAtivo, detalhe?.SalaId) : null,
-            HistoricoRecente = historico.Select(c => MapToMeuCheckinResumoDto(c, detalhe?.SalaId)).ToList()
+            HistoricoRecente = historico.Select(c => MapToMeuCheckinResumoDto(c, detalhe?.SalaId)).ToList(),
+            FotoUrl = pessoa.FotoUrl
         };
     }
 

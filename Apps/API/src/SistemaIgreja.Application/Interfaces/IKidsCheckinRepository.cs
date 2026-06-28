@@ -11,6 +11,7 @@ public interface IKidsCheckinRepository
     Task<KidsCheckin?> GetByPinRetiradaAsync(string pinRetirada);
     Task<IEnumerable<KidsCheckin>> GetByPeriodoAsync(DateTime dataInicioUtc, DateTime dataFimUtc);
     Task<IEnumerable<KidsCheckin>> GetHistoricoPorCriancaAsync(int criancaPessoaId, int? limit = null);
+    Task<(IReadOnlyList<KidsCheckin> Items, int Total)> GetHistoricoPagedAsync(IEnumerable<int> criancaIds, int page, int pageSize);
     Task<IEnumerable<KidsCheckin>> GetCheckinsAtivosAsync();
     Task<KidsCheckin> CreateAsync(KidsCheckin checkin);
     Task<KidsCheckin> CreateWithoutSaveAsync(KidsCheckin checkin);

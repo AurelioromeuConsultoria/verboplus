@@ -222,6 +222,7 @@ builder.Services.AddScoped<IInscricaoEventoService, InscricaoEventoService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<INotificacaoUsuarioService, NotificacaoUsuarioService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IKidsRegistrationService, KidsRegistrationService>();
 builder.Services.AddScoped<IPerfilAcessoService, PerfilAcessoService>();
 builder.Services.AddScoped<ITenantManagementService, TenantManagementService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();

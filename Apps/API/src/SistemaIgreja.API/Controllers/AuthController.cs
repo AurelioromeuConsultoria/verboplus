@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using SistemaIgreja.Application.DTOs;
+using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Application.Services;
 using System.Security.Claims;
 
@@ -12,10 +13,12 @@ namespace SistemaIgreja.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IKidsRegistrationService _registrationService;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IKidsRegistrationService registrationService)
     {
         _authService = authService;
+        _registrationService = registrationService;
     }
 
     [HttpPost("login")]
@@ -84,6 +87,29 @@ public class AuthController : ControllerBase
         catch (UnauthorizedAccessException ex)
         {
             return Unauthorized(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("registrar-responsavel")]
+    [EnableRateLimiting("login")]
+    public async Task<ActionResult<LoginResponseDto>> RegistrarResponsavel(RegistrarResponsavelDto dto)
+    {
+        try
+        {
+            var result = await _registrationService.RegistrarResponsavelAsync(dto);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
         catch (Exception ex)
         {

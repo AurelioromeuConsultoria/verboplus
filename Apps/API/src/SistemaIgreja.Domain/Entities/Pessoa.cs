@@ -24,6 +24,9 @@ public class Pessoa : ITenantEntity
     [MaxLength(20)]
     public string? WhatsApp { get; set; }
 
+    [MaxLength(500)]
+    public string? FotoUrl { get; set; }
+
     public DateTime? DataNascimento { get; set; }
 
     [Required]

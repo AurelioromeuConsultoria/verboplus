@@ -532,6 +532,7 @@ public class MinhaCriancaResumoDto
     public bool EstaCheckedIn { get; set; }
     public MeuCheckinResumoDto? CheckinAtual { get; set; }
     public bool TemAlertaCritico { get; set; }
+    public string? FotoUrl { get; set; }
 }
 
 public class MinhaCriancaDetalheDto
@@ -547,6 +548,7 @@ public class MinhaCriancaDetalheDto
     public bool EstaCheckedIn { get; set; }
     public MeuCheckinResumoDto? CheckinAtual { get; set; }
     public List<MeuCheckinResumoDto> HistoricoRecente { get; set; } = new();
+    public string? FotoUrl { get; set; }
 }
 
 public class MeuCheckinResumoDto
@@ -561,6 +563,15 @@ public class MeuCheckinResumoDto
     public string? TokenRetirada { get; set; }
     public string? PinRetirada { get; set; }
     public DateTime? TokenRetiradaExpiraEm { get; set; }
+}
+
+public class MeuHistoricoPagedDto
+{
+    public List<MeuCheckinResumoDto> Items { get; set; } = new();
+    public int Total { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public bool HasMore => Page * PageSize < Total;
 }
 
 public class CreateKidsPreCheckinRequest

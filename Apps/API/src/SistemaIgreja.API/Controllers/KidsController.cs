@@ -301,6 +301,30 @@ public class KidsController : ControllerBase
     }
 
     /// <summary>
+    /// Histórico paginado de check-ins do responsável autenticado.
+    /// </summary>
+    [HttpGet("me/historico")]
+    public async Task<ActionResult<MeuHistoricoPagedDto>> GetMeuHistorico(
+        [FromQuery] int? criancaPessoaId = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        try
+        {
+            var resultado = await _service.GetMeuHistoricoAsync(criancaPessoaId, page, pageSize);
+            return Ok(resultado);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao buscar histórico", error = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Lista os conteúdos publicados aplicáveis a uma criança vinculada ao responsável autenticado.
     /// </summary>
     [HttpGet("me/criancas/{criancaPessoaId}/conteudos-aula")]
