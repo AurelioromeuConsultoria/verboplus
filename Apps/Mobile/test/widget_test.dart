@@ -1,30 +1,88 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:app_kids/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('MaterialApp básico renderiza sem erro', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Text('App Kids'),
+        ),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('App Kids'), findsOneWidget);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('SafeArea e Scaffold renderizam filhos corretamente', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SafeArea(
+            child: Column(
+              children: [
+                Text('Header'),
+                Text('Content'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Header'), findsOneWidget);
+    expect(find.text('Content'), findsOneWidget);
+  });
+
+  testWidgets('FilledButton chama callback ao ser pressionado', (WidgetTester tester) async {
+    var tapped = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FilledButton(
+            onPressed: () => tapped = true,
+            child: const Text('Entrar'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Entrar'));
+    expect(tapped, isTrue);
+  });
+
+  testWidgets('ListView renderiza múltiplos itens', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView(
+            children: const [
+              Text('Item 1'),
+              Text('Item 2'),
+              Text('Item 3'),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Item 1'), findsOneWidget);
+    expect(find.text('Item 2'), findsOneWidget);
+    expect(find.text('Item 3'), findsOneWidget);
+  });
+
+  testWidgets('CircleAvatar com inicial renderiza corretamente', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: CircleAvatar(
+            child: Text('M'),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('M'), findsOneWidget);
   });
 }

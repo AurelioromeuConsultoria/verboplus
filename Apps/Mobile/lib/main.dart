@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'core/api_client.dart';
 import 'core/app_palette.dart';
 import 'core/auth_repository.dart';
+import 'core/cache_service.dart';
+import 'core/connectivity_service.dart';
 import 'core/push_service.dart';
 import 'app_state.dart';
 import 'app_router.dart';
@@ -10,17 +13,21 @@ import 'features/auth/login_screen.dart';
 import 'features/kids/minha_crianca_detalhe_screen.dart';
 import 'features/kids/minhas_criancas_screen.dart';
 import 'features/kids/kids_repository.dart';
-import 'features/avisos/avisos_screen.dart';
 import 'features/settings/settings_screen.dart';
 
 /// URL base da API. Sobrescrito em produção via --dart-define=API_BASE_URL=...
 const kBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://localhost:7000',
+  defaultValue: 'http://10.0.2.2:7000',
 );
+
+/// Slug do tenant pré-configurado no build da organização.
+/// Deixar vazio para que o campo apareça no formulário de cadastro.
+const kTenantSlug = String.fromEnvironment('TENANT_SLUG', defaultValue: '');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('pt_BR', null);
   await PushService.initializeFirebase();
 
   final api = ApiClient(baseUrl: kBaseUrl);
@@ -72,6 +79,10 @@ class AppKidsApp extends StatelessWidget {
         Provider<AuthRepository>.value(value: authRepo),
         Provider<KidsRepository>.value(value: kidsRepo),
         Provider<PushService>.value(value: pushService),
+        Provider<CacheService>(create: (_) => CacheService()),
+        ChangeNotifierProvider<ConnectivityService>(
+          create: (_) => ConnectivityService(),
+        ),
         ChangeNotifierProvider<AppState>(
           create: (_) => AppState(initialUser: initialUser),
         ),
@@ -82,144 +93,92 @@ class AppKidsApp extends StatelessWidget {
         routerConfig: AppRouter.router(
           loginScreen: const LoginScreen(),
           homeScreen: const MinhasCriancasScreen(),
-          avisosScreen: const AvisosScreen(),
           settingsScreen: const SettingsScreen(),
           minhaCriancaDetalheBuilder: (criancaPessoaId) =>
               MinhaCriancaDetalheScreen(criancaPessoaId: criancaPessoaId),
+          tenantSlug: kTenantSlug,
         ),
       ),
     );
   }
 
   ThemeData _buildTheme() {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppPalette.deepSea,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: AppPalette.deepSea,
-      secondary: AppPalette.aqua,
-      tertiary: AppPalette.apricot,
-      surface: AppPalette.shell,
-      onSurface: AppPalette.ink,
-      onSurfaceVariant: AppPalette.mutedInk,
-      surfaceContainerHighest: AppPalette.fog,
-      outlineVariant: AppPalette.line,
-    );
-
     return ThemeData(
-      colorScheme: colorScheme,
       useMaterial3: true,
-      scaffoldBackgroundColor: AppPalette.cream,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppPalette.primary,
+        brightness: Brightness.light,
+      ).copyWith(
+        primary: AppPalette.primary,
+        surface: AppPalette.card,
+        onSurface: AppPalette.ink,
+        onSurfaceVariant: AppPalette.midInk,
+        surfaceContainerHighest: AppPalette.divider,
+        outlineVariant: AppPalette.border,
+      ),
+      scaffoldBackgroundColor: AppPalette.bg,
       appBarTheme: const AppBarTheme(
-        centerTitle: false,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        backgroundColor: AppPalette.cream,
+        backgroundColor: AppPalette.card,
         foregroundColor: AppPalette.ink,
+        elevation: 0,
+        centerTitle: false,
+        surfaceTintColor: Colors.transparent,
         titleTextStyle: TextStyle(
           color: AppPalette.ink,
-          fontSize: 22,
+          fontSize: 20,
           fontWeight: FontWeight.w800,
+          letterSpacing: -0.3,
         ),
         iconTheme: IconThemeData(color: AppPalette.ink),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: AppPalette.shell,
+        color: AppPalette.card,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(32),
-          side: BorderSide(color: colorScheme.outlineVariant),
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppPalette.border),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppPalette.lilac,
+          backgroundColor: AppPalette.primary,
           foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(56),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(26),
-          ),
-          textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          minimumSize: const Size.fromHeight(52),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(54),
-          foregroundColor: AppPalette.deepSea,
-          side: const BorderSide(color: AppPalette.line),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(26),
-          ),
+          minimumSize: const Size.fromHeight(52),
+          foregroundColor: AppPalette.primary,
+          side: const BorderSide(color: AppPalette.border, width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
-      chipTheme: ChipThemeData(
-        backgroundColor: AppPalette.shell,
-        side: BorderSide(color: colorScheme.outlineVariant),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppPalette.lilac,
-        contentTextStyle: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-        ),
+        backgroundColor: AppPalette.ink,
+        contentTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.88),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        fillColor: AppPalette.divider,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
-          borderSide: BorderSide(color: colorScheme.outlineVariant),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
-          borderSide: BorderSide(color: colorScheme.outlineVariant),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
-          borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
-        ),
-      ),
-      textTheme: const TextTheme(
-        headlineMedium: TextStyle(
-          fontSize: 34,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.8,
-          color: AppPalette.ink,
-        ),
-        headlineSmall: TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.6,
-          color: AppPalette.ink,
-        ),
-        titleLarge: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.3,
-          color: AppPalette.ink,
-        ),
-        titleMedium: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          color: AppPalette.ink,
-        ),
-        bodyLarge: TextStyle(fontSize: 16, height: 1.4, color: AppPalette.ink),
-        bodyMedium: TextStyle(
-          fontSize: 14,
-          height: 1.4,
-          color: AppPalette.mutedInk,
-        ),
-        labelLarge: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: AppPalette.ink,
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppPalette.primary, width: 2),
         ),
       ),
     );

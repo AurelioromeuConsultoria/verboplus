@@ -46,6 +46,51 @@ class AuthRepository {
     await _api.clearTokens();
   }
 
+  /// PUT /api/auth/alterar-senha
+  Future<void> alterarSenha(String senhaAtual, String novaSenha) async {
+    final response = await _api.put(
+      '/api/auth/alterar-senha',
+      body: {'senhaAtual': senhaAtual, 'novaSenha': novaSenha},
+    );
+    if (response.statusCode == 204) return;
+    throw Exception(_errorMessage(response));
+  }
+
+  /// POST /api/auth/registrar-responsavel
+  Future<LoginResult> registrarResponsavel({
+    required String tenantSlug,
+    required String nome,
+    required String email,
+    required String senha,
+    String? telefone,
+    String? whatsApp,
+  }) async {
+    final response = await _api.post(
+      '/api/auth/registrar-responsavel',
+      body: {
+        'tenantSlug': tenantSlug,
+        'nome': nome,
+        'email': email,
+        'senha': senha,
+        if (telefone != null) 'telefone': telefone,
+        if (whatsApp != null) 'whatsApp': whatsApp,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final token = data['token'] as String?;
+      final refreshToken = data['refreshToken'] as String?;
+      final usuario = data['usuario'] as Map<String, dynamic>?;
+      if (token == null || refreshToken == null || usuario == null) {
+        return LoginResult.failure('Resposta inválida do servidor');
+      }
+      await _api.setTokens(token, refreshToken);
+      return LoginResult.success(Usuario.fromJson(usuario));
+    }
+    return LoginResult.failure(_errorMessage(response));
+  }
+
   String _errorMessage(http.Response response) {
     try {
       final m = jsonDecode(response.body);

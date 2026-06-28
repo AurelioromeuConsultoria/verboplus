@@ -19,7 +19,13 @@ class PushService {
 
   final ApiClient _api;
   String? _currentToken;
-  void Function()? onNotificationOpened;
+
+  /// Chamado quando o usuário toca em uma notificação (background/terminated).
+  /// [avisoId] é extraído do data payload — null se não vier na notificação.
+  void Function(String? avisoId)? onNotificationOpened;
+
+  /// Chamado quando uma notificação chega com o app em foreground.
+  void Function(String? avisoId)? onForegroundMessage;
 
   static bool _firebaseReady = false;
   static bool _handlersSetUp = false;
@@ -29,7 +35,6 @@ class PushService {
       await Firebase.initializeApp();
       _firebaseReady = true;
     } catch (e) {
-      // Config files ausentes — modo no-op até o projeto Firebase ser criado.
       debugPrint('PushService: Firebase init skipped — $e');
     }
   }
@@ -46,7 +51,6 @@ class PushService {
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
         return null;
       }
-      // No iOS, o token FCM exige que o APNs token esteja disponível primeiro.
       if (!kIsWeb && Platform.isIOS) {
         await messaging.getAPNSToken();
       }
@@ -88,20 +92,31 @@ class PushService {
     if (!_firebaseReady || _handlersSetUp) return;
     _handlersSetUp = true;
 
-    // Mensagem recebida com o app em foreground — sem popup automático no FCM,
-    // mas aqui poderia acionar um snackbar ou badge no ícone de avisos.
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('PushService: foreground — ${message.notification?.title}');
+      final avisoId = message.data['avisoId'] as String?;
+      onForegroundMessage?.call(avisoId);
     });
 
-    // Usuário tocou na notificação com o app em background/suspended.
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint('PushService: opened from bg — ${message.notification?.title}');
-      onNotificationOpened?.call();
+      final avisoId = message.data['avisoId'] as String?;
+      onNotificationOpened?.call(avisoId);
     });
   }
 
   /// Verifica se o app foi aberto a partir de uma notificação (estado terminated).
+  static Future<String?> getInitialAvisoId() async {
+    if (!_firebaseReady) return null;
+    try {
+      final msg = await FirebaseMessaging.instance.getInitialMessage();
+      return msg?.data['avisoId'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Mantido por compatibilidade com chamadas existentes.
   static Future<bool> hadInitialNotification() async {
     if (!_firebaseReady) return false;
     try {

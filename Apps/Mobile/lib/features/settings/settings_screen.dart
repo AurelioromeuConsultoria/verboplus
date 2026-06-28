@@ -14,7 +14,6 @@ class SettingsScreen extends StatelessWidget {
     final authRepository = context.read<AuthRepository>();
     final push = context.read<PushService>();
     final appState = context.read<AppState>();
-    // Remove o token FCM do backend antes de limpar a sessão.
     await push.unregisterToken();
     await authRepository.logout();
     appState.setUser(null);
@@ -25,42 +24,47 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AppState>().user;
+    final initial = user?.nome.isNotEmpty == true ? user!.nome[0].toUpperCase() : '?';
 
     return Scaffold(
+      backgroundColor: AppPalette.bg,
       appBar: AppBar(
-        title: const Text('Configuração'),
+        title: const Text('Configurações'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: AppPalette.border),
+        ),
       ),
-      body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: AppPalette.appBackground),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          children: [
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+        children: [
+          // ── User avatar + info ────────────────────────────────────
+          if (user != null) ...[
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: AppPalette.heroGradient,
-                borderRadius: BorderRadius.circular(34),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x22173A45),
-                    blurRadius: 28,
-                    offset: Offset(0, 14),
-                  ),
-                ],
+                color: AppPalette.card,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppPalette.border),
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 76,
-                    height: 76,
-                    padding: const EdgeInsets.all(14),
+                    width: 56,
+                    height: 56,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(24),
+                      color: AppPalette.primarySoft,
+                      shape: BoxShape.circle,
                     ),
-                    child: Image.asset(
-                      'assets/branding/kingdom-logo-white.png',
-                      fit: BoxFit.contain,
+                    child: Center(
+                      child: Text(
+                        initial,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: AppPalette.primary,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -69,19 +73,17 @@ class SettingsScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'AppKids',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                              ),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Sua área de ajustes, acesso e informações do aplicativo.',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            height: 1.35,
+                          user.nome,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: AppPalette.ink,
                           ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          user.email,
+                          style: const TextStyle(fontSize: 13, color: AppPalette.midInk),
                         ),
                       ],
                     ),
@@ -89,125 +91,96 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 18),
-            if (user != null)
-              _SettingsSection(
-                title: 'Conta',
-                children: [
-                  _InfoTile(
-                    icon: Icons.person_outline_rounded,
-                    title: user.nome,
-                    subtitle: user.email,
-                  ),
-                ],
-              ),
-            const SizedBox(height: 18),
-            _SettingsSection(
-              title: 'Configuração',
-              children: [
-                const _InfoTile(
-                  icon: Icons.info_outline_rounded,
-                  title: 'Versão do aplicativo',
-                  subtitle: AppMeta.version,
-                ),
-                _ActionTile(
-                  icon: Icons.logout_rounded,
-                  title: 'Sair',
-                  subtitle: 'Encerrar a sessão neste aparelho',
-                  foreground: const Color(0xFFB64040),
-                  onTap: () => _logout(context),
-                ),
-              ],
-            ),
+            const SizedBox(height: 20),
           ],
-        ),
-      ),
-    );
-  }
-}
 
-class _SettingsSection extends StatelessWidget {
-  const _SettingsSection({
-    required this.title,
-    required this.children,
-  });
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+          // ── Conta ───────────────────────────────────────────────
+          const Text(
+            'CONTA',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppPalette.lightInk,
+              letterSpacing: 1.2,
             ),
-            const SizedBox(height: 14),
-            ...children,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoTile extends StatelessWidget {
-  const _InfoTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: AppPalette.mistGradient,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppPalette.line),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: AppPalette.deepSea.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: AppPalette.deepSea),
           ),
-          const SizedBox(width: 14),
-          Expanded(
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: AppPalette.card,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppPalette.border),
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                _ListTileButton(
+                  icon: Icons.lock_outline_rounded,
+                  iconColor: AppPalette.primary,
+                  title: 'Alterar senha',
+                  onTap: () => context.push('/alterar-senha'),
+                  isFirst: true,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppPalette.mutedInk,
-                      ),
+                const Divider(height: 1, indent: 16),
+                _ListTileButton(
+                  icon: Icons.history_rounded,
+                  iconColor: AppPalette.primary,
+                  title: 'Histórico de presenças',
+                  onTap: () => context.push('/historico'),
+                  isLast: true,
                 ),
               ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── App info ────────────────────────────────────────────
+          const Text(
+            'APLICATIVO',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppPalette.lightInk,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: AppPalette.card,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppPalette.border),
+            ),
+            child: Column(
+              children: [
+                _ListTile(
+                  icon: Icons.info_outline_rounded,
+                  iconColor: AppPalette.primary,
+                  title: 'Versão',
+                  trailing: Text(
+                    AppMeta.version,
+                    style: const TextStyle(fontSize: 13, color: AppPalette.midInk, fontWeight: FontWeight.w600),
+                  ),
+                  isFirst: true,
+                  isLast: true,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 32),
+
+          // ── Logout ──────────────────────────────────────────────
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _logout(context),
+              icon: const Icon(Icons.logout_rounded),
+              label: const Text('Sair da conta'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppPalette.danger,
+                side: const BorderSide(color: AppPalette.danger),
+              ),
             ),
           ),
         ],
@@ -216,69 +189,103 @@ class _InfoTile extends StatelessWidget {
   }
 }
 
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
+class _ListTileButton extends StatelessWidget {
+  const _ListTileButton({
     required this.icon,
+    required this.iconColor,
     required this.title,
-    required this.subtitle,
-    required this.foreground,
     required this.onTap,
+    this.isFirst = false,
+    this.isLast = false,
   });
 
   final IconData icon;
+  final Color iconColor;
   final String title;
-  final String subtitle;
-  final Color foreground;
   final VoidCallback onTap;
+  final bool isFirst;
+  final bool isLast;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: foreground.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: foreground.withValues(alpha: 0.15)),
-        ),
+      borderRadius: BorderRadius.vertical(
+        top: isFirst ? const Radius.circular(16) : Radius.zero,
+        bottom: isLast ? const Radius.circular(16) : Radius.zero,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
             Container(
-              width: 46,
-              height: 46,
+              width: 36, height: 36,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(16),
+                color: iconColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: foreground),
+              child: Icon(icon, size: 18, color: iconColor),
             ),
             const SizedBox(width: 14),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: foreground,
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: foreground.withValues(alpha: 0.82),
-                        ),
-                  ),
-                ],
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppPalette.ink),
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: foreground),
+            const Icon(Icons.chevron_right_rounded, size: 20, color: AppPalette.lightInk),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ListTile extends StatelessWidget {
+  const _ListTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    this.trailing,
+    required this.isFirst,
+    required this.isLast,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final Widget? trailing;
+  final bool isFirst;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: iconColor),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppPalette.ink,
+              ),
+            ),
+          ),
+          if (trailing != null) trailing!,
+        ],
       ),
     );
   }
