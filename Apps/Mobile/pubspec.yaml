@@ -1,0 +1,62 @@
+name: app_kids
+description: App Kids - check-in/checkout e avisos para pais (VerboPlus).
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # HTTP e API
+  http: ^1.2.0
+  # Navegação
+  go_router: ^13.0.0
+  # Estado
+  provider: ^6.1.1
+  # Armazenamento seguro de tokens (keychain iOS / keystore Android)
+  flutter_secure_storage: ^9.2.2
+  # Push notifications
+  firebase_core: ^3.13.1
+  firebase_messaging: ^15.2.5
+  # Utilitários
+  intl: ^0.19.0
+  url_launcher: ^6.3.0
+  # Cache offline e conectividade
+  shared_preferences: ^2.3.2
+  connectivity_plus: ^6.1.4
+  qr_flutter: ^4.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.2
+  flutter_native_splash: ^2.4.3
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: false
+  image_path: "assets/branding/app_icon.png"
+  adaptive_icon_background: "#6C3CCB"
+  adaptive_icon_foreground: "assets/branding/kingdom-logo-white.png"
+  min_sdk_android: 21
+  web:
+    generate: false
+
+flutter_native_splash:
+  color: "#6C3CCB"
+  image: assets/branding/kingdom-logo-white.png
+  android_gravity: center
+  android: true
+  ios: false
+  android_12:
+    color: "#6C3CCB"
+    image: assets/branding/kingdom-logo-white.png
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/branding/kingdom-logo-white.png
+    - assets/branding/app_icon.png
