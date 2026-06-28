@@ -418,19 +418,24 @@ builder.Services.AddSwaggerGen(c =>
 const string CorsPolicyName = "DefaultCors";
 var allowedCorsOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 {
-    // Portal principal (novo domínio)
+    // Verbo+ (domínio atual)
+    "https://verboplus.com.br",
+    "http://verboplus.com.br",
+    "https://www.verboplus.com.br",
+    "http://www.verboplus.com.br",
+    // Admin
+    "https://app.verboplus.com.br",
+    "http://app.verboplus.com.br",
+
+    // Portal (permanece em kingdombr.com.br)
     "https://www.kingdombr.com.br",
     "http://www.kingdombr.com.br",
     "https://kingdombr.com.br",
     "http://kingdombr.com.br",
-
-    // Portal legacy (subdomínio antigo)
     "https://portal.kingdombr.com.br",
     "http://portal.kingdombr.com.br",
 
-    // Admin
-    "https://admin.kingdombr.com.br",
-    "http://admin.kingdombr.com.br",
+    // Desenvolvimento
     "http://localhost:3000",
     "http://localhost:5174",
     "http://localhost:4173"
