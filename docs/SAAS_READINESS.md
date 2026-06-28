@@ -1,6 +1,6 @@
 # Verbo+ — Roadmap de prontidão para venda (SaaS)
 
-> Análise atualizada em 2026-06-18. Marcar `[x]` conforme concluir. Itens 🔴 são bloqueadores de lançamento.
+> Análise atualizada em 2026-06-28. Marcar `[x]` conforme concluir. Itens 🔴 são bloqueadores de lançamento.
 
 ## ✅ Já concluído
 - [x] LGPD (export / anonimização / consentimento / solicitações do titular)
@@ -11,6 +11,7 @@
 - [x] Lockout de login + política de senha + rate limit no `/signup`
 - [x] Testes backend (~209 arquivos, inclui isolamento de tenant) + frontend (71)
 - [x] Branding Verbo+ (logo, tema Violeta Profundo, Poppins) + dashboard acionável
+- [x] Infra migrada para GitHub + Coolify (domínio verboplus.com.br); landing no ar; auto-deploy via GitHub Actions (2026-06-28)
 
 ---
 

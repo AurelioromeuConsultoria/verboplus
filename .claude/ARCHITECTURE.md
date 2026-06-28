@@ -305,14 +305,16 @@ Padrões transversais: **kill-switch** (no-op com credencial vazia), **retry man
 
 ## Estratégia de Deploy
 
-- **Backend (API + Worker):** containers **Docker** no **Coolify** (PaaS auto-hospedado). Imagens base `mcr.microsoft.com/dotnet/sdk:10.0` (build) → `aspnet`/`runtime:10.0` (runtime). O `Dockerfile` do Worker copia o repo e publica só o projeto Worker (evita restaurar `tests`).
-- **FrontEnd admin:** `azure-pipelines.yml` — Node 20, **pnpm**, `pnpm run test` (**bloqueia deploy se falhar**) → `pnpm run build` → **Azure Static Web App**.
-- **Portal:** Azure DevOps → `npm run build` → `staticwebapp.config.json` → `AzureStaticWebApp@0` (Node 18, triggers `main`/`master`).
-- **Backend CI (`BackEnd/azure-pipelines.yml`):** trigger `main`, .NET SDK 10.x, `restore`/`build`/`publish` → artefato `app.zip`. `TODO: confirmar com o time` — relação entre esse artefato e o deploy efetivo (que parece ser via Coolify/Docker).
-- **VerboPlus / CadastroMembro:** build estático (Vite / HTML), hosting estático.
-- **Ambientes:** Development (API local `localhost:7000`/`127.0.0.1:5013`, admin `localhost:5174`, portal `5173`; em dev o admin aponta uploads para produção) e Production (API `https://api.kingdombr.com.br`; domínio-alvo `verboplus.com.br` / `app.verboplus.com.br`).
-- **Containers no repo:** `src/SistemaIgreja.API/Dockerfile`, `SistemaIgreja.BackgroundWorker/Dockerfile`, `docker-compose.evolution.yml`.
-- **Cloud providers:** Coolify (API+Worker), Azure Static Web Apps (frontends), AWS S3 (storage opcional), Postgres em host próprio (`77.37.43.5:5433`).
+> Migração de infra concluída em 2026-06-28 (Azure → GitHub/Coolify, kingdombr → verboplus). Detalhe operacional vivo na memória `infra-coolify-verboplus`.
+
+- **Hospedagem:** todos os apps de produto (API, Worker, Admin, Website) rodam como containers **Docker** no **Coolify** (VPS `77.37.43.5`, projeto `verboplus`/env `production`). Source = monorepo GitHub `AurelioromeuConsultoria/verboplus` (público), build via Dockerfile com Base Directory por app.
+- **API + Worker:** imagens base `mcr.microsoft.com/dotnet/sdk:10.0` (build) → `aspnet`/`runtime:10.0` (runtime). Base Directory `/Apps/API`; o Worker publica só seu projeto (evita restaurar `tests`). API em `api.verboplus.com.br` (+ `api.kingdombr.com.br`, ainda usado pelo Portal).
+- **Admin / Website:** Vite → build → **nginx** (Dockerfile multi-stage, porta 80). Admin em `app.verboplus.com.br`; Website (landing) em `verboplus.com.br`/`www` + `verbo.plus`/`www`.
+- **Portal:** permanece em **kingdombr.com.br** (repo GitHub separado `kingdom`, deploy para **Azure Static Web App** `swa-portal-igreja` via `deploy.yml`). Único componente que ainda usa Azure.
+- **CI/CD (GitHub Actions):** `.github/workflows/{api,admin,website}.yml` com filtro de caminho. Em push a `main`: build (admin roda testes que bloqueiam) → dispara deploy no Coolify via `GET {COOLIFY_URL}/api/v1/deploy?uuid=...` (uma chamada por resource; UUIDs com vírgula não funcionam). Auto-deploy-on-push do Coolify fica **OFF** (o gate é o CI).
+- **Ambientes:** Development (API local `localhost:7000`/`127.0.0.1:5013`, admin `localhost:5174`, website/portal `5173`) e Production (verboplus.com.br + Coolify).
+- **Containers no repo:** `Apps/API/src/SistemaIgreja.API/Dockerfile`, `Apps/API/SistemaIgreja.BackgroundWorker/Dockerfile`, `Apps/Admin/Dockerfile`+`nginx.conf`, `Apps/Website/Dockerfile`+`nginx.conf`, `Apps/API/docker-compose.evolution.yml`.
+- **Cloud providers:** Coolify (API+Worker+Admin+Website na VPS), Azure Static Web App (apenas Portal), AWS S3 (storage opcional), Postgres na VPS (`77.37.43.5:5433`, resource Coolify `postgres-kingdom`).
 
 ---
 
@@ -352,7 +354,7 @@ Domínios lógicos (módulos dentro do monólito), por evidência de controllers
 | **Webhook validado só por token, com idempotência** | `BillingService.ProcessarWebhookAsync`; `EventoWebhookBilling` | Simplicidade; idempotência protege reprocessamento | **Sem HMAC** (gap de hardening) |
 | **Segredos só em env vars (Coolify)** | `appsettings` com secrets vazios; `commit_migration_postgresql.sh` exclui o arquivo | Pós-incidente de segredos no git (rotação 2026-06-12) | Depende de gestão correta no Coolify |
 | **Migração incremental (strangler) + preservação de dados** | `RefatoracaoPessoaCentralizada`, `AdicionarTenantId...`, `COMUNICACAO_SPRINT1_MAPA_LEGADO.md` | Evitar *big bang*; manter dados | Coexistência temporária de legado; migrations idempotentes/reversíveis |
-| **Frontends separados consumindo 1 API** | Pastas `FrontEnd/Portal/VerboPlus/CadastroMembro/AppKids` | Públicos e ciclos de deploy distintos | Múltiplos repos/pipelines a manter |
+| **Frontends separados consumindo 1 API** | `Apps/{Admin,Website,Mobile,CadastroMembro}` no monorepo + Portal no repo `kingdom` | Públicos e ciclos de deploy distintos | Múltiplos workflows a manter |
 
 ---
 
@@ -458,7 +460,7 @@ Baseado nos padrões encontrados:
 
 - `TODO: confirmar com o time` — **Lock distribuído para schedulers:** hoje podem rodar na API **e** no Worker sem lock (só `SKIP LOCKED` da fila de mensagens cobre parcialmente). Decisão: rodar schedulers só no Worker?
 - `TODO: confirmar com o time` — **Framework do projeto de testes:** `.csproj` em `net10.0`, mas `Dockerfile` do Worker menciona `.NET 9`.
-- `TODO: confirmar com o time` — **Pipeline efetivo de deploy do backend:** `BackEnd/azure-pipelines.yml` gera `app.zip`, mas o deploy de produção parece ser via Coolify (Docker). Qual é o oficial?
+- ~~Pipeline efetivo de deploy do backend~~ — **RESOLVIDO (2026-06-28):** deploy é GitHub Actions (`.github/workflows/`) disparando a API de deploy do Coolify; os `azure-pipelines.yml` foram removidos. Ver memória `infra-coolify-verboplus`.
 - `TODO: confirmar com o time` — **Cache distribuído (Redis):** não há evidência no código. Existe em algum ambiente?
 - `TODO: confirmar com o time` — **Métricas / tracing distribuído:** ausentes (`TracesSampleRate=0`, sem OpenTelemetry). São fora de escopo ou pendentes?
 - `TODO: confirmar com o time` — **HMAC em webhooks:** validação atual é só por token; webhook sem token configurado é aceito. É intencional?
