@@ -32,11 +32,17 @@ jobs:
       - name: Build (valida antes do deploy)
         run: dotnet build src/SistemaIgreja.API/SistemaIgreja.API.csproj -c Release --no-restore
 
-      # Dispara o deploy no Coolify da API E do Worker (ambos vivem em Apps/API).
-      # Coolify aceita UUIDs separados por vírgula numa única chamada.
-      - name: Deploy no Coolify (API + Worker)
+      # API e Worker vivem ambos em Apps/API → dispara o deploy dos dois (chamadas separadas).
+      - name: Deploy no Coolify (API)
         if: github.event_name == 'push'
         run: |
-          curl -fsSL -X GET \
-            "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_API_UUID }},${{ secrets.COOLIFY_WORKER_UUID }}&force=false" \
+          curl -fsS --max-time 30 --retry 2 -X GET \
+            "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_API_UUID }}&force=false" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
+
+      - name: Deploy no Coolify (Worker)
+        if: github.event_name == 'push'
+        run: |
+          curl -fsS --max-time 30 --retry 2 -X GET \
+            "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_WORKER_UUID }}&force=false" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
