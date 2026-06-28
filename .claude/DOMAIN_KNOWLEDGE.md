@@ -622,7 +622,7 @@ Documento derivado da análise direta das entidades (`BackEnd/src/SistemaIgreja.
 - [.claude/INTEGRATION_PATTERNS.md](INTEGRATION_PATTERNS.md) — padrões de integração externa.
 - [.claude/CODING_STANDARDS.md](CODING_STANDARDS.md) — convenções (nomenclatura de domínio em Português).
 - [.claude/MIGRATION_RULES.md](MIGRATION_RULES.md) — regras de migração.
-- [SAAS_READINESS.md](../SAAS_READINESS.md) — gaps de produção (ex.: limites de plano não bloqueiam).
+- [SAAS_READINESS.md](../docs/SAAS_READINESS.md) — gaps de produção (ex.: limites de plano não bloqueiam).
 - `legal/` — Termos de Uso e Política de Privacidade (v1).
 </content>
 </invoke>

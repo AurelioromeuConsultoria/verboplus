@@ -234,7 +234,7 @@ Ref.: [EvolutionApiService.cs:34](BackEnd/src/SistemaIgreja.Application/Services
 - **Leitura defensiva do payload:** helpers `ReadString/ReadDecimal/ReadDate` que checam `ValueKind` antes de extrair — [BillingService.cs:537-547](BackEnd/src/SistemaIgreja.Infrastructure/Services/BillingService.cs#L537-L547).
 - **Mapa de eventos tratados (Asaas billing):** `PAYMENT_CONFIRMED`/`PAYMENT_RECEIVED` → Ativa; `PAYMENT_OVERDUE` → Inadimplente (+e-mail); `PAYMENT_REFUNDED`/`PAYMENT_CHARGEBACK_REQUESTED` → Inadimplente. Ver [BillingService.cs:363-390](BackEnd/src/SistemaIgreja.Infrastructure/Services/BillingService.cs#L363-L390).
 
-> **Gap conhecido (não inventar solução):** validação é só por token, **sem HMAC/assinatura** — hardening pendente registrado em [SAAS_READINESS.md](SAAS_READINESS.md).
+> **Gap conhecido (não inventar solução):** validação é só por token, **sem HMAC/assinatura** — hardening pendente registrado em [SAAS_READINESS.md](../docs/SAAS_READINESS.md).
 
 ---
 
@@ -420,7 +420,7 @@ Ordem refletindo o fluxo real do projeto. (Espelha [CODING_STANDARDS.md §14](.c
 13. **Webhook** *(se entrada)* — controller `[AllowAnonymous]` com rota absoluta, `[FromBody] JsonElement`, validação por token (`Ordinal`), **idempotência** (tabela de eventos ou estado da entidade), `Ok()`/`Unauthorized()`. Isentar nos middlewares de gating/permissão (prefixo `/api/webhooks`).
 14. **Persistência** — correlacionar com colunas `Gateway*`/`External*`; upsert manual por essa chave; sem bulk/procedure.
 15. **Testes** — mockar o `HttpClient`/cliente; cobrir caminho feliz, erro não-2xx, exceção e (se houver) retry.
-16. **Documentar** bloqueio de produção em [SAAS_READINESS.md](SAAS_READINESS.md) se exigir conta/credencial real.
+16. **Documentar** bloqueio de produção em [SAAS_READINESS.md](../docs/SAAS_READINESS.md) se exigir conta/credencial real.
 
 ---
 

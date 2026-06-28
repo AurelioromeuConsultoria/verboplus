@@ -19,7 +19,7 @@ Plataforma de **gestão de igrejas** (ChMS — Church Management System) sendo c
 Centraliza a operação administrativa de uma igreja: cadastro de pessoas/membros/visitantes, voluntariado e escalas de ministério, eventos e inscrições, módulo infantil (Kids) com check-in seguro, financeiro (receitas/despesas/orçamento/patrimônio), comunicação omnichannel (WhatsApp), portal público e doações online — tudo isolado por igreja (tenant) e cobrado por assinatura.
 
 ### Contexto de negócio
-- Produto em fase de **preparação para lançamento como SaaS** (ver [SAAS_READINESS.md](SAAS_READINESS.md)).
+- Produto em fase de **preparação para lançamento como SaaS** (ver [SAAS_READINESS.md](../docs/SAAS_READINESS.md)).
 - Modelo de receita: **assinatura mensal da igreja** (3 planos) via gateway **Asaas**, com trial → inadimplência → suspensão e gating HTTP 402.
 - Também processa **doações online** (PIX/Boleto/Cartão via Asaas) para a igreja-cliente.
 - Conformidade **LGPD** já implementada (consentimento versionado, exportação, anonimização, solicitações do titular).
@@ -509,7 +509,7 @@ Todos os clientes consomem a **mesma API .NET** (`https://api.kingdombr.com.br/a
 ### Anexos úteis (fontes de verdade vivas)
 - **[.claude/INTEGRATION_PATTERNS.md](.claude/INTEGRATION_PATTERNS.md)** — referência oficial de padrões de integração (clients, auth, webhooks, schedulers, kill-switch, checklists).
 - **[.claude/CODING_STANDARDS.md](.claude/CODING_STANDARDS.md)** — padrões reais de código do backend.
-- **[SAAS_READINESS.md](SAAS_READINESS.md)** — bloqueadores e roadmap de lançamento (manter atualizado).
+- **[SAAS_READINESS.md](../docs/SAAS_READINESS.md)** — bloqueadores e roadmap de lançamento (manter atualizado).
 - **`legal/`** — Termos de Uso e Política de Privacidade (v1).
 - **`FrontEnd/CONFIGURACAO_BACKEND_IMAGENS.md`** e **`FrontEnd/ENDPOINT_LISTAGEM_FOTOS.md`** — notas de integração de imagens/galerias.
 - Documentos `KIDS_*`, `COMUNICACAO_*`, `ADMIN_REDESIGN_*`, `MULTITENANCY_ROADMAP.md` na raiz — histórico de planejamento por módulo (contexto de produto, não de estado atual).

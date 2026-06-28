@@ -483,6 +483,6 @@ Documento derivado da análise direta da solução `BackEnd/SistemaIgreja.sln` (
 - [.claude/CODING_STANDARDS.md](CODING_STANDARDS.md) — padrões reais de código do backend.
 - [.claude/INTEGRATION_PATTERNS.md](INTEGRATION_PATTERNS.md) — padrões reais de integração.
 - [.claude/MIGRATION_RULES.md](MIGRATION_RULES.md) — regras reais de migração.
-- [SAAS_READINESS.md](../SAAS_READINESS.md) — bloqueadores e gaps de produção.
+- [SAAS_READINESS.md](../docs/SAAS_READINESS.md) — bloqueadores e gaps de produção.
 </content>
 </invoke>

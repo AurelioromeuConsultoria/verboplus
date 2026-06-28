@@ -521,4 +521,4 @@ Com base em ausência consistente no código:
 ---
 
 ### Fontes
-Documento derivado da análise direta de controllers, services, repositories, entidades, DTOs, classes de integração, middlewares, testes, `Program.cs`, `appsettings.json` e migrations em `BackEnd/`, cruzada com [.claude/PROJECT_CONTEXT.md](.claude/PROJECT_CONTEXT.md) e [SAAS_READINESS.md](SAAS_READINESS.md).
+Documento derivado da análise direta de controllers, services, repositories, entidades, DTOs, classes de integração, middlewares, testes, `Program.cs`, `appsettings.json` e migrations em `BackEnd/`, cruzada com [.claude/PROJECT_CONTEXT.md](.claude/PROJECT_CONTEXT.md) e [SAAS_READINESS.md](../docs/SAAS_READINESS.md).
