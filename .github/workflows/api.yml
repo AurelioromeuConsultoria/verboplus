@@ -1,0 +1,34 @@
+name: API (.NET) CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Apps/API/**'
+      - '.github/workflows/api.yml'
+  pull_request:
+    paths:
+      - 'Apps/API/**'
+      - '.github/workflows/api.yml'
+
+defaults:
+  run:
+    working-directory: Apps/API
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Restore
+        run: dotnet restore src/SistemaIgreja.API/SistemaIgreja.API.csproj
+
+      - name: Build
+        run: dotnet build src/SistemaIgreja.API/SistemaIgreja.API.csproj -c Release --no-restore
+
+      # Deploy é feito pelo Coolify (pull do repositório). Este job apenas valida o build.

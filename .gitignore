@@ -1,0 +1,33 @@
+# ---- Geral ----
+.DS_Store
+*.log
+
+# ---- Segredos / env ----
+# Segredos locais nunca são versionados.
+.env
+.env.local
+.env.*.local
+*.env.save
+*.ev.save
+# OBS: .env.development / .env.production contêm apenas config PÚBLICA de build
+# (URLs de API, DSN público do Sentry) e SÃO versionados de propósito.
+
+# ---- Node (Admin, Website) ----
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# ---- .NET (API) ----
+bin/
+obj/
+*.user
+
+# ---- Flutter (Mobile) ----
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+**/build/
+**/Pods/
+*.iml
+.idea/

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Membro — Kingdom</title>
+  <style>
+    :root {
+      --primary: #1a5f7a;
+      --primary-dark: #134a5e;
+      --text: #2d3748;
+      --text-light: #718096;
+      --border: #e2e8f0;
+      --error: #e53e3e;
+      --success: #38a169;
+      --bg: #f8fafc;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 400px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      padding: 40px 32px;
+    }
+
+    .logo {
+      display: block;
+      margin: 0 auto 32px;
+      max-width: 160px;
+      height: auto;
+    }
+
+    .logo-svg {
+      width: 160px;
+      height: auto;
+      display: block;
+      margin: 0 auto 32px;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text);
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 0.875rem;
+      color: var(--text-light);
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    label .required {
+      color: var(--error);
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.15s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(26, 95, 122, 0.15);
+    }
+
+    input::placeholder {
+      color: #a0aec0;
+    }
+
+    input.error {
+      border-color: var(--error);
+    }
+
+    .error-msg {
+      font-size: 0.8125rem;
+      color: var(--error);
+      margin-top: 4px;
+    }
+
+    .success-msg {
+      font-size: 0.875rem;
+      color: var(--success);
+      text-align: center;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: #f0fff4;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .success-msg.visible {
+      display: block;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: white;
+      background: var(--primary);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-top: 8px;
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--primary-dark);
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .hint {
+      font-size: 0.75rem;
+      color: var(--text-light);
+      margin-top: 4px;
+    }
+
+    .consent {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      font-weight: 400;
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      cursor: pointer;
+    }
+
+    .consent input {
+      width: auto;
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+
+    .consent a {
+      color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Logo: use imagem se existir, senão SVG -->
+    <img src="logo.png" alt="Kingdom" class="logo" id="logo-img" onerror="this.style.display='none';document.getElementById('logo-svg').style.display='block'">
+    <svg id="logo-svg" class="logo-svg" viewBox="0 0 180 50" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:none">
+      <text x="0" y="35" font-family="Georgia, serif" font-size="32" font-weight="600" fill="#1a5f7a">Kingdom</text>
+    </svg>
+
+    <h1>Cadastro de Membro</h1>
+    <p class="subtitle">Preencha seus dados para fazer parte do nosso cadastro</p>
+
+    <div class="success-msg" id="success-msg"></div>
+
+    <form id="form" novalidate>
+      <div class="form-group">
+        <label for="nome">Nome completo <span class="required">*</span></label>
+        <input type="text" id="nome" name="nome" placeholder="Seu nome completo" autocomplete="name" maxlength="100">
+        <span class="error-msg" id="erro-nome"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="whatsapp">WhatsApp <span class="required">*</span></label>
+        <input type="tel" id="whatsapp" name="whatsapp" placeholder="(11) 99999-9999" autocomplete="tel">
+        <span class="error-msg" id="erro-whatsapp"></span>
+        <p class="hint">Com DDD, apenas números</p>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email <span class="required">*</span></label>
+        <input type="email" id="email" name="email" placeholder="seu@email.com" autocomplete="email" maxlength="100" required>
+        <span class="error-msg" id="erro-email"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="dataNascimento">Data de nascimento</label>
+        <input type="date" id="dataNascimento" name="dataNascimento">
+        <span class="error-msg" id="erro-dataNascimento"></span>
+      </div>
+
+      <div class="form-group">
+        <label class="consent" for="aceiteTermos">
+          <input type="checkbox" id="aceiteTermos" name="aceiteTermos">
+          <span>Li e aceito os <a href="/termos-de-uso.html" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="/politica-de-privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a> <span class="required">*</span></span>
+        </label>
+        <span class="error-msg" id="erro-aceiteTermos"></span>
+      </div>
+
+      <button type="submit" id="btn-submit">Cadastrar</button>
+    </form>
+  </div>
+
+  <script>
+    // URL da API — altere conforme seu ambiente
+    const API_BASE = (function() {
+      if (typeof window.CADASTRO_API_BASE === 'string' && window.CADASTRO_API_BASE) return window.CADASTRO_API_BASE;
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:7000';
+      }
+      return window.location.origin;
+    })();
+
+    // Versão dos Termos de Uso / Política de Privacidade vigentes (LGPD).
+    const TERMOS_VERSAO = 'v1';
+
+    const form = document.getElementById('form');
+    const successMsg = document.getElementById('success-msg');
+    const btnSubmit = document.getElementById('btn-submit');
+
+    function maskWhatsApp(value) {
+      const nums = value.replace(/\D/g, '');
+      if (nums.length <= 2) return nums;
+      if (nums.length <= 7) return `(${nums.slice(0, 2)}) ${nums.slice(2)}`;
+      return `(${nums.slice(0, 2)}) ${nums.slice(2, 7)}-${nums.slice(7, 11)}`;
+    }
+
+    document.getElementById('whatsapp').addEventListener('input', function(e) {
+      e.target.value = maskWhatsApp(e.target.value);
+    });
+
+    function showError(fieldId, msg) {
+      const input = document.getElementById(fieldId);
+      const erro = document.getElementById('erro-' + fieldId);
+      if (input) input.classList.toggle('error', !!msg);
+      if (erro) erro.textContent = msg || '';
+    }
+
+    function clearErrors() {
+      ['nome', 'whatsapp', 'email', 'dataNascimento', 'aceiteTermos'].forEach(id => {
+        showError(id, '');
+      });
+    }
+
+    function validate() {
+      let valid = true;
+      clearErrors();
+
+      const nome = document.getElementById('nome').value.trim();
+      if (!nome) {
+        showError('nome', 'Informe seu nome');
+        valid = false;
+      } else if (nome.length < 3) {
+        showError('nome', 'Nome deve ter pelo menos 3 caracteres');
+        valid = false;
+      }
+
+      const whatsapp = document.getElementById('whatsapp').value.replace(/\D/g, '');
+      if (!whatsapp || whatsapp.length < 10) {
+        showError('whatsapp', 'Informe o WhatsApp com DDD');
+        valid = false;
+      } else if (whatsapp.length > 13) {
+        showError('whatsapp', 'WhatsApp inválido');
+        valid = false;
+      }
+
+      const email = document.getElementById('email').value.trim();
+      if (!email) {
+        showError('email', 'Informe seu email');
+        valid = false;
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showError('email', 'Email inválido');
+        valid = false;
+      }
+
+      const dataNasc = document.getElementById('dataNascimento').value;
+      if (dataNasc) {
+        const d = new Date(dataNasc);
+        const hoje = new Date();
+        if (d > hoje) {
+          showError('dataNascimento', 'Data não pode ser futura');
+          valid = false;
+        }
+      }
+
+      if (!document.getElementById('aceiteTermos').checked) {
+        showError('aceiteTermos', 'É necessário aceitar os Termos de Uso e a Política de Privacidade');
+        valid = false;
+      }
+
+      return valid;
+    }
+
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      if (!validate()) return;
+
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = 'Enviando...';
+      successMsg.classList.remove('visible');
+
+      const payload = {
+        nome: document.getElementById('nome').value.trim(),
+        whatsApp: document.getElementById('whatsapp').value.replace(/\D/g, ''),
+        email: document.getElementById('email').value.trim(),
+        dataNascimento: document.getElementById('dataNascimento').value || null,
+        aceiteTermosVersao: TERMOS_VERSAO
+      };
+      if (payload.dataNascimento) {
+        payload.dataNascimento = new Date(payload.dataNascimento).toISOString();
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/Membros/cadastro`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+
+        const msg = data.mensagem || data.Mensagem || '';
+        if (res.ok) {
+          successMsg.textContent = msg || 'Cadastro realizado com sucesso!';
+          successMsg.classList.add('visible');
+          form.reset();
+        } else {
+          showError('whatsapp', msg || 'Erro ao cadastrar. Tente novamente.');
+        }
+      } catch (err) {
+        showError('whatsapp', 'Erro de conexão. Verifique se a API está acessível.');
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Cadastrar';
+      }
+    });
+
+  </script>
+</body>
+</html>
