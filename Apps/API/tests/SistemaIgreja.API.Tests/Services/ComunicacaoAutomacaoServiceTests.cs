@@ -45,6 +45,10 @@ public class ComunicacaoAutomacaoServiceTests
                 MaxTentativasPorPessoa = 3,
                 TimeZoneId = "America/Sao_Paulo"
             }),
+            Options.Create(new PublicAppUrlSettings
+            {
+                ApiBaseUrl = "https://api.verboplus.com.br"
+            }),
             _loggerMock.Object);
     }
 
