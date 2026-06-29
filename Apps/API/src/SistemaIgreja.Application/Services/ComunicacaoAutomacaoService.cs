@@ -30,6 +30,7 @@ public class ComunicacaoAutomacaoService : IComunicacaoAutomacaoService
     private readonly IComunicacaoProcessamentoService _processamentoService;
     private readonly IAuditLogService _auditLogService;
     private readonly BirthdayCampaignSchedulerSettings _birthdaySchedulerSettings;
+    private readonly PublicAppUrlSettings _publicAppUrlSettings;
     private readonly ILogger<ComunicacaoAutomacaoService> _logger;
 
     public ComunicacaoAutomacaoService(
@@ -44,6 +45,7 @@ public class ComunicacaoAutomacaoService : IComunicacaoAutomacaoService
         IComunicacaoProcessamentoService processamentoService,
         IAuditLogService auditLogService,
         IOptions<BirthdayCampaignSchedulerSettings> birthdaySchedulerSettings,
+        IOptions<PublicAppUrlSettings> publicAppUrlSettings,
         ILogger<ComunicacaoAutomacaoService> logger)
     {
         _visitanteRepository = visitanteRepository;
@@ -57,6 +59,7 @@ public class ComunicacaoAutomacaoService : IComunicacaoAutomacaoService
         _processamentoService = processamentoService;
         _auditLogService = auditLogService;
         _birthdaySchedulerSettings = birthdaySchedulerSettings.Value;
+        _publicAppUrlSettings = publicAppUrlSettings.Value;
         _logger = logger;
     }
 
@@ -475,6 +478,8 @@ public class ComunicacaoAutomacaoService : IComunicacaoAutomacaoService
 
     private async Task<ComunicacaoEntrega> CriarEntregaAniversarioAsync(ComunicacaoCampanha campanha, Pessoa pessoa, ConfiguracaoCampanhaAniversario configuracao)
     {
+        var midiaUrl = ResolverImagemUrl(configuracao.ImagemUrl);
+
         if (await _preferenciaService.EstaBloqueadoAsync(pessoa.Id, CanalComunicacao.WhatsApp))
         {
             return new ComunicacaoEntrega
@@ -485,7 +490,7 @@ public class ComunicacaoAutomacaoService : IComunicacaoAutomacaoService
                 DestinoResolvido = $"pessoa:{pessoa.Id}",
                 RemetenteResolvido = campanha.Nome,
                 ConteudoFinal = campanha.Nome,
-                MidiaUrl = configuracao.ImagemUrl,
+                MidiaUrl = midiaUrl,
                 Status = StatusComunicacaoEntrega.IgnoradoPorPreferencia,
                 Erro = $"Entrega ignorada: {pessoa.Nome} bloqueou o canal {CanalComunicacao.WhatsApp}.",
                 ChaveDedupe = $"{campanha.Id}:{CanalComunicacao.WhatsApp}:{pessoa.Id}:0:preferencia",
@@ -503,7 +508,7 @@ public class ComunicacaoAutomacaoService : IComunicacaoAutomacaoService
                 DestinoResolvido = $"pessoa:{pessoa.Id}",
                 RemetenteResolvido = campanha.Nome,
                 ConteudoFinal = campanha.Nome,
-                MidiaUrl = configuracao.ImagemUrl,
+                MidiaUrl = midiaUrl,
                 Status = StatusComunicacaoEntrega.Falhou,
                 Erro = $"Entrega bloqueada: {pessoa.Nome} não possui WhatsApp válido.",
                 ChaveDedupe = $"{campanha.Id}:{CanalComunicacao.WhatsApp}:{pessoa.Id}:0",
@@ -524,6 +529,36 @@ public class ComunicacaoAutomacaoService : IComunicacaoAutomacaoService
             ChaveDedupe = $"{campanha.Id}:{CanalComunicacao.WhatsApp}:{pessoa.Id}:0",
             DataCriacao = DateTime.UtcNow
         };
+    }
+
+    /// <summary>
+    /// Converte o caminho relativo da imagem (ex.: "/uploads/...") numa URL absoluta pública,
+    /// para que a Evolution API a baixe por HTTP. Sem isso, o caminho relativo seria interpretado
+    /// como arquivo local — que não existe no container do Worker (sem volume de uploads montado).
+    /// </summary>
+    private string? ResolverImagemUrl(string? imagemUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imagemUrl))
+        {
+            return imagemUrl;
+        }
+
+        if (Uri.TryCreate(imagemUrl, UriKind.Absolute, out _))
+        {
+            return imagemUrl;
+        }
+
+        if (string.IsNullOrWhiteSpace(_publicAppUrlSettings.ApiBaseUrl))
+        {
+            _logger.LogWarning(
+                "PublicAppUrl:ApiBaseUrl não configurado; a imagem da campanha de aniversário será enviada como caminho relativo e pode falhar. Caminho={Caminho}",
+                imagemUrl);
+            return imagemUrl;
+        }
+
+        var baseUrl = _publicAppUrlSettings.ApiBaseUrl.TrimEnd('/');
+        var caminho = imagemUrl.StartsWith('/') ? imagemUrl : "/" + imagemUrl;
+        return $"{baseUrl}{caminho}";
     }
 
     private DateTime GetAgoraLocal()
