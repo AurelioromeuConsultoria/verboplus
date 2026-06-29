@@ -42,8 +42,8 @@ public class EventosOcorrenciasControllerTests
     [Fact]
     public async Task GerarPorRecorrencia_ReturnsOk_WhenServiceSucceeds()
     {
-        _serviceMock.Setup(s => s.GerarPorRecorrenciaAsync(1, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
-            .ReturnsAsync(3);
+        _serviceMock.Setup(s => s.GerarPorRecorrenciaAsync(1, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
+            .ReturnsAsync(new GerarOcorrenciasResultadoDto { TotalCriadas = 3, TotalRemovidas = 1 });
 
         var result = await _controller.GerarPorRecorrencia(1, DateTime.Today, DateTime.Today.AddDays(30));
 

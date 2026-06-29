@@ -67,3 +67,9 @@ public class AtualizarEventoOcorrenciaDto
     public DateTime? DataHoraFim { get; set; }
     public StatusEventoOcorrencia Status { get; set; } = StatusEventoOcorrencia.Confirmado;
 }
+
+public class GerarOcorrenciasResultadoDto
+{
+    public int TotalCriadas { get; set; }
+    public int TotalRemovidas { get; set; }
+}

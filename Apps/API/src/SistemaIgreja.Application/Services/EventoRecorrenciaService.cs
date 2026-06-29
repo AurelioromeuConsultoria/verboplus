@@ -81,6 +81,7 @@ public class EventoRecorrenciaService : IEventoRecorrenciaService
             DataInicioVigencia = dto.DataInicioVigencia.Date,
             DataFimVigencia = dto.DataFimVigencia?.Date,
             Ativo = dto.Ativo,
+            SemanasDoMesExcluidas = SerializarSemanasExcluidas(dto.SemanasDoMesExcluidas),
             DataCriacao = DateTime.Now
         };
 
@@ -111,6 +112,7 @@ public class EventoRecorrenciaService : IEventoRecorrenciaService
         entity.DataInicioVigencia = dto.DataInicioVigencia.Date;
         entity.DataFimVigencia = dto.DataFimVigencia?.Date;
         entity.Ativo = dto.Ativo;
+        entity.SemanasDoMesExcluidas = SerializarSemanasExcluidas(dto.SemanasDoMesExcluidas);
 
         var updated = await _repository.UpdateAsync(entity);
         return MapToDto(updated);
@@ -151,6 +153,34 @@ public class EventoRecorrenciaService : IEventoRecorrenciaService
 
     private static string FormatTimeSpan(TimeSpan ts) => ts.ToString(@"hh\:mm");
 
+    // Normaliza a lista de semanas (1 a 5) e serializa como CSV ordenado (ex.: "1,2"). Null/vazio => null.
+    private static string? SerializarSemanasExcluidas(List<int>? semanas)
+    {
+        if (semanas == null || semanas.Count == 0) return null;
+
+        var normalizadas = semanas.Distinct().OrderBy(s => s).ToList();
+        foreach (var semana in normalizadas)
+        {
+            if (semana < 1 || semana > 5)
+                throw new ArgumentException("Semana do mês inválida. Use valores de 1 a 5.");
+        }
+
+        return string.Join(",", normalizadas);
+    }
+
+    private static List<int> ParseSemanasExcluidas(string? csv)
+    {
+        if (string.IsNullOrWhiteSpace(csv)) return new List<int>();
+
+        return csv
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => int.TryParse(s, out var v) ? v : 0)
+            .Where(v => v >= 1 && v <= 5)
+            .Distinct()
+            .OrderBy(v => v)
+            .ToList();
+    }
+
     private static EventoRecorrenciaDto MapToDto(EventoRecorrencia r)
     {
         return new EventoRecorrenciaDto
@@ -182,6 +212,7 @@ public class EventoRecorrenciaService : IEventoRecorrenciaService
             DataInicioVigencia = r.DataInicioVigencia,
             DataFimVigencia = r.DataFimVigencia,
             Ativo = r.Ativo,
+            SemanasDoMesExcluidas = ParseSemanasExcluidas(r.SemanasDoMesExcluidas),
             DataCriacao = r.DataCriacao
         };
     }

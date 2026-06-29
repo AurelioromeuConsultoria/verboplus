@@ -107,8 +107,8 @@ public class EventosOcorrenciasController : ControllerBase
     {
         try
         {
-            var total = await _service.GerarPorRecorrenciaAsync(eventoId, dataInicio, dataFim);
-            return Ok(new { totalCriadas = total });
+            var resultado = await _service.GerarPorRecorrenciaAsync(eventoId, dataInicio, dataFim, reconciliarFuturasSemEscala: true);
+            return Ok(new { totalCriadas = resultado.TotalCriadas, totalRemovidas = resultado.TotalRemovidas });
         }
         catch (Exception ex)
         {

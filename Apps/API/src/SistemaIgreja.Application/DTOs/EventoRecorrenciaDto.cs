@@ -17,6 +17,8 @@ public class EventoRecorrenciaDto
     public DateTime DataInicioVigencia { get; set; }
     public DateTime? DataFimVigencia { get; set; }
     public bool Ativo { get; set; }
+    /// <summary>Semanas do mês (1 a 5) que esta recorrência pula. Vazio = não pula nenhuma.</summary>
+    public List<int> SemanasDoMesExcluidas { get; set; } = new();
     public DateTime DataCriacao { get; set; }
 }
 
@@ -30,6 +32,8 @@ public class CriarEventoRecorrenciaDto
     public DateTime DataInicioVigencia { get; set; }
     public DateTime? DataFimVigencia { get; set; }
     public bool Ativo { get; set; } = true;
+    /// <summary>Semanas do mês (1 a 5) a pular. Ex.: [2] = não gera no 2º dia-da-semana do mês.</summary>
+    public List<int>? SemanasDoMesExcluidas { get; set; }
 }
 
 public class AtualizarEventoRecorrenciaDto
@@ -41,4 +45,6 @@ public class AtualizarEventoRecorrenciaDto
     public DateTime DataInicioVigencia { get; set; }
     public DateTime? DataFimVigencia { get; set; }
     public bool Ativo { get; set; }
+    /// <summary>Semanas do mês (1 a 5) a pular. Ex.: [2] = não gera no 2º dia-da-semana do mês.</summary>
+    public List<int>? SemanasDoMesExcluidas { get; set; }
 }

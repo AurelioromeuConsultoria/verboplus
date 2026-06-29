@@ -1,11 +1,11 @@
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using SistemaIgreja.API.Controllers;
+using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Application.Services;
 using System.Net;
 using System.Text.Json;
@@ -15,7 +15,7 @@ namespace SistemaIgreja.API.Tests.Controllers;
 
 public class UploadControllerTests
 {
-    private readonly Mock<IWebHostEnvironment> _environmentMock = new();
+    private readonly Mock<IFileStorageService> _fileStorageMock = new();
     private readonly Mock<IHttpClientFactory> _httpClientFactoryMock = new();
     private readonly Mock<ILogger<UploadController>> _loggerMock = new();
     private readonly IConfiguration _configuration;
@@ -24,14 +24,22 @@ public class UploadControllerTests
 
     public UploadControllerTests()
     {
-        _environmentMock.SetupGet(x => x.ContentRootPath).Returns(Path.GetTempPath());
+        StubSave(_fileStorageMock);
         _configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
         _controller = new UploadController(
-            _environmentMock.Object,
+            _fileStorageMock.Object,
             _httpClientFactoryMock.Object,
             _configuration,
             _tenantContext,
             _loggerMock.Object);
+    }
+
+    // Faz o storage devolver um caminho previsível (sem tocar disco). IsLocalStorage fica false por padrão,
+    // então o fluxo de sincronização dev->prod é pulado nos testes que não o exercitam.
+    private static void StubSave(Mock<IFileStorageService> mock)
+    {
+        mock.Setup(s => s.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync((Stream _, string _, string folder, string fileName, string _) => $"/uploads/{folder}/{fileName}");
     }
 
     [Fact]
@@ -70,7 +78,7 @@ public class UploadControllerTests
             })
             .Build();
         var controller = new UploadController(
-            _environmentMock.Object,
+            _fileStorageMock.Object,
             _httpClientFactoryMock.Object,
             configuration,
             _tenantContext,
@@ -97,7 +105,7 @@ public class UploadControllerTests
             })
             .Build();
         var controller = new UploadController(
-            _environmentMock.Object,
+            _fileStorageMock.Object,
             _httpClientFactoryMock.Object,
             configuration,
             _tenantContext,
@@ -132,7 +140,7 @@ public class UploadControllerTests
             })));
 
         var controller = new UploadController(
-            _environmentMock.Object,
+            _fileStorageMock.Object,
             factory.Object,
             _configuration,
             _tenantContext,
@@ -297,7 +305,7 @@ public class UploadControllerTests
             })
             .Build();
         var controller = new UploadController(
-            _environmentMock.Object,
+            _fileStorageMock.Object,
             _httpClientFactoryMock.Object,
             configuration,
             _tenantContext,
@@ -341,8 +349,13 @@ public class UploadControllerTests
         factory.Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(() => httpClients.Dequeue());
 
+        // Storage local: o controller tenta sincronizar para produção; o sync falha (500) e ele cai no path local.
+        var fileStorageMock = new Mock<IFileStorageService>();
+        StubSave(fileStorageMock);
+        fileStorageMock.SetupGet(s => s.IsLocalStorage).Returns(true);
+
         var controller = new UploadController(
-            _environmentMock.Object,
+            fileStorageMock.Object,
             factory.Object,
             configuration,
             _tenantContext,
@@ -366,7 +379,7 @@ public class UploadControllerTests
             })
             .Build();
         var controller = new UploadController(
-            _environmentMock.Object,
+            _fileStorageMock.Object,
             _httpClientFactoryMock.Object,
             configuration,
             _tenantContext,
@@ -392,7 +405,7 @@ public class UploadControllerTests
             .Returns(new HttpClient(new StubHttpMessageHandler(responder)));
 
         return new UploadController(
-            _environmentMock.Object,
+            _fileStorageMock.Object,
             factory.Object,
             _configuration,
             _tenantContext,
@@ -403,7 +416,11 @@ public class UploadControllerTests
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(content);
         var stream = new MemoryStream(bytes);
-        return new FormFile(stream, 0, bytes.Length, "file", fileName);
+        return new FormFile(stream, 0, bytes.Length, "file", fileName)
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "application/octet-stream"
+        };
     }
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler
