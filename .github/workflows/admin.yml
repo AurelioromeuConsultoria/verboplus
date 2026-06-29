@@ -42,9 +42,16 @@ jobs:
 
       # Deploy: o Coolify builda a imagem (Apps/Admin/Dockerfile → nginx) ao receber o webhook.
       # Mantenha o auto-deploy-on-push DESLIGADO no Coolify para que os testes acima sejam o gate real.
+      # O deploy do Coolify é assíncrono: timeout de resposta (exit 28) não é falha.
+      # Só falha em erro explícito de autenticação/UUID (401/403/404).
       - name: Disparar deploy no Coolify
         if: github.event_name == 'push'
         run: |
-          curl -fsSL -X GET \
+          code=$(curl -sS -o /tmp/deploy_admin.txt -w "%{http_code}" --max-time 120 -X GET \
             "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_ADMIN_UUID }}&force=false" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}") || true
+          echo "Coolify (Admin) respondeu HTTP: ${code:-sem-resposta-timeout}"
+          cat /tmp/deploy_admin.txt 2>/dev/null || true
+          case "$code" in
+            401|403|404) echo "::error::Coolify recusou o deploy do Admin (HTTP $code) — confira COOLIFY_URL/UUID/TOKEN"; exit 1 ;;
+          esac

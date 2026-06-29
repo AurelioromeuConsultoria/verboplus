@@ -33,16 +33,29 @@ jobs:
         run: dotnet build src/SistemaIgreja.API/SistemaIgreja.API.csproj -c Release --no-restore
 
       # API e Worker vivem ambos em Apps/API → dispara o deploy dos dois (chamadas separadas).
+      # O endpoint de deploy do Coolify enfileira o build de forma assíncrona: uma resposta
+      # lenta (timeout do curl, exit 28) NÃO significa falha. Por isso o passo só falha em
+      # erro explícito de autenticação/UUID (401/403/404), não em timeout de resposta.
       - name: Deploy no Coolify (API)
         if: github.event_name == 'push'
         run: |
-          curl -fsS --max-time 30 --retry 2 -X GET \
+          code=$(curl -sS -o /tmp/deploy_api.txt -w "%{http_code}" --max-time 120 -X GET \
             "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_API_UUID }}&force=false" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}") || true
+          echo "Coolify (API) respondeu HTTP: ${code:-sem-resposta-timeout}"
+          cat /tmp/deploy_api.txt 2>/dev/null || true
+          case "$code" in
+            401|403|404) echo "::error::Coolify recusou o deploy da API (HTTP $code) — confira COOLIFY_URL/UUID/TOKEN"; exit 1 ;;
+          esac
 
       - name: Deploy no Coolify (Worker)
         if: github.event_name == 'push'
         run: |
-          curl -fsS --max-time 30 --retry 2 -X GET \
+          code=$(curl -sS -o /tmp/deploy_worker.txt -w "%{http_code}" --max-time 120 -X GET \
             "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_WORKER_UUID }}&force=false" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}") || true
+          echo "Coolify (Worker) respondeu HTTP: ${code:-sem-resposta-timeout}"
+          cat /tmp/deploy_worker.txt 2>/dev/null || true
+          case "$code" in
+            401|403|404) echo "::error::Coolify recusou o deploy do Worker (HTTP $code) — confira COOLIFY_URL/UUID/TOKEN"; exit 1 ;;
+          esac
