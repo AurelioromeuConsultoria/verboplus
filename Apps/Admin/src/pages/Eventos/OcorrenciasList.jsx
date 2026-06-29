@@ -115,8 +115,13 @@ export default function OcorrenciasList() {
         `${dataFim}T23:59:59`
       );
       const total = res.data?.totalCriadas ?? 0;
-      if (total > 0) {
-        toast.success(t('events.occurrencesGenerateCreated', { count: total }));
+      const removidas = res.data?.totalRemovidas ?? 0;
+      if (total > 0 || removidas > 0) {
+        if (removidas > 0) {
+          toast.success(t('events.occurrencesGenerateReconciled', { created: total, removed: removidas }));
+        } else {
+          toast.success(t('events.occurrencesGenerateCreated', { count: total }));
+        }
         await loadOcorrencias();
       } else {
         toast.warning(t('events.occurrencesGenerateNone'));

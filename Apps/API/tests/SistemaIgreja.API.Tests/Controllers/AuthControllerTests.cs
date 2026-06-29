@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using SistemaIgreja.API.Controllers;
 using SistemaIgreja.Application.DTOs;
+using SistemaIgreja.Application.Interfaces;
 using SistemaIgreja.Application.Services;
 
 namespace SistemaIgreja.API.Tests.Controllers;
@@ -12,11 +13,12 @@ namespace SistemaIgreja.API.Tests.Controllers;
 public class AuthControllerTests
 {
     private readonly Mock<IAuthService> _authServiceMock = new();
+    private readonly Mock<IKidsRegistrationService> _registrationServiceMock = new();
     private readonly AuthController _controller;
 
     public AuthControllerTests()
     {
-        _controller = new AuthController(_authServiceMock.Object);
+        _controller = new AuthController(_authServiceMock.Object, _registrationServiceMock.Object);
     }
 
     [Fact]

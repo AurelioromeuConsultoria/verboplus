@@ -13,7 +13,7 @@ public interface IEventoOcorrenciaService
     Task<EventoOcorrenciaDto> CreateAsync(CriarEventoOcorrenciaDto dto);
     Task<EventoOcorrenciaDto> UpdateAsync(int id, AtualizarEventoOcorrenciaDto dto);
     Task DeleteAsync(int id);
-    Task<int> GerarPorRecorrenciaAsync(int eventoId, DateTime dataInicio, DateTime dataFim);
+    Task<GerarOcorrenciasResultadoDto> GerarPorRecorrenciaAsync(int eventoId, DateTime dataInicio, DateTime dataFim, bool reconciliarFuturasSemEscala = false);
 }
 
 public class EventoOcorrenciaService : IEventoOcorrenciaService
@@ -161,7 +161,7 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
         await _repository.DeleteAsync(id);
     }
 
-    public async Task<int> GerarPorRecorrenciaAsync(int eventoId, DateTime dataInicio, DateTime dataFim)
+    public async Task<GerarOcorrenciasResultadoDto> GerarPorRecorrenciaAsync(int eventoId, DateTime dataInicio, DateTime dataFim, bool reconciliarFuturasSemEscala = false)
     {
         if (dataFim < dataInicio)
         {
@@ -178,6 +178,7 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
                 "Este evento não possui recorrências configuradas. Edite o evento em Eventos e, na seção Recorrências, adicione ao menos uma (dia da semana, horário e periodicidade).");
         }
 
+        var horariosEsperados = new HashSet<DateTime>();
         var totalCriadas = 0;
 
         foreach (var recorrencia in recorrencias)
@@ -196,15 +197,22 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
                 recorrencia.Periodicidade,
                 inicioVigencia);
 
+            var semanasExcluidas = ParseSemanasExcluidas(recorrencia.SemanasDoMesExcluidas);
+
             foreach (var dataBase in datasOcorrencia)
             {
+                // Ex.: "todo domingo, exceto o 2º domingo do mês" -> pula a semana 2.
+                if (semanasExcluidas.Contains(SemanaDoMes(dataBase))) continue;
+
                 var dataHoraInicio = dataBase.Date.Add(recorrencia.HoraInicio);
-                var dataHoraFim = recorrencia.HoraFim.HasValue
-                    ? (DateTime?)dataBase.Date.Add(recorrencia.HoraFim.Value)
-                    : null;
+                horariosEsperados.Add(dataHoraInicio);
 
                 var existe = await _repository.ExistsOcorrenciaNoHorarioAsync(eventoId, dataHoraInicio);
                 if (existe) continue;
+
+                var dataHoraFim = recorrencia.HoraFim.HasValue
+                    ? (DateTime?)dataBase.Date.Add(recorrencia.HoraFim.Value)
+                    : null;
 
                 var entity = new EventoOcorrencia
                 {
@@ -223,7 +231,42 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
             }
         }
 
-        return totalCriadas;
+        var totalRemovidas = reconciliarFuturasSemEscala
+            ? await ReconciliarFuturasSemEscalaAsync(eventoId, dataInicio, dataFim, horariosEsperados)
+            : 0;
+
+        return new GerarOcorrenciasResultadoDto
+        {
+            TotalCriadas = totalCriadas,
+            TotalRemovidas = totalRemovidas
+        };
+    }
+
+    // Remove ocorrências FUTURAS geradas automaticamente que não correspondem mais a nenhuma
+    // recorrência ativa (ex.: recorrência alterada, desativada ou apagada). Preserva o passado,
+    // ocorrências criadas manualmente e qualquer ocorrência que já tenha escala montada.
+    private async Task<int> ReconciliarFuturasSemEscalaAsync(
+        int eventoId,
+        DateTime dataInicio,
+        DateTime dataFim,
+        HashSet<DateTime> horariosEsperados)
+    {
+        var agora = DateTime.Now;
+        var ocorrencias = await _repository.GetByPeriodoAsync(dataInicio, dataFim, eventoId);
+
+        var removidas = 0;
+        foreach (var ocorrencia in ocorrencias)
+        {
+            if (!ocorrencia.GeradaAutomaticamente) continue;
+            if (ocorrencia.DataHoraInicio < agora) continue;
+            if (horariosEsperados.Contains(ocorrencia.DataHoraInicio)) continue;
+            if (ocorrencia.Escalas?.Any() == true) continue;
+
+            await _repository.DeleteAsync(ocorrencia.Id);
+            removidas++;
+        }
+
+        return removidas;
     }
 
     private static IEnumerable<DateTime> GerarDatasRecorrencia(
@@ -301,6 +344,20 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
         var primeira = ProximaDataNoDiaSemana(new DateTime(ano, mes, 1), diaSemana);
         var data = primeira.AddDays((semanaDoMes - 1) * 7);
         return data.Month == mes ? data : null;
+    }
+
+    // Ordinal da semana do mês (1 a 5) para a data, baseado no dia do mês.
+    private static int SemanaDoMes(DateTime data) => ((data.Day - 1) / 7) + 1;
+
+    private static HashSet<int> ParseSemanasExcluidas(string? csv)
+    {
+        if (string.IsNullOrWhiteSpace(csv)) return new HashSet<int>();
+
+        return csv
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => int.TryParse(s, out var v) ? v : 0)
+            .Where(v => v >= 1 && v <= 5)
+            .ToHashSet();
     }
 
     private static EventoOcorrenciaDto MapToDto(EventoOcorrencia o)

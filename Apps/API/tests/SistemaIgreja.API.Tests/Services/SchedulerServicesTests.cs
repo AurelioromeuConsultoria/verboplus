@@ -200,8 +200,8 @@ public class SchedulerServicesTests
             {
                 new Evento { Id = 3, Titulo = "Culto", Ativo = true, EhRecorrente = true }
             });
-        ocorrenciaServiceMock.Setup(s => s.GerarPorRecorrenciaAsync(3, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
-            .ReturnsAsync(2);
+        ocorrenciaServiceMock.Setup(s => s.GerarPorRecorrenciaAsync(3, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
+            .ReturnsAsync(new GerarOcorrenciasResultadoDto { TotalCriadas = 2 });
         escalaServiceMock.Setup(s => s.EnviarLembretesPendentesAsync(It.IsAny<DateTime>()))
             .ReturnsAsync(1)
             .Callback(() => cts.Cancel());
@@ -275,8 +275,8 @@ public class SchedulerServicesTests
             {
                 new Evento { Id = 3, Titulo = "Culto", Ativo = true, EhRecorrente = true }
             });
-        ocorrenciaServiceMock.Setup(s => s.GerarPorRecorrenciaAsync(3, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
-            .ReturnsAsync(0);
+        ocorrenciaServiceMock.Setup(s => s.GerarPorRecorrenciaAsync(3, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
+            .ReturnsAsync(new GerarOcorrenciasResultadoDto { TotalCriadas = 0 });
         escalaServiceMock.Setup(s => s.EnviarLembretesPendentesAsync(It.IsAny<DateTime>()))
             .ThrowsAsync(new InvalidOperationException("falha lembretes"));
 

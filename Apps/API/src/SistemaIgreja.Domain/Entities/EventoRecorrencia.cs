@@ -34,6 +34,14 @@ public class EventoRecorrencia : ITenantEntity
     [Required]
     public bool Ativo { get; set; } = true;
 
+    /// <summary>
+    /// Semanas do mês (1 a 5) em que esta recorrência NÃO deve gerar ocorrências,
+    /// armazenadas como CSV (ex.: "2" ou "1,3"). Null/vazio = não pula nenhuma.
+    /// Útil para regras como "todo domingo, exceto o 2º domingo do mês".
+    /// </summary>
+    [MaxLength(20)]
+    public string? SemanasDoMesExcluidas { get; set; }
+
     public DateTime DataCriacao { get; set; } = DateTime.Now;
 
     public virtual ICollection<EventoOcorrencia> Ocorrencias { get; set; } = new List<EventoOcorrencia>();

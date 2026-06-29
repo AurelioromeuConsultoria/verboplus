@@ -108,6 +108,7 @@ export default function EventoForm() {
     horaFim: '',
     periodicidade: 1,
     semanaDoMes: 1,
+    semanasExcluidas: [],
     dataInicioVigencia: new Date().toISOString().slice(0, 10),
     dataFimVigencia: '',
     ativo: true,
@@ -263,6 +264,7 @@ export default function EventoForm() {
       horaFim: '',
       periodicidade: 1,
       semanaDoMes: 1,
+      semanasExcluidas: [],
       dataInicioVigencia: new Date().toISOString().slice(0, 10),
       dataFimVigencia: '',
       ativo: true,
@@ -278,6 +280,7 @@ export default function EventoForm() {
       horaFim: r.horaFim || '',
       periodicidade: r.periodicidade,
       semanaDoMes: getWeekdayOrdinalFromDate(r.dataInicioVigencia, r.diaSemana),
+      semanasExcluidas: r.semanasDoMesExcluidas || [],
       dataInicioVigencia: r.dataInicioVigencia?.slice(0, 10) || new Date().toISOString().slice(0, 10),
       dataFimVigencia: r.dataFimVigencia?.slice(0, 10) || '',
       ativo: r.ativo ?? true,
@@ -303,6 +306,8 @@ export default function EventoForm() {
       dataInicioVigencia: dataInicioVigencia ? new Date(`${dataInicioVigencia}T00:00:00`).toISOString() : new Date().toISOString(),
       dataFimVigencia: recorrenciaForm.dataFimVigencia ? new Date(recorrenciaForm.dataFimVigencia).toISOString() : null,
       ativo: recorrenciaForm.ativo,
+      // Exclusão de semanas só faz sentido para Semanal/Quinzenal; Mensal já mira uma semana específica.
+      semanasDoMesExcluidas: periodicidade === 3 ? [] : (recorrenciaForm.semanasExcluidas || []),
     };
     try {
       if (editingRecorrenciaId) {
@@ -676,6 +681,34 @@ export default function EventoForm() {
                       </Select>
                     </div>
                   )}
+                  {Number(recorrenciaForm.periodicidade) !== 3 && (
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>{t('events.form.recurrence.excludeWeeksLabel')}</Label>
+                      <div className="flex flex-wrap gap-3">
+                        {semanasMes.map((week) => {
+                          const checked = (recorrenciaForm.semanasExcluidas || []).includes(week.value);
+                          return (
+                            <label key={week.value} className="flex items-center gap-1.5 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => setRecorrenciaForm((p) => {
+                                  const atual = p.semanasExcluidas || [];
+                                  const next = e.target.checked
+                                    ? [...atual, week.value]
+                                    : atual.filter((v) => v !== week.value);
+                                  return { ...p, semanasExcluidas: next.sort((a, b) => a - b) };
+                                })}
+                                className="rounded border-input"
+                              />
+                              {week.label}
+                            </label>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{t('events.form.recurrence.excludeWeeksHint')}</p>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>{t('events.form.recurrence.validFrom')}</Label>
                     <Input type="date" value={recorrenciaForm.dataInicioVigencia} onChange={(e) => setRecorrenciaForm((p) => ({ ...p, dataInicioVigencia: e.target.value }))} />
@@ -719,7 +752,16 @@ export default function EventoForm() {
                       <TableCell>{r.diaSemanaDescricao ?? diasSemana.find((d) => d.value === r.diaSemana)?.label}</TableCell>
                       <TableCell>{r.horaInicio}</TableCell>
                       <TableCell>{r.horaFim || t('events.form.recurrence.noEndTime')}</TableCell>
-                      <TableCell>{getPeriodicidadeRecorrenciaLabel(r)}</TableCell>
+                      <TableCell>
+                        {getPeriodicidadeRecorrenciaLabel(r)}
+                        {r.semanasDoMesExcluidas?.length > 0 && (
+                          <span className="block text-xs text-muted-foreground">
+                            {t('events.form.recurrence.excludeWeeksSummary', {
+                              weeks: r.semanasDoMesExcluidas.map((w) => t(`events.form.recurrence.monthWeek.${w}`)).join(', '),
+                            })}
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {r.dataInicioVigencia?.slice(0, 10)} {r.dataFimVigencia ? t('events.form.recurrence.validityUntil', { date: r.dataFimVigencia.slice(0, 10) }) : t('events.form.recurrence.noEndDate')}
                       </TableCell>

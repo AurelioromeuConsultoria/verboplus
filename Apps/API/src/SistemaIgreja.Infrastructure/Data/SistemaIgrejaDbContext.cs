@@ -1153,6 +1153,7 @@ public class SistemaIgrejaDbContext : DbContext
             entity.Property(e => e.Periodicidade).IsRequired();
             entity.Property(e => e.DataInicioVigencia).IsRequired();
             entity.Property(e => e.Ativo).IsRequired();
+            entity.Property(e => e.SemanasDoMesExcluidas).HasMaxLength(20);
             entity.Property(e => e.DataCriacao).IsRequired();
 
             entity.HasOne(e => e.Evento)

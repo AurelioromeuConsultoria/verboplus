@@ -140,11 +140,12 @@ public class EscalaSchedulerService : BackgroundService
 
             try
             {
-                var geradas = await eventoOcorrenciaService.GerarPorRecorrenciaAsync(
+                var resultado = await eventoOcorrenciaService.GerarPorRecorrenciaAsync(
                     evento.Id,
                     dataInicio,
                     dataFim);
 
+                var geradas = resultado.TotalCriadas;
                 totalGeradas += geradas;
 
                 if (geradas > 0)
