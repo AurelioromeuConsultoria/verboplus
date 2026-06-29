@@ -67,9 +67,9 @@ export default function CampanhaAniversario() {
     whatsApp: '',
   });
 
-  const loadConfiguracao = async (filtersToUse = filters) => {
+  const loadConfiguracao = async (filtersToUse = filters, { silent = false } = {}) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await pessoasApi.getCampanhaAniversario({
         busca: filtersToUse.busca || undefined,
         status: filtersToUse.status === 'all' ? undefined : filtersToUse.status,
@@ -93,7 +93,7 @@ export default function CampanhaAniversario() {
       console.error(error);
       toast.error(t('birthdayCampaignManagement.errorLoad'));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -163,7 +163,7 @@ export default function CampanhaAniversario() {
       setResendingId(item.id);
       const response = await pessoasApi.resendCampanhaAniversarioHistorico(item.id);
       toast.success(response.data?.mensagem || t('birthdayCampaignManagement.history.resendSuccess'));
-      await loadConfiguracao(filters);
+      await loadConfiguracao(filters, { silent: true });
     } catch (error) {
       console.error(error);
       const mensagem = error.response?.data?.mensagem || t('birthdayCampaignManagement.history.resendError');
