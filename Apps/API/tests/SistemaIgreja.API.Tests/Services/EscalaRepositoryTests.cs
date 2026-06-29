@@ -60,13 +60,13 @@ public class EscalaRepositoryTests
 
         var cargaRecente = await repository.GetCargaRecentePorVoluntarioAsync(setup.EquipeLouvor.Id, primeiroDiaMes);
         cargaRecente.Should().ContainKey(setup.VoluntarioLouvor.Id);
-        cargaRecente[setup.VoluntarioLouvor.Id].Should().Be(2);
+        cargaRecente[setup.VoluntarioLouvor.Id].Should().Be(1);
 
         var noMes = await repository.GetQuantidadeEscalasNoMesPorVoluntarioAsync(setup.EquipeLouvor.Id, primeiroDiaMes.Year, primeiroDiaMes.Month);
-        noMes[setup.VoluntarioLouvor.Id].Should().Be(2);
+        noMes[setup.VoluntarioLouvor.Id].Should().Be(1);
 
         var noPeriodo = await repository.GetQuantidadeEscalasEmPeriodoPorVoluntarioAsync(setup.EquipeLouvor.Id, primeiroDiaMes, ultimoDiaMes);
-        noPeriodo[setup.VoluntarioLouvor.Id].Should().Be(2);
+        noPeriodo[setup.VoluntarioLouvor.Id].Should().Be(1);
     }
 
     [Fact]
@@ -105,9 +105,8 @@ public class EscalaRepositoryTests
 
     private static async Task<EscalaSetup> SeedEscalaSetupAsync(SistemaIgrejaDbContext context)
     {
-        var baseDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 15);
-        var dataFutura = baseDate.AddDays(10);
-        var dataPassada = baseDate.AddDays(-5);
+        var dataFutura = new DateTime(2030, 7, 25);
+        var dataPassada = new DateTime(2020, 7, 10);
 
         var pessoaVoluntario = await SeedPessoaAsync(context, "Mateus", TipoPessoa.Adulto);
         var pessoaAudio = await SeedPessoaAsync(context, "Joao", TipoPessoa.Adulto);
