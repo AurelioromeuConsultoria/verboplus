@@ -62,8 +62,8 @@ export default function Login() {
   return (
     <>
       <div className="grid min-h-screen overflow-hidden bg-white text-[#0f172a] lg:grid-cols-[42%_58%]">
-        <aside className="relative hidden min-h-screen overflow-hidden bg-[#07172a] text-white lg:flex lg:flex-col lg:items-center">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_92%_8%,rgba(6,182,212,0.18),transparent_28%),radial-gradient(circle_at_0%_100%,rgba(124,58,237,0.18),transparent_24%),linear-gradient(180deg,#0f172a_0%,#08233d_45%,#06172a_100%)]" />
+        <aside className="relative hidden min-h-screen overflow-hidden bg-[#0f0b1f] text-white lg:flex lg:flex-col lg:items-center">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_92%_8%,rgba(124,58,237,0.28),transparent_32%),radial-gradient(circle_at_0%_100%,rgba(167,139,250,0.22),transparent_30%),linear-gradient(180deg,#0f0b1f_0%,#130a2d_45%,#0c0a1e_100%)]" />
           <div className="absolute -right-28 top-[-130px] size-[390px] rounded-full border-[70px] border-white/7" />
           <div className="absolute -bottom-28 -left-24 size-[290px] rounded-full border-[54px] border-white/7" />
           <div className="absolute inset-0 bg-[linear-gradient(transparent_96%,rgba(255,255,255,0.035)_96%),linear-gradient(90deg,transparent_96%,rgba(255,255,255,0.025)_96%)] bg-[size:26px_26px] opacity-50" />
@@ -88,11 +88,6 @@ export default function Login() {
               <h1 className="text-5xl font-bold leading-none tracking-tight">{t('login.brandHeadline')}</h1>
               <p className="mt-6 max-w-sm text-lg leading-8 text-slate-300">{t('login.brandDescription')}</p>
 
-              <div className="mt-14 flex items-center justify-center gap-3" aria-hidden="true">
-                <span className="h-2 w-8 rounded-full bg-white" />
-                <span className="size-2 rounded-full bg-white/35" />
-                <span className="size-2 rounded-full bg-white/35" />
-              </div>
             </div>
 
             <div className="relative w-full border-t border-white/18 pt-9">
@@ -117,7 +112,7 @@ export default function Login() {
               </div>
 
               <div className="mb-9">
-                <h2 className="text-3xl font-bold tracking-tight text-[#1e4f82]">{t('login.welcomeTitle')}</h2>
+                <h2 className="text-3xl font-bold tracking-tight text-[#7C3AED]">{t('login.welcomeTitle')}</h2>
                 <p className="mt-4 text-base leading-7 text-slate-500">{t('login.welcomeSubtitle')}</p>
               </div>
 
@@ -135,7 +130,7 @@ export default function Login() {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder={t('login.emailPlaceholder')}
-                      className="h-14 rounded-lg border-slate-200 bg-white pl-12 pr-4 text-base shadow-none transition placeholder:text-slate-500 focus-visible:border-[#2563eb] focus-visible:ring-[#2563eb]/20"
+                      className="h-14 rounded-lg border-slate-200 bg-white pl-12 pr-4 text-base shadow-none transition placeholder:text-slate-500 focus-visible:border-[#7C3AED] focus-visible:ring-[#7C3AED]/20"
                       required
                       autoComplete="email"
                     />
@@ -155,13 +150,13 @@ export default function Login() {
                       value={formData.senha}
                       onChange={handleChange}
                       placeholder={t('login.passwordPlaceholder')}
-                      className="h-14 rounded-lg border-slate-200 bg-white pl-12 pr-12 text-base tracking-[0.12em] shadow-none transition placeholder:text-slate-500 focus-visible:border-[#2563eb] focus-visible:ring-[#2563eb]/20"
+                      className="h-14 rounded-lg border-slate-200 bg-white pl-12 pr-12 text-base tracking-[0.12em] shadow-none transition placeholder:text-slate-500 focus-visible:border-[#7C3AED] focus-visible:ring-[#7C3AED]/20"
                       required
                       autoComplete="current-password"
                     />
                     <button
                       type="button"
-                      className="absolute right-3 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]/25"
+                      className="absolute right-3 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]/25"
                       onClick={() => setShowPassword((current) => !current)}
                       aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
                     >
@@ -172,11 +167,21 @@ export default function Login() {
 
                 <Button
                   type="submit"
-                  className="mt-1 h-14 w-full rounded-lg bg-[#2563eb] text-base font-bold text-white shadow-none hover:bg-[#1d4ed8]"
+                  className="mt-1 h-14 w-full rounded-lg bg-gradient-to-r from-[#7C3AED] to-[#6d28d9] text-base font-bold text-white shadow-none transition hover:from-[#6d28d9] hover:to-[#5b21b6]"
                   disabled={loading}
                 >
                   {loading ? t('login.submitting') : t('login.submit')}
                 </Button>
+
+                <p className="pt-1 text-center text-sm text-slate-400">
+                  Ainda não tem uma conta?{' '}
+                  <a
+                    href="https://verboplus.com.br/#planos"
+                    className="font-medium text-[#7C3AED] transition hover:text-[#6d28d9]"
+                  >
+                    Ver planos →
+                  </a>
+                </p>
               </form>
             </section>
           </div>

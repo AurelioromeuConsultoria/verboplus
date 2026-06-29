@@ -22,6 +22,8 @@ dist/
 bin/
 obj/
 *.user
+# launchSettings.json pode conter connection strings e segredos de dev local
+**/Properties/launchSettings.json
 
 # ---- Flutter (Mobile) ----
 .dart_tool/
