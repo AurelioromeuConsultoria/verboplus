@@ -32,9 +32,16 @@ jobs:
       - name: Build (valida o bundle antes do deploy)
         run: npm run build
 
+      # O deploy do Coolify é assíncrono: timeout de resposta (exit 28) não é falha.
+      # Só falha em erro explícito de autenticação/UUID (401/403/404).
       - name: Deploy no Coolify
         if: github.event_name == 'push'
         run: |
-          curl -fsSL -X GET \
+          code=$(curl -sS -o /tmp/deploy_website.txt -w "%{http_code}" --max-time 120 -X GET \
             "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_WEBSITE_UUID }}&force=false" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}") || true
+          echo "Coolify (Website) respondeu HTTP: ${code:-sem-resposta-timeout}"
+          cat /tmp/deploy_website.txt 2>/dev/null || true
+          case "$code" in
+            401|403|404) echo "::error::Coolify recusou o deploy do Website (HTTP $code) — confira COOLIFY_URL/UUID/TOKEN"; exit 1 ;;
+          esac
