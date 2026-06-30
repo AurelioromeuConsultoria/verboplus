@@ -2808,6 +2808,15 @@
       "teamLabel": "Team",
       "allEvents": "All events",
       "allTeams": "All teams",
+      "volunteerSearchLabel": "Volunteer",
+      "volunteerSearchPlaceholder": "Search by name...",
+      "statusFilterLabel": "Status",
+      "allStatuses": "All statuses",
+      "noScheduleFilter": "No schedule",
+      "clearFilters": "Clear filters",
+      "filteredOf": "{{filtered}} of {{total}}",
+      "emptyFilterTitle": "No volunteers match this filter.",
+      "emptyFilterDescription": "Adjust the volunteer or status filters to see results.",
       "gridTitle": "Monthly distribution",
       "occurrences": "occurrences",
       "manualTitle": "Manual planning",
@@ -2861,7 +2870,15 @@
         "failures": "{{count}} send(s) failed. {{details}}",
         "noRecipients": "No volunteer on this team has WhatsApp filled in.",
         "uploadError": "Could not save the schedule image for sending.",
-        "error": "Error sending schedule via WhatsApp."
+        "error": "Error sending schedule via WhatsApp.",
+        "imageFailedPartial": "{{count}} message(s) were delivered as text only — the image could not be sent. Check the API connection to Evolution.",
+        "test": "Send test",
+        "testTitle": "Test WhatsApp delivery",
+        "testDescription": "The schedule will be sent only to the number provided, without notifying the team volunteers.",
+        "testNumberLabel": "Test number (with area code)",
+        "testNumberPlaceholder": "e.g. 11987654321",
+        "testNumberRequired": "Enter a number for the test.",
+        "testSent": "Test sent to {{number}}."
       },
       "manualFields": {
         "occurrence": "Occurrence",
@@ -2885,7 +2902,14 @@
         "removeSuccess": "Volunteer removed from schedule",
         "removeError": "Error removing volunteer",
         "scheduleHere": "Schedule",
-        "volunteerNotLinkedToTeam": "This volunteer is not linked to the selected team."
+        "volunteerNotLinkedToTeam": "This volunteer is not linked to the selected team.",
+        "clearAll": "Clear schedules",
+        "clearing": "Clearing...",
+        "clearSuccess": "{{count}} allocation(s) removed",
+        "clearError": "Error clearing schedules",
+        "clearConfirmTitle": "Clear visible schedules?",
+        "clearConfirmDescription": "This will remove {{count}} allocation(s) from team \"{{equipe}}\" in {{mes}}. Registered attendance will also be affected. This cannot be undone.",
+        "clearConfirm": "Yes, clear"
       }
     },
     "schedules": {
@@ -3561,6 +3585,7 @@
     "occurrencesGenerateReconciled": "{{created}} occurrence(s) created and {{removed}} outdated one(s) removed",
     "occurrencesGenerateNone": "No new occurrence was created. Check if the event has recurrences configured (Edit event → Recurrences) and if the validity covers the chosen period.",
     "occurrencesGenerateError": "Error generating occurrences",
+    "occurrencesGenerateNaoReconciliadas": "{{count}} occurrence(s) with volunteers already assigned could not be removed automatically. Delete the schedule(s) manually and generate again.",
     "occurrencesDeleteTitle": "Delete occurrence",
     "occurrencesDeleteConfirm": "Delete this occurrence?",
     "occurrencesDeleteSuccess": "Occurrence deleted.",

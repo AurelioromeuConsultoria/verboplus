@@ -231,21 +231,24 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
             }
         }
 
-        var totalRemovidas = reconciliarFuturasSemEscala
+        var (totalRemovidas, totalNaoReconciliadas) = reconciliarFuturasSemEscala
             ? await ReconciliarFuturasSemEscalaAsync(eventoId, dataInicio, dataFim, horariosEsperados)
-            : 0;
+            : (0, 0);
 
         return new GerarOcorrenciasResultadoDto
         {
             TotalCriadas = totalCriadas,
-            TotalRemovidas = totalRemovidas
+            TotalRemovidas = totalRemovidas,
+            TotalNaoReconciliadas = totalNaoReconciliadas
         };
     }
 
     // Remove ocorrências FUTURAS geradas automaticamente que não correspondem mais a nenhuma
-    // recorrência ativa (ex.: recorrência alterada, desativada ou apagada). Preserva o passado,
-    // ocorrências criadas manualmente e qualquer ocorrência que já tenha escala montada.
-    private async Task<int> ReconciliarFuturasSemEscalaAsync(
+    // recorrência ativa (ex.: recorrência alterada, desativada ou apagada, semana excluída).
+    // Preserva o passado e ocorrências criadas manualmente.
+    // Escalas vazias (rascunho sem itens) são removidas em cascade junto com a ocorrência.
+    // Ocorrências com escala que já tem voluntários alocados são preservadas e contadas em NaoReconciliadas.
+    private async Task<(int Removidas, int NaoReconciliadas)> ReconciliarFuturasSemEscalaAsync(
         int eventoId,
         DateTime dataInicio,
         DateTime dataFim,
@@ -255,18 +258,30 @@ public class EventoOcorrenciaService : IEventoOcorrenciaService
         var ocorrencias = await _repository.GetByPeriodoAsync(dataInicio, dataFim, eventoId);
 
         var removidas = 0;
+        var naoReconciliadas = 0;
         foreach (var ocorrencia in ocorrencias)
         {
             if (!ocorrencia.GeradaAutomaticamente) continue;
             if (ocorrencia.DataHoraInicio < agora) continue;
             if (horariosEsperados.Contains(ocorrencia.DataHoraInicio)) continue;
-            if (ocorrencia.Escalas?.Any() == true) continue;
+
+            if (ocorrencia.Escalas?.Any() == true)
+            {
+                var escalasDetalhadas = await _escalaRepository.GetAllByEventoOcorrenciaAsync(ocorrencia.Id);
+                if (escalasDetalhadas.Any(e => e.Itens.Any()))
+                {
+                    naoReconciliadas++;
+                    continue;
+                }
+                foreach (var escala in escalasDetalhadas)
+                    await _escalaRepository.DeleteAsync(escala.Id);
+            }
 
             await _repository.DeleteAsync(ocorrencia.Id);
             removidas++;
         }
 
-        return removidas;
+        return (removidas, naoReconciliadas);
     }
 
     private static IEnumerable<DateTime> GerarDatasRecorrencia(

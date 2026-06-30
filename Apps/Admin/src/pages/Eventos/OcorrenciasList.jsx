@@ -116,17 +116,20 @@ export default function OcorrenciasList() {
       );
       const total = res.data?.totalCriadas ?? 0;
       const removidas = res.data?.totalRemovidas ?? 0;
+      const naoReconciliadas = res.data?.totalNaoReconciliadas ?? 0;
       if (total > 0 || removidas > 0) {
         if (removidas > 0) {
           toast.success(t('events.occurrencesGenerateReconciled', { created: total, removed: removidas }));
         } else {
           toast.success(t('events.occurrencesGenerateCreated', { count: total }));
         }
-        await loadOcorrencias();
       } else {
         toast.warning(t('events.occurrencesGenerateNone'));
-        await loadOcorrencias();
       }
+      if (naoReconciliadas > 0) {
+        toast.warning(t('events.occurrencesGenerateNaoReconciliadas', { count: naoReconciliadas }));
+      }
+      await loadOcorrencias();
     } catch (err) {
       console.error(err);
       const msg = err.response?.data?.message ?? err.response?.data;

@@ -2807,6 +2807,15 @@
       "teamLabel": "Equipe",
       "allEvents": "Todos os eventos",
       "allTeams": "Todas as equipes",
+      "volunteerSearchLabel": "Voluntário",
+      "volunteerSearchPlaceholder": "Buscar por nome...",
+      "statusFilterLabel": "Status",
+      "allStatuses": "Todos os status",
+      "noScheduleFilter": "Sem escala",
+      "clearFilters": "Limpar filtros",
+      "filteredOf": "{{filtered}} de {{total}}",
+      "emptyFilterTitle": "Nenhum voluntário corresponde ao filtro.",
+      "emptyFilterDescription": "Ajuste os filtros de voluntário ou status para ver resultados.",
       "gridTitle": "Distribuição mensal",
       "occurrences": "ocorrências",
       "manualTitle": "Montagem manual",
@@ -2860,7 +2869,15 @@
         "failures": "{{count}} envio(s) falharam. {{details}}",
         "noRecipients": "Nenhum voluntário da equipe possui WhatsApp preenchido.",
         "uploadError": "Não foi possível salvar a imagem da escala para envio.",
-        "error": "Erro ao disparar escala pelo WhatsApp."
+        "error": "Erro ao disparar escala pelo WhatsApp.",
+        "imageFailedPartial": "{{count}} mensagem(ns) foram entregues só com texto — a imagem não pôde ser enviada. Verifique a conexão da API com a Evolution.",
+        "test": "Testar envio",
+        "testTitle": "Testar envio no WhatsApp",
+        "testDescription": "A escala será enviada apenas para o número informado, sem notificar os voluntários da equipe.",
+        "testNumberLabel": "Número de teste (com DDD)",
+        "testNumberPlaceholder": "Ex.: 11987654321",
+        "testNumberRequired": "Informe um número para o teste.",
+        "testSent": "Teste enviado para {{number}}."
       },
       "manualFields": {
         "occurrence": "Ocorrência",
@@ -2884,7 +2901,14 @@
         "removeSuccess": "Voluntário removido da escala",
         "removeError": "Erro ao remover voluntário",
         "scheduleHere": "Escalar",
-        "volunteerNotLinkedToTeam": "Este voluntário não tem vínculo com a equipe selecionada."
+        "volunteerNotLinkedToTeam": "Este voluntário não tem vínculo com a equipe selecionada.",
+        "clearAll": "Limpar escalados",
+        "clearing": "Limpando...",
+        "clearSuccess": "{{count}} alocação(ões) removida(s)",
+        "clearError": "Erro ao limpar escalados",
+        "clearConfirmTitle": "Limpar escalados visíveis?",
+        "clearConfirmDescription": "Esta ação removerá {{count}} alocação(ões) da equipe \"{{equipe}}\" em {{mes}}. Presença já registrada também será afetada. Não pode ser desfeita.",
+        "clearConfirm": "Sim, limpar"
       }
     },
     "schedules": {
@@ -3560,6 +3584,7 @@
     "occurrencesGenerateReconciled": "{{created}} ocorrência(s) criada(s) e {{removed}} desatualizada(s) removida(s)",
     "occurrencesGenerateNone": "Nenhuma ocorrência nova foi criada. Verifique se o evento tem recorrências configuradas (Editar evento → Recorrências) e se a vigência cobre o período escolhido.",
     "occurrencesGenerateError": "Erro ao gerar ocorrências",
+    "occurrencesGenerateNaoReconciliadas": "{{count}} ocorrência(s) com voluntários já alocados não puderam ser removidas automaticamente. Exclua a(s) escala(s) manualmente e gere novamente.",
     "occurrencesDeleteTitle": "Excluir ocorrência",
     "occurrencesDeleteConfirm": "Excluir esta ocorrência?",
     "occurrencesDeleteSuccess": "Ocorrência excluída.",

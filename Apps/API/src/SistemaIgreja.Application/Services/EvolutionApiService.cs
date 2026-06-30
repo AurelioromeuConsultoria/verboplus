@@ -697,8 +697,23 @@ public class EvolutionApiService : IEvolutionApiService
             {
                 _logger.LogWarning(
                     ex,
-                    "Nao foi possivel baixar midia remota para envio inline na Evolution API. Url: {Url}. Sera mantido o envio por URL.",
+                    "Nao foi possivel baixar midia remota para envio inline na Evolution API. Url: {Url}. Tentando leitura local.",
                     imageUrl);
+            }
+
+            // Fallback: extrai o path da URL e tenta ler o arquivo do disco local.
+            // A API tem o volume de uploads montado; se o download self-referente falhou
+            // (DNS interno, hairpin NAT, etc.), a leitura local é mais confiável.
+            if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var parsedUri))
+            {
+                var pathFromUrl = parsedUri.AbsolutePath; // ex.: /uploads/tenants/xxx/images/abc.jpg
+                var dataUri = TentarLerPathLocalAsync(pathFromUrl);
+                if (dataUri != null)
+                {
+                    _logger.LogInformation(
+                        "Arquivo lido do disco local como fallback para URL {Url}.", imageUrl);
+                    return dataUri;
+                }
             }
 
             return imageUrl;
@@ -766,6 +781,39 @@ public class EvolutionApiService : IEvolutionApiService
 
         throw new FileNotFoundException(
             $"Nao foi possivel localizar o arquivo da midia para envio. Caminho informado: {imageUrl}");
+    }
+
+    private static string? TentarLerPathLocalAsync(string path)
+    {
+        try
+        {
+            var caminhoNormalizado = path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+            var contentRoot = Directory.GetCurrentDirectory();
+            var baseDirectory = AppContext.BaseDirectory;
+
+            var candidatos = new[]
+            {
+                Path.Combine(contentRoot, caminhoNormalizado),
+                Path.Combine(contentRoot, "uploads", caminhoNormalizado.Replace($"uploads{Path.DirectorySeparatorChar}", string.Empty)),
+                Path.Combine(baseDirectory, caminhoNormalizado),
+                Path.Combine(baseDirectory, "uploads", caminhoNormalizado.Replace($"uploads{Path.DirectorySeparatorChar}", string.Empty)),
+            };
+
+            foreach (var candidato in candidatos)
+            {
+                if (string.IsNullOrWhiteSpace(candidato) || !File.Exists(candidato))
+                    continue;
+
+                var bytes = File.ReadAllBytes(candidato);
+                return ConstruirDataUri(ObterMimeType(candidato), bytes);
+            }
+        }
+        catch
+        {
+            // ignora — o chamador fará fallback para a URL
+        }
+
+        return null;
     }
 
     private static bool EhUrlHttp(string valor)
