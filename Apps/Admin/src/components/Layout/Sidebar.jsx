@@ -80,12 +80,14 @@ const menuGroups = [
         titleKey: 'menu.people',
         href: '/pessoas',
         icon: Users,
+        exact: true,
         permission: RESOURCES.PESSOAS,
       },
       {
         titleKey: 'menu.birthdays',
         href: '/pessoas/aniversariantes',
         icon: CalendarDays,
+        exact: true,
         permission: RESOURCES.PESSOAS,
       },
       {
@@ -231,6 +233,7 @@ const menuGroups = [
         titleKey: 'menu.events',
         href: '/eventos',
         icon: Calendar,
+        exact: true,
         permission: RESOURCES.EVENTOS,
       },
       {
@@ -362,6 +365,7 @@ const menuGroups = [
         title: 'Doações recebidas',
         href: '/doacoes',
         icon: HeartHandshake,
+        exact: true,
         permission: RESOURCES.FINANCEIRO,
       },
       {
@@ -778,8 +782,8 @@ export function Sidebar({
               <CollapsibleContent className={cn('space-y-1 mt-1', isIconOnly && 'hidden')}>
                 {visibleItems.map((item) => {
                   const ItemIcon = item.icon;
-                  const isActive = location.pathname === item.href || 
-                    (item.href !== '/' && location.pathname.startsWith(item.href));
+                  const isActive = location.pathname === item.href ||
+                    (!item.exact && item.href !== '/' && location.pathname.startsWith(item.href + '/'));
 
                   return (
                     <Link

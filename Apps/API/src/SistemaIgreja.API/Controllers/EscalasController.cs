@@ -241,6 +241,7 @@ public class EscalasController : ControllerBase
                 if (fallbackResponse.Sucesso)
                 {
                     resultado.TotalEnviados++;
+                    resultado.TotalSomenteTexto++;
                     resultado.Falhas.Add($"{voluntario.Nome}: mídia falhou, mas texto foi entregue.");
                     continue;
                 }

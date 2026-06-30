@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, CalendarDays, CheckCircle2, Clock3, Download, Eye, Send, Share2, Users, XCircle } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CheckCircle2, Clock3, Download, Eye, Search, Send, Share2, Trash2, Users, X, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +29,14 @@ function getStatusMeta(status, t) {
   if (value === 3 || value === 4) return { label: t('volunteer.monthlyPlanning.status.declined'), className: 'bg-red-100 text-red-800 hover:bg-red-100', icon: XCircle };
   if (value === 6) return { label: t('volunteer.monthlyPlanning.status.absent'), className: 'bg-slate-100 text-slate-800 hover:bg-slate-100', icon: AlertTriangle };
   return { label: t('volunteer.monthlyPlanning.status.pending'), className: 'bg-amber-100 text-amber-800 hover:bg-amber-100', icon: Clock3 };
+}
+
+function getStatusGroup(status) {
+  const value = Number(status);
+  if (value === 2 || value === 5) return 'confirmed';
+  if (value === 3 || value === 4) return 'declined';
+  if (value === 6) return 'absent';
+  return 'pending';
 }
 
 function getShortDate(value) {
@@ -319,7 +327,19 @@ export default function PlanejamentoMensalEscalas() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [autoGenerating, setAutoGenerating] = useState(false);
+  const [voluntarioFiltro, setVoluntarioFiltro] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState('all');
+  const [clearing, setClearing] = useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [testNumber, setTestNumber] = useState(() => {
+    try {
+      return localStorage.getItem('planejamentoMensal.testNumber') || '';
+    } catch {
+      return '';
+    }
+  });
   const [previewingImage, setPreviewingImage] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState('');
@@ -413,6 +433,27 @@ export default function PlanejamentoMensalEscalas() {
     return map;
   }, [voluntarios]);
 
+  const todasAlocacoes = useMemo(
+    () => voluntarios.flatMap((v) => v.alocacoes || []),
+    [voluntarios],
+  );
+
+  const voluntariosFiltrados = useMemo(() => {
+    let result = voluntarios;
+    if (voluntarioFiltro.trim()) {
+      const q = voluntarioFiltro.trim().toLowerCase();
+      result = result.filter((v) => v.nome.toLowerCase().includes(q));
+    }
+    if (statusFiltro === 'sem_escala') {
+      result = result.filter((v) => (v.alocacoes || []).length === 0);
+    } else if (statusFiltro !== 'all') {
+      result = result.filter((v) =>
+        (v.alocacoes || []).some((a) => getStatusGroup(a.status) === statusFiltro)
+      );
+    }
+    return result;
+  }, [voluntarios, voluntarioFiltro, statusFiltro]);
+
   if (loading) return <LoadingPage text={t('volunteer.monthlyPlanning.loading')} />;
   if (error) return <ErrorPage message={error} onRetry={loadPlanejamento} />;
 
@@ -447,6 +488,23 @@ export default function PlanejamentoMensalEscalas() {
       toast.error(err.response?.data || t('volunteer.monthlyPlanning.actions.autoGenerateError'));
     } finally {
       setAutoGenerating(false);
+    }
+  };
+
+  const handleClearAll = async () => {
+    setClearConfirmOpen(false);
+    try {
+      setClearing(true);
+      await Promise.all(
+        todasAlocacoes.map((a) => escalasApi.deleteItem(a.escalaId, a.escalaItemId)),
+      );
+      toast.success(t('volunteer.monthlyPlanning.actions.clearSuccess', { count: todasAlocacoes.length }));
+      await loadPlanejamento({ silent: true });
+    } catch (err) {
+      console.error(err);
+      toast.error(t('volunteer.monthlyPlanning.actions.clearError'));
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -604,7 +662,7 @@ export default function PlanejamentoMensalEscalas() {
     }, 'image/png');
   };
 
-  const handleSendWhatsApp = async () => {
+  const handleSendWhatsApp = async ({ whatsAppTeste = null } = {}) => {
     if (!equipeSelecionada) {
       toast.error(t('volunteer.monthlyPlanning.actions.selectTeamRequired'));
       return;
@@ -642,6 +700,7 @@ export default function PlanejamentoMensalEscalas() {
         eventoId: eventoId === 'all' ? null : Number(eventoId),
         imagemUrl,
         mensagem: getWhatsAppMessage(),
+        whatsAppTeste: whatsAppTeste || null,
       });
 
       const resultado = res.data || {};
@@ -650,10 +709,20 @@ export default function PlanejamentoMensalEscalas() {
         return;
       }
 
-      toast.success(t('volunteer.monthlyPlanning.whatsapp.sent', {
-        sent: resultado.totalEnviados || 0,
-        total: resultado.totalDestinatarios || 0,
-      }));
+      if (whatsAppTeste) {
+        toast.success(t('volunteer.monthlyPlanning.whatsapp.testSent', { number: whatsAppTeste }));
+      } else {
+        toast.success(t('volunteer.monthlyPlanning.whatsapp.sent', {
+          sent: resultado.totalEnviados || 0,
+          total: resultado.totalDestinatarios || 0,
+        }));
+      }
+
+      if ((resultado.totalSomenteTexto || 0) > 0) {
+        toast.warning(t('volunteer.monthlyPlanning.whatsapp.imageFailedPartial', {
+          count: resultado.totalSomenteTexto,
+        }));
+      }
 
       if ((resultado.totalFalhas || 0) > 0) {
         toast.warning(t('volunteer.monthlyPlanning.whatsapp.failures', {
@@ -667,6 +736,21 @@ export default function PlanejamentoMensalEscalas() {
     } finally {
       setSendingWhatsApp(false);
     }
+  };
+
+  const handleSendTest = async () => {
+    const numero = testNumber.trim();
+    if (!numero) {
+      toast.error(t('volunteer.monthlyPlanning.whatsapp.testNumberRequired'));
+      return;
+    }
+    try {
+      localStorage.setItem('planejamentoMensal.testNumber', numero);
+    } catch {
+      // localStorage indisponível — segue sem persistir
+    }
+    setTestDialogOpen(false);
+    await handleSendWhatsApp({ whatsAppTeste: numero });
   };
 
   return (
@@ -689,9 +773,26 @@ export default function PlanejamentoMensalEscalas() {
             <Share2 className="h-4 w-4 mr-2" />
             {t('volunteer.monthlyPlanning.share.share')}
           </Button>
-          <Button variant="outline" onClick={handleSendWhatsApp} disabled={!equipeSelecionada || sendingWhatsApp}>
+          <Button
+            variant="outline"
+            onClick={() => setTestDialogOpen(true)}
+            disabled={!equipeSelecionada || sendingWhatsApp}
+          >
+            <Send className="h-4 w-4 mr-2" />
+            {t('volunteer.monthlyPlanning.whatsapp.test')}
+          </Button>
+          <Button variant="outline" onClick={() => handleSendWhatsApp()} disabled={!equipeSelecionada || sendingWhatsApp}>
             <Send className="h-4 w-4 mr-2" />
             {sendingWhatsApp ? t('volunteer.monthlyPlanning.whatsapp.sending') : t('volunteer.monthlyPlanning.whatsapp.send')}
+          </Button>
+          <Button
+            variant="outline"
+            className="text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => setClearConfirmOpen(true)}
+            disabled={!equipeSelecionada || todasAlocacoes.length === 0 || clearing}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {clearing ? t('volunteer.monthlyPlanning.actions.clearing') : t('volunteer.monthlyPlanning.actions.clearAll')}
           </Button>
           <Button onClick={handleAutoGenerate} disabled={!equipeSelecionada || autoGenerating}>
             {autoGenerating ? t('volunteer.monthlyPlanning.actions.generating') : t('volunteer.monthlyPlanning.actions.autoGenerate')}
@@ -728,20 +829,87 @@ export default function PlanejamentoMensalEscalas() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('volunteer.monthlyPlanning.whatsapp.testTitle')}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t('volunteer.monthlyPlanning.whatsapp.testDescription')}
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="testNumber">{t('volunteer.monthlyPlanning.whatsapp.testNumberLabel')}</Label>
+            <Input
+              id="testNumber"
+              value={testNumber}
+              onChange={(e) => setTestNumber(e.target.value)}
+              placeholder={t('volunteer.monthlyPlanning.whatsapp.testNumberPlaceholder')}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSendTest(); }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestDialogOpen(false)}>
+              {t('actions.cancel')}
+            </Button>
+            <Button onClick={handleSendTest} disabled={sendingWhatsApp}>
+              <Send className="h-4 w-4 mr-2" />
+              {sendingWhatsApp ? t('volunteer.monthlyPlanning.whatsapp.sending') : t('volunteer.monthlyPlanning.whatsapp.test')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('volunteer.monthlyPlanning.actions.clearConfirmTitle')}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t('volunteer.monthlyPlanning.actions.clearConfirmDescription', {
+              count: todasAlocacoes.length,
+              equipe: equipes.find((e) => String(e.id) === String(equipeId))?.nome || '',
+              mes: formatDate(`${month}-01T00:00:00`, month, { month: 'long', year: 'numeric' }),
+            })}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearConfirmOpen(false)}>
+              {t('actions.cancel')}
+            </Button>
+            <Button variant="destructive" onClick={handleClearAll}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              {t('volunteer.monthlyPlanning.actions.clearConfirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card>
-        <CardHeader>
-          <CardTitle>{t('volunteer.monthlyPlanning.filtersTitle')}</CardTitle>
+        <CardHeader className="pb-3 pt-4 px-5">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('volunteer.monthlyPlanning.filtersTitle')}</CardTitle>
+            {(voluntarioFiltro || statusFiltro !== 'all') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-muted-foreground"
+                onClick={() => { setVoluntarioFiltro(''); setStatusFiltro('all'); }}
+              >
+                <X className="h-3.5 w-3.5 mr-1" />
+                {t('volunteer.monthlyPlanning.clearFilters')}
+              </Button>
+            )}
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label>{t('volunteer.monthlyPlanning.monthLabel')}</Label>
-              <Input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
+        <CardContent className="px-5 pb-5">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1.5 min-w-[140px] flex-1">
+              <Label className="text-xs text-muted-foreground">{t('volunteer.monthlyPlanning.monthLabel')}</Label>
+              <Input type="month" value={month} onChange={(event) => setMonth(event.target.value)} className="h-9" />
             </div>
-            <div className="space-y-2">
-              <Label>{t('volunteer.monthlyPlanning.eventLabel')}</Label>
+            <div className="space-y-1.5 min-w-[160px] flex-1">
+              <Label className="text-xs text-muted-foreground">{t('volunteer.monthlyPlanning.eventLabel')}</Label>
               <Select value={eventoId} onValueChange={setEventoId}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder={t('volunteer.monthlyPlanning.allEvents')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -752,10 +920,10 @@ export default function PlanejamentoMensalEscalas() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>{t('volunteer.monthlyPlanning.teamLabel')}</Label>
+            <div className="space-y-1.5 min-w-[160px] flex-1">
+              <Label className="text-xs text-muted-foreground">{t('volunteer.monthlyPlanning.teamLabel')}</Label>
               <Select value={equipeId} onValueChange={setEquipeId}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder={t('volunteer.monthlyPlanning.allTeams')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -763,6 +931,43 @@ export default function PlanejamentoMensalEscalas() {
                   {equipes.map((equipe) => (
                     <SelectItem key={equipe.id} value={String(equipe.id)}>{equipe.nome}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5 min-w-[180px] flex-[1.5]">
+              <Label className="text-xs text-muted-foreground">{t('volunteer.monthlyPlanning.volunteerSearchLabel')}</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  value={voluntarioFiltro}
+                  onChange={(e) => setVoluntarioFiltro(e.target.value)}
+                  placeholder={t('volunteer.monthlyPlanning.volunteerSearchPlaceholder')}
+                  className="h-9 pl-8 pr-8"
+                />
+                {voluntarioFiltro && (
+                  <button
+                    type="button"
+                    onClick={() => setVoluntarioFiltro('')}
+                    className="absolute right-2.5 top-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="space-y-1.5 min-w-[160px] flex-1">
+              <Label className="text-xs text-muted-foreground">{t('volunteer.monthlyPlanning.statusFilterLabel')}</Label>
+              <Select value={statusFiltro} onValueChange={setStatusFiltro}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('volunteer.monthlyPlanning.allStatuses')}</SelectItem>
+                  <SelectItem value="pending">{t('volunteer.monthlyPlanning.status.pending')}</SelectItem>
+                  <SelectItem value="confirmed">{t('volunteer.monthlyPlanning.status.confirmed')}</SelectItem>
+                  <SelectItem value="declined">{t('volunteer.monthlyPlanning.status.declined')}</SelectItem>
+                  <SelectItem value="absent">{t('volunteer.monthlyPlanning.status.absent')}</SelectItem>
+                  <SelectItem value="sem_escala">{t('volunteer.monthlyPlanning.noScheduleFilter')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -872,10 +1077,18 @@ export default function PlanejamentoMensalEscalas() {
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <CardTitle>{t('volunteer.monthlyPlanning.gridTitle')}</CardTitle>
-            <Badge variant="outline" className="gap-1">
-              <CalendarDays className="h-3.5 w-3.5" />
-              {ocorrencias.length} {t('volunteer.monthlyPlanning.occurrences')}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {voluntariosFiltrados.length < voluntarios.length && (
+                <Badge variant="secondary" className="gap-1">
+                  <Users className="h-3.5 w-3.5" />
+                  {t('volunteer.monthlyPlanning.filteredOf', { filtered: voluntariosFiltrados.length, total: voluntarios.length })}
+                </Badge>
+              )}
+              <Badge variant="outline" className="gap-1">
+                <CalendarDays className="h-3.5 w-3.5" />
+                {ocorrencias.length} {t('volunteer.monthlyPlanning.occurrences')}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -889,6 +1102,11 @@ export default function PlanejamentoMensalEscalas() {
             <PageEmptyState
               title={t('volunteer.monthlyPlanning.emptyVolunteersTitle')}
               description={t('volunteer.monthlyPlanning.emptyVolunteersDescription')}
+            />
+          ) : voluntariosFiltrados.length === 0 ? (
+            <PageEmptyState
+              title={t('volunteer.monthlyPlanning.emptyFilterTitle')}
+              description={t('volunteer.monthlyPlanning.emptyFilterDescription')}
             />
           ) : (
             <div className="overflow-auto border rounded-md">
@@ -906,7 +1124,7 @@ export default function PlanejamentoMensalEscalas() {
                   </tr>
                 </thead>
                 <tbody>
-                  {voluntarios.map((voluntario) => (
+                  {voluntariosFiltrados.map((voluntario) => (
                     <tr key={voluntario.pessoaId} className="border-t">
                       <td className="sticky left-0 z-10 bg-background p-3 align-top">
                         <div className="font-medium">{voluntario.nome}</div>

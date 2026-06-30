@@ -464,6 +464,8 @@ public class EscalaService : IEscalaService
         var ordemGlobal = 0;
         foreach (var itemModelo in modelo.Itens.OrderBy(i => i.Ordem).ThenBy(i => i.Id))
         {
+            // Passe 1: todos os filtros rígidos
+            // Ordena por escalasNoMes (equidade cross-evento no mês) → cargaRecente (histórico) → nome.
             var candidatos = voluntarios
                 .Where(v =>
                     (itemModelo.CargoId == null || v.CargoId == itemModelo.CargoId) &&
@@ -471,10 +473,48 @@ public class EscalaService : IEscalaService
                     !indisponiveis.Contains(v.Id) &&
                     (!v.MaxEscalasPorMes.HasValue || !escalasNoMes.TryGetValue(v.Id, out var noMes) || noMes < v.MaxEscalasPorMes.Value) &&
                     (diasFolga == 0 || !escalasPeriodoFolga.TryGetValue(v.Id, out var noPeriodo) || noPeriodo == 0))
-                .OrderBy(v => cargaRecente.GetValueOrDefault(v.Id, 0))
+                .OrderBy(v => escalasNoMes.GetValueOrDefault(v.Id, 0))
+                .ThenBy(v => cargaRecente.GetValueOrDefault(v.Id, 0))
                 .ThenBy(v => v.Pessoa?.Nome ?? string.Empty)
                 .Take(itemModelo.Quantidade)
                 .ToList();
+
+            // Passe 2: vagas ainda abertas → relaxa folga, mantém os demais filtros
+            if (candidatos.Count < itemModelo.Quantidade && diasFolga > 0)
+            {
+                var jaAlocados = candidatos.Select(v => v.Id).ToHashSet();
+                var complemento = voluntarios
+                    .Where(v =>
+                        !jaAlocados.Contains(v.Id) &&
+                        (itemModelo.CargoId == null || v.CargoId == itemModelo.CargoId) &&
+                        !pessoaIdsJaEscaladas.Contains(v.PessoaId) &&
+                        !indisponiveis.Contains(v.Id) &&
+                        (!v.MaxEscalasPorMes.HasValue || !escalasNoMes.TryGetValue(v.Id, out var noMes2) || noMes2 < v.MaxEscalasPorMes.Value))
+                    .OrderBy(v => escalasNoMes.GetValueOrDefault(v.Id, 0))
+                    .ThenBy(v => cargaRecente.GetValueOrDefault(v.Id, 0))
+                    .ThenBy(v => v.Pessoa?.Nome ?? string.Empty)
+                    .Take(itemModelo.Quantidade - candidatos.Count)
+                    .ToList();
+                candidatos.AddRange(complemento);
+            }
+
+            // Passe 3: vagas ainda abertas → relaxa também MaxEscalasPorMes
+            if (candidatos.Count < itemModelo.Quantidade)
+            {
+                var jaAlocados = candidatos.Select(v => v.Id).ToHashSet();
+                var complemento = voluntarios
+                    .Where(v =>
+                        !jaAlocados.Contains(v.Id) &&
+                        (itemModelo.CargoId == null || v.CargoId == itemModelo.CargoId) &&
+                        !pessoaIdsJaEscaladas.Contains(v.PessoaId) &&
+                        !indisponiveis.Contains(v.Id))
+                    .OrderBy(v => escalasNoMes.GetValueOrDefault(v.Id, 0))
+                    .ThenBy(v => cargaRecente.GetValueOrDefault(v.Id, 0))
+                    .ThenBy(v => v.Pessoa?.Nome ?? string.Empty)
+                    .Take(itemModelo.Quantidade - candidatos.Count)
+                    .ToList();
+                candidatos.AddRange(complemento);
+            }
 
             foreach (var vol in candidatos)
             {

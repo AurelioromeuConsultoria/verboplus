@@ -223,5 +223,7 @@ public class DispararPlanejamentoMensalWhatsAppResultadoDto
     public int TotalDestinatarios { get; set; }
     public int TotalEnviados { get; set; }
     public int TotalFalhas { get; set; }
+    /// <summary>Envios em que a imagem falhou e só o texto foi entregue (contam como enviados).</summary>
+    public int TotalSomenteTexto { get; set; }
     public List<string> Falhas { get; set; } = new();
 }

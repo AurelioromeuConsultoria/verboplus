@@ -72,4 +72,5 @@ public class GerarOcorrenciasResultadoDto
 {
     public int TotalCriadas { get; set; }
     public int TotalRemovidas { get; set; }
+    public int TotalNaoReconciliadas { get; set; }
 }
